@@ -248,14 +248,14 @@ watch(page, () => void load())
 }
 
 .filter-field > span {
-  color: #4b5565;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 500;
 }
 
 .filter-field :deep(.n-input) {
   width: 100%;
-  background-color: rgb(255 255 255 / 88%);
+  background-color: var(--color-field-surface);
 }
 
 .selector-search-actions {
@@ -264,7 +264,7 @@ watch(page, () => void load())
   gap: 10px;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .selector-search-actions :deep(.n-button) {

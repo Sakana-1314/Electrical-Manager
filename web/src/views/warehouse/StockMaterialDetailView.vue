@@ -295,9 +295,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 24px;
   padding: 20px;
-  border: 1px solid #e3e8f2;
+  border: 1px solid var(--color-border);
   border-radius: 10px;
-  background: #f8faff;
+  background: var(--color-surface-soft);
   box-sizing: border-box;
 }
 
@@ -307,8 +307,8 @@ onBeforeUnmount(() => {
   flex: none;
   padding: 8px;
   border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 6px 18px rgba(31, 52, 118, 0.1);
+  background: var(--color-scan-surface);
+  box-shadow: 0 6px 18px var(--shadow-card-strong);
   box-sizing: border-box;
 }
 
@@ -321,7 +321,7 @@ onBeforeUnmount(() => {
 }
 
 .mini-program-code-details strong {
-  color: #172033;
+  color: var(--color-text-strong);
   font-size: 16px;
 }
 
@@ -330,8 +330,8 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   overflow: hidden;
   border-radius: 6px;
-  background: #edf2ff;
-  color: #3658c7;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong-text);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;

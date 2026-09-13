@@ -17,25 +17,35 @@ import {
   GridOutline,
   InformationCircleOutline,
   LinkOutline,
+  LogOutOutline,
   MenuOutline,
+  MoonOutline,
   OptionsOutline,
   PeopleOutline,
   PhonePortraitOutline,
   ReceiptOutline,
   SearchOutline,
   SettingsOutline,
+  SunnyOutline,
   SwapHorizontalOutline,
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useThemeStore } from '@/stores/theme'
 import { roleLabels } from '@/types/navigation'
+import {
+  appearanceButtonLabel,
+  buildThemeMenuGroup,
+  isThemeModeKey,
+} from '@/layouts/appearanceMenu'
 import { LOGO_URL } from '@/constants/branding'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const theme = useThemeStore()
 const collapsed = ref(false)
 // 移动端断点：≤768px 时侧边栏切换为抽屉导航
 const isMobile = useMediaQuery('(max-width: 768px)')
@@ -111,6 +121,34 @@ function logout() {
   auth.logout()
   void router.push({ name: 'login' })
 }
+
+/* ============ 顶栏用户下拉：外观（自动 / 浅色 / 深色） ============
+ * 一级分组为「外观」，二级菜单是三个档位；当前档位显示对勾，
+ * 顶栏按钮图标同步反映当前实际外观（跟随系统的深色也显示月亮）——
+ * 这样不展开菜单也能一眼看出当前是深色还是浅色。菜单结构在 appearanceMenu.ts（有单测）。 */
+
+const currentThemeIcon = computed(() => (theme.isDark ? MoonOutline : SunnyOutline))
+const currentThemeLabel = computed(() => appearanceButtonLabel(theme.mode, theme.isDark))
+
+/** 顶栏快捷切换：只切明暗——当前是深色就固定浅色，当前是浅色就固定深色（含「自动」档下的实际外观）。 */
+function toggleAppearance() {
+  theme.setMode(theme.isDark ? 'light' : 'dark')
+}
+
+const userMenuOptions = computed<MenuOption[]>(() => [
+  ...buildThemeMenuGroup(theme.mode, renderIcon),
+  { type: 'divider', key: 'logout-divider' },
+  { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
+])
+
+/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）。 */
+function onUserMenuSelect(key: string) {
+  if (key === 'logout') {
+    logout()
+    return
+  }
+  if (isThemeModeKey(key)) theme.setMode(key)
+}
 </script>
 
 <template>
@@ -155,17 +193,33 @@ function logout() {
             <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
           </n-breadcrumb>
         </div>
-        <n-dropdown :options="[{ label: '退出登录', key: 'logout' }]" @select="logout">
-          <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
-            <span class="user-summary">
-              <span class="user-name">{{ auth.user?.display_name || auth.user?.username }}</span>
-              <span v-if="!isMobile" class="user-role">{{
-                auth.user ? roleLabels[auth.user.role] : ''
-              }}</span>
-            </span>
-            <span class="user-menu-caret" aria-hidden="true" />
-          </button>
-        </n-dropdown>
+        <div class="topbar-actions">
+          <!-- 外观快捷切换：只做明暗切换，档位（自动 / 浅色 / 深色）在用户菜单的「外观」二级菜单里选 -->
+          <n-tooltip :delay="300">
+            <template #trigger>
+              <button
+                type="button"
+                class="appearance-toggle"
+                :aria-label="currentThemeLabel"
+                @click="toggleAppearance"
+              >
+                <n-icon :size="20"><component :is="currentThemeIcon" /></n-icon>
+              </button>
+            </template>
+            {{ currentThemeLabel }}
+          </n-tooltip>
+          <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
+            <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
+              <span class="user-summary">
+                <span class="user-name">{{ auth.user?.display_name || auth.user?.username }}</span>
+                <span v-if="!isMobile" class="user-role">{{
+                  auth.user ? roleLabels[auth.user.role] : ''
+                }}</span>
+              </span>
+              <span class="user-menu-caret" aria-hidden="true" />
+            </button>
+          </n-dropdown>
+        </div>
       </n-layout-header>
       <n-layout-content class="app-content" :native-scrollbar="false">
         <router-view v-slot="{ Component, route: currentRoute }">
@@ -230,7 +284,7 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgb(255 255 255 / 92%);
+  background: var(--color-surface-translucent);
   backdrop-filter: blur(12px);
 }
 .topbar-left {
@@ -239,7 +293,15 @@ function logout() {
   align-items: center;
   gap: 10px;
 }
-.menu-toggle {
+.topbar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+/* 顶栏弱图标按钮（导航开关、外观切换）共用一套观感 */
+.menu-toggle,
+.appearance-toggle {
   display: grid;
   flex: none;
   width: 40px;
@@ -255,8 +317,10 @@ function logout() {
     border-color 0.2s ease;
 }
 .menu-toggle:hover,
-.menu-toggle:focus-visible {
-  border-color: #dce5ff;
+.menu-toggle:focus-visible,
+.appearance-toggle:hover,
+.appearance-toggle:focus-visible {
+  border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   outline: none;
 }
@@ -277,7 +341,7 @@ function logout() {
 }
 .user-menu-trigger:hover,
 .user-menu-trigger:focus-visible {
-  border-color: #dce5ff;
+  border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   outline: none;
 }
@@ -308,8 +372,7 @@ function logout() {
 }
 .app-content {
   padding: 24px 28px 32px;
-  background:
-    radial-gradient(circle at 100% 0%, rgb(63 99 216 / 4%), transparent 28%), var(--color-bg);
+  background: var(--page-glow), var(--color-bg);
 }
 /* 抽屉内导航 */
 .drawer-brand {

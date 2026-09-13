@@ -12,25 +12,37 @@
 
 ## 设计令牌
 
-令牌维护在 `web/src/theme.ts` 与 `web/src/styles.css`。
+令牌维护在 `web/src/theme.ts`（Naive UI 组件覆盖，明暗两套调色板）与 `web/src/styles.css`
+（全局样式与 CSS 变量）。**下表的色值是浅色档**；深色档在 `styles.css` 的 `[data-theme='dark']` 里逐项覆盖，
+两套同名同义，页面只引用变量、不写死颜色。
 
-| 用途 | 变量 | 色值 |
-| --- | --- | --- |
-| 主色 | `--color-primary` | `#3f63d8` |
-| 主色悬停 | `--color-primary-hover` | `#5376e4` |
-| 主色浅背景 | `--color-primary-soft` | `#edf2ff` |
-| 成功 | `--color-success` | `#229b6b` |
-| 警告 | `--color-warning` | `#d99020` |
-| 危险 | `--color-danger` | `#d94b64` |
-| 强文本 | `--color-text-strong` | `#172033` |
-| 正文 | `--color-text` | `#4b5565` |
-| 弱文本 | `--color-text-muted` | `#7d8798` |
-| 页面背景 | `--color-bg` | `#f4f6fa` |
-| 卡片背景 | `--color-surface` | `#ffffff` |
-| 弱化背景 | `--color-surface-soft` | `#f8faff` |
-| 中性底色 | `--color-surface-muted` | `#ebedef` |
-| 边框 | `--color-border` | `#e2e7ef` |
-| 弱边框 | `--color-border-subtle` | `#edf0f5` |
+| 用途 | 变量 | 浅色档 | 深色档 |
+| --- | --- | --- | --- |
+| 主色 | `--color-primary` | `#3f63d8` | `#6b8cf0` |
+| 主色悬停 | `--color-primary-hover` | `#5376e4` | `#86a2f5` |
+| 主色浅背景 | `--color-primary-soft` | `#edf2ff` | `#232f4a` |
+| 主色浅边框 | `--color-primary-border` | `#dce5ff` | `#33456f` |
+| 浅底上的主色文字 | `--color-primary-strong-text` | `#3658c7` | `#9fb5ff` |
+| 成功 | `--color-success` | `#229b6b` | `#3fbf8a` |
+| 警告 | `--color-warning` | `#d99020` | `#e0a83f` |
+| 危险 | `--color-danger` | `#d94b64` | `#f27289` |
+| 强文本 | `--color-text-strong` | `#172033` | `#e6eaf2` |
+| 正文 | `--color-text` | `#4b5565` | `#aeb8c9` |
+| 弱文本 | `--color-text-muted` | `#7d8798` | `#8791a3` |
+| 页面背景 | `--color-bg` | `#f4f6fa` | `#13171d` |
+| 卡片背景 | `--color-surface` | `#ffffff` | `#191e26` |
+| 弱化背景 | `--color-surface-soft` | `#f8faff` | `#1c222b` |
+| 中性底色 | `--color-surface-muted` | `#ebedef` | `#20262f` |
+| 边框 | `--color-border` | `#e2e7ef` | `#333b47` |
+| 弱边框 | `--color-border-subtle` | `#edf0f5` | `#2a313b` |
+| 表头背景 / 文字 | `--color-table-header` / `--color-table-header-text` | `#f7f9fc` / `#3d4758` | `#1e242d` / `#c9d1de` |
+| 行悬停 | `--color-table-row-hover` | `#f4f7ff` | `#212936` |
+| 局部面板底色 / 悬停 | `--color-panel` / `--color-panel-hover` | `#f6f8fb` / `#eef2f9` | `#1e242d` / `#262e39` |
+| 表单控件底色 | `--color-field-surface` | `rgb(255 255 255 / 88%)` | `rgb(30 36 45 / 88%)` |
+| 顶栏半透明底 | `--color-surface-translucent` | `rgb(255 255 255 / 92%)` | `rgb(25 30 38 / 92%)` |
+| 页面底色光晕 | `--page-glow` | 主色 4% 径向光晕 | 主色 8% 径向光晕 |
+| 详情页 Hero 底 | `--color-hero` | 白→浅蓝渐变 | 深灰→深蓝灰渐变 |
+| 加载遮罩底 / 卡片 | `--color-mask-surface` / `--color-overlay-surface` | 半透明浅灰 / `#ffffff` | 半透明深灰 / `#1e242d` |
 
 | 项 | 值 |
 | --- | --- |
@@ -44,6 +56,18 @@
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
 `--color-surface-muted`，不用蓝色系底色。
+
+## 界面外观（明 / 暗）
+
+| 项 | 要求 |
+| --- | --- |
+| 档位 | 三档：`auto`（自动，跟随系统，默认）、`light`（浅色）、`dark`（深色）；档位存浏览器本地 `theme.mode`，不落库、不产生请求 |
+| 入口 | 顶栏用户下拉里的「外观」分组（二级菜单三档，当前档用勾选标记）；顶栏另有一个只切明暗的快捷按钮，图标反映当前实际外观 |
+| 解析 | `auto` 时用 `prefers-color-scheme` 实时判断；用户显式选择后固定该档，覆盖系统设置，刷新与换页都保持 |
+| 落地 | 解析结果写到 `<html data-theme="light|dark">` 与 `color-scheme`；`styles.css` 的颜色令牌按该属性整套切换；Naive UI 组件由 `n-config-provider` 同时切到 `darkTheme` + 深色调色板覆盖 |
+| 首屏 | `index.html` 在入口脚本前用同一规则预置 `data-theme`，避免刷新时先浅后深的闪烁；app 启动后再由 store 校正 |
+| 新增样式 | 只引用上文令牌，不写死颜色；确需新颜色时先在设计令牌表里加一组浅 / 深值，再引用变量 |
+
 
 ## 页面结构
 
@@ -114,6 +138,8 @@
 | 结构 | “用户名 + 角色”两级文字，用户名为主要信息，角色用弱文本 |
 | 头像 | 系统无头像能力时不显示首字母或占位头像 |
 | 样式 | 默认轻量，仅悬停与键盘聚焦时用主色浅背景 + 弱边框；保留下拉的可交互状态与焦点样式 |
+| 下拉内容 | 先「外观」分组（自动 / 浅色 / 深色，当前档勾选），分隔线之后是「退出登录」 |
+| 外观快捷键 | 顶栏账号左侧一个弱图标按钮，只切明暗（深色↔浅色），图标与无障碍说明反映当前档位与实际外观 |
 
 ### 二级库信息分工
 

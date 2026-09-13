@@ -74,7 +74,7 @@ async function submit() {
 .login-intro {
   background:
     radial-gradient(circle at 18% 20%, rgb(255 255 255 / 14%), transparent 24%),
-    linear-gradient(145deg, #2947a6, #5579e7);
+    var(--gradient-brand);
   color: white;
   display: grid;
   place-items: center;
@@ -119,13 +119,13 @@ h1 {
   display: grid;
   place-items: center;
   padding: 48px;
-  background:
-    radial-gradient(circle at 100% 0%, rgb(63 99 216 / 7%), transparent 32%), var(--color-bg);
+  /* 与业务页共用一个页面底色光晕令牌（浅色几乎不可见，深色下是氛围底色） */
+  background: var(--page-glow), var(--color-bg);
 }
 .login-card {
   width: 420px;
   border: 1px solid var(--color-border-subtle);
-  box-shadow: 0 18px 44px rgb(15 23 42 / 10%);
+  box-shadow: var(--shadow-card-strong);
 }
 h2 {
   font-size: 28px;

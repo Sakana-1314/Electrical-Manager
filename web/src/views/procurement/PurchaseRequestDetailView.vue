@@ -381,7 +381,7 @@ onMounted(() => void load())
   margin-bottom: 18px;
   overflow: hidden;
   border-radius: 8px;
-  background: #f6f8fb;
+  background: var(--color-panel);
 }
 
 .edit-advanced-fields :deep(.n-collapse-item) {
@@ -394,7 +394,7 @@ onMounted(() => void load())
 }
 
 .edit-advanced-fields :deep(.n-collapse-item__header:hover) {
-  background: #eef2f9;
+  background: var(--color-panel-hover);
 }
 
 .edit-advanced-fields :deep(.n-collapse-item__content-inner) {
@@ -406,6 +406,6 @@ onMounted(() => void load())
   align-items: center;
   gap: 6px;
   font-weight: 500;
-  color: #4b5565;
+  color: var(--color-text);
 }
 </style>

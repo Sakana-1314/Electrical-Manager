@@ -249,7 +249,7 @@ function onFileChange(event: Event) {
 .filter-actions {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .filter-action-buttons {

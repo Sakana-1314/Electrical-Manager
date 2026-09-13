@@ -109,7 +109,7 @@ onMounted(async () => {
   height: 64px;
   flex: none;
   place-items: center;
-  border: 1px solid #dce5ff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 14px;
   background: var(--color-primary-soft);
   color: var(--color-primary);

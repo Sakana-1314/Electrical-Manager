@@ -15,16 +15,18 @@
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 27 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 31 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 目录结构
 ```text
 web/src/
-├── App.vue                 根组件：n-config-provider（中文 locale + themeOverrides）包 4 个 provider + router-view
-├── main.ts                 启动引导：拉图片加速配置 → createApp + 加载 settings store → mount
-├── theme.ts / styles.css   Naive UI 全局主题覆盖；全局样式与 CSS 变量（--color-*、--radius-*）
+├── App.vue                 根组件：n-config-provider（中文 locale + 按外观解析的 theme/theme-overrides）包 4 个 provider + router-view
+├── main.ts                 启动引导：拉图片加速配置 → createApp + 应用外观 + 加载 settings store → mount
+├── theme.ts / styles.css   Naive UI 全局主题覆盖（明/暗两套调色板）；全局样式与 CSS 变量（--color-*、--radius-*），深色档见 [data-theme='dark']
 ├── env.d.ts                ImportMetaEnv 声明 + __BUILD_TIME__
+├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
 ├── api/client.ts           axios 实例、拦截器、AppError
-├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 顶栏用户菜单
+├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 顶栏外观快捷键与用户菜单
+├── layouts/appearanceMenu.ts 用户菜单「外观」分组与档位判定（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
@@ -94,13 +96,14 @@ web/src/
 | 无权限时 | 静默重定向到工作台；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
 | keep-alive | `meta.keepAlive` 只在 3 个列表路由声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
-`web/src/stores/` 下只有 2 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
+`web/src/stores/` 下只有 3 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
 
 | store | state | getters | actions | 持久化 | 职责 |
 | --- | --- | --- | --- | --- | --- |
 | `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与角色权限判断 |
 | `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'`，`loaded` 置 true 后不再重复请求） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式，供路由守卫与侧边菜单在首次导航前同步读取 |
-`main.ts` 在 `app.mount('#app')` 之前 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`。
+| `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
+`main.ts` 在 `app.mount('#app')` 之前 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
 
 </TabsContent>
 
@@ -201,6 +204,7 @@ web/src/
 | `image.ts` | 图片类型/大小校验（允许 `image/jpeg`/`png`/`webp`，上限 10MB）、`configureImageBaseUrl`、`imageUrl`、`imagePreviewUrl` |
 | `memoDrafts.ts` | 备忘录未保存草稿的 IndexedDB 暂存：按 `${userId}:${memoId}` 隔离，不可用时静默降级为无操作，另有 `hasPendingDraft` |
 | `memoFontSize.ts` | 备忘录编辑区字号偏好（`localStorage` key `memos.font-size`，档位 `14/16/18/20/24`，默认 16px）：`MEMO_FONT_SIZE_OPTIONS`、`normalizeMemoFontSize`、`readMemoFontSize`、`writeMemoFontSize`；非法 / 越界值回落默认且不写回脏值，存储不可用时静默降级 |
+| `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
 | `settings.ts` | `inventoryModeOptionsFor(secondaryWarehouseMode)`：精简模式下不提供「可读写」选项 |
@@ -218,7 +222,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、系统管理），顶栏含用户信息与退出（`auth.logout()` + 跳 `login`）；`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、系统管理），顶栏含外观快捷按钮（只切明暗）、用户信息与下拉（「外观」分组三档 + 退出登录，`auth.logout()` + 跳 `login`）；`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
 
 
 </TabsContent>

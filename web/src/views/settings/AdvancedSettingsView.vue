@@ -451,7 +451,7 @@ onMounted(load)
 }
 
 .settings-card {
-  border: 1px solid #e8edf5;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 14px;
   box-shadow: 0 10px 28px rgb(30 64 175 / 5%);
 }
@@ -468,7 +468,7 @@ onMounted(load)
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0;
-  border: 1px solid #e8edf5;
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -478,7 +478,7 @@ onMounted(load)
 }
 
 .webhook-platform + .webhook-platform {
-  border-left: 1px solid #e8edf5;
+  border-left: 1px solid var(--color-border-subtle);
 }
 
 .webhook-platform-header,
@@ -523,7 +523,7 @@ onMounted(load)
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: #64748b;
+  color: var(--color-text);
   font-size: 13px;
 }
 
@@ -534,12 +534,12 @@ onMounted(load)
 .feature-group + .feature-group {
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .feature-group-title {
   margin-bottom: 8px;
-  color: #1f2937;
+  color: var(--color-text-strong);
   font-size: 14px;
   font-weight: 600;
 }
@@ -570,7 +570,7 @@ onMounted(load)
   }
 
   .webhook-platform + .webhook-platform {
-    border-top: 1px solid #e8edf5;
+    border-top: 1px solid var(--color-border-subtle);
     border-left: 0;
   }
 }
