@@ -5,7 +5,14 @@ import { useSettingsStore } from '@/stores/settings'
 
 declare module 'vue-router' {
   interface RouteMeta {
+    /** 顶栏面包屑与浏览器标题里展示的页面名（详情页同样用这个短名） */
     title?: string
+    /**
+     * 上一级标题：桌面端顶栏面包屑按「上级 / 当前」展示，移动端只展示当前标题（宽度不够）。
+     * 二级条目用所属菜单分组名（二级库 / 申购管理 / 系统管理），详情页与操作页用所属列表页标题，
+     * 让「当前在哪、能返回哪里」一眼可读。
+     */
+    parent?: string
     permission?: Permission
     public?: boolean
     keepAlive?: boolean
@@ -55,105 +62,105 @@ const router = createRouter({
           path: 'warehouse/materials',
           name: 'stock-materials',
           component: () => import('@/views/warehouse/StockMaterialsView.vue'),
-          meta: { title: '二级库物资' },
+          meta: { title: '二级库物资', parent: '二级库' },
         },
         {
           path: 'warehouse/materials/:id',
           name: 'stock-material-detail',
           component: () => import('@/views/warehouse/StockMaterialDetailView.vue'),
-          meta: { title: '二级库物资详情' },
+          meta: { title: '物资详情', parent: '二级库物资' },
         },
         {
           path: 'warehouse/inbound',
           name: 'inbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'INBOUND' },
-          meta: { title: '入库', permission: 'warehouse:write' },
+          meta: { title: '入库', parent: '二级库', permission: 'warehouse:write' },
         },
         {
           path: 'warehouse/outbound',
           name: 'outbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'OUTBOUND' },
-          meta: { title: '出库', permission: 'warehouse:write' },
+          meta: { title: '出库', parent: '二级库', permission: 'warehouse:write' },
         },
         {
           path: 'warehouse/stock',
           name: 'stock',
           component: () => import('@/views/warehouse/StockView.vue'),
-          meta: { title: '库存查询' },
+          meta: { title: '库存查询', parent: '二级库' },
         },
         {
           path: 'warehouse/hua-xing-stock',
           name: 'hua-xing-stock',
           component: () => import('@/views/warehouse/HuaXingStockView.vue'),
-          meta: { title: '华星总库存' },
+          meta: { title: '华星总库存', parent: '备件管理' },
         },
         {
           path: 'warehouse/lite',
           name: 'warehouse-lite',
           component: () => import('@/views/warehouse/SecondaryWarehouseLiteView.vue'),
-          meta: { title: '二级库' },
+          meta: { title: '二级库', parent: '备件管理' },
         },
         {
           path: 'warehouse/operations',
           name: 'operations',
           component: () => import('@/views/warehouse/OperationsView.vue'),
-          meta: { title: '操作记录' },
+          meta: { title: '操作记录', parent: '二级库' },
         },
         {
           path: 'warehouse/operations/:id',
           name: 'operation-detail',
           component: () => import('@/views/warehouse/OperationDetailView.vue'),
-          meta: { title: '流水详情' },
+          meta: { title: '流水详情', parent: '操作记录' },
         },
         {
           path: 'procurement/materials',
           name: 'purchase-materials',
           component: () => import('@/views/procurement/PurchaseMaterialsView.vue'),
-          meta: { title: '申购计划', keepAlive: true },
+          meta: { title: '申购计划', parent: '申购管理', keepAlive: true },
         },
         {
           path: 'procurement/materials/:id',
           name: 'purchase-material-detail',
           component: () => import('@/views/procurement/PurchaseMaterialDetailView.vue'),
-          meta: { title: '申购计划详情' },
+          meta: { title: '申购计划详情', parent: '申购计划' },
         },
         {
           path: 'procurement/purchase-plan-templates',
           name: 'purchase-plan-templates',
           component: () => import('@/views/procurement/PurchasePlanTemplatesView.vue'),
-          meta: { title: '周期性计划', keepAlive: true },
+          meta: { title: '周期性计划', parent: '申购管理', keepAlive: true },
         },
         {
           path: 'procurement/uncoded-materials',
           name: 'uncoded-materials',
           component: () => import('@/views/procurement/UncodedMaterialsView.vue'),
-          meta: { title: '未编码物资' },
+          meta: { title: '未编码物资', parent: '申购管理' },
         },
         {
           path: 'procurement/material-code-library',
           name: 'material-code-library',
           component: () => import('@/views/procurement/MaterialCodeLibraryView.vue'),
-          meta: { title: '物料编码库' },
+          meta: { title: '物料编码库', parent: '申购管理' },
         },
         {
           path: 'procurement/records',
           name: 'purchase-records',
           component: () => import('@/views/procurement/PurchaseRequestsView.vue'),
-          meta: { title: '申购记录', keepAlive: true },
+          meta: { title: '申购记录', parent: '申购管理', keepAlive: true },
         },
         {
           path: 'procurement/records/:id',
           name: 'purchase-record-detail',
           component: () => import('@/views/procurement/PurchaseRequestDetailView.vue'),
-          meta: { title: '申购记录详情' },
+          meta: { title: '申购记录详情', parent: '申购记录' },
         },
         {
           path: 'settings/advanced',
           name: 'advanced-settings',
           component: () => import('@/views/settings/AdvancedSettingsView.vue'),
-          meta: { title: '高级设置', permission: 'settings:write' },
+          meta: { title: '高级设置', parent: '系统管理', permission: 'settings:write' },
         },
         {
           path: 'settings/ai-search',
@@ -163,25 +170,25 @@ const router = createRouter({
           path: 'settings/users',
           name: 'users',
           component: () => import('@/views/settings/UsersView.vue'),
-          meta: { title: '管理端用户', permission: 'settings:write' },
+          meta: { title: '管理端用户', parent: '系统管理', permission: 'settings:write' },
         },
         {
           path: 'settings/mini-program-users',
           name: 'mini-program-users',
           component: () => import('@/views/settings/MiniProgramUsersView.vue'),
-          meta: { title: '小程序用户', permission: 'settings:write' },
+          meta: { title: '小程序用户', parent: '系统管理', permission: 'settings:write' },
         },
         {
           path: 'settings/about',
           name: 'about',
           component: () => import('@/views/settings/AboutView.vue'),
-          meta: { title: '关于', permission: 'settings:write' },
+          meta: { title: '关于', parent: '系统管理', permission: 'settings:write' },
         },
         {
           path: 'settings/share-links',
           name: 'share-links',
           component: () => import('@/views/settings/ShareLinksView.vue'),
-          meta: { title: '分享链接', permission: 'settings:write' },
+          meta: { title: '分享链接', parent: '系统管理', permission: 'settings:write' },
         },
       ],
     },
@@ -201,7 +208,11 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  document.title = `${to.meta.title || '系统'} - HXNI 电气无忧`
+  // 浏览器标题带上级路径（如「申购管理 / 申购记录 - HXNI 电气无忧」），与顶栏面包屑同一套元信息
+  const pageTitle = to.meta.parent
+    ? `${to.meta.parent} / ${to.meta.title || '系统'}`
+    : to.meta.title
+  document.title = `${pageTitle || '系统'} - HXNI 电气无忧`
   if (!to.meta.public && !auth.isAuthenticated)
     return { name: 'login', query: { redirect: to.fullPath } }
   if (to.name === 'login' && auth.isAuthenticated) return { name: 'dashboard' }

@@ -1104,17 +1104,23 @@ onMounted(() => {
       <div>
         <h1 class="page-title">申购记录</h1>
       </div>
-      <n-space align="center">
-        <n-button
-          v-if="auth.can('purchase:write')"
-          :disabled="!selectedRecords.length"
-          @click="openBatchEdit"
-        >
-          批量修改（{{ selectedRecords.length }}）
-        </n-button>
-        <n-tag :bordered="false" round type="info">共 {{ total }} 条记录</n-tag>
-        <ExportButton :options="exportOptions" :loading="resultExporting" @select="handleExport" />
-      </n-space>
+      <div class="page-actions">
+        <n-space align="center">
+          <n-button
+            v-if="auth.can('purchase:write')"
+            :disabled="!selectedRecords.length"
+            @click="openBatchEdit"
+          >
+            批量修改（{{ selectedRecords.length }}）
+          </n-button>
+          <n-tag :bordered="false" round type="info">共 {{ total }} 条记录</n-tag>
+          <ExportButton
+            :options="exportOptions"
+            :loading="resultExporting"
+            @select="handleExport"
+          />
+        </n-space>
+      </div>
     </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">

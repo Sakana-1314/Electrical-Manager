@@ -1074,18 +1074,20 @@ onBeforeUnmount(() => {
       <div>
         <h1 class="page-title">申购计划</h1>
       </div>
-      <n-space>
-        <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
-        <template v-if="auth.can('purchase:write')">
-          <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
-            批量修改（{{ selectedPlans.length }}）
-          </n-button>
-          <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
-            批量转为申购记录（{{ selectedPlans.length }}）
-          </n-button>
-          <n-button type="primary" @click="openCreate">新建申购计划</n-button>
-        </template>
-      </n-space>
+      <div class="page-actions">
+        <n-space>
+          <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
+          <template v-if="auth.can('purchase:write')">
+            <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
+              批量修改（{{ selectedPlans.length }}）
+            </n-button>
+            <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
+              批量转为申购记录（{{ selectedPlans.length }}）
+            </n-button>
+            <n-button type="primary" @click="openCreate">新建申购计划</n-button>
+          </template>
+        </n-space>
+      </div>
     </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">

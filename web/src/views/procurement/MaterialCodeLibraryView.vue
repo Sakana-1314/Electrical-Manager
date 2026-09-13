@@ -149,22 +149,24 @@ function onFileChange(event: Event) {
   <div class="page">
     <div class="page-header">
       <h1 class="page-title">物料编码库</h1>
-      <n-button
-        v-if="auth.can('purchase:write')"
-        type="primary"
-        :loading="importing"
-        :disabled="importing"
-        @click="openFilePicker"
-      >
-        导入表格全量更新
-      </n-button>
-      <input
-        ref="fileInput"
-        class="hidden-file-input"
-        type="file"
-        accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-        @change="onFileChange"
-      />
+      <div class="page-actions">
+        <n-button
+          v-if="auth.can('purchase:write')"
+          type="primary"
+          :loading="importing"
+          :disabled="importing"
+          @click="openFilePicker"
+        >
+          导入表格全量更新
+        </n-button>
+        <input
+          ref="fileInput"
+          class="hidden-file-input"
+          type="file"
+          accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+          @change="onFileChange"
+        />
+      </div>
     </div>
 
     <n-card class="filter-card" :bordered="false">

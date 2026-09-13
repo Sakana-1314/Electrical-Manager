@@ -303,18 +303,20 @@ void loadMemos()
       <div>
         <h1 class="page-title">备忘录</h1>
       </div>
-      <n-space :size="10" align="center">
-        <span class="memo-font-size-label">字号</span>
-        <n-select
-          class="memo-font-size-select"
-          :value="fontSize"
-          :options="fontSizeOptions"
-          @update:value="changeFontSize"
-        />
-        <n-button type="primary" :loading="creating" :disabled="creating" @click="confirmCreate">
-          新建备忘录
-        </n-button>
-      </n-space>
+      <div class="page-actions">
+        <n-space :size="10" align="center">
+          <span class="memo-font-size-label">字号</span>
+          <n-select
+            class="memo-font-size-select"
+            :value="fontSize"
+            :options="fontSizeOptions"
+            @update:value="changeFontSize"
+          />
+          <n-button type="primary" :loading="creating" :disabled="creating" @click="confirmCreate">
+            新建备忘录
+          </n-button>
+        </n-space>
+      </div>
     </div>
 
     <n-card class="memo-card" :content-style="{ padding: '0' }">

@@ -542,11 +542,13 @@ onBeforeUnmount(() => {
       <div>
         <h1 class="page-title">周期性计划</h1>
       </div>
-      <n-space>
-        <n-button v-if="auth.can('purchase:write')" type="primary" @click="openCreate">
-          新建周期性计划
-        </n-button>
-      </n-space>
+      <div class="page-actions">
+        <n-space>
+          <n-button v-if="auth.can('purchase:write')" type="primary" @click="openCreate">
+            新建周期性计划
+          </n-button>
+        </n-space>
+      </div>
     </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">

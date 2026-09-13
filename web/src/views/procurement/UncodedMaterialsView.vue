@@ -150,20 +150,22 @@ function handleExport(key: string) {
       <div>
         <h1 class="page-title">未编码物资</h1>
       </div>
-      <n-space>
-        <ColumnVisibilityPicker
-          :value="visibleColumnKeys"
-          :options="fieldOptions"
-          storage-key="procurement.uncoded-materials.visible-columns.v1"
-          @update:value="setVisibleColumnKeys"
-        />
-        <ExportButton
-          :options="exportOptions"
-          :loading="exporting"
-          :disabled="!total"
-          @select="handleExport"
-        />
-      </n-space>
+      <div class="page-actions">
+        <n-space>
+          <ColumnVisibilityPicker
+            :value="visibleColumnKeys"
+            :options="fieldOptions"
+            storage-key="procurement.uncoded-materials.visible-columns.v1"
+            @update:value="setVisibleColumnKeys"
+          />
+          <ExportButton
+            :options="exportOptions"
+            :loading="exporting"
+            :disabled="!total"
+            @select="handleExport"
+          />
+        </n-space>
+      </div>
     </div>
     <n-card class="data-card">
       <n-data-table

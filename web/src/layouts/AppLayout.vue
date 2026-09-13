@@ -188,10 +188,16 @@ function onUserMenuSelect(key: string) {
           >
             <n-icon :size="20"><MenuOutline /></n-icon>
           </button>
-          <n-breadcrumb>
-            <n-breadcrumb-item v-if="!isMobile">备件管理</n-breadcrumb-item>
-            <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
-          </n-breadcrumb>
+          <!-- 顶栏标题：桌面端「系统名 / 上级 / 当前」，移动端只保留当前标题（宽度不够） -->
+          <div class="topbar-title">
+            <n-breadcrumb>
+              <n-breadcrumb-item v-if="!isMobile">备件管理</n-breadcrumb-item>
+              <n-breadcrumb-item v-if="!isMobile && route.meta.parent">
+                {{ route.meta.parent }}
+              </n-breadcrumb-item>
+              <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
+            </n-breadcrumb>
+          </div>
         </div>
         <div class="topbar-actions">
           <!-- 外观快捷切换：只做明暗切换，档位（自动 / 浅色 / 深色）在用户菜单的「外观」二级菜单里选 -->
@@ -299,6 +305,14 @@ function onUserMenuSelect(key: string) {
   min-width: 0;
   align-items: center;
   gap: 10px;
+}
+/* 标题区可压缩：窄屏时省略，不把右侧操作挤出屏幕 */
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+}
+.topbar-title .n-breadcrumb {
+  white-space: nowrap;
 }
 .topbar-actions {
   display: flex;

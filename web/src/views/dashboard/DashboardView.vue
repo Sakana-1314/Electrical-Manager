@@ -63,7 +63,9 @@ onMounted(load)
       <div>
         <h1 class="page-title">工作台</h1>
       </div>
-      <n-button @click="load">刷新数据</n-button>
+      <div class="page-actions">
+        <n-button @click="load">刷新数据</n-button>
+      </div>
     </div>
     <div class="stat-grid">
       <n-card v-for="card in cards" :key="card.label"

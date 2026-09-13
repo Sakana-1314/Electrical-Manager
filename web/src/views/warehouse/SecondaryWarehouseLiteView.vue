@@ -148,15 +148,17 @@ function onFileChange(event: Event) {
   <div class="page">
     <div class="page-header">
       <h1 class="page-title">二级库</h1>
-      <n-button
-        v-if="auth.can('warehouse:write')"
-        type="primary"
-        :loading="importing"
-        :disabled="importing"
-        @click="openFilePicker"
-      >
-        导入表格全量更新
-      </n-button>
+      <div class="page-actions">
+        <n-button
+          v-if="auth.can('warehouse:write')"
+          type="primary"
+          :loading="importing"
+          :disabled="importing"
+          @click="openFilePicker"
+        >
+          导入表格全量更新
+        </n-button>
+      </div>
       <input
         ref="fileInput"
         class="hidden-file-input"

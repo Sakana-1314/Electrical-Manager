@@ -152,6 +152,15 @@ a {
   gap: 16px 24px;
   padding: 2px 2px 0;
 }
+/* 页头右侧操作区：单个容器（不随标题换行），内部按钮在窄屏仍保持同一行 */
+.page-actions {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 3px;
+}
 .page-title {
   margin: 0;
   color: var(--color-text-strong);
@@ -396,8 +405,61 @@ a {
   .pagination-bar .n-pagination {
     flex-wrap: nowrap;
   }
+  /* 移动端顶栏面包屑已展示当前页面标题，内容区不再重复标题（详情页标题在顶栏里）；
+     页头只留操作区，下面这些按钮排成同一行，必要时压缩字号与内边距来容纳 */
   .page-title {
-    font-size: 21px;
+    display: none;
+  }
+  .page-header {
+    min-height: 0;
+    justify-content: flex-end;
+    /* 标题已隐藏，页头内只保留操作按钮，去掉与内容区的多余间距 */
+    padding: 0 2px;
+  }
+  /* 只隐藏「承载页面标题的容器」，不要误伤标题右侧的信息标签容器 */
+  .page-header > div:has(> .page-title),
+  .page-header > div:has(> div > .page-title) {
+    display: none;
+  }
+  .page-actions {
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  /* n-space 的内联样式是 flex-wrap: nowrap，这里只需让按钮本体不换行并压缩尺寸；
+     内容区按钮在窄屏必要时横向滑动，避免挤出屏幕或压成两行 */
+  /* 按钮组按内容宽度排成一行（不压缩），必要时由外层横向滑动承接 */
+  .page-actions > *,
+  .detail-toolbar > .n-space {
+    flex: none;
+    min-width: 0;
+  }
+  .page-actions,
+  .detail-toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .page-actions::-webkit-scrollbar,
+  .detail-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .page-header .n-button,
+  .detail-toolbar .n-button {
+    flex: none;
+    font-size: 13px;
+  }
+  .page-header .n-button .n-button__content,
+  .detail-toolbar .n-button .n-button__content {
+    font-size: 13px;
+  }
+  .page-header .n-button.n-button--medium-type,
+  .detail-toolbar .n-button.n-button--medium-type {
+    --n-padding: 0 11px;
+  }
+  .detail-toolbar {
+    gap: 10px 12px;
   }
 }
 

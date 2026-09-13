@@ -257,9 +257,11 @@ function rowProps(row: StockMaterial) {
       <div>
         <h1 class="page-title">物资档案</h1>
       </div>
-      <n-button v-if="auth.can('warehouse:write')" type="primary" @click="openCreate">
-        新建物资
-      </n-button>
+      <div class="page-actions">
+        <n-button v-if="auth.can('warehouse:write')" type="primary" @click="openCreate">
+          新建物资
+        </n-button>
+      </div>
     </div>
 
     <n-card class="filter-card" :bordered="false">

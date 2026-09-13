@@ -190,7 +190,9 @@ function remove(row: ManagedUser) {
       <div>
         <h1 class="page-title">管理端用户</h1>
       </div>
-      <n-button type="primary" @click="open()">新建用户</n-button>
+      <div class="page-actions">
+        <n-button type="primary" @click="open()">新建用户</n-button>
+      </div>
     </div>
     <n-card class="data-card"
       ><n-data-table
