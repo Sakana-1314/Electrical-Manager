@@ -2,9 +2,10 @@
 import { NButton } from 'naive-ui'
 
 /**
- * 移动端筛选折叠开关。
- * - 桌面端（>768px）默认隐藏：折叠/展开由全局 CSS 断点控制，桌面始终全量展示筛选。
- * - 移动端（≤768px）显示：点击在「更多筛选 / 收起筛选」间切换。
+ * 筛选区折叠开关（桌面端与移动端同一套行为）。
+ * - 筛选区默认只展示第一排常用条件，其余扩展字段（`.filter-extras-fields`）收起；
+ *   点击在「更多筛选 / 收起筛选」间切换。
+ * - 页面没有任何扩展字段时不要渲染本按钮（没有可展开的内容）。
  */
 defineProps<{ expanded: boolean }>()
 const emit = defineEmits<{ 'update:expanded': [value: boolean] }>()
