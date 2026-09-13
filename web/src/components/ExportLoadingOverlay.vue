@@ -29,13 +29,13 @@ defineProps<{ show: boolean }>()
   gap: 16px;
   padding: 28px 40px;
   border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+  background: var(--color-overlay-surface);
+  box-shadow: var(--shadow-card-strong);
 }
 
 .export-loading-text {
   margin: 0;
-  color: #4b5565;
+  color: var(--color-text);
   font-size: 14px;
 }
 </style>

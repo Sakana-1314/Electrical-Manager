@@ -126,7 +126,7 @@ function remove(index: number) {
   min-width: 680px;
 }
 .line-head {
-  color: #6b7280;
+  color: var(--color-text);
   font-size: 13px;
   padding: 0 4px;
 }

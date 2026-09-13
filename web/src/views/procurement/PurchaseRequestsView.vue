@@ -1104,17 +1104,23 @@ onMounted(() => {
       <div>
         <h1 class="page-title">申购记录</h1>
       </div>
-      <n-space align="center">
-        <n-button
-          v-if="auth.can('purchase:write')"
-          :disabled="!selectedRecords.length"
-          @click="openBatchEdit"
-        >
-          批量修改（{{ selectedRecords.length }}）
-        </n-button>
-        <n-tag :bordered="false" round type="info">共 {{ total }} 条记录</n-tag>
-        <ExportButton :options="exportOptions" :loading="resultExporting" @select="handleExport" />
-      </n-space>
+      <div class="page-actions">
+        <n-space align="center">
+          <n-button
+            v-if="auth.can('purchase:write')"
+            :disabled="!selectedRecords.length"
+            @click="openBatchEdit"
+          >
+            批量修改（{{ selectedRecords.length }}）
+          </n-button>
+          <n-tag :bordered="false" round type="info">共 {{ total }} 条记录</n-tag>
+          <ExportButton
+            :options="exportOptions"
+            :loading="resultExporting"
+            @select="handleExport"
+          />
+        </n-space>
+      </div>
     </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">
@@ -1821,7 +1827,7 @@ onMounted(() => {
 .filter-actions {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .filter-action-buttons {
@@ -1857,7 +1863,7 @@ onMounted(() => {
   margin-bottom: 18px;
   overflow: hidden;
   border-radius: 8px;
-  background: #f6f8fb;
+  background: var(--color-panel);
 }
 
 .edit-advanced-fields :deep(.n-collapse-item) {
@@ -1870,7 +1876,7 @@ onMounted(() => {
 }
 
 .edit-advanced-fields :deep(.n-collapse-item__header:hover) {
-  background: #eef2f9;
+  background: var(--color-panel-hover);
 }
 
 .edit-advanced-fields :deep(.n-collapse-item__content-inner) {
@@ -1882,7 +1888,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-weight: 500;
-  color: #4b5565;
+  color: var(--color-text);
 }
 
 .open-new-page-btn {

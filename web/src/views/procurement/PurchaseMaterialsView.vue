@@ -1074,18 +1074,20 @@ onBeforeUnmount(() => {
       <div>
         <h1 class="page-title">申购计划</h1>
       </div>
-      <n-space>
-        <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
-        <template v-if="auth.can('purchase:write')">
-          <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
-            批量修改（{{ selectedPlans.length }}）
-          </n-button>
-          <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
-            批量转为申购记录（{{ selectedPlans.length }}）
-          </n-button>
-          <n-button type="primary" @click="openCreate">新建申购计划</n-button>
-        </template>
-      </n-space>
+      <div class="page-actions">
+        <n-space>
+          <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
+          <template v-if="auth.can('purchase:write')">
+            <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
+              批量修改（{{ selectedPlans.length }}）
+            </n-button>
+            <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
+              批量转为申购记录（{{ selectedPlans.length }}）
+            </n-button>
+            <n-button type="primary" @click="openCreate">新建申购计划</n-button>
+          </template>
+        </n-space>
+      </div>
     </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">
@@ -1652,7 +1654,7 @@ onBeforeUnmount(() => {
   margin-bottom: 18px;
   overflow: hidden;
   border-radius: 8px;
-  background: #f6f8fb;
+  background: var(--color-panel);
 }
 
 .create-advanced-fields :deep(.n-collapse-item) {
@@ -1665,7 +1667,7 @@ onBeforeUnmount(() => {
 }
 
 .create-advanced-fields :deep(.n-collapse-item__header:hover) {
-  background: #eef2f9;
+  background: var(--color-panel-hover);
 }
 
 .create-advanced-fields :deep(.n-collapse-item__content-inner) {
@@ -1677,7 +1679,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   font-weight: 500;
-  color: #4b5565;
+  color: var(--color-text);
 }
 
 .open-new-page-btn {
@@ -1687,7 +1689,7 @@ onBeforeUnmount(() => {
 .filter-actions {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .filter-action-buttons {
@@ -1711,7 +1713,7 @@ onBeforeUnmount(() => {
   right: 6px;
   width: 28px;
   height: 28px;
-  color: #aeb7c4;
+  color: var(--color-status-icon);
 }
 
 .table-fullscreen-toggle::before {
@@ -1731,8 +1733,8 @@ onBeforeUnmount(() => {
 }
 
 .table-fullscreen-toggle:hover {
-  background: rgb(148 163 184 / 10%);
-  color: #8e99a8;
+  background: var(--color-status-icon-hover-bg);
+  color: var(--color-status-icon-hover);
 }
 
 .purchase-plan-table-area:fullscreen {

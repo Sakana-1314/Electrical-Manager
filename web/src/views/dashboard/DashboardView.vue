@@ -19,25 +19,25 @@ const cards = computed(() => [
     label: '库存物资',
     value: summary.value.stock_material_count,
     hint: '已建立档案的二级库物资',
-    color: '#3f63d8',
+    color: 'var(--color-primary)',
   },
   {
     label: '低库存',
     value: summary.value.low_stock_count,
     hint: '当前库存已达到预警阈值',
-    color: '#d94b64',
+    color: 'var(--color-danger)',
   },
   {
     label: '未编码物资',
     value: summary.value.uncoded_purchase_material_count,
     hint: '正常计划中待补录物料编码',
-    color: '#d99020',
+    color: 'var(--color-warning)',
   },
   {
     label: '申购记录',
     value: summary.value.purchase_record_count,
     hint: '已转入申购记录的物资明细',
-    color: '#229b6b',
+    color: 'var(--color-success)',
   },
 ])
 async function load() {
@@ -63,7 +63,9 @@ onMounted(load)
       <div>
         <h1 class="page-title">工作台</h1>
       </div>
-      <n-button @click="load">刷新数据</n-button>
+      <div class="page-actions">
+        <n-button @click="load">刷新数据</n-button>
+      </div>
     </div>
     <div class="stat-grid">
       <n-card v-for="card in cards" :key="card.label"

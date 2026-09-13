@@ -172,7 +172,7 @@ async function remove(file: FileObject) {
 .upload-trigger {
   width: 98px;
   height: 98px;
-  border: 1px dashed #b8c4df;
+  border: 1px dashed var(--color-dashed-border);
   border-radius: 10px;
   background: var(--color-surface);
   color: var(--color-text-muted);

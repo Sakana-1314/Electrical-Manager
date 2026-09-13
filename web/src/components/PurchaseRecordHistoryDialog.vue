@@ -225,14 +225,14 @@ watch(page, () => void load())
 }
 
 .filter-field > span {
-  color: #4b5565;
+  color: var(--color-text);
   font-size: 13px;
   font-weight: 500;
 }
 
 .filter-field :deep(.n-input) {
   width: 100%;
-  background-color: rgb(255 255 255 / 88%);
+  background-color: var(--color-field-surface);
 }
 
 .history-search-actions {

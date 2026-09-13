@@ -6,7 +6,7 @@
 | 后端单元测试 | `server/tests/unit/`、`server/tests/test_*.py` | 无网络、无 MySQL | 纯函数 / 服务逻辑 / schema / 标识符 / 日志 |
 | 后端集成测试 | `server/tests/integration/` | 内存 SQLite（`sqlite+aiosqlite:///:memory:`）+ `httpx.ASGITransport` | 真实路由、鉴权、权限、并发、状态流转 |
 | Schema 与文档契约 | `server/tests/test_init_sql.py`、`server/tests/test_error_code_docs.py` | 直接读文件 | 保证 `docs/references/database/init.sql`、错误码文档与代码不漂移 |
-| 前端单测 | `web/src/**/*.spec.ts`（27 个文件） | Vitest + jsdom | 组件、composable、工具函数、store、类型权限矩阵 |
+| 前端单测 | `web/src/**/*.spec.ts`（31 个文件） | Vitest + jsdom | 组件、composable、工具函数、store、类型权限矩阵 |
 接口契约另有独立门禁：CI 会重新导出 `docs/openapi.yaml` 与 `web/src/api/generated.raw.ts` 并校验无 diff，详见 [CI 工作流](#ci-工作流)。
 ## 后端测试套件
 `server/tests/` 共 38 个 `test_*.py` 文件：根目录 14 个、`unit/` 3 个、`integration/` 21 个；根目录另有 `conftest.py` 与 `__init__.py`（`unit/`、`integration/` 目录下无 `__init__.py`）。
@@ -146,7 +146,7 @@
 | 环境 | jsdom，全局 API 由 `web/tsconfig.app.json` 的 `types: ["vitest/globals"]` 提供 |
 | 配置文件 | `web/vitest.config.ts`（`vite.config.ts` 内没有 vitest 段）：`plugins: [vue()]`、`alias['@'] → ./src`、`define.__BUILD_TIME__`、`test.environment = 'jsdom'`、`test.setupFiles = ['./src/test/setup.ts']` |
 | setup | `web/src/test/setup.ts` 仅一条：`afterEach(() => vi.restoreAllMocks())` |
-| 用例数 | 27 个 `*.spec.ts` |
+| 用例数 | 31 个 `*.spec.ts` |
 
 | 文件 | 被测对象 | 关键用例 |
 | --- | --- | --- |
@@ -165,7 +165,10 @@
 | `web/src/composables/usePagedTable.spec.ts` | 分页表格 composable | 首屏加载、查询重置页码、翻页与页大小、重置筛选、空页回滚（含第 1 页不死循环）、分页关闭时固定页大小、无 `onError` 静默吞错、URL 同步、筛选类型正确 |
 | `web/src/config/env.spec.ts` | 构建环境配置 | 去除末尾斜杠、绝对地址拼接、后端地址补 API 路径、图床补图片接口路径、生成带令牌的 MCP 绝对地址 |
 | `web/src/constants/shareColumns.spec.ts` | 分享列常量 | 计划/记录列键与后端 Literal 一致、按类型返回列定义、默认列 = 全部列去掉「状态」 |
+| `web/src/layouts/appearanceMenu.spec.ts` | 用户菜单外观分组 | 「外观」分组含自动/浅色/深色三档且各带图标、当前档用对勾、档位 key 判定只认三档、按钮说明同时给出档位与明暗 |
 | `web/src/stores/settings.spec.ts` | settings store（二级库模式） | 未加载默认完整模式、load 后精简/完整、请求失败回落完整模式、只拉取一次 |
+| `web/src/stores/theme.spec.ts` | theme store（界面外观） | 默认 auto 跟随系统、启动即写 html 属性、切深色落本地并同步 html/color-scheme、切回 auto、刷新读回已保存档位、非法档位回落 auto |
+| `web/src/utils/themeMode.spec.ts` | 外观偏好工具 | 缺省 auto、三档识别、非法值回落、写入归一化、存储不可用静默降级 |
 | `web/src/types/navigation.spec.ts` | 四角色权限矩阵 | 超管全写、仓库仅仓库域、申购仅申购域、只读无写权限 |
 | `web/src/utils/decimal.spec.ts` | Decimal 工具 | 不经浮点比较大数与 1 位小数、按位校验正数量、出库后库存精确计算 |
 | `web/src/utils/download.spec.ts` | 下载工具 | RFC 5987 `filename*`、普通引号文件名、空头返回 null、优先服务端文件名、缺头回退、锚点点击下载、地址拼接 |

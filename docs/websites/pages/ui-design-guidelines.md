@@ -12,25 +12,37 @@
 
 ## 设计令牌
 
-令牌维护在 `web/src/theme.ts` 与 `web/src/styles.css`。
+令牌维护在 `web/src/theme.ts`（Naive UI 组件覆盖，明暗两套调色板）与 `web/src/styles.css`
+（全局样式与 CSS 变量）。**下表的色值是浅色档**；深色档在 `styles.css` 的 `[data-theme='dark']` 里逐项覆盖，
+两套同名同义，页面只引用变量、不写死颜色。
 
-| 用途 | 变量 | 色值 |
-| --- | --- | --- |
-| 主色 | `--color-primary` | `#3f63d8` |
-| 主色悬停 | `--color-primary-hover` | `#5376e4` |
-| 主色浅背景 | `--color-primary-soft` | `#edf2ff` |
-| 成功 | `--color-success` | `#229b6b` |
-| 警告 | `--color-warning` | `#d99020` |
-| 危险 | `--color-danger` | `#d94b64` |
-| 强文本 | `--color-text-strong` | `#172033` |
-| 正文 | `--color-text` | `#4b5565` |
-| 弱文本 | `--color-text-muted` | `#7d8798` |
-| 页面背景 | `--color-bg` | `#f4f6fa` |
-| 卡片背景 | `--color-surface` | `#ffffff` |
-| 弱化背景 | `--color-surface-soft` | `#f8faff` |
-| 中性底色 | `--color-surface-muted` | `#ebedef` |
-| 边框 | `--color-border` | `#e2e7ef` |
-| 弱边框 | `--color-border-subtle` | `#edf0f5` |
+| 用途 | 变量 | 浅色档 | 深色档 |
+| --- | --- | --- | --- |
+| 主色 | `--color-primary` | `#3f63d8` | `#6b8cf0` |
+| 主色悬停 | `--color-primary-hover` | `#5376e4` | `#86a2f5` |
+| 主色浅背景 | `--color-primary-soft` | `#edf2ff` | `#232f4a` |
+| 主色浅边框 | `--color-primary-border` | `#dce5ff` | `#33456f` |
+| 浅底上的主色文字 | `--color-primary-strong-text` | `#3658c7` | `#9fb5ff` |
+| 成功 | `--color-success` | `#229b6b` | `#3fbf8a` |
+| 警告 | `--color-warning` | `#d99020` | `#e0a83f` |
+| 危险 | `--color-danger` | `#d94b64` | `#f27289` |
+| 强文本 | `--color-text-strong` | `#172033` | `#e6eaf2` |
+| 正文 | `--color-text` | `#4b5565` | `#aeb8c9` |
+| 弱文本 | `--color-text-muted` | `#7d8798` | `#8791a3` |
+| 页面背景 | `--color-bg` | `#f4f6fa` | `#13171d` |
+| 卡片背景 | `--color-surface` | `#ffffff` | `#191e26` |
+| 弱化背景 | `--color-surface-soft` | `#f8faff` | `#1c222b` |
+| 中性底色 | `--color-surface-muted` | `#ebedef` | `#20262f` |
+| 边框 | `--color-border` | `#e2e7ef` | `#333b47` |
+| 弱边框 | `--color-border-subtle` | `#edf0f5` | `#2a313b` |
+| 表头背景 / 文字 | `--color-table-header` / `--color-table-header-text` | `#f7f9fc` / `#3d4758` | `#1e242d` / `#c9d1de` |
+| 行悬停 | `--color-table-row-hover` | `#f4f7ff` | `#212936` |
+| 局部面板底色 / 悬停 | `--color-panel` / `--color-panel-hover` | `#f6f8fb` / `#eef2f9` | `#1e242d` / `#262e39` |
+| 表单控件底色 | `--color-field-surface` | `rgb(255 255 255 / 88%)` | `rgb(30 36 45 / 88%)` |
+| 顶栏半透明底 | `--color-surface-translucent` | `rgb(255 255 255 / 92%)` | `rgb(25 30 38 / 92%)` |
+| 页面底色光晕 | `--page-glow` | 主色 4% 径向光晕 | 主色 8% 径向光晕 |
+| 详情页 Hero 底 | `--color-hero` | 白→浅蓝渐变 | 深灰→深蓝灰渐变 |
+| 加载遮罩底 / 卡片 | `--color-mask-surface` / `--color-overlay-surface` | 半透明浅灰 / `#ffffff` | 半透明深灰 / `#1e242d` |
 
 | 项 | 值 |
 | --- | --- |
@@ -45,6 +57,18 @@
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
 `--color-surface-muted`，不用蓝色系底色。
 
+## 界面外观（明 / 暗）
+
+| 项 | 要求 |
+| --- | --- |
+| 档位 | 三档：`auto`（自动，跟随系统，默认）、`light`（浅色）、`dark`（深色）；档位存浏览器本地 `theme.mode`，不落库、不产生请求 |
+| 入口 | 顶栏用户下拉里的「外观」分组（二级菜单三档，当前档用勾选标记）；顶栏另有一个只切明暗的快捷按钮，图标反映当前实际外观 |
+| 解析 | `auto` 时用 `prefers-color-scheme` 实时判断；用户显式选择后固定该档，覆盖系统设置，刷新与换页都保持 |
+| 落地 | 解析结果写到 `<html data-theme="light|dark">` 与 `color-scheme`；`styles.css` 的颜色令牌按该属性整套切换；Naive UI 组件由 `n-config-provider` 同时切到 `darkTheme` + 深色调色板覆盖 |
+| 首屏 | `index.html` 在入口脚本前用同一规则预置 `data-theme`，避免刷新时先浅后深的闪烁；app 启动后再由 store 校正 |
+| 新增样式 | 只引用上文令牌，不写死颜色；确需新颜色时先在设计令牌表里加一组浅 / 深值，再引用变量 |
+
+
 ## 页面结构
 
 ### 页头
@@ -54,7 +78,9 @@
   <div>
     <h1 class="page-title">页面标题</h1>
   </div>
-  <n-space>页面操作</n-space>
+  <div class="page-actions">
+    <n-space>页面操作</n-space>
+  </div>
 </div>
 ```
 
@@ -63,6 +89,18 @@
 | 列表页 | 不使用 `page-subtitle` |
 | 详情页 | 标题下可显示一行关键元数据（编号、状态、时间、型号），最多一行 |
 | 业务规则 | 放进对应卡片、表单提示或 `n-alert`，不写在页头 |
+| 操作区容器 | 页头右侧控件统一放进 `.page-actions`（不直接与标题同级），便于窄屏统一压缩；隐藏的 `file input` 随按钮放在容器内即可 |
+| 移动端标题 | 顶栏已展示当前页面标题，**移动端隐藏内容区标题**（`.page-title`），只留操作区；桌面端内容区标题保持展示 |
+| 移动端操作区 | 页头多个按钮必须排在同一行：`styles.css` 里统一把 `.page-actions` 内按钮字号压到 13px、内边距收窄，按钮组按内容宽度不压缩，超出时由操作区横向滑动承接，不换行、不把页面撑宽 |
+
+### 顶栏标题（面包屑）
+
+| 项 | 要求 |
+| --- | --- |
+| 层级 | 标题层级由路由 `meta.title` + `meta.parent` 提供：桌面端展示「备件管理 / 上级 / 当前」，移动端只展示当前标题（宽度不够） |
+| 上级取值 | 二级条目用所属菜单分组名（二级库 / 申购管理 / 系统管理），详情页与操作页用所属列表页标题或所属入口标题，让“能返回哪里”一眼可读 |
+| 浏览器标题 | 与面包屑同源：`meta.parent / meta.title - HXNI 电气无忧`，不另外拼一套文案 |
+| 详情页 | 详情页标题用短名（如「物资详情」），避免与上级标题重复成「物资档案 / 物资档案」 |
 
 ### 卡片与筛选区
 
@@ -71,8 +109,9 @@
 | 卡片 | 页面内容统一 `n-card`；筛选卡片加 `filter-card`（轻微蓝灰渐变），数据表卡片加 `data-card`；不在单页重设圆角/阴影/边框 |
 | 简单筛选 | `filter-bar`，控件间距 `10px` |
 | 多条件筛选 | 用栅格形式，保留一个“筛选条件”标题 |
+| 筛选折叠 | 桌面端与移动端一致：默认只展示第一排常用条件；次要条件放进 `.filter-extras-fields`，由筛选卡片标题右侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面不自己写折叠逻辑，也不给折叠按钮加断点显示规则 |
 | 文本搜索 | 多关键词用半角 `|` 表示“或”（兼容全角 `｜`）；同一输入框内按 OR，不同控件之间按 AND；不在占位文字里重复该规则 |
-| 按钮 | 主按钮为“查询”，重置为次按钮并与查询相邻 |
+| 按钮 | 主按钮为“查询”，重置为次按钮并与查询相邻；查询/重置不受筛选折叠影响，始终可见 |
 
 ### 数据表格
 
@@ -114,6 +153,8 @@
 | 结构 | “用户名 + 角色”两级文字，用户名为主要信息，角色用弱文本 |
 | 头像 | 系统无头像能力时不显示首字母或占位头像 |
 | 样式 | 默认轻量，仅悬停与键盘聚焦时用主色浅背景 + 弱边框；保留下拉的可交互状态与焦点样式 |
+| 下拉内容 | 先「外观」分组（自动 / 浅色 / 深色，当前档勾选），分隔线之后是「退出登录」 |
+| 外观快捷键 | 顶栏账号左侧一个弱图标按钮，只切明暗（深色↔浅色），图标与无障碍说明反映当前档位与实际外观 |
 
 ### 二级库信息分工
 
@@ -185,6 +226,7 @@
 | 颜色 | 优先用 CSS 变量或主题令牌，避免新增硬编码色值 |
 | 组件复用 | 新增重复 UI 前先查 `web/src/components` 是否已有可复用组件 |
 | 图标 | `NIcon` + `@vicons/ionicons5`（如 `web/src/layouts/AppLayout.vue` 侧栏），不手写内联 SVG 或字符占位；尺寸与居中交给组件库（`collapsed-icon-size` / `icon-size`），不用 margin/padding 手工微调 |
+| 菜单图标 | **只给一级菜单项配图标**：侧栏折叠时只渲染一级图标，二级项图标永远不会出现，加了只是多余噪音；二级项靠缩进区分层级 |
 
 ## 变更检查清单
 
@@ -194,5 +236,5 @@
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`
-- [ ] 图标来自 `NIcon` + `@vicons/ionicons5`，折叠态菜单图标居中
+- [ ] 图标来自 `NIcon` + `@vicons/ionicons5`，折叠态菜单图标居中；二级菜单项没有多余图标
 - [ ] 通过 `npm run build`、`npm run test`、`npm run lint`

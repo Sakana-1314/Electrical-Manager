@@ -384,7 +384,7 @@ const tableScrollX = getTableScrollX(columns)
   place-items: center;
   border: 1.5px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .column-card.selected .column-card-check {
@@ -395,6 +395,7 @@ const tableScrollX = getTableScrollX(columns)
 .column-card-check-icon {
   width: 10px;
   height: 6px;
+  /* 勾选态底色是主色，勾选记号固定用白色，深色下同样清晰 */
   border-left: 2px solid #fff;
   border-bottom: 2px solid #fff;
   transform: rotate(-45deg) translateY(-1px);

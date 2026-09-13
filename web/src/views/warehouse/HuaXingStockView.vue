@@ -196,15 +196,17 @@ function onFileChange(event: Event) {
   <div class="page">
     <div class="page-header">
       <h1 class="page-title">华星总库存</h1>
-      <n-button
-        v-if="auth.can('warehouse:write')"
-        type="primary"
-        :loading="importing"
-        :disabled="importing"
-        @click="openFilePicker"
-      >
-        导入表格全量更新
-      </n-button>
+      <div class="page-actions">
+        <n-button
+          v-if="auth.can('warehouse:write')"
+          type="primary"
+          :loading="importing"
+          :disabled="importing"
+          @click="openFilePicker"
+        >
+          导入表格全量更新
+        </n-button>
+      </div>
       <input
         ref="fileInput"
         class="hidden-file-input"
@@ -335,7 +337,7 @@ function onFileChange(event: Event) {
 .filter-actions {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .filter-action-buttons {

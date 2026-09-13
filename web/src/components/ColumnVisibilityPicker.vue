@@ -89,7 +89,7 @@ watch(() => props.value, persistColumns, { deep: true })
 }
 
 .column-picker-header span {
-  color: #8a919f;
+  color: var(--color-text-muted);
   font-size: 12px;
 }
 

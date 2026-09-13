@@ -1,7 +1,7 @@
 :root {
   font-family: Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  color: #172033;
-  background: #f4f6fa;
+  color: var(--color-text-strong);
+  background: var(--color-bg);
   font-synthesis: none;
   --color-primary: #3f63d8;
   --color-primary-hover: #5376e4;
@@ -30,6 +30,96 @@
   --filter-col-min-width: 240px;
   --filter-grid-gap: 16px;
   --filter-field-label-gap: 7px;
+  /* 表格：与 Naive UI DataTable 的表头 / 行悬停保持一致（明暗各一套） */
+  --color-table-header: #f7f9fc;
+  --color-table-header-text: #3d4758;
+  --color-table-row-hover: #f4f7ff;
+  /* 折叠面板、内嵌面板等局部中性底色 */
+  --color-panel: #f6f8fb;
+  --color-panel-hover: #eef2f9;
+  /* 表单控件在卡片上的底色（半透明覆盖，明暗都不突兀） */
+  --color-field-surface: rgb(255 255 255 / 88%);
+  /* 主色系浅边框（顶栏按钮、Hero 卡片） */
+  --color-primary-border: #dce5ff;
+  /* 主色浅底文字（Hero 卡片标题、小程序码 key 等），深色下需要用更亮的蓝 */
+  --color-primary-strong-text: #3658c7;
+  /* 主色渐变的 Hero 卡片底色 */
+  --color-hero: linear-gradient(135deg, #ffffff 0%, #f5f8ff 100%);
+  /* 表格全屏切换等弱图标按钮（图标与悬停底色） */
+  --color-status-icon: #aeb7c4;
+  --color-status-icon-hover: #8e99a8;
+  --color-status-icon-hover-bg: rgb(148 163 184 / 10%);
+  /* 账号/条件选择器里的次级文案 */
+  --color-text-subtle: #8a919f;
+  /* 页面背景上的主色光晕（工作台、登录页），浅色几乎不可见、深色下做氛围底色 */
+  --page-glow: radial-gradient(circle at 100% 0%, rgb(63 99 216 / 7%), transparent 32%);
+  /* 顶栏 / 卡片表面的半透明底色（配合 backdrop-filter） */
+  --color-surface-translucent: rgb(255 255 255 / 92%);
+  /* 卡片阴影在深色下需要更重才能区分层次 */
+  --shadow-card-strong: 0 18px 44px rgb(15 23 42 / 10%);
+  --shadow-hero: 0 14px 34px rgb(43 67 133 / 8%);
+  /* 局部加载遮罩的卡片底色 */
+  --color-overlay-surface: #ffffff;
+  --overlay-scrim: rgb(23 32 51 / 45%);
+  /* 虚线交互区域（图片上传） */
+  --color-dashed-border: #b8c4df;
+  /* 深色下二维码需要白底才能被扫描，浅色与卡片同色 */
+  --color-scan-surface: #ffffff;
+  /* 品牌装饰渐变（登录页左侧栏、分享页品牌点） */
+  --gradient-brand: linear-gradient(145deg, #2947a6, #5579e7);
+  --gradient-brand-dot: linear-gradient(135deg, #2f6fed, #5aa9ff);
+}
+
+/* ============ 深色外观令牌 ============
+ * 由「自动（跟随系统）/ 深色」解析后写在 <html data-theme="dark"> 上（见 stores/theme.ts），
+ * 首屏由 index.html 的预置脚本先行写入。此处只覆盖颜色 / 阴影 / 渐变类令牌，
+ * 尺寸、圆角、间距等结构性令牌与浅色共用一套。
+ * Naive UI 组件自身的深色由 n-config-provider 的 darkTheme + theme.ts 覆盖值负责。 */
+[data-theme='dark'] {
+  color: #e6eaf2;
+  background: #13171d;
+  --color-primary: #6b8cf0;
+  --color-primary-hover: #86a2f5;
+  --color-primary-soft: #232f4a;
+  --color-primary-soft-hover: #2a3757;
+  --color-success: #3fbf8a;
+  --color-warning: #e0a83f;
+  --color-danger: #f27289;
+  --color-text-strong: #e6eaf2;
+  --color-text: #aeb8c9;
+  --color-text-muted: #8791a3;
+  --color-bg: #13171d;
+  --color-surface: #191e26;
+  --color-surface-soft: #1c222b;
+  --color-surface-muted: #20262f;
+  --color-border: #333b47;
+  --color-border-subtle: #2a313b;
+  --color-mask-surface: rgb(24 28 35 / 62%);
+  --shadow-card: 0 8px 24px rgb(0 0 0 / 32%);
+  --shadow-card-hover: 0 12px 30px rgb(0 0 0 / 42%);
+  --color-table-header: #1e242d;
+  --color-table-header-text: #c9d1de;
+  --color-table-row-hover: #212936;
+  --color-panel: #1e242d;
+  --color-panel-hover: #262e39;
+  --color-field-surface: rgb(30 36 45 / 88%);
+  --color-primary-border: #33456f;
+  --color-primary-strong-text: #9fb5ff;
+  --color-hero: linear-gradient(135deg, #1c222b 0%, #1a2130 100%);
+  --color-status-icon: #6b7687;
+  --color-status-icon-hover: #98a3b4;
+  --color-status-icon-hover-bg: rgb(148 163 184 / 14%);
+  --color-text-subtle: #98a2b3;
+  --page-glow: radial-gradient(circle at 100% 0%, rgb(107 140 240 / 8%), transparent 32%);
+  --color-surface-translucent: rgb(25 30 38 / 92%);
+  --shadow-card-strong: 0 18px 44px rgb(0 0 0 / 45%);
+  --shadow-hero: 0 14px 34px rgb(0 0 0 / 35%);
+  --color-overlay-surface: #1e242d;
+  --overlay-scrim: rgb(6 9 13 / 62%);
+  --color-dashed-border: #46536b;
+  --color-scan-surface: #ffffff;
+  --gradient-brand: linear-gradient(145deg, #1f3a86, #2f55c4);
+  --gradient-brand-dot: linear-gradient(135deg, #4a86ff, #7ab8ff);
 }
 * {
   box-sizing: border-box;
@@ -39,6 +129,8 @@ body {
   min-width: 0;
   min-height: 100vh;
   background: var(--color-bg);
+  /* 明暗切换时不做整页动画过渡，只让底色跟随，避免大面积闪烁 */
+  color: var(--color-text);
 }
 a {
   color: inherit;
@@ -59,6 +151,15 @@ a {
   flex-wrap: wrap;
   gap: 16px 24px;
   padding: 2px 2px 0;
+}
+/* 页头右侧操作区：单个容器（不随标题换行），内部按钮在窄屏仍保持同一行 */
+.page-actions {
+  display: flex;
+  flex: none;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 3px;
 }
 .page-title {
   margin: 0;
@@ -111,12 +212,12 @@ a {
   padding-top: 18px;
 }
 .page .n-data-table-th {
-  background-color: #f7f9fc;
-  color: #3d4758;
+  background-color: var(--color-table-header);
+  color: var(--color-table-header-text);
   font-weight: 600;
 }
 .page .n-data-table-tr:hover .n-data-table-td {
-  background-color: #f4f7ff;
+  background-color: var(--color-table-row-hover);
 }
 .table-scroll {
   width: 100%;
@@ -182,7 +283,7 @@ a {
   width: 100%;
 }
 .filter-field .n-input {
-  background-color: rgb(255 255 255 / 88%);
+  background-color: var(--color-field-surface);
 }
 /* 筛选区头部右侧操作（如「已启用 N 项」标签与折叠开关） */
 .filter-heading-actions {
@@ -191,13 +292,17 @@ a {
   align-items: center;
   gap: 8px;
 }
-/* 筛选折叠开关：桌面端隐藏（筛选始终全量展示），仅在移动端断点内显示 */
+/* 筛选折叠开关：桌面端与移动端一致——筛选区只默认展示第一排常用条件，
+   其余（`.filter-extras-fields`）通过本开关展开；没有扩展字段的页面不渲染本按钮。 */
 .filter-collapse-btn {
+  display: inline-flex;
+}
+/* 扩展筛选字段：展开时按 `display: contents` 内联参与外层筛选网格的自动填充（不额外换行），
+   收起时整组隐藏——桌面端与移动端同一套行为。 */
+.filter-extras-fields {
   display: none;
 }
-/* 扩展筛选字段与操作栏：桌面端始终参与原布局（扩展字段以内联方式
-   参与外层筛选网格的自动填充，不额外换行），移动端默认收起由下方断点控制 */
-.filter-extras-fields {
+.filter-extras-fields.filter-extras-open {
   display: contents;
 }
 .filter-extras-actions {
@@ -288,17 +393,8 @@ a {
   .filter-actions > button {
     width: 100%;
   }
-  /* 移动端筛选区默认收起：仅保留名称+型号等常用字段与查询/重置操作栏，
-     其余字段经「更多筛选」展开 */
-  .filter-collapse-btn {
-    display: inline-flex;
-  }
-  .filter-extras-fields {
-    display: none;
-  }
-  .filter-extras-fields.filter-extras-open {
-    display: contents;
-  }
+  /* 折叠开关与扩展字段的收起/展开规则与桌面端共用（见上方 .filter-collapse-btn /
+     .filter-extras-fields），移动端只需处理按钮组与分页的窄屏排版 */
   /* 分页器过宽时允许横向滑动，避免挤压溢出 */
   .pagination-bar {
     justify-content: flex-start;
@@ -309,8 +405,61 @@ a {
   .pagination-bar .n-pagination {
     flex-wrap: nowrap;
   }
+  /* 移动端顶栏面包屑已展示当前页面标题，内容区不再重复标题（详情页标题在顶栏里）；
+     页头只留操作区，下面这些按钮排成同一行，必要时压缩字号与内边距来容纳 */
   .page-title {
-    font-size: 21px;
+    display: none;
+  }
+  .page-header {
+    min-height: 0;
+    justify-content: flex-end;
+    /* 标题已隐藏，页头内只保留操作按钮，去掉与内容区的多余间距 */
+    padding: 0 2px;
+  }
+  /* 只隐藏「承载页面标题的容器」，不要误伤标题右侧的信息标签容器 */
+  .page-header > div:has(> .page-title),
+  .page-header > div:has(> div > .page-title) {
+    display: none;
+  }
+  .page-actions {
+    min-width: 0;
+    max-width: 100%;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  /* n-space 的内联样式是 flex-wrap: nowrap，这里只需让按钮本体不换行并压缩尺寸；
+     内容区按钮在窄屏必要时横向滑动，避免挤出屏幕或压成两行 */
+  /* 按钮组按内容宽度排成一行（不压缩），必要时由外层横向滑动承接 */
+  .page-actions > *,
+  .detail-toolbar > .n-space {
+    flex: none;
+    min-width: 0;
+  }
+  .page-actions,
+  .detail-toolbar {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .page-actions::-webkit-scrollbar,
+  .detail-toolbar::-webkit-scrollbar {
+    display: none;
+  }
+  .page-header .n-button,
+  .detail-toolbar .n-button {
+    flex: none;
+    font-size: 13px;
+  }
+  .page-header .n-button .n-button__content,
+  .detail-toolbar .n-button .n-button__content {
+    font-size: 13px;
+  }
+  .page-header .n-button.n-button--medium-type,
+  .detail-toolbar .n-button.n-button--medium-type {
+    --n-padding: 0 11px;
+  }
+  .detail-toolbar {
+    gap: 10px 12px;
   }
 }
 

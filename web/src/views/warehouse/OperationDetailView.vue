@@ -358,9 +358,9 @@ onMounted(load)
 
 <style scoped>
 .operation-hero {
-  border: 1px solid #dce5ff;
-  background: linear-gradient(135deg, #ffffff 0%, #f5f8ff 100%);
-  box-shadow: 0 14px 34px rgba(43, 67, 133, 0.08);
+  border: 1px solid var(--color-primary-border);
+  background: var(--color-hero);
+  box-shadow: 0 14px 34px var(--shadow-hero);
 }
 
 .operation-hero-layout {
@@ -375,7 +375,7 @@ onMounted(load)
 }
 
 .operation-eyebrow {
-  color: #5670c9;
+  color: var(--color-primary-hover);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -390,7 +390,7 @@ onMounted(load)
 
 .operation-title-row h1 {
   margin: 0;
-  color: #172033;
+  color: var(--color-text-strong);
   font-size: clamp(24px, 3vw, 34px);
   line-height: 1.25;
 }
@@ -401,12 +401,12 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   margin-top: 16px;
-  color: #707b8f;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .operation-meta-row strong {
-  color: #364153;
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -414,27 +414,27 @@ onMounted(load)
   width: 1px;
   height: 14px;
   margin: 0 4px;
-  background: #d9dfeb;
+  background: var(--color-border);
 }
 
 .operation-line-count {
   flex: none;
   min-width: 132px;
   padding: 18px 24px;
-  border: 1px solid #dce5ff;
+  border: 1px solid var(--color-primary-border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--color-surface-translucent);
   text-align: center;
 }
 
 .operation-line-count > span {
-  color: #748096;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .operation-line-count div {
   margin-top: 4px;
-  color: #3658c7;
+  color: var(--color-primary-strong-text);
 }
 
 .operation-line-count strong {

@@ -3,39 +3,34 @@ import { computed, h, ref, type Component as VueComponent } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
 import {
-  AlertCircleOutline,
-  ArrowDownCircleOutline,
-  ArrowUpCircleOutline,
-  BarcodeOutline,
   BusinessOutline,
-  CalendarOutline,
   CartOutline,
-  ClipboardOutline,
   CubeOutline,
   DocumentTextOutline,
-  FolderOpenOutline,
   GridOutline,
-  InformationCircleOutline,
-  LinkOutline,
+  LogOutOutline,
   MenuOutline,
-  OptionsOutline,
-  PeopleOutline,
-  PhonePortraitOutline,
-  ReceiptOutline,
-  SearchOutline,
+  MoonOutline,
   SettingsOutline,
-  SwapHorizontalOutline,
+  SunnyOutline,
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { useThemeStore } from '@/stores/theme'
 import { roleLabels } from '@/types/navigation'
+import {
+  appearanceButtonLabel,
+  buildThemeMenuGroup,
+  isThemeModeKey,
+} from '@/layouts/appearanceMenu'
 import { LOGO_URL } from '@/constants/branding'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
+const theme = useThemeStore()
 const collapsed = ref(false)
 // 移动端断点：≤768px 时侧边栏切换为抽屉导航
 const isMobile = useMediaQuery('(max-width: 768px)')
@@ -46,10 +41,14 @@ const closeDrawer = () => {
 /** 统一用组件库图标（Naive UI 的 NIcon + @vicons/ionicons5），尺寸与居中由 n-menu 控制。 */
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
-const link = (label: string, name: string, icon: VueComponent) => ({
+/**
+ * 导航项：一级项给 icon，二级项不给——侧栏折叠时只显示一级图标，
+ * 二级项图标永远看不到，加了只是多余噪音（展开态也靠缩进区分层级）。
+ */
+const link = (label: string, name: string, icon?: VueComponent): MenuOption => ({
   label: () => h(RouterLink, { to: { name }, onClick: closeDrawer }, { default: () => label }),
   key: name,
-  icon: renderIcon(icon),
+  ...(icon ? { icon: renderIcon(icon) } : {}),
 })
 
 const menuOptions = computed<MenuOption[]>(() => {
@@ -66,15 +65,10 @@ const menuOptions = computed<MenuOption[]>(() => {
       key: 'warehouse-group',
       icon: renderIcon(CubeOutline),
       children: [
-        link('库存查询', 'stock', SearchOutline),
-        link('物资档案', 'stock-materials', FolderOpenOutline),
-        link('操作记录', 'operations', SwapHorizontalOutline),
-        ...(auth.can('warehouse:write')
-          ? [
-              link('入库', 'inbound', ArrowDownCircleOutline),
-              link('出库', 'outbound', ArrowUpCircleOutline),
-            ]
-          : []),
+        link('库存查询', 'stock'),
+        link('物资档案', 'stock-materials'),
+        link('操作记录', 'operations'),
+        ...(auth.can('warehouse:write') ? [link('入库', 'inbound'), link('出库', 'outbound')] : []),
       ],
     })
   }
@@ -84,11 +78,11 @@ const menuOptions = computed<MenuOption[]>(() => {
     key: 'procurement-group',
     icon: renderIcon(CartOutline),
     children: [
-      link('申购计划', 'purchase-materials', ClipboardOutline),
-      link('周期性计划', 'purchase-plan-templates', CalendarOutline),
-      link('未编码物资', 'uncoded-materials', AlertCircleOutline),
-      link('物料编码库', 'material-code-library', BarcodeOutline),
-      link('申购记录', 'purchase-records', ReceiptOutline),
+      link('申购计划', 'purchase-materials'),
+      link('周期性计划', 'purchase-plan-templates'),
+      link('未编码物资', 'uncoded-materials'),
+      link('物料编码库', 'material-code-library'),
+      link('申购记录', 'purchase-records'),
     ],
   })
   if (auth.can('settings:write'))
@@ -97,11 +91,11 @@ const menuOptions = computed<MenuOption[]>(() => {
       key: 'settings-group',
       icon: renderIcon(SettingsOutline),
       children: [
-        link('管理端用户', 'users', PeopleOutline),
-        link('小程序用户', 'mini-program-users', PhonePortraitOutline),
-        link('高级设置', 'advanced-settings', OptionsOutline),
-        link('分享链接', 'share-links', LinkOutline),
-        link('关于', 'about', InformationCircleOutline),
+        link('管理端用户', 'users'),
+        link('小程序用户', 'mini-program-users'),
+        link('高级设置', 'advanced-settings'),
+        link('分享链接', 'share-links'),
+        link('关于', 'about'),
       ],
     })
   return items
@@ -110,6 +104,34 @@ const menuOptions = computed<MenuOption[]>(() => {
 function logout() {
   auth.logout()
   void router.push({ name: 'login' })
+}
+
+/* ============ 顶栏用户下拉：外观（自动 / 浅色 / 深色） ============
+ * 一级分组为「外观」，二级菜单是三个档位；当前档位显示对勾，
+ * 顶栏按钮图标同步反映当前实际外观（跟随系统的深色也显示月亮）——
+ * 这样不展开菜单也能一眼看出当前是深色还是浅色。菜单结构在 appearanceMenu.ts（有单测）。 */
+
+const currentThemeIcon = computed(() => (theme.isDark ? MoonOutline : SunnyOutline))
+const currentThemeLabel = computed(() => appearanceButtonLabel(theme.mode, theme.isDark))
+
+/** 顶栏快捷切换：只切明暗——当前是深色就固定浅色，当前是浅色就固定深色（含「自动」档下的实际外观）。 */
+function toggleAppearance() {
+  theme.setMode(theme.isDark ? 'light' : 'dark')
+}
+
+const userMenuOptions = computed<MenuOption[]>(() => [
+  ...buildThemeMenuGroup(theme.mode, renderIcon),
+  { type: 'divider', key: 'logout-divider' },
+  { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
+])
+
+/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）。 */
+function onUserMenuSelect(key: string) {
+  if (key === 'logout') {
+    logout()
+    return
+  }
+  if (isThemeModeKey(key)) theme.setMode(key)
 }
 </script>
 
@@ -128,7 +150,7 @@ function logout() {
     >
       <div class="brand" :class="{ compact: collapsed }">
         <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
-        <span v-if="!collapsed">电气车间备件</span>
+        <span v-if="!collapsed">HXNI 电气无忧</span>
       </div>
       <n-menu
         :collapsed="collapsed"
@@ -150,22 +172,44 @@ function logout() {
           >
             <n-icon :size="20"><MenuOutline /></n-icon>
           </button>
-          <n-breadcrumb>
-            <n-breadcrumb-item v-if="!isMobile">备件管理</n-breadcrumb-item>
-            <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
-          </n-breadcrumb>
+          <!-- 顶栏标题：桌面端「系统名 / 上级 / 当前」，移动端只保留当前标题（宽度不够） -->
+          <div class="topbar-title">
+            <n-breadcrumb>
+              <n-breadcrumb-item v-if="!isMobile">备件管理</n-breadcrumb-item>
+              <n-breadcrumb-item v-if="!isMobile && route.meta.parent">
+                {{ route.meta.parent }}
+              </n-breadcrumb-item>
+              <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
+            </n-breadcrumb>
+          </div>
         </div>
-        <n-dropdown :options="[{ label: '退出登录', key: 'logout' }]" @select="logout">
-          <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
-            <span class="user-summary">
-              <span class="user-name">{{ auth.user?.display_name || auth.user?.username }}</span>
-              <span v-if="!isMobile" class="user-role">{{
-                auth.user ? roleLabels[auth.user.role] : ''
-              }}</span>
-            </span>
-            <span class="user-menu-caret" aria-hidden="true" />
-          </button>
-        </n-dropdown>
+        <div class="topbar-actions">
+          <!-- 外观快捷切换：只做明暗切换，档位（自动 / 浅色 / 深色）在用户菜单的「外观」二级菜单里选 -->
+          <n-tooltip :delay="300">
+            <template #trigger>
+              <button
+                type="button"
+                class="appearance-toggle"
+                :aria-label="currentThemeLabel"
+                @click="toggleAppearance"
+              >
+                <n-icon :size="20"><component :is="currentThemeIcon" /></n-icon>
+              </button>
+            </template>
+            {{ currentThemeLabel }}
+          </n-tooltip>
+          <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
+            <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
+              <span class="user-summary">
+                <span class="user-name">{{ auth.user?.display_name || auth.user?.username }}</span>
+                <span v-if="!isMobile" class="user-role">{{
+                  auth.user ? roleLabels[auth.user.role] : ''
+                }}</span>
+              </span>
+              <span class="user-menu-caret" aria-hidden="true" />
+            </button>
+          </n-dropdown>
+        </div>
       </n-layout-header>
       <n-layout-content class="app-content" :native-scrollbar="false">
         <router-view v-slot="{ Component, route: currentRoute }">
@@ -186,7 +230,7 @@ function logout() {
   <n-drawer v-model:show="drawerOpen" placement="left" :width="250" aria-label="导航菜单">
     <div class="drawer-brand">
       <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
-      <span>电气车间备件</span>
+      <span>HXNI 电气无忧</span>
     </div>
     <n-menu
       class="drawer-menu"
@@ -214,6 +258,13 @@ function logout() {
   font-weight: 650;
   white-space: nowrap;
 }
+/* 品牌名比折叠阈值长，极窄侧栏 / 大字号系统设置下省略而不换行挤压 */
+.brand > span,
+.drawer-brand > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .brand.compact {
   justify-content: center;
   padding: 0;
@@ -230,7 +281,7 @@ function logout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgb(255 255 255 / 92%);
+  background: var(--color-surface-translucent);
   backdrop-filter: blur(12px);
 }
 .topbar-left {
@@ -239,7 +290,23 @@ function logout() {
   align-items: center;
   gap: 10px;
 }
-.menu-toggle {
+/* 标题区可压缩：窄屏时省略，不把右侧操作挤出屏幕 */
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+}
+.topbar-title .n-breadcrumb {
+  white-space: nowrap;
+}
+.topbar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+/* 顶栏弱图标按钮（导航开关、外观切换）共用一套观感 */
+.menu-toggle,
+.appearance-toggle {
   display: grid;
   flex: none;
   width: 40px;
@@ -255,8 +322,10 @@ function logout() {
     border-color 0.2s ease;
 }
 .menu-toggle:hover,
-.menu-toggle:focus-visible {
-  border-color: #dce5ff;
+.menu-toggle:focus-visible,
+.appearance-toggle:hover,
+.appearance-toggle:focus-visible {
+  border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   outline: none;
 }
@@ -277,7 +346,7 @@ function logout() {
 }
 .user-menu-trigger:hover,
 .user-menu-trigger:focus-visible {
-  border-color: #dce5ff;
+  border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   outline: none;
 }
@@ -308,8 +377,7 @@ function logout() {
 }
 .app-content {
   padding: 24px 28px 32px;
-  background:
-    radial-gradient(circle at 100% 0%, rgb(63 99 216 / 4%), transparent 28%), var(--color-bg);
+  background: var(--page-glow), var(--color-bg);
 }
 /* 抽屉内导航 */
 .drawer-brand {

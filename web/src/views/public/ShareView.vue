@@ -331,7 +331,7 @@ onMounted(async () => {
 .share-page {
   min-height: 100vh;
   box-sizing: border-box;
-  background: #f4f7fb;
+  background: var(--color-bg);
   display: flex;
   flex-direction: column;
 }
@@ -345,15 +345,15 @@ onMounted(async () => {
 
 .share-header {
   padding: 18px 28px 14px;
-  border-bottom: 1px solid #e8edf5;
-  background: #fff;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface);
 }
 
 .share-brand {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #7a8699;
+  color: var(--color-text-muted);
   font-size: 13px;
   margin-bottom: 10px;
 }
@@ -362,7 +362,7 @@ onMounted(async () => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2f6fed, #5aa9ff);
+  background: var(--gradient-brand-dot);
 }
 
 .share-title-row {
@@ -375,7 +375,7 @@ onMounted(async () => {
 .share-title {
   margin: 0;
   font-size: 22px;
-  color: #1f2a3d;
+  color: var(--color-text-strong);
   font-weight: 700;
 }
 
@@ -394,7 +394,7 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   padding: 14px 28px 20px;
-  background: #fff;
+  background: var(--color-surface);
   /* 作为局部加载遮罩（LoadingMask）的定位上下文 */
   position: relative;
 }
@@ -404,18 +404,18 @@ onMounted(async () => {
 }
 
 .share-table :deep(.n-data-table-th) {
-  background: #f4f7fb;
-  color: #344054;
+  background: var(--color-bg);
+  color: var(--color-table-header-text);
   font-weight: 600;
 }
 
 .share-table :deep(.n-data-table-tr:hover) {
-  background: #f0f5ff;
+  background: var(--color-table-row-hover);
 }
 
 .cell-name {
   font-weight: 600;
-  color: #1f2a3d;
+  color: var(--color-text-strong);
 }
 
 .share-error {
@@ -423,13 +423,13 @@ onMounted(async () => {
 }
 
 .share-error-hint {
-  color: #98a2b3;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 
 .share-footer {
   text-align: center;
-  color: #a6b0c0;
+  color: var(--color-text-muted);
   font-size: 12px;
   padding: 10px 0 14px;
 }
