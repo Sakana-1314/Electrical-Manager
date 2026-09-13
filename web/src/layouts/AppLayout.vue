@@ -3,31 +3,16 @@ import { computed, h, ref, type Component as VueComponent } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
 import {
-  AlertCircleOutline,
-  ArrowDownCircleOutline,
-  ArrowUpCircleOutline,
-  BarcodeOutline,
   BusinessOutline,
-  CalendarOutline,
   CartOutline,
-  ClipboardOutline,
   CubeOutline,
   DocumentTextOutline,
-  FolderOpenOutline,
   GridOutline,
-  InformationCircleOutline,
-  LinkOutline,
   LogOutOutline,
   MenuOutline,
   MoonOutline,
-  OptionsOutline,
-  PeopleOutline,
-  PhonePortraitOutline,
-  ReceiptOutline,
-  SearchOutline,
   SettingsOutline,
   SunnyOutline,
-  SwapHorizontalOutline,
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
@@ -56,10 +41,14 @@ const closeDrawer = () => {
 /** 统一用组件库图标（Naive UI 的 NIcon + @vicons/ionicons5），尺寸与居中由 n-menu 控制。 */
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
-const link = (label: string, name: string, icon: VueComponent) => ({
+/**
+ * 导航项：一级项给 icon，二级项不给——侧栏折叠时只显示一级图标，
+ * 二级项图标永远看不到，加了只是多余噪音（展开态也靠缩进区分层级）。
+ */
+const link = (label: string, name: string, icon?: VueComponent): MenuOption => ({
   label: () => h(RouterLink, { to: { name }, onClick: closeDrawer }, { default: () => label }),
   key: name,
-  icon: renderIcon(icon),
+  ...(icon ? { icon: renderIcon(icon) } : {}),
 })
 
 const menuOptions = computed<MenuOption[]>(() => {
@@ -76,15 +65,10 @@ const menuOptions = computed<MenuOption[]>(() => {
       key: 'warehouse-group',
       icon: renderIcon(CubeOutline),
       children: [
-        link('库存查询', 'stock', SearchOutline),
-        link('物资档案', 'stock-materials', FolderOpenOutline),
-        link('操作记录', 'operations', SwapHorizontalOutline),
-        ...(auth.can('warehouse:write')
-          ? [
-              link('入库', 'inbound', ArrowDownCircleOutline),
-              link('出库', 'outbound', ArrowUpCircleOutline),
-            ]
-          : []),
+        link('库存查询', 'stock'),
+        link('物资档案', 'stock-materials'),
+        link('操作记录', 'operations'),
+        ...(auth.can('warehouse:write') ? [link('入库', 'inbound'), link('出库', 'outbound')] : []),
       ],
     })
   }
@@ -94,11 +78,11 @@ const menuOptions = computed<MenuOption[]>(() => {
     key: 'procurement-group',
     icon: renderIcon(CartOutline),
     children: [
-      link('申购计划', 'purchase-materials', ClipboardOutline),
-      link('周期性计划', 'purchase-plan-templates', CalendarOutline),
-      link('未编码物资', 'uncoded-materials', AlertCircleOutline),
-      link('物料编码库', 'material-code-library', BarcodeOutline),
-      link('申购记录', 'purchase-records', ReceiptOutline),
+      link('申购计划', 'purchase-materials'),
+      link('周期性计划', 'purchase-plan-templates'),
+      link('未编码物资', 'uncoded-materials'),
+      link('物料编码库', 'material-code-library'),
+      link('申购记录', 'purchase-records'),
     ],
   })
   if (auth.can('settings:write'))
@@ -107,11 +91,11 @@ const menuOptions = computed<MenuOption[]>(() => {
       key: 'settings-group',
       icon: renderIcon(SettingsOutline),
       children: [
-        link('管理端用户', 'users', PeopleOutline),
-        link('小程序用户', 'mini-program-users', PhonePortraitOutline),
-        link('高级设置', 'advanced-settings', OptionsOutline),
-        link('分享链接', 'share-links', LinkOutline),
-        link('关于', 'about', InformationCircleOutline),
+        link('管理端用户', 'users'),
+        link('小程序用户', 'mini-program-users'),
+        link('高级设置', 'advanced-settings'),
+        link('分享链接', 'share-links'),
+        link('关于', 'about'),
       ],
     })
   return items

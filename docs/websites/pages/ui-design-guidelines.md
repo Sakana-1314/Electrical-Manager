@@ -226,6 +226,7 @@
 | 颜色 | 优先用 CSS 变量或主题令牌，避免新增硬编码色值 |
 | 组件复用 | 新增重复 UI 前先查 `web/src/components` 是否已有可复用组件 |
 | 图标 | `NIcon` + `@vicons/ionicons5`（如 `web/src/layouts/AppLayout.vue` 侧栏），不手写内联 SVG 或字符占位；尺寸与居中交给组件库（`collapsed-icon-size` / `icon-size`），不用 margin/padding 手工微调 |
+| 菜单图标 | **只给一级菜单项配图标**：侧栏折叠时只渲染一级图标，二级项图标永远不会出现，加了只是多余噪音；二级项靠缩进区分层级 |
 
 ## 变更检查清单
 
@@ -235,5 +236,5 @@
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`
-- [ ] 图标来自 `NIcon` + `@vicons/ionicons5`，折叠态菜单图标居中
+- [ ] 图标来自 `NIcon` + `@vicons/ionicons5`，折叠态菜单图标居中；二级菜单项没有多余图标
 - [ ] 通过 `npm run build`、`npm run test`、`npm run lint`
