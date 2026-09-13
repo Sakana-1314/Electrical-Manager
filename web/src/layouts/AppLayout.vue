@@ -166,7 +166,7 @@ function onUserMenuSelect(key: string) {
     >
       <div class="brand" :class="{ compact: collapsed }">
         <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
-        <span v-if="!collapsed">电气车间备件</span>
+        <span v-if="!collapsed">HXNI 电气无忧</span>
       </div>
       <n-menu
         :collapsed="collapsed"
@@ -240,7 +240,7 @@ function onUserMenuSelect(key: string) {
   <n-drawer v-model:show="drawerOpen" placement="left" :width="250" aria-label="导航菜单">
     <div class="drawer-brand">
       <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
-      <span>电气车间备件</span>
+      <span>HXNI 电气无忧</span>
     </div>
     <n-menu
       class="drawer-menu"
@@ -267,6 +267,13 @@ function onUserMenuSelect(key: string) {
   font-size: 17px;
   font-weight: 650;
   white-space: nowrap;
+}
+/* 品牌名比折叠阈值长，极窄侧栏 / 大字号系统设置下省略而不换行挤压 */
+.brand > span,
+.drawer-brand > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .brand.compact {
   justify-content: center;
