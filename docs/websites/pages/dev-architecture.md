@@ -671,7 +671,20 @@ server/app/
 | 申购与记录 | `pages/purchase-plans/purchase-plans`、`pages/purchase-plan-detail/purchase-plan-detail`、`pages/purchase-records/purchase-records`、`pages/purchase-record-detail/purchase-record-detail`、`pages/records/records` |
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`navigation.js`、`i18n.js`。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+
+### 界面外观（明 / 暗）
+
+三档语义与网页端一致：`auto`（自动，跟随系统，默认）、`light`、`dark`；档位按本机存在 storage（`miniProgramThemeMode`），不落库、不产生请求，入口在首页「个人信息」弹窗的「外观」分段控件（`t-segmented`）。
+
+| 层 | 实现 |
+| --- | --- |
+| 原生外观 | `app.json` 开启 `darkmode` 并指定 `themeLocation`，窗口与导航栏颜色以 `@变量` 引用 `theme.json` 的 light / dark 调色板；自动档由此跟随系统 |
+| 主题运行时 | `utils/theme.js` 把档位解析成实际外观（`auto` 读 `wx.getAppBaseInfo().theme`，取不到回落 `wx.getSystemInfoSync().theme`），系统切换由单个 `wx.onThemeChange` 广播给已绑定页面；页面统一 `Page(withTheme({…}))` 接入，`withTheme` 注入 `themeMode` / `theme` / `themeClass` 并在 `onLoad`、`onShow`、`onUnload` 完成应用与订阅 |
+| 样式令牌 | `app.wxss` 中浅色令牌定义在 `page`，深色同名覆盖在 `.theme-dark`（由 `themeClass` 加到页面根节点）；`page, .theme-dark` 把 TDesign 的 `--td-*` 语义令牌桥接到 `--app-*`，两个作用域共用一套声明 |
+| 显式档覆盖系统 | 导航栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 按解析结果纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统 |
+
+不使用 `@media (prefers-color-scheme)` 切换主题（媒体查询只跟随系统，与显式档并存会互相覆盖），也不引入 `tdesign-miniprogram` 自带的 `common/style/theme/*` 媒体查询主题；页面样式只引用令牌，颜色字面量只允许出现在 `app.wxss` 的令牌定义里，以上均由 `node scripts/check.js` 校验。
 
 ### 登录与建档
 
