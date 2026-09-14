@@ -35,6 +35,8 @@ from app.core.identifiers import uuid7_string
 from app.domain.enums import (
     ExcelExportJobStatus,
     ExcelImportJobStatus,
+    HazardLevel,
+    HazardStatus,
     OperationType,
     PurchasePlanStatus,
     Role,
@@ -769,12 +771,144 @@ class WebhookDelivery(Base):
     channel: Mapped[WebhookChannel] = relationship(lazy="joined")
 
 
+class HazardUnit(AuditMixin, Base):
+    """隐患责任单位：每个单位对应一个责任人，隐患登记时按单位带出责任人快照。
+
+    停用（enabled=False）的单位不再出现在新增隐患的下拉里，但历史隐患仍保留其名称快照。
+    """
+
+    __tablename__ = "hazard_unit"
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    person: Mapped[str] = mapped_column(String(64), nullable=False)
+    remark: Mapped[str | None] = mapped_column(String(255))
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="1", nullable=False
+    )
+
+
+class HazardType(AuditMixin, Base):
+    """隐患类型：一行一个「大类 + 小类」组合，无父子层级，同一组合唯一。
+
+    隐患只引用本表 id；删除为物理删除，删除前校验是否被隐患引用。
+    """
+
+    __tablename__ = "hazard_type"
+    __table_args__ = (UniqueConstraint("major", "minor"),)
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    major: Mapped[str] = mapped_column(String(128), nullable=False)
+    minor: Mapped[str] = mapped_column(String(128), nullable=False)
+
+
+class Hazard(AuditMixin, Base):
+    """隐患台账主表：检查信息 + 责任单位与责任人快照 + 整改前/后图片 + 整改状态。
+
+    责任人（person）是登记时从责任单位带出的快照，之后单位换人不会回写历史隐患；
+    整改前/后图片各一张关联表（`hazard_before_image` / `hazard_after_image`），
+    附件管理按这两张表统计引用次数。
+    """
+
+    __tablename__ = "hazard"
+    __table_args__ = (
+        Index("ix_hazard_unit_id", "hazard_unit_id"),
+        Index("ix_hazard_type_id", "hazard_type_id"),
+        Index("ix_hazard_status", "status"),
+        Index("ix_hazard_due_date", "due_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    inspection_area: Mapped[str] = mapped_column(
+        String(128), nullable=False, default="华星现场", server_default="华星现场"
+    )
+    inspection_date: Mapped[date] = mapped_column(Date, nullable=False)
+    inspector: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="电气自查", server_default="电气自查"
+    )
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    suggestion: Mapped[str | None] = mapped_column(Text)
+    hazard_unit_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("hazard_unit.id"), nullable=False
+    )
+    # 责任人快照：登记时取自责任单位，之后单位换人不回写历史隐患。
+    person: Mapped[str] = mapped_column(String(64), nullable=False, default="", server_default="")
+    due_date: Mapped[date] = mapped_column(Date, nullable=False)
+    recheck_person: Mapped[str | None] = mapped_column(String(64))
+    # 整改员工：实际执行整改的员工，可选（与责任人/复查人都不是同一概念）。
+    rectify_person: Mapped[str | None] = mapped_column(String(64))
+    status: Mapped[HazardStatus] = mapped_column(
+        SAEnum(HazardStatus),
+        nullable=False,
+        default=HazardStatus.PENDING,
+        server_default=HazardStatus.PENDING.value,
+    )
+    hazard_type_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("hazard_type.id"), nullable=False
+    )
+    level: Mapped[HazardLevel] = mapped_column(
+        SAEnum(HazardLevel),
+        nullable=False,
+        default=HazardLevel.GENERAL,
+        server_default=HazardLevel.GENERAL.value,
+    )
+    remark: Mapped[str | None] = mapped_column(Text)
+
+    unit: Mapped[HazardUnit] = relationship(lazy="selectin")
+    hazard_type: Mapped[HazardType] = relationship(lazy="selectin")
+    before_images: Mapped[list[HazardBeforeImage]] = relationship(
+        back_populates="hazard",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="HazardBeforeImage.sort_order",
+    )
+    after_images: Mapped[list[HazardAfterImage]] = relationship(
+        back_populates="hazard",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="HazardAfterImage.sort_order",
+    )
+
+
+class HazardBeforeImage(Base):
+    """隐患「整改前」图片关联：一张图一行，sort_order 保留上传顺序。"""
+
+    __tablename__ = "hazard_before_image"
+
+    hazard_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("hazard.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("file_object.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(UTINYINT, nullable=False, default=0)
+    hazard: Mapped[Hazard] = relationship(back_populates="before_images")
+    file: Mapped[FileObject] = relationship(lazy="selectin")
+
+
+class HazardAfterImage(Base):
+    """隐患「整改后」图片关联：与整改前分表，便于附件管理分别统计引用次数。"""
+
+    __tablename__ = "hazard_after_image"
+
+    hazard_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("hazard.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("file_object.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(UTINYINT, nullable=False, default=0)
+    hazard: Mapped[Hazard] = relationship(back_populates="after_images")
+    file: Mapped[FileObject] = relationship(lazy="selectin")
+
+
 __all__ = [
     "Base",
     "BusinessEventLog",
     "ExcelExportJob",
     "ExcelImportJob",
     "FileObject",
+    "Hazard",
+    "HazardAfterImage",
+    "HazardBeforeImage",
+    "HazardType",
+    "HazardUnit",
     "HuaXingInventory",
     "LiteInventory",
     "Memo",

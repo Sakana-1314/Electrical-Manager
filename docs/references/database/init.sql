@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `api_token_hash` VARCHAR(64) NOT NULL,
   `api_token_enc` VARCHAR(512) NOT NULL DEFAULT '',
   `display_name` VARCHAR(128) NOT NULL,
-  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'READ_ONLY') NOT NULL,
+  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY') NOT NULL,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -484,6 +484,85 @@ CREATE TABLE IF NOT EXISTS `memo` (
   INDEX `ix_memo_created_by` (`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 隐患管理：责任单位 / 隐患类型两张字典表 + 隐患台账主表 + 整改前/后两张图片关联表。
+-- 隐患与两张字典表均为物理删除（删除前校验引用），图片关联表随隐患级联删除。
+
+CREATE TABLE IF NOT EXISTS `hazard_unit` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL,
+  `person` VARCHAR(64) NOT NULL,
+  `remark` VARCHAR(255),
+  `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_hazard_unit` PRIMARY KEY (`id`),
+  CONSTRAINT `uq_hazard_unit_name` UNIQUE (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `hazard_type` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `major` VARCHAR(128) NOT NULL,
+  `minor` VARCHAR(128) NOT NULL,
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_hazard_type` PRIMARY KEY (`id`),
+  CONSTRAINT `uq_hazard_type_major` UNIQUE (`major`, `minor`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `hazard` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `inspection_area` VARCHAR(128) NOT NULL DEFAULT '华星现场',
+  `inspection_date` DATE NOT NULL,
+  `inspector` VARCHAR(64) NOT NULL DEFAULT '电气自查',
+  `description` TEXT NOT NULL,
+  `suggestion` TEXT,
+  `hazard_unit_id` BIGINT UNSIGNED NOT NULL,
+  `person` VARCHAR(64) NOT NULL DEFAULT '',
+  `due_date` DATE NOT NULL,
+  `recheck_person` VARCHAR(64),
+  `rectify_person` VARCHAR(64),
+  `status` ENUM('PENDING', 'BLOCKED', 'DONE') NOT NULL DEFAULT 'PENDING',
+  `hazard_type_id` BIGINT UNSIGNED NOT NULL,
+  `level` ENUM('GENERAL', 'MAJOR') NOT NULL DEFAULT 'GENERAL',
+  `remark` TEXT,
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_hazard` PRIMARY KEY (`id`),
+  CONSTRAINT `fk_hazard_hazard_unit_id_hazard_unit`
+    FOREIGN KEY (`hazard_unit_id`) REFERENCES `hazard_unit` (`id`),
+  CONSTRAINT `fk_hazard_hazard_type_id_hazard_type`
+    FOREIGN KEY (`hazard_type_id`) REFERENCES `hazard_type` (`id`),
+  INDEX `ix_hazard_unit_id` (`hazard_unit_id`),
+  INDEX `ix_hazard_type_id` (`hazard_type_id`),
+  INDEX `ix_hazard_status` (`status`),
+  INDEX `ix_hazard_due_date` (`due_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `hazard_before_image` (
+  `hazard_id` BIGINT UNSIGNED NOT NULL,
+  `file_id` VARCHAR(36) NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT `pk_hazard_before_image` PRIMARY KEY (`hazard_id`, `file_id`),
+  CONSTRAINT `fk_hazard_before_image_hazard_id_hazard`
+    FOREIGN KEY (`hazard_id`) REFERENCES `hazard` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_hazard_before_image_file_id_file_object`
+    FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `hazard_after_image` (
+  `hazard_id` BIGINT UNSIGNED NOT NULL,
+  `file_id` VARCHAR(36) NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT `pk_hazard_after_image` PRIMARY KEY (`hazard_id`, `file_id`),
+  CONSTRAINT `fk_hazard_after_image_hazard_id_hazard`
+    FOREIGN KEY (`hazard_id`) REFERENCES `hazard` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_hazard_after_image_file_id_file_object`
+    FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码。
 SET @admin_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES(2)),
   '-4', SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3), '-',
@@ -502,11 +581,17 @@ SET @readonly_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYT
   SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
   '-', HEX(RANDOM_BYTES(6))));
 
+SET @hazard_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES(2)),
+  '-4', SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3), '-',
+  SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
+  '-', HEX(RANDOM_BYTES(6))));
+
 INSERT INTO `user` (`username`, `password_hash`, `api_token_hash`, `display_name`, `role`, `enabled`)
 VALUES
   ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@admin_api_token, 256), '系统管理员', 'SUPER_ADMIN', 1),
   ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@warehouse_api_token, 256), '仓库管理员', 'WAREHOUSE_ADMIN', 1),
   ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@purchase_api_token, 256), '申购管理员', 'PURCHASE_ADMIN', 1),
+  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@hazard_api_token, 256), '隐患管理员', 'HAZARD_ADMIN', 1),
   ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@readonly_api_token, 256), '只读用户', 'READ_ONLY', 1)
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
