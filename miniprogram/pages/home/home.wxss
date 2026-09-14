@@ -212,19 +212,51 @@
 
 .user-profile-appearance {
   margin-top: 22rpx;
-  padding-top: 22rpx;
   border-top: 2rpx solid var(--app-divider);
 }
 
-.user-profile-appearance-label {
-  margin-bottom: 16rpx;
+/* 收起态是「标签 + 当前档位 + 箭头」，展开态在下方列出三档（与筛选下拉一致的交互）。 */
+.appearance-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 22rpx 0;
+  transition: opacity 120ms ease;
+}
+
+.appearance-trigger-active {
+  opacity: 0.6;
+}
+
+.appearance-trigger-label {
+  flex: none;
   color: var(--app-text-subtle);
   font-size: 23rpx;
 }
 
-.appearance-segmented {
-  display: block;
-  width: 100%;
+.appearance-trigger-value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.appearance-trigger-text {
+  color: var(--app-brand-text);
+  font-size: 24rpx;
+  font-weight: 550;
+}
+
+.appearance-arrow {
+  flex: none;
+  color: var(--app-brand-icon);
+}
+
+.appearance-options {
+  padding: 4rpx 22rpx;
+  border-radius: 20rpx;
+  background: var(--app-surface-soft);
 }
 
 .user-profile-records {

@@ -129,9 +129,6 @@ page {
   --app-scrim: rgba(4, 6, 10, 0.68);
   --td-toast-bg-color: rgba(0, 0, 0, 0.82);
   --td-toast-color: #ffffff;
-  /* 分段控件在深色下做「凹槽 + 亮起选中项」，与浅色档的层次观感一致。 */
-  --td-segmented-bg-color: var(--app-bg);
-  --td-segmented-item-active-bg: var(--app-surface-soft);
 }
 
 /* TDesign 桥接：两个作用域共用一套声明，取值一律引用 --app-* 令牌。 */

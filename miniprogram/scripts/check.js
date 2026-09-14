@@ -204,6 +204,9 @@ if (themedPage.custom !== 1 || !themedPage.onLoad || !themedPage.onShow || !them
 if (themedPage.data.themeMode !== 'auto' || themedPage.data.theme !== 'light' || themedPage.data.themeClass !== '') {
   throw new Error('withTheme must inject the resolved appearance into page data.');
 }
+if (themedPage.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeAuto')) {
+  throw new Error('withTheme must inject the appearance label shown by the closed dropdown.');
+}
 if (themedPage.data.i18n === undefined) {
   throw new Error('withTheme must keep the page data.');
 }
@@ -235,6 +238,9 @@ if (themedPage.data.i18n === undefined) {
   if (page.data.theme !== 'light' || page.data.themeClass !== '' || nativeCalls.nav.length !== 1) {
     throw new Error('Applying the light appearance must keep the default palette and set the native bar.');
   }
+  if (page.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeAuto')) {
+    throw new Error('The appearance dropdown must show the current tier label.');
+  }
   if (nativeCalls.nav[0].frontColor !== '#000000' || nativeCalls.background[0].backgroundColor !== '#f4f6fa') {
     throw new Error('Light appearance must use the light native colors.');
   }
@@ -255,6 +261,9 @@ if (themedPage.data.i18n === undefined) {
   setThemeMode(page, 'light');
   if (storage.get(THEME_MODE_STORAGE_KEY) !== 'light' || page.data.theme !== 'light') {
     throw new Error('Selecting an explicit appearance must persist and switch the page palette.');
+  }
+  if (page.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeLight')) {
+    throw new Error('The appearance dropdown label must follow the selected tier.');
   }
   systemTheme = 'light';
   listeners[0]({ theme: 'light' });
@@ -281,6 +290,27 @@ if (themedPage.data.i18n === undefined) {
     throw new Error('Appearance options must expose the three translated tiers.');
   }
   delete global.wx;
+}
+
+// 首页外观入口是一个下拉菜单：收起时显示当前档位，展开后列出三档。
+{
+  const homeScript = read('pages/home/home.js');
+  for (const snippet of ['toggleAppearance', 'appearanceExpanded', 'onThemeModeChange']) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`pages/home/home.js must wire the appearance dropdown: ${snippet}`);
+    }
+  }
+  const homeMarkup = read('pages/home/home.wxml');
+  for (const snippet of ['{{themeLabel}}', 'appearanceExpanded', 't-radio-group']) {
+    if (!homeMarkup.includes(snippet)) {
+      throw new Error(`pages/home/home.wxml must render the appearance dropdown: ${snippet}`);
+    }
+  }
+  const homeConfig = JSON.parse(read('pages/home/home.json'));
+  const components = Object.values(homeConfig.usingComponents || {});
+  if (!components.includes('tdesign-miniprogram/radio-group/radio-group')) {
+    throw new Error('pages/home/home.json must register t-radio-group for the appearance dropdown.');
+  }
 }
 
 for (const page of pages) {

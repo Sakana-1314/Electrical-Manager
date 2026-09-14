@@ -108,13 +108,18 @@ function normalizeTheme(value) {
   return value === THEME_DARK ? THEME_DARK : THEME_LIGHT;
 }
 
+/** 当前档位的展示文案（下拉菜单收起时显示在右侧）。 */
+function themeLabelOf(mode) {
+  return t(THEME_LABEL_KEYS[normalizeThemeMode(mode)]);
+}
+
 /** 页面 data 的主题字段：同步解析，保证首屏渲染就是正确的档位（不闪白）。 */
 function themePageData() {
   const { mode, theme, themeClass } = resolveTheme();
-  return { themeMode: mode, theme, themeClass };
+  return { themeMode: mode, theme, themeClass, themeLabel: themeLabelOf(mode) };
 }
 
-/** 分段控件选项（文案走 i18n，与全站语言一致）。 */
+/** 外观下拉菜单的选项（文案走 i18n，与全站语言一致）。 */
 function getAppearanceOptions() {
   return THEME_MODE_OPTIONS.map((value) => ({ value, label: t(THEME_LABEL_KEYS[value]) }));
 }
@@ -150,7 +155,10 @@ function applyThemeToPage(page) {
   const data = page.data || {};
   const resolved = resolveTheme();
   const patch = {};
-  if (data.themeMode !== resolved.mode) patch.themeMode = resolved.mode;
+  if (data.themeMode !== resolved.mode) {
+    patch.themeMode = resolved.mode;
+    patch.themeLabel = themeLabelOf(resolved.mode);
+  }
   if (data.theme !== resolved.theme) patch.theme = resolved.theme;
   if (data.themeClass !== resolved.themeClass) patch.themeClass = resolved.themeClass;
   if (Object.keys(patch).length) page.setData(patch);
@@ -221,6 +229,7 @@ module.exports = {
   readThemeMode,
   resolveTheme,
   setThemeMode,
+  themeLabelOf,
   themePageData,
   withTheme,
   writeThemeMode,
