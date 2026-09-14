@@ -38,7 +38,7 @@ docker compose up -d
 | `APP_JWT_SECRET` | 至少 32 位随机字符串，生产环境必须修改。 |
 | `APP_ACCESS_TOKEN_MINUTES` | 登录有效期（分钟），默认 480。 |
 | `APP_FERNET_KEY` | 可选，加密 API Key / Webhook 密钥的专用密钥；留空则从 `APP_JWT_SECRET` 派生。 |
-| `APP_WECHAT_MINI_PROGRAM_APP_ID` | 扫码出库小程序 AppID，多个按相同顺序用英文逗号分隔。 |
+| `APP_WECHAT_MINI_PROGRAM_APP_ID` | HXNI 电气无忧小程序 AppID，多个按相同顺序用英文逗号分隔。 |
 | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 与上一项一一对应，只能保存在服务端。 |
 | `BACKEND_PORT` / `FRONTEND_PORT` | 宿主机映射端口，默认 8000 / 8080。 |
 

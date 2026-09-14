@@ -25,7 +25,7 @@
 | --- | --- | --- |
 | 服务端 | FastAPI + SQLAlchemy 2.x async + MySQL 8.0 | `server/` |
 | 网页端 | Vue 3 + TypeScript + Vite + Naive UI + Pinia | `web/` |
-| 小程序 | 微信小程序（扫码出库） | `miniprogram/` |
+| 小程序 | 微信小程序（HXNI 电气无忧） | `miniprogram/` |
 | 项目站点 | VitePress，由 CI 发布到 `gh-pages` | `docs/websites/` |
 
 ## 文档
