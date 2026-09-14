@@ -113,6 +113,9 @@ class MiniProgramUser(AuditMixin, Base):
         server_default="华星检修维护部电气车间",
     )
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    # 最近一次登录小程序的时间（管理端「小程序用户」页展示的活跃度依据）。
+    # 写它时不自增 version：用户每次打开小程序都会刷新，递增会让管理端乐观锁频繁失效。
+    last_used_at: Mapped[datetime | None] = mapped_column(UTC_DATETIME, nullable=True)
     identities: Mapped[list[MiniProgramIdentity]] = relationship(
         back_populates="user",
         lazy="selectin",

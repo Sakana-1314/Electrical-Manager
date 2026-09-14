@@ -480,6 +480,7 @@ _MINI_PROGRAM_USERS: list[dict[str, Any]] = [
         ],
         "created_at": "2026-08-14T10:20:00+08:00",
         "updated_at": "2026-09-02T09:35:00+08:00",
+        "last_used_at": "2026-09-13T09:12:00+08:00",
         "version": 2,
     },
     {
@@ -489,6 +490,7 @@ _MINI_PROGRAM_USERS: list[dict[str, Any]] = [
         "identities": [("wx9d2f1c8a5b3e4701", "oHXNI-2c4d6e8f0a1b3c5d", "2026-08-14T10:26:00+08:00")],
         "created_at": "2026-08-14T10:26:00+08:00",
         "updated_at": "2026-08-14T10:26:00+08:00",
+        "last_used_at": "2026-09-06T14:05:00+08:00",
         "version": 1,
     },
     {
@@ -498,6 +500,7 @@ _MINI_PROGRAM_USERS: list[dict[str, Any]] = [
         "identities": [("wx9d2f1c8a5b3e4701", "oHXNI-3e5f7a9b1c2d4e6f", "2026-08-15T08:12:00+08:00")],
         "created_at": "2026-08-15T08:12:00+08:00",
         "updated_at": "2026-09-04T11:02:00+08:00",
+        "last_used_at": "2026-08-15T08:12:00+08:00",
         "version": 2,
     },
 ]
@@ -931,6 +934,7 @@ def _mini_program_users() -> list[dict[str, Any]]:
             ],
             "created_at": item["created_at"],
             "updated_at": item["updated_at"],
+            "last_used_at": item["last_used_at"],
             "version": item["version"],
         }
         for index, item in enumerate(_MINI_PROGRAM_USERS, start=1)

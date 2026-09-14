@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import io
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
@@ -11,7 +11,7 @@ from PIL import Image
 
 from app.core.database import SessionLocal
 from app.domain.enums import MiniProgramCodeEnv
-from app.models import HuaXingInventory
+from app.models import HuaXingInventory, MiniProgramUser
 from app.services import ai_search_service, mini_program_service
 from tests.conftest import auth_headers
 
@@ -1555,3 +1555,68 @@ async def test_mini_program_users_require_super_admin(client: AsyncClient) -> No
         json={"source_user_id": 2, "source_version": 1, "target_version": 1},
     )
     assert merged.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_last_used_at_tracks_mini_program_sign_in(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """最近使用时间：建档即记录，之后每次登录刷新，且刷新不自增 version。
+
+    version 保持不变是关键约定：用户每次打开小程序都会刷新该字段，若递增，
+    管理端的 PATCH / DELETE / merge 会因乐观锁版本频繁过期而报 409。
+    """
+
+    async def fake_exchange_wechat_code(
+        code: str, app_id: str | None = None
+    ) -> tuple[str, str]:
+        assert code == "last-used-code"
+        return app_id or "wx-test-primary", "openid-last-used"
+
+    monkeypatch.setattr(
+        mini_program_service,
+        "exchange_wechat_code",
+        fake_exchange_wechat_code,
+    )
+    admin = await auth_headers(client, "admin")
+
+    login = await client.post(
+        "/api/v1/mini-program/auth/wx-login", json={"code": "last-used-code"}
+    )
+    assert login.status_code == 200, login.text
+    profile = await client.post(
+        "/api/v1/mini-program/profile",
+        headers={"Authorization": f"Bearer {login.json()['registration_token']}"},
+        json={
+            "display_name": "活跃度用户",
+            "department_name": "华星检修维护部电气车间",
+        },
+    )
+    assert profile.status_code == 200, profile.text
+    created = profile.json()["user"]
+    # 建档就是一次登录：首条记录即带最近使用时间。
+    assert created["last_used_at"] is not None
+    assert created["version"] == 1
+
+    # 制造「很久没登录」：把最近使用时间改写到 2020 年，再由登录刷新。
+    async with SessionLocal() as session:
+        row = await session.get(MiniProgramUser, created["id"])
+        assert row is not None
+        row.last_used_at = datetime(2020, 1, 1)
+        await session.commit()
+
+    relogin = await client.post(
+        "/api/v1/mini-program/auth/wx-login", json={"code": "last-used-code"}
+    )
+    assert relogin.status_code == 200, relogin.text
+    refreshed = relogin.json()["user"]
+    assert refreshed["last_used_at"] is not None
+    assert datetime.fromisoformat(refreshed["last_used_at"]).year > 2020
+    assert refreshed["version"] == created["version"]
+
+    users = await client.get("/api/v1/mini-program-users", headers=admin)
+    assert users.status_code == 200, users.text
+    assert users.json()["total"] == 1
+    listed = users.json()["items"][0]
+    assert listed["id"] == created["id"]
+    assert listed["last_used_at"] == refreshed["last_used_at"]

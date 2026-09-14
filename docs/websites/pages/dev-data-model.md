@@ -102,6 +102,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `mini_program_user` | `display_name` | VARCHAR(128) | 否 | 无 | 姓名 |
 | `mini_program_user` | `department_name` | VARCHAR(128) | 否 | `'华星检修维护部电气车间'` | 部门 |
 | `mini_program_user` | `enabled` | TINYINT(1) | 否 | 1 | 是否允许使用小程序 |
+| `mini_program_user` | `last_used_at` | DATETIME(6) | 是 | NULL | 最近一次登录小程序的时间（登录即刷新，不自增 version；本字段上线前建档的历史数据为 NULL） |
 | `mini_program_user` | *索引 / 外键* | — | — | — | 索引 `pk_mini_program_user(id)`；外键：无 |
 | `mini_program_identity` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `mini_program_identity` | `mini_program_user_id` | BIGINT UNSIGNED | 否 | 无 | 关联小程序用户 |

@@ -3046,6 +3046,7 @@ export interface components {
          *         ],
          *         "created_at": "2026-08-14T10:20:00+08:00",
          *         "updated_at": "2026-09-02T09:35:00+08:00",
+         *         "last_used_at": "2026-09-13T09:12:00+08:00",
          *         "version": 2
          *       },
          *       "requires_profile": false
@@ -3628,6 +3629,7 @@ export interface components {
          *       ],
          *       "created_at": "2026-08-14T10:20:00+08:00",
          *       "updated_at": "2026-09-02T09:35:00+08:00",
+         *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "version": 2
          *     }
          */
@@ -3640,6 +3642,8 @@ export interface components {
             department_name: string;
             /** Enabled */
             enabled: boolean;
+            /** Last Used At */
+            last_used_at?: string | null;
             /** Identities */
             identities: components["schemas"]["MiniProgramIdentityRead"][];
             /**
@@ -5395,6 +5399,7 @@ export interface components {
          *           ],
          *           "created_at": "2026-08-14T10:20:00+08:00",
          *           "updated_at": "2026-09-02T09:35:00+08:00",
+         *           "last_used_at": "2026-09-13T09:12:00+08:00",
          *           "version": 2
          *         },
          *         {
@@ -5412,6 +5417,7 @@ export interface components {
          *           ],
          *           "created_at": "2026-08-14T10:26:00+08:00",
          *           "updated_at": "2026-08-14T10:26:00+08:00",
+         *           "last_used_at": "2026-09-06T14:05:00+08:00",
          *           "version": 1
          *         },
          *         {
@@ -5429,6 +5435,7 @@ export interface components {
          *           ],
          *           "created_at": "2026-08-15T08:12:00+08:00",
          *           "updated_at": "2026-09-04T11:02:00+08:00",
+         *           "last_used_at": "2026-08-15T08:12:00+08:00",
          *           "version": 2
          *         }
          *       ],
@@ -17839,6 +17846,7 @@ export interface operations {
                      *           ],
                      *           "created_at": "2026-08-14T10:20:00+08:00",
                      *           "updated_at": "2026-09-02T09:35:00+08:00",
+                     *           "last_used_at": "2026-09-13T09:12:00+08:00",
                      *           "version": 2
                      *         },
                      *         {
@@ -17856,6 +17864,7 @@ export interface operations {
                      *           ],
                      *           "created_at": "2026-08-14T10:26:00+08:00",
                      *           "updated_at": "2026-08-14T10:26:00+08:00",
+                     *           "last_used_at": "2026-09-06T14:05:00+08:00",
                      *           "version": 1
                      *         },
                      *         {
@@ -17873,6 +17882,7 @@ export interface operations {
                      *           ],
                      *           "created_at": "2026-08-15T08:12:00+08:00",
                      *           "updated_at": "2026-09-04T11:02:00+08:00",
+                     *           "last_used_at": "2026-08-15T08:12:00+08:00",
                      *           "version": 2
                      *         }
                      *       ],
@@ -18121,6 +18131,7 @@ export interface operations {
                      *       ],
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "version": 2
                      *     }
                      */
@@ -18257,6 +18268,7 @@ export interface operations {
                      *       ],
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "version": 2
                      *     }
                      */
@@ -18395,6 +18407,7 @@ export interface operations {
                      *         ],
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
+                     *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2
                      *       },
                      *       "requires_profile": false
@@ -18527,6 +18540,7 @@ export interface operations {
                      *       ],
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "version": 2
                      *     }
                      */
@@ -18665,6 +18679,7 @@ export interface operations {
                      *         ],
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
+                     *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2
                      *       },
                      *       "requires_profile": false

@@ -53,6 +53,13 @@ const columns = preventTableColumnCompression<MiniProgramUser>([
     render: (row) => formatShanghaiTime(row.created_at),
   },
   {
+    title: '最近使用时间',
+    key: 'last_used_at',
+    width: tableColumnWidths.datetime,
+    // 登录即刷新；本字段上线前建档的历史数据显示“—”。
+    render: (row) => formatShanghaiTime(row.last_used_at ?? undefined),
+  },
+  {
     title: '小程序 AppID',
     key: 'app_id',
     width: 190,

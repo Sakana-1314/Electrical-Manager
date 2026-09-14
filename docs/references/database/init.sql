@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `mini_program_user` (
   `display_name` VARCHAR(128) NOT NULL,
   `department_name` VARCHAR(128) NOT NULL DEFAULT '华星检修维护部电气车间',
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
+  `last_used_at` DATETIME(6) NULL,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `version` INT UNSIGNED NOT NULL DEFAULT 1,

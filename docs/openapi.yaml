@@ -6606,6 +6606,7 @@ paths:
                     created_at: '2026-09-02T09:35:00+08:00'
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
+                  last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                 - id: 2
                   display_name: 李建军
@@ -6618,6 +6619,7 @@ paths:
                     created_at: '2026-08-14T10:26:00+08:00'
                   created_at: '2026-08-14T10:26:00+08:00'
                   updated_at: '2026-08-14T10:26:00+08:00'
+                  last_used_at: '2026-09-06T14:05:00+08:00'
                   version: 1
                 - id: 3
                   display_name: 王海涛
@@ -6630,6 +6632,7 @@ paths:
                     created_at: '2026-08-15T08:12:00+08:00'
                   created_at: '2026-08-15T08:12:00+08:00'
                   updated_at: '2026-09-04T11:02:00+08:00'
+                  last_used_at: '2026-08-15T08:12:00+08:00'
                   version: 2
                 page: 1
                 page_size: 20
@@ -6734,6 +6737,7 @@ paths:
                   created_at: '2026-09-02T09:35:00+08:00'
                 created_at: '2026-08-14T10:20:00+08:00'
                 updated_at: '2026-09-02T09:35:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
         '400':
           description: 业务校验失败
@@ -6916,6 +6920,7 @@ paths:
                   created_at: '2026-09-02T09:35:00+08:00'
                 created_at: '2026-08-14T10:20:00+08:00'
                 updated_at: '2026-09-02T09:35:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
         '400':
           description: 业务校验失败
@@ -7011,6 +7016,7 @@ paths:
                     created_at: '2026-09-02T09:35:00+08:00'
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
+                  last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                 requires_profile: false
         '400':
@@ -7097,6 +7103,7 @@ paths:
                   created_at: '2026-09-02T09:35:00+08:00'
                 created_at: '2026-08-14T10:20:00+08:00'
                 updated_at: '2026-09-02T09:35:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
         '400':
           description: 业务校验失败
@@ -7194,6 +7201,7 @@ paths:
                     created_at: '2026-09-02T09:35:00+08:00'
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
+                  last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                 requires_profile: false
         '400':
@@ -17265,6 +17273,7 @@ components:
             created_at: '2026-09-02T09:35:00+08:00'
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
+          last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
         requires_profile: false
     MiniProgramMaterialCodeRead:
@@ -18061,6 +18070,12 @@ components:
         enabled:
           type: boolean
           title: Enabled
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
         identities:
           items:
             $ref: '#/components/schemas/MiniProgramIdentityRead'
@@ -18104,6 +18119,7 @@ components:
           created_at: '2026-09-02T09:35:00+08:00'
         created_at: '2026-08-14T10:20:00+08:00'
         updated_at: '2026-09-02T09:35:00+08:00'
+        last_used_at: '2026-09-13T09:12:00+08:00'
         version: 2
     MiniProgramUserUpdate:
       properties:
@@ -19858,6 +19874,7 @@ components:
             created_at: '2026-09-02T09:35:00+08:00'
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
+          last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
         - id: 2
           display_name: 李建军
@@ -19870,6 +19887,7 @@ components:
             created_at: '2026-08-14T10:26:00+08:00'
           created_at: '2026-08-14T10:26:00+08:00'
           updated_at: '2026-08-14T10:26:00+08:00'
+          last_used_at: '2026-09-06T14:05:00+08:00'
           version: 1
         - id: 3
           display_name: 王海涛
@@ -19882,6 +19900,7 @@ components:
             created_at: '2026-08-15T08:12:00+08:00'
           created_at: '2026-08-15T08:12:00+08:00'
           updated_at: '2026-09-04T11:02:00+08:00'
+          last_used_at: '2026-08-15T08:12:00+08:00'
           version: 2
         page: 1
         page_size: 20

@@ -287,6 +287,7 @@ stateDiagram-v2
 | 待审核 | 带小程序 token 调任意小程序接口 | 拒绝 | `403 ACCOUNT_DISABLED`（“您的账号待审核”） |
 | 待审核 | `POST /mini-program/profile`（重复建档） | 拒绝 | `403 ACCOUNT_DISABLED` |
 | 已停用 | 重新 `wx-login` | 拒绝 | `403 ACCOUNT_DISABLED` |
+| 已启用 | `wx-login` / 建档成功 | 不变（刷新 `last_used_at`，`version` 不变） | — |
 | 任意 | `merge` 源=目标 | 拒绝 | `409 MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` |
 | 任意 | 微信换码失败/服务不可用 | 不变 | `401 WECHAT_AUTH_FAILED` / `503 WECHAT_AUTH_UNAVAILABLE` |
 #### 9.2 功能模式（`MiniProgramFeatureMode`）
