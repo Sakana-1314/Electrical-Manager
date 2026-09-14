@@ -1,4 +1,4 @@
-<view class="page-shell purchase-plans-page">
+<view class="page-shell purchase-plans-page {{themeClass}}">
   <view class="list-header"><view class="page-title">{{i18n.purchasePlansTitle}}</view></view>
   <view class="list-tools">
     <t-search
@@ -59,7 +59,7 @@
           <view class="meta-label">{{i18n.actualDemandPerson}}</view>
           <view class="meta-value">{{item.actual_demand_person}}</view>
         </view>
-        <t-icon name="chevron-right" size="36rpx" color="#a1a9b7" />
+        <t-icon class="plan-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>
   </view>
@@ -74,6 +74,6 @@
     aria-label="{{i18n.backToTop}}"
     bind:tap="scrollToTop"
   >
-    <t-icon name="backtop" size="52rpx" color="#ffffff" />
+    <t-icon name="backtop" size="52rpx" />
   </button>
 </view>

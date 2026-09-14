@@ -1,4 +1,4 @@
-<view class="page-shell outbound-page">
+<view class="page-shell outbound-page {{themeClass}}">
   <view wx:if="{{loading}}" class="section-card loading-card">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingMaterial}}" />
   </view>

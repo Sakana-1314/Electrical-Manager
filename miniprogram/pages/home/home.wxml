@@ -1,11 +1,11 @@
-<view class="page-shell home-page">
+<view class="page-shell home-page {{themeClass}}">
   <view class="page-header">
     <view class="header-row">
       <view class="page-title">{{i18n.brandTitle}}</view>
       <view wx:if="{{user}}" class="operator-badge" hover-class="operator-badge-active" bind:tap="showUserProfile">
         <view class="operator-dot"></view>
         <view class="operator-name">{{user.display_name}}</view>
-        <t-icon name="chevron-down" size="24rpx" color="#5573d1" />
+        <t-icon class="operator-chevron" name="chevron-down" size="24rpx" />
       </view>
     </view>
   </view>
@@ -97,6 +97,16 @@
           <view class="user-profile-value">{{miniProgramUpdatedAt}}</view>
         </view>
       </view>
+      <view class="user-profile-appearance">
+        <view class="user-profile-appearance-label">{{i18n.appearanceTitle}}</view>
+        <t-segmented
+          class="appearance-segmented"
+          block
+          options="{{themeOptions}}"
+          value="{{themeMode}}"
+          bind:change="onThemeModeChange"
+        />
+      </view>
       <view
         wx:if="{{!liteMode}}"
         class="user-profile-records"
@@ -104,15 +114,15 @@
         bind:tap="openRecords"
       >
         <view class="records-entry">
-          <t-icon name="time" size="36rpx" color="#5573d1" />
+          <t-icon class="records-icon" name="time" size="36rpx" />
           <view class="records-entry-text">{{i18n.viewRecords}}</view>
         </view>
-        <t-icon name="chevron-right" size="36rpx" color="#a1a9b7" />
+        <t-icon class="records-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>
   </t-popup>
 
   <button class="share-fab" open-type="share" aria-label="{{i18n.shareApp}}">
-    <t-icon name="share" size="52rpx" color="#ffffff" />
+    <t-icon name="share" size="52rpx" />
   </button>
 </view>

@@ -10,6 +10,23 @@
 4. 在微信开发者工具中执行“工具 → 构建 npm”。
 5. 在小程序后台将 `https://materials-manager.qcloud.19890605.xyz` 配置为 request 合法域名。
 
+提交前执行 `npm run check`（静态结构检查，含深色模式令牌与接线校验）。
+
+## 深色模式（界面外观）
+
+三档语义与网页端一致：`auto`（自动，跟随系统，默认）、`light`（浅色）、`dark`（深色）；档位按本机保存在
+storage 的 `miniProgramThemeMode`，不落库、不产生请求。首页「个人信息」弹窗里的「外观」分段控件可切换三档。
+
+| 层 | 位置 | 约定 |
+| --- | --- | --- |
+| 原生外观 | `app.json` 的 `darkmode` / `themeLocation` + `theme.json` | 窗口与导航栏颜色用 `@变量` 引用 `theme.json`，自动档跟随系统 |
+| 主题运行时 | `utils/theme.js` | 解析档位（`auto` 读系统主题，显式档覆盖系统），把 `theme-dark` 类与原生配色同步到页面；页面统一用 `Page(withTheme({…}))` 接入 |
+| 样式令牌 | `app.wxss` | 浅色令牌定义在 `page`，深色同名覆盖在 `.theme-dark`；`page, .theme-dark` 把 `--td-*` 桥接到 `--app-*` 供 TDesign 组件使用 |
+
+- 页面与组件样式**只引用 `--app-*` 令牌，不写颜色字面量**（`npm run check` 会拦截），新增令牌时明暗两档必须同名同义。
+- 不引入 `tdesign-miniprogram` 自带的 `common/style/theme/*`（媒体查询版暗色）：媒体查询只跟随系统，无法支持显式档，两者混用会互相打架。
+- 显式档与系统档不一致时，导航栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统。
+
 后端需要配置：
 
 ```env

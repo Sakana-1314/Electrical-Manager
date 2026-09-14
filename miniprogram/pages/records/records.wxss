@@ -13,7 +13,7 @@
 
 .result-count {
   margin: 0 8rpx 14rpx;
-  color: #7d8798;
+  color: var(--app-text-muted);
   font-size: 23rpx;
 }
 
@@ -25,10 +25,10 @@
 
 .record-card {
   padding: 24rpx;
-  border: 2rpx solid #edf0f5;
+  border: 2rpx solid var(--app-card-border);
   border-radius: 24rpx;
-  background: #ffffff;
-  box-shadow: 0 10rpx 30rpx rgba(15, 23, 42, 0.04);
+  background: var(--app-surface);
+  box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
 }
 
 .card-heading {
@@ -42,7 +42,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: #687386;
+  color: var(--app-text-secondary);
   font-size: 23rpx;
   text-align: right;
   text-overflow: ellipsis;
@@ -57,14 +57,14 @@
 }
 
 .material-name {
-  color: #172033;
+  color: var(--app-text-strong);
   font-size: 29rpx;
   font-weight: 650;
   line-height: 1.4;
 }
 
 .material-spec {
-  color: #687386;
+  color: var(--app-text-secondary);
   font-size: 24rpx;
   line-height: 1.45;
   word-break: break-all;
@@ -73,7 +73,7 @@
 .card-divider {
   height: 2rpx;
   margin: 18rpx 0 14rpx;
-  background: #edf0f5;
+  background: var(--app-divider);
 }
 
 .detail-list {
@@ -92,14 +92,14 @@
 .detail-label {
   flex: none;
   width: 120rpx;
-  color: #8a94a5;
+  color: var(--app-text-subtle);
   font-size: 23rpx;
 }
 
 .detail-value {
   flex: 1;
   min-width: 0;
-  color: #3d4757;
+  color: var(--app-text);
   font-size: 24rpx;
   line-height: 1.45;
   word-break: break-all;
@@ -120,7 +120,7 @@
 .load-more,
 .load-finished {
   padding: 28rpx 0 8rpx;
-  color: #a1a9b7;
+  color: var(--app-text-placeholder);
   font-size: 22rpx;
   text-align: center;
 }

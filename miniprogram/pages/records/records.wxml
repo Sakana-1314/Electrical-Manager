@@ -1,4 +1,4 @@
-<view class="page-shell records-page">
+<view class="page-shell records-page {{themeClass}}">
   <view class="records-header">
     <view class="page-title">{{i18n.recordsTitle}}</view>
   </view>

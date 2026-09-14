@@ -10,11 +10,11 @@
   padding: 38rpx 36rpx;
   border-radius: 32rpx;
   background:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.18), transparent 25%),
-    linear-gradient(145deg, #2947a6, #5579e7);
-  box-shadow: 0 20rpx 48rpx rgba(41, 71, 166, 0.2);
+    radial-gradient(circle at 14% 12%, var(--app-on-brand-glow), transparent 25%),
+    var(--app-brand-strong-gradient);
+  box-shadow: 0 20rpx 48rpx var(--app-brand-strong-shadow-color);
   box-sizing: border-box;
-  color: #ffffff;
+  color: var(--app-on-brand);
 }
 
 .brand-content {
@@ -40,7 +40,7 @@
 
 .brand-orbit {
   position: absolute;
-  border: 2rpx solid rgba(255, 255, 255, 0.16);
+  border: 2rpx solid var(--app-on-brand-line);
   border-radius: 50%;
 }
 
@@ -50,8 +50,8 @@
   width: 380rpx;
   height: 380rpx;
   box-shadow:
-    0 0 0 56rpx rgba(255, 255, 255, 0.04),
-    0 0 0 112rpx rgba(255, 255, 255, 0.025);
+    0 0 0 56rpx var(--app-on-brand-ring),
+    0 0 0 112rpx var(--app-on-brand-ring-soft);
 }
 
 .brand-orbit-small {
@@ -66,12 +66,12 @@
 }
 
 .profile-card {
-  --td-input-bg-color: #ffffff;
+  --td-input-bg-color: var(--app-form-surface);
 }
 
 .binding-warning {
   margin: 22rpx 28rpx 0;
-  color: #1d4fa8;
+  color: var(--app-status-danger);
   font-size: 22rpx;
   line-height: 1.5;
   text-align: center;

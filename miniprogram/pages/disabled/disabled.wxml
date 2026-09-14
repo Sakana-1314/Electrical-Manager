@@ -1,4 +1,4 @@
-<view class="page-shell disabled-page">
+<view class="page-shell disabled-page {{themeClass}}">
   <view class="disabled-card">
     <t-result
       theme="warning"

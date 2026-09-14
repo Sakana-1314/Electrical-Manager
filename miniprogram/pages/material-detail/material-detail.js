@@ -4,9 +4,10 @@ const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { canOutbound } = require('../../utils/features');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-Page({
+Page(withTheme({
   data: {
     material: null,
     loading: true,
@@ -108,4 +109,4 @@ Page({
       direction: 'column',
     });
   },
-});
+}));

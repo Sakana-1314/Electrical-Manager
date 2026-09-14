@@ -3,9 +3,10 @@ const { request } = require('../../utils/request');
 const { createClientRequestId, extractMaterialUuid } = require('../../utils/material');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-Page({
+Page(withTheme({
   data: {
     material: null,
     loading: true,
@@ -208,4 +209,4 @@ Page({
       direction: 'column',
     });
   },
-});
+}));
