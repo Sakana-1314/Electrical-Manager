@@ -64,13 +64,13 @@ const router = createRouter({
           path: 'warehouse/materials',
           name: 'stock-materials',
           component: () => import('@/views/warehouse/StockMaterialsView.vue'),
-          meta: { title: '二级库物资', parent: '二级库' },
+          meta: { title: '物资档案', parent: '二级库' },
         },
         {
           path: 'warehouse/materials/:id',
           name: 'stock-material-detail',
           component: () => import('@/views/warehouse/StockMaterialDetailView.vue'),
-          meta: { title: '物资详情', parent: '二级库物资' },
+          meta: { title: '物资详情', parent: '物资档案' },
         },
         {
           path: 'warehouse/inbound',
