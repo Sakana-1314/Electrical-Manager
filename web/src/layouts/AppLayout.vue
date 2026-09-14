@@ -10,20 +10,14 @@ import {
   GridOutline,
   LogOutOutline,
   MenuOutline,
-  MoonOutline,
   SettingsOutline,
-  SunnyOutline,
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { useThemeStore } from '@/stores/theme'
 import { roleLabels } from '@/types/navigation'
-import {
-  appearanceButtonLabel,
-  buildThemeMenuGroup,
-  isThemeModeKey,
-} from '@/layouts/appearanceMenu'
+import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
 import { LOGO_URL } from '@/constants/branding'
 
 const route = useRoute()
@@ -108,20 +102,13 @@ function logout() {
 }
 
 /* ============ 顶栏用户下拉：外观（自动 / 浅色 / 深色） ============
- * 一级分组为「外观」，二级菜单是三个档位；当前档位显示对勾，
- * 顶栏按钮图标同步反映当前实际外观（跟随系统的深色也显示月亮）——
- * 这样不展开菜单也能一眼看出当前是深色还是浅色。菜单结构在 appearanceMenu.ts（有单测）。 */
-
-const currentThemeIcon = computed(() => (theme.isDark ? MoonOutline : SunnyOutline))
-const currentThemeLabel = computed(() => appearanceButtonLabel(theme.mode, theme.isDark))
-
-/** 顶栏快捷切换：只切明暗——当前是深色就固定浅色，当前是浅色就固定深色（含「自动」档下的实际外观）。 */
-function toggleAppearance() {
-  theme.setMode(theme.isDark ? 'light' : 'dark')
-}
+ * 一级是「外观」二级菜单：鼠标悬浮向左展开三个档位（顶栏在最右上角，
+ * Naive UI 子菜单空间不足时自动向左翻转）。父项图标反映当前实际明暗，
+ * 当前档位显示对勾；顶栏不再放独立的明暗切换图标，外观只从菜单里切换。
+ * 菜单结构在 appearanceMenu.ts（有单测）。 */
 
 const userMenuOptions = computed<MenuOption[]>(() => [
-  ...buildThemeMenuGroup(theme.mode, renderIcon),
+  ...buildThemeMenuSubmenu(theme.mode, theme.isDark, renderIcon),
   { type: 'divider', key: 'logout-divider' },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ])
@@ -185,20 +172,7 @@ function onUserMenuSelect(key: string) {
           </div>
         </div>
         <div class="topbar-actions">
-          <!-- 外观快捷切换：只做明暗切换，档位（自动 / 浅色 / 深色）在用户菜单的「外观」二级菜单里选 -->
-          <n-tooltip :delay="300">
-            <template #trigger>
-              <button
-                type="button"
-                class="appearance-toggle"
-                :aria-label="currentThemeLabel"
-                @click="toggleAppearance"
-              >
-                <n-icon :size="20"><component :is="currentThemeIcon" /></n-icon>
-              </button>
-            </template>
-            {{ currentThemeLabel }}
-          </n-tooltip>
+          <!-- 外观只从用户菜单的「外观」二级菜单切换，顶栏不再放独立的明暗切换图标 -->
           <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
             <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
               <span class="user-summary">
@@ -305,9 +279,8 @@ function onUserMenuSelect(key: string) {
   align-items: center;
   gap: 8px;
 }
-/* 顶栏弱图标按钮（导航开关、外观切换）共用一套观感 */
-.menu-toggle,
-.appearance-toggle {
+/* 顶栏弱图标按钮（移动端导航开关） */
+.menu-toggle {
   display: grid;
   flex: none;
   width: 40px;
@@ -323,9 +296,7 @@ function onUserMenuSelect(key: string) {
     border-color 0.2s ease;
 }
 .menu-toggle:hover,
-.menu-toggle:focus-visible,
-.appearance-toggle:hover,
-.appearance-toggle:focus-visible {
+.menu-toggle:focus-visible {
   border-color: var(--color-primary-border);
   background: var(--color-primary-soft);
   outline: none;

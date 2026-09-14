@@ -165,7 +165,7 @@
 | `web/src/composables/usePagedTable.spec.ts` | 分页表格 composable | 首屏加载、查询重置页码、翻页与页大小、重置筛选、空页回滚（含第 1 页不死循环）、分页关闭时固定页大小、无 `onError` 静默吞错、URL 同步、筛选类型正确 |
 | `web/src/config/env.spec.ts` | 构建环境配置 | 去除末尾斜杠、绝对地址拼接、后端地址补 API 路径、图床补图片接口路径、生成带令牌的 MCP 绝对地址 |
 | `web/src/constants/shareColumns.spec.ts` | 分享列常量 | 计划/记录列键与后端 Literal 一致、按类型返回列定义、默认列 = 全部列去掉「状态」 |
-| `web/src/layouts/appearanceMenu.spec.ts` | 用户菜单外观分组 | 「外观」分组含自动/浅色/深色三档且各带图标、当前档用对勾、档位 key 判定只认三档、按钮说明同时给出档位与明暗 |
+| `web/src/layouts/appearanceMenu.spec.ts` | 用户菜单外观二级菜单 | 「外观」为二级菜单父项、内含自动/浅色/深色三档且各带图标、当前档用对勾、父项图标反映当前实际明暗、档位 key 判定只认三档 |
 | `web/src/stores/settings.spec.ts` | settings store（二级库模式） | 未加载默认完整模式、load 后精简/完整、请求失败回落完整模式、只拉取一次 |
 | `web/src/stores/theme.spec.ts` | theme store（界面外观） | 默认 auto 跟随系统、启动即写 html 属性、切深色落本地并同步 html/color-scheme、切回 auto、刷新读回已保存档位、非法档位回落 auto |
 | `web/src/utils/themeMode.spec.ts` | 外观偏好工具 | 缺省 auto、三档识别、非法值回落、写入归一化、存储不可用静默降级 |
