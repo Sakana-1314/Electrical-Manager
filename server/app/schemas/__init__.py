@@ -198,6 +198,8 @@ class MiniProgramUserRead(ReadModel):
     display_name: str
     department_name: str
     enabled: bool
+    # 最近一次登录小程序的时间；本字段上线前建档的历史数据为 null。
+    last_used_at: UtcDateTime | None = None
     identities: list[MiniProgramIdentityRead]
     created_at: UtcDateTime
     updated_at: UtcDateTime

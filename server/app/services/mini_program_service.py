@@ -60,12 +60,22 @@ from app.services import (
     material_code_library_service,
     webhook_service,
 )
-from app.services.common import contains_any, file_read, utc_aware, validate_version
+from app.services.common import contains_any, file_read, utc_aware, utcnow, validate_version
 
 _wechat_access_tokens: dict[str, tuple[str, float]] = {}
 _wechat_access_token_lock = asyncio.Lock()
 _material_code_cache: dict[tuple[str, MiniProgramCodeEnv, str], bytes] = {}
 _material_code_lock = asyncio.Lock()
+
+
+def _mark_last_used(user: MiniProgramUser) -> None:
+    """登录即刷新「最近使用时间」。
+
+    口径：凡客户端当作登录的入口（wx-login、profile 建档）成功都算一次使用。
+    刻意不自增 version——用户每次打开小程序都会走这里，递增会让管理端的
+    乐观锁版本频繁失效（PATCH/DELETE/merge 都要带最新 version）。
+    """
+    user.last_used_at = utcnow()
 
 
 async def list_users(
@@ -444,6 +454,11 @@ async def merge_users(
     for identity in list(source.identities):
         source.identities.remove(identity)
         target.identities.append(identity)
+    # 源账号随后被删除，把更近的一次使用时间留给保留的账号，避免活跃度信息丢失。
+    if source.last_used_at is not None and (
+        target.last_used_at is None or source.last_used_at > target.last_used_at
+    ):
+        target.last_used_at = source.last_used_at
     target.version += 1
     await session.delete(source)
     await session.flush()
@@ -605,6 +620,9 @@ async def login_with_wechat(
             "当前暂未开放新用户绑定，请联系管理员",
             status_code=403,
         )
+    if user is not None:
+        # 待审核 / 已停用账号在上面的分支被拒，不会走到这里。
+        _mark_last_used(user)
     return user, effective_app_id, openid
 
 
@@ -627,6 +645,8 @@ async def register_user(
     if existing is not None:
         if not existing.enabled:
             raise AppError("ACCOUNT_DISABLED", "您的账号待审核，请联系管理员", status_code=403)
+        # 重复建档（registration_token 重放）同样按一次登录记录，但不覆盖姓名 / 部门。
+        _mark_last_used(existing)
         return existing
     if not await ai_search_service.is_mini_program_registration_enabled(session):
         raise AppError(
@@ -638,6 +658,7 @@ async def register_user(
         display_name=display_name,
         department_name=department_name,
         enabled=await ai_search_service.is_mini_program_new_user_enabled(session),
+        last_used_at=utcnow(),
         identities=[MiniProgramIdentity(app_id=app_id, wechat_openid=openid)],
     )
     session.add(user)

@@ -90,11 +90,12 @@ sequenceDiagram
     WX-->>API: openid
     API->>DB: identity(app_id, openid) → user
     alt 已建档且 enabled
+        API->>DB: last_used_at = now（登录即刷新，不自增 version）
         API-->>MP: access_token(token_type=mini_program) + user
     else 未建档
         API-->>MP: registration_token(10 分钟) + requires_profile=true
         MP->>API: POST /mini-program/profile（Bearer registration_token）
-        API->>DB: 新建 user（enabled = mini_program_new_user_enabled）+ identity
+        API->>DB: 新建 user（enabled = mini_program_new_user_enabled，last_used_at = now）+ identity
         API->>DB: Webhook 入队 MINI_PROGRAM_USER_BOUND
         API-->>MP: access_token（仅当 enabled）
     end
@@ -102,10 +103,11 @@ sequenceDiagram
 | 项 | 内容 |
 | --- | --- |
 | 接口 | `POST /mini-program/auth/wx-login`、`POST /mini-program/profile`、`GET /mini-program/me` |
-| 表 | `mini_program_user`、`mini_program_identity`、`webhook_delivery`（建档时入队） |
+| 表 | `mini_program_user`（`last_used_at` 记录最近使用时间）、`mini_program_identity`、`webhook_delivery`（建档时入队） |
 | 事务 | 建档与 Webhook 入队在同一请求事务内 |
 | 并发 | `uq_mini_program_identity_app_id` 唯一索引，撞号转 `409 WECHAT_USER_CREATE_CONFLICT`；`_wechat_access_tokens`、`_material_code_cache` 用模块级 `asyncio.Lock` + 单调时钟 TTL 防穿透 |
 | 失败 | 待审核 `403 ACCOUNT_DISABLED`、注册关闭 `403 MINI_PROGRAM_REGISTRATION_DISABLED`、微信不可用 `503 WECHAT_AUTH_UNAVAILABLE`、凭证无效 `401 WECHAT_AUTH_FAILED` |
+| 最近使用时间 | 上面两个入口（登录、建档）成功即写 `mini_program_user.last_used_at`，管理端「小程序用户」页展示；**刻意不自增 `version`**，否则用户每次打开小程序都会让管理端的乐观锁版本失效 |
 小程序 `miniprogram/utils/request.js` 同样做 401 静默重登去重（`refreshPromise`），并按错误码跳 `/pages/disabled/disabled` 或 `/pages/registration-closed/registration-closed`。
 
 </TabsContent>
