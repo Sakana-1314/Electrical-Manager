@@ -1,11 +1,19 @@
 # 数据流
-按端到端链路说明数据如何流动：**接口 → 服务 → 表 → 事务与并发控制**。细节出自 `server/app/api/v1/`、`server/app/services/`、`server/app/core/` 与 `docs/references/database/init.sql`。
 
-| 贯穿机制 | 实现 |
-| --- | --- |
-| 请求级事务边界 | `server/app/core/database.get_db`：路由函数执行期间共用一个 `AsyncSession`，正常返回后 `commit`，抛异常则 `rollback`。service 层只 `flush()`（让后续查询可见），不 `commit()` |
-| 独立事务/后台会话 | 图片上传与删除、导入任务、导出任务、Webhook 投递、各清理任务使用自己的 `SessionLocal()` 并显式 `commit()`；`material_service.create_purchase_material` 用 `session.begin_nested()` 保存点做撞号重试 |
-| 并发控制手段 | ① `SELECT ... FOR UPDATE`（按 id 升序加锁）；② `with_for_update(skip_locked=True)` 认领式队列；③ 唯一索引幂等；④ `version` 乐观锁（`If-Match`）；⑤ 进程内 `asyncio.Lock`（导入按类型、图片按摘要、微信 access_token） |
+按端到端链路说明数据怎么走：**入口 → 服务 → 表 → 事务与并发控制**。细节出自 `server/app/api/v1/`、`server/app/services/`、`server/app/core/` 与 `docs/references/database/init.sql`。
+
+```mermaid
+flowchart TD
+    A["一次 HTTP 请求"] --> B["请求级事务：路由执行期间共用一个数据库会话<br/>正常返回即提交，抛错即回滚；服务层只 flush 不提交"]
+    B --> C["需要「先落库再返回 / 再抛错」的场景自行提交<br/>图片上传与删除、导入导出任务、Webhook 投递、各类清理任务"]
+    B --> D["后台任务不使用请求会话：自建会话并自行提交"]
+    E["并发控制手段"] --> E1["按 id 升序加行锁，固定加锁顺序避免死锁"]
+    E --> E2["跳过已锁定行的认领式队列（Webhook 投递、计划清理）"]
+    E --> E3["唯一索引幂等（客户端请求键、计划单号、投递去重）"]
+    E --> E4["版本号乐观锁，冲突提示刷新后重试"]
+    E --> E5["进程内协程锁（导入按类型、图片按摘要、微信凭证）"]
+```
+
 <Tabs :tabs="[
   { id: 't0', title: '登录与认证' },
   { id: 't1', title: '库存与补库' },
@@ -16,422 +24,436 @@
 
 <TabsContent id="t0">
 
-### 1. 登录与令牌认证
-#### 1.1 管理端密码登录
+### 管理端密码登录
+
 ```mermaid
 sequenceDiagram
     participant U as 浏览器
-    participant API as POST /api/v1/auth/login
-    participant DB as user 表
-    U->>API: {username, password}
-    API->>DB: select(User).where(username == ?)
-    API->>API: verify_password(password, password_hash)（Argon2）
-    API-->>U: {access_token, refresh_token, user}
+    participant API as 认证接口
+    participant DB as 用户表
+    U->>API: 用户名与密码
+    API->>DB: 按用户名查账号
+    API->>API: 用 Argon2 校验口令哈希
+    API-->>U: 访问令牌 + 续期令牌 + 用户信息
+    note over API,U: 用户不存在、账号停用、密码错误返回同一条「凭证无效」提示
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /auth/login`、`POST /auth/refresh`、`GET /auth/me` |
-| 表 | `user` |
-| 事务 | 请求级事务（只读） |
-| 并发 | 无锁；失败分支统一 `401 INVALID_CREDENTIALS`（用户不存在、已停用、密码错误同一提示） |
 
-| 项 | 规则 |
-| --- | --- |
-| 算法 | JWT HS256（`server/app/core/security.py`） |
-| access_token | 默认 30 分钟（`APP_ACCESS_TOKEN_MINUTES`；compose 生产注入 480） |
-| refresh_token | 默认 7 天，额外带 `version`；续期校验 `user.version == token.version`，不符则 `401 INVALID_REFRESH_TOKEN` |
-| payload | `sub`（用户 id）、`token_type`、`iat`、`exp`、`jti` |
-| token_type 取值 | `management_access`、`management_refresh`、`mini_program`、`mini_program_registration` |
+```mermaid
+flowchart LR
+    L["登录成功"] --> A["访问令牌：默认 30 分钟<br/>生产 Compose 注入 480 分钟"]
+    L --> R["续期令牌：默认 7 天，附带用户版本号"]
+    R --> V{"用户当前版本号与令牌一致？"}
+    V -- "否" --> N["续期失败，需要重新登录"]
+    V -- "是" --> A2["换发新的一对令牌"]
+    L --> P["负载：用户 id、令牌类型、签发与过期时间、令牌唯一标识"]
+    L --> T["令牌类型：管理端访问 / 管理端续期 / 小程序 / 小程序注册"]
+    L --> S["签名算法 HS256，密钥取自环境变量"]
+```
 
-| 时机 | 行为 |
-| --- | --- |
-| 请求前 | 注入 `Authorization: Bearer <access_token>` 与 `X-Request-ID`（`crypto.randomUUID()`） |
-| 响应 401 且 `code=INVALID_TOKEN` | 用模块级 `refreshRequest` 单例去重刷新，成功后重放原请求 |
-| 刷新失败 | 清理 `localStorage` 的 `access_token`/`refresh_token`/`auth_user`，跳登录页 |
+```mermaid
+flowchart TD
+    A["请求前注入访问令牌与请求标识"] --> B{"返回「凭证无效」？"}
+    B -- "是" --> C["模块级单例去重刷新，成功后重放原请求"]
+    B -- "否" --> D["交给业务错误处理"]
+    C -- "刷新失败" --> E["清理本地凭证并跳登录页"]
+```
 
-位置：`web/src/api/client.ts`。
-#### 1.2 接口令牌（`X-API-Token`）
+### 接口令牌认证
+
 ```mermaid
 sequenceDiagram
-    participant C as MCP/脚本客户端
-    participant P as core.permissions
-    participant DB as user 表
-    C->>P: 请求头 X-API-Token: <36 位令牌>
-    P->>P: 令牌长度 != 36 → 直接返回 None
-    P->>DB: select(User).where(api_token_hash == SHA-256(token))
-    alt 命中且 api_token_enc 为空
-        P->>DB: api_token_enc = encrypt_secret(token)（懒迁移回写，随请求事务提交）
+    participant C as MCP / 脚本客户端
+    participant P as 权限层
+    participant DB as 用户表
+    C->>P: 请求头带 36 位接口令牌
+    P->>P: 长度不是 36 位直接判否
+    P->>DB: 按令牌哈希查找账号
+    alt 命中且密文列为空
+        P->>DB: 加密回写密文，随本次请求事务提交
     end
-    P->>C: request.state.user_id / username = 该用户
+    P->>C: 请求上下文记下该用户
+    note over P,DB: 哈希列只用于查找，密文列用于界面回显<br/>管理端每次读取用户都解密回显明文令牌
 ```
-| 项 | 内容 |
-| --- | --- |
-| 入口 | `X-API-Token` 请求头（`APIKeyHeader`）；36 位以内的令牌也可放进 `Authorization: Bearer`，`authenticate_management_user` 会先按接口令牌尝试 |
-| 表 | `user`（`api_token_hash` SHA-256 唯一索引 + `api_token_enc` Fernet 密文） |
-| 令牌生成/重置 | `POST /users/{id}/api-token/regenerate`（`SuperAdmin`）；此后 `GET /users`、`PATCH /users/{id}` 每次都解密**回显**明文令牌 |
-| 事务 | 懒迁移的 `api_token_enc` 回写用 `flush()`，随本次请求事务一起提交 |
-| 并发 | `api_token_hash` 唯一索引保证查找唯一；回写是幂等的同值写入 |
-| 失败 | 无效 `401 INVALID_TOKEN`；用户停用 `401 USER_DISABLED` |
 
-| 项 | 说明 |
-| --- | --- |
-| 复用同一条认证路径 | HTTP 请求的令牌放进 `ContextVar`，MCP 工具以该用户身份调用内部业务接口 |
-| 工具 | `system_whoami`、`operations_list`、`operation_describe`、`operation_call` |
-| 结果 | 权限与网页端完全一致（同样经过角色校验、乐观锁、事务与审计） |
-#### 1.3 微信小程序登录与建档
+有效令牌也可放进 Bearer 头（长度 36 位以内时先按接口令牌尝试）。令牌无效或用户停用分别返回凭证无效 / 账号停用。
+
+```mermaid
+flowchart LR
+    A["MCP 工具调用"] --> B["HTTP 请求的令牌放进上下文，以该用户身份调用内部业务接口"]
+    B --> C["权限、乐观锁、事务与审计与网页端完全一致"]
+    B --> D["工具：当前用户、接口列表、接口说明、接口调用"]
+```
+
+### 微信小程序登录与建档
+
 ```mermaid
 sequenceDiagram
     participant MP as 小程序
-    participant API as POST /mini-program/auth/wx-login
-    participant WX as api.weixin.qq.com
-    participant DB as mini_program_user / _identity
-    MP->>API: {code, app_id?}
-    API->>WX: GET /sns/jscode2session
-    WX-->>API: openid
-    API->>DB: identity(app_id, openid) → user
-    alt 已建档且 enabled
-        API->>DB: last_used_at = now（登录即刷新，不自增 version）
-        API-->>MP: access_token(token_type=mini_program) + user
+    participant API as 小程序认证接口
+    participant WX as 微信服务
+    participant DB as 小程序用户与身份表
+    MP->>API: 登录码与自身 AppID
+    API->>WX: 用对应小程序的密钥换 OpenID
+    WX-->>API: OpenID
+    API->>DB: 按「小程序 + OpenID」查身份与用户档案
+    alt 已建档且账号启用
+        API->>DB: 刷新最近使用时间（不自增版本号）
+        API-->>MP: 访问令牌 + 用户档案
     else 未建档
-        API-->>MP: registration_token(10 分钟) + requires_profile=true
-        MP->>API: POST /mini-program/profile（Bearer registration_token）
-        API->>DB: 新建 user（enabled = mini_program_new_user_enabled，last_used_at = now）+ identity
-        API->>DB: Webhook 入队 MINI_PROGRAM_USER_BOUND
-        API-->>MP: access_token（仅当 enabled）
+        API-->>MP: 注册凭证（10 分钟有效）+ 需要补档案
+        MP->>API: 提交姓名建档
+        API->>DB: 新建用户档案与身份映射，入队「小程序用户已绑定」事件
+        API-->>MP: 访问令牌（仅当新用户默认启用）
     end
+    note over API,DB: 建档与事件入队在同一请求事务内<br/>身份唯一索引撞号时报「微信用户创建冲突」<br/>待审核 / 注册关闭 / 微信不可用分别返回对应错误
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /mini-program/auth/wx-login`、`POST /mini-program/profile`、`GET /mini-program/me` |
-| 表 | `mini_program_user`（`last_used_at` 记录最近使用时间）、`mini_program_identity`、`webhook_delivery`（建档时入队） |
-| 事务 | 建档与 Webhook 入队在同一请求事务内 |
-| 并发 | `uq_mini_program_identity_app_id` 唯一索引，撞号转 `409 WECHAT_USER_CREATE_CONFLICT`；`_wechat_access_tokens`、`_material_code_cache` 用模块级 `asyncio.Lock` + 单调时钟 TTL 防穿透 |
-| 失败 | 待审核 `403 ACCOUNT_DISABLED`、注册关闭 `403 MINI_PROGRAM_REGISTRATION_DISABLED`、微信不可用 `503 WECHAT_AUTH_UNAVAILABLE`、凭证无效 `401 WECHAT_AUTH_FAILED` |
-| 最近使用时间 | 上面两个入口（登录、建档）成功即写 `mini_program_user.last_used_at`，管理端「小程序用户」页展示；**刻意不自增 `version`**，否则用户每次打开小程序都会让管理端的乐观锁版本失效 |
-小程序 `miniprogram/utils/request.js` 同样做 401 静默重登去重（`refreshPromise`），并按错误码跳 `/pages/disabled/disabled` 或 `/pages/registration-closed/registration-closed`。
+
+每次静默登录都刷新「最近使用时间」但**刻意不递增版本号**，否则用户每次打开小程序都会让管理端的乐观锁版本失效。
 
 </TabsContent>
 
 <TabsContent id="t1">
 
-### 2. 入库与出库
+### 入库与出库
+
 ```mermaid
 sequenceDiagram
     participant W as 网页端 / 小程序
-    participant API as POST /inventory/inbounds|outbounds
-    participant S as inventory_service.create_operation
+    participant API as 库存接口
+    participant S as 库存服务
     participant DB as MySQL
-    W->>API: client_request_id + occurred_at + source_type + business_reason + lines[]
-    API->>S: OperationType.INBOUND|OUTBOUND（WarehouseWriter / 小程序用户）
-    S->>DB: select StockOperation where client_request_id = ?（快路径幂等，命中直接返回）
-    S->>S: 语义校验（来源类型 / 领用人 / 用途 / 数量小数位）
-    S->>DB: SELECT stock_balance ... FOR UPDATE ORDER BY id → 缺失则 409 BALANCE_MISSING
-    S->>DB: SELECT stock_material ... FOR UPDATE ORDER BY id → 缺失则 400 NOT_FOUND
-    S->>DB: 同 client_request_id 再次 FOR UPDATE 复查 → 命中则返回原流水
-    S->>DB: INSERT stock_operation（先 TMP- 号，flush 后改为 IN/OUT+日期+6 位 id）
-    S->>DB: INSERT stock_operation_line（quantity / remaining_qty / 物资快照）
-    S->>S: replay_materials：按 occurred_at, operation_id, line_id 重放该物资全部流水
-    S->>DB: UPDATE stock_balance.quantity / version / updated_at
-    S->>DB: INSERT business_event_log(action=CREATED)
-    S->>DB: enqueue_event（仅非冲销：stock.inbound.created / stock.outbound.created）
-    API-->>W: 201 + StockOperationRead（含每行 before_qty/after_qty/remaining_qty）
+    W->>API: 幂等键 + 发生时间 + 来源 + 用途 + 明细
+    API->>S: 按单据类型校验身份与权限
+    S->>DB: 先按幂等键查单据（命中直接返回，快路径）
+    S->>S: 语义校验：来源类型 / 领用人 / 用途 / 数量小数位
+    S->>DB: 按物资 id 升序锁定余额与物资行
+    S->>DB: 再按幂等键加锁复查一次
+    S->>DB: 插入单据头与明细行（含物资快照）
+    S->>S: 重放该物资全部流水，算出前后数量
+    S->>DB: 更新余额与版本号
+    S->>DB: 写业务事件日志；非冲销单据入队 Webhook
+    API-->>W: 单据详情（含每行前后数量与剩余可冲量）
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /inventory/inbounds`、`POST /inventory/outbounds`、`PATCH /inventory/operations/{id}`、`POST /inventory/operations/{id}/reverse`、`POST /mini-program/outbound` |
-| 表 | `stock_operation`、`stock_operation_line`、`stock_balance`、`stock_material`、`business_event_log`、`webhook_delivery` |
-| 事务 | 上述写入全部在**同一个请求事务**内，任何一步抛错整体回滚 |
-| 并发 | ① 余额与物资按 `stock_material_id` **升序** `FOR UPDATE`（固定加锁顺序避免死锁）；② `client_request_id` 唯一索引 + 二次 `FOR UPDATE` 复查实现幂等；③ 修改流水时对「旧明细 + 新明细」的全部物资一起加锁后整体重放 |
-| 一致性 | `stock_balance.quantity` 是「重放结果」而非增量维护：`replay_materials` 从零按 `occurred_at, operation_id, line_id` 累加（入库 `+quantity`、出库 `-quantity`），并回写每行 `before_qty`/`after_qty`，因此修改历史流水后当前余额与后续快照必然自洽 |
-| 精度与边界 | 数量最多 1 位小数（`400 INVALID_QUANTITY_PRECISION`），DB 列为 `DECIMAL(18,1)`；`operation_type` 决定 `operation_no` 前缀 `IN`/`OUT`；同一 `client_request_id` 用于不同物资的小程序出库 → `409 CLIENT_REQUEST_ID_CONFLICT`；出库不校验余额是否充足，`stock_balance.quantity` 可为负 |
-同一个事务内的步骤（`inventory_service.reverse_operation`）：
 
-| 步骤 | 校验 / 结果 |
-| --- | --- |
-| 读取原流水 | `SELECT ... FOR UPDATE` |
-| 逐行校验数量 | `quantity <= remaining_qty`，否则 `409 INSUFFICIENT_QUANTITY`；行不在原流水内 `400 INVALID_REVERSAL_LINE` |
-| 新建冲销流水 | 相反 `operation_type`，带 `reversal_of_id`、`source_type=REVERSAL`、`occurred_at = max(now, 原发生时间+1µs)` |
-| 回写原行 | 扣减 `remaining_qty` |
-| 重算余额 | `replay_materials` |
-| 审计 | `business_event_log(action=REVERSED)` |
+```mermaid
+flowchart LR
+    A["余额与物资行"] --> B["按物资 id 升序加锁：固定顺序避免死锁"]
+    C["客户端请求键"] --> D["唯一索引 + 二次加锁复查：重复提交返回原单据"]
+    E["修改已确认流水"] --> F["对旧明细与新明细涉及的物资一起加锁后整体重放"]
+    G["余额"] --> H["是重放结果而非增量维护：从零按时间、单据、明细行累加<br/>修改历史流水后当前余额与后续快照必然自洽"]
+```
 
-冲销**不投递 Webhook**；对 `reversal_of_id` 非空的流水再冲销返回 `409 REVERSAL_NOT_ALLOWED`。
-### 3. 低库存与补库计算
+数量最多 1 位小数，出库不校验余额是否充足（可以出现负库存）；单据号前缀区分入库与出库。
+
+### 冲销
+
+```mermaid
+sequenceDiagram
+    participant U as 网页端
+    participant API as 冲销接口
+    participant S as 库存服务
+    participant DB as MySQL
+    U->>API: 原单据 + 每行冲销数量
+    API->>S: 校验权限与版本号
+    S->>DB: 锁定原单据与明细行
+    S->>S: 逐行校验：不超过剩余可冲量、该行属于原单据、原单不是冲销单
+    S->>DB: 新建方向相反的流水，指向原单，来源记为冲销
+    S->>DB: 原行扣减剩余可冲量
+    S->>S: 重放受影响物资的流水，重算余额
+    S->>DB: 写业务事件日志（冲销不投递 Webhook）
+```
+
+发生时间取「当前时间」与「原流水时间加 1 微秒」中较晚者；子项号继承原流水，领用人与领用单位强制为空。
+
+### 低库存与补库
+
 ```mermaid
 flowchart TD
-    A[GET /inventory/balances 或 /inventory/low-stock] --> B[inventory_repository.search_inventory_materials<br/>join stock_balance + stock_replenishment_policy]
-    B --> C{low_stock_only?}
-    C -->|是| D[过滤 policy.enabled 且 quantity <= minimum_qty]
-    C -->|否| E[返回全部]
-    D --> F[inventory_repository.recent_outbound_consumption]
+    A["库存列表 / 低库存工作台 / 工作台统计"] --> B["连表查询物资、余额与补库策略"]
+    B --> C{"只看低库存？"}
+    C -- "是" --> D["保留策略启用且余额不高于最低库存的物资"]
+    C -- "否" --> E["返回全部"]
+    D --> F["统计近期出库消耗：最近 6 个自然月、非冲销、且未被冲销的流水合计"]
     E --> F
-    F --> G[近 6 个自然月 OUTBOUND、source_type != REVERSAL<br/>且不存在 reversal 流水引用它 → SUM(quantity)]
-    G --> H[组装 InventoryBalanceRead：current_qty / minimum_qty<br/>is_low_stock / suggested_purchase_qty]
-    H --> I[POST /inventory/low-stock/{id}/create-replenishment-draft]
-    I --> J{policy 存在且启用且 quantity <= minimum_qty?}
-    J -->|否| K[409 NOT_LOW_STOCK]
-    J -->|是| L[create_purchase_material：新建申购计划<br/>复制名称/规格/单位/备注/图片/二级库关联<br/>复用最近一次编码，usage=低库存补库<br/>remark 同时记建议数量与确认数量]
-    L --> M[201 {next: purchase_material, resource_id}]
+    F --> G["组装读模型：当前数量 / 最低库存 / 是否低库存 / 建议申购数量"]
+    G --> H["低库存一键补库"]
+    H --> I{"策略存在、启用且余额不高于最低库存？"}
+    I -- "否" --> J["拒绝：不属于低库存"]
+    I -- "是" --> K["新建申购计划：复制名称、规格、单位、备注、图片与二级库关联<br/>复用最近一次编码，注明建议数量与确认数量"]
+    K --> L["返回新计划与其编号"]
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `GET /inventory/balances`、`GET /inventory/low-stock`、`GET /inventory/replenishment-defaults`、`POST /inventory/low-stock/{material_id}/create-replenishment-draft`、`GET /dashboard/summary` |
-| 表 | `stock_material`、`stock_balance`、`stock_replenishment_policy`、`stock_operation(_line)`、`purchase_material` |
-| 事务 | 查询只读；补库草稿在一个请求事务内新建计划（含 `begin_nested()` 撞号重试） |
-| 并发 | 计划号由 `material_service.next_purchase_plan_no` 生成：对 `purchase_material.plan_no` 与 `purchase_request_line.plan_no_snapshot` 分别取 `MAX` 并 `FOR UPDATE`，撞唯一索引后回滚保存点重取，最多 3 次，仍失败 `409 PLAN_NO_CONFLICT`；单日上限 999 条（`409 PLAN_DAILY_LIMIT_EXCEEDED`） |
-| 不落库与空消耗 | 低库存标记与建议数量都是**实时计算**，没有预警表；近 6 个月无出库时建议数量为 0，仍允许用户手填计划数量发起补库 |
-补库默认值：需求日期取上海当天，实际需求人预填最近一条有值的 `purchase_responsible`（`replenishment_service.replenishment_defaults`）；补库**只新增申购计划，不创建申购记录**。低库存工作台的低库存数量由 `dashboard_repository.count_low_stock_materials` 统计（只读决策表，精简模式下恒为 0）。
+
+```mermaid
+flowchart LR
+    A["计划编号"] --> B["对计划表与记录行快照分别取最大编号并加锁"]
+    B --> C["撞唯一索引则回滚保存点后重取，最多 3 次"]
+    C --> D["单日上限 999 条，超限与连续撞号各自返回冲突"]
+    E["低库存标记与建议数量"] --> F["查询时实时计算，没有预警表"]
+```
+
+补库只新增申购计划，不创建申购记录；需求日期取上海当天，实际需求人预填最近一条有值的记录。
 
 </TabsContent>
 
 <TabsContent id="t2">
 
-### 4. 申购计划 → 申购记录 → 到货入库
+### 申购计划 → 申购记录 → 到货入库
+
 ```mermaid
 sequenceDiagram
     participant P as 申购管理员
-    participant API as /purchase-materials /purchase-records
+    participant API as 申购接口
     participant DB as MySQL
     participant X as 外部物资平台脚本
     participant W as 仓库管理员
-    P->>API: PATCH /purchase-materials/{id}（补录 material_code）
-    API->>DB: UPDATE purchase_material（version += 1，需匹配 If-Match / body version）
-    P->>API: POST /purchase-materials/{id}/move-to-record（或 /batch-move-to-record）
-    API->>DB: 计划 FOR UPDATE → 校验编码非空且未转入
-    API->>DB: INSERT purchase_request + purchase_request_line（计划字段全部快照，status 默认「已申购」）
-    X->>API: GET /purchase-record-sync/targets 或 /order-targets（limit + cursor + fields）
-    X->>API: POST /purchase-record-sync/trace/{trace_no} 或 /orders/{no}/apply
-    API->>DB: 锁定行与单据头（FOR UPDATE）→ 只补空值、状态只进不退 → 仅变更时 version += 1
-    W->>API: POST /inventory/inbounds（source_type=MANUAL，按记录信息人工填写物资与数量）
-    API->>DB: 写流水 + 重放余额（见第 2 节）
+    P->>API: 补录物料编码并保存计划
+    API->>DB: 更新计划并递增版本号（需匹配版本）
+    P->>API: 转入申购记录（单条或批量）
+    API->>DB: 锁定计划，校验已编码且未转入
+    API->>DB: 新建申购单与记录行，计划字段整体快照，状态默认「已申购」
+    X->>API: 拉取待补字段的目标（按追溯号或按申购单号整单）
+    X->>API: 回写采购进度
+    API->>DB: 锁定记录行与单据头，只补空值、状态只进不退，仅变更时递增版本
+    W->>API: 按记录信息人工入库
+    API->>DB: 写流水并重放余额
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /purchase-materials/{id}/move-to-record`、`POST /purchase-materials/batch-move-to-record`、`POST /purchase-records/{line_id}/restore-to-plan`、`PATCH /purchase-records/{line_id}`、`PATCH /purchase-records/batch`、`GET /purchase-records`、`GET /purchase-records/{line_id}` |
-| 表 | `purchase_material`、`purchase_request`、`purchase_request_line`、`purchase_material_image`、`purchase_request_line_image`、`file_object` |
-| 事务 | 转入（计划加锁 + 新建单据）与恢复（删行/删单 + 计划回 `NORMAL`）各在**一个请求事务**内完成 |
-| 并发 | 计划行、记录行、单据头都 `FOR UPDATE`；`plan_no` 唯一索引兜底；`version` 乐观锁保护详情/批量编辑 |
-| 转入副作用 | 行快照字段（`plan_no_snapshot`、`material_code_snapshot`、`*_snapshot`、`purchase_qty`、`usage`、图片等）全部从计划复制；计划本身随后由**每日 02:00 清理任务**删除，清理前先把 `purchase_request_line.purchase_material_id` 置空（`with_for_update(skip_locked=True)`，每批 50 条） |
-| 恢复副作用 | 原计划若已被清理，则按行快照重建一条计划（保留原 `plan_no`）；若该单只剩这一行则整单删除，否则只删除该行 |
-| 到货入库 | **与申购记录无自动化关联**：没有 `received_qty` 字段、没有入库明细到申购行的外键、也没有 `prepare-inbound` 接口。仓库管理员按记录的物资与数量人工入库，「部分入库 / 已入库」状态由外部平台回写（见 [/dev-state-machines](/dev-state-machines) 第 3 节） |
-计划清理任务的护栏：只清理「被记录行引用且 `plan_no_snapshot` 非空」的计划，避免旧库未回填快照时误删导致记录字段缺失。任务开关 `APP_PURCHASE_PLAN_CLEANUP_ENABLED`（默认开启），worker 名称 `purchase-plan-cleanup-worker`，每天北京时间 02:00 触发，随后循环清理直到无候选。
-### 5. Excel 导入（异步任务）
+
+```mermaid
+flowchart LR
+    A["到货入库"] --> B["与申购记录没有自动化关联：没有到货数量字段、没有入库到记录行的外键"]
+    B --> C["「部分入库 / 已入库」由外部平台回写，不由入库流水计算"]
+    D["计划清理任务"] --> E["每天凌晨执行，只清理被记录行引用且计划单号快照非空的老计划"]
+    E --> F["清理前先把记录行的计划关联置空，每批 50 条并跳过已锁定行"]
+    G["从记录恢复计划"] --> H["原计划已被清理时按记录行快照重建，保留原计划单号<br/>整单只剩一行则删除整单"]
+```
+
+### Excel 导入
+
 ```mermaid
 sequenceDiagram
     participant U as 浏览器
-    participant API as POST /{module}/import
-    participant S as import_job_service
+    participant API as 导入接口
+    participant S as 导入服务
     participant BG as 后台协程
     participant DB as MySQL
-    U->>API: multipart 文件（≤50MB，.xlsx/.xlsm/.xls/.csv）
-    API->>S: save_upload（1MB 分块流式写 data/uploads/imports/{uuid7}.{ext}）
-    API->>S: enqueue_import（按 import_type 的 asyncio.Lock 串行）
-    S->>DB: 存在 PENDING/RUNNING 同类任务 → 409 IMPORT_IN_PROGRESS
-    S->>DB: INSERT excel_import_job(status=PENDING) 并 commit（独立事务）
-    API-->>U: 202 + {job_id, status=PENDING}
-    BG->>DB: status=RUNNING, started_at（独立事务）
-    BG->>BG: asyncio.to_thread(同步解析器)（openpyxl / xlrd / csv）
-    BG->>DB: DELETE 全表 + 分批 2000 行 INSERT + commit（处理器自带会话）
-    BG->>DB: status=SUCCEEDED/FAILED + result/error_code/finished_at（独立事务）
-    BG->>BG: 删除临时导入文件
+    U->>API: 上传文件（不超过 50MB，支持 xlsx / xlsm / xls / csv）
+    API->>S: 分块流式写入临时目录
+    API->>S: 按导入类型加协程锁后登记任务
+    S->>DB: 已有同类进行中任务则拒绝；否则登记待处理任务并提交（独立事务）
+    API-->>U: 任务号与状态（异步）
+    BG->>DB: 置为处理中（独立事务）
+    BG->>BG: 在线程中解析文件
+    BG->>DB: 全量替换目标表：先清空，再分批 2000 行写入并一次提交（失败则整表不变）
+    BG->>DB: 写终态与结果（独立事务）
+    BG->>BG: 删除临时文件
     loop 前端轮询
-        U->>API: GET /{module}/import-jobs/{job_id}
+        U->>API: 查询任务进度
     end
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /material-code-library/import`、`POST /huaxing-inventory/import`、`POST /secondary-warehouse/import`、`GET .../import-jobs/{job_id}`、`GET .../last-import` |
-| `import_type` | `MATERIAL_CODE_LIBRARY`、`HUAXING_INVENTORY`、`LITE_INVENTORY` |
-| 表 | `excel_import_job` + 目标表（`material_code_library` / `huaxing_inventory` / `lite_inventory`） |
-| 事务 | 三次独立 `SessionLocal` 事务（登记 / 置 `RUNNING` / 写终态）；业务写入由处理器自己的会话一次 `commit`（全量替换，失败即整表不变） |
-| 并发 | ① `asyncio.Lock` 按 `import_type` 串行化「检查进行中 + 登记」，保证 409 判断原子（单进程 worker 内有效）；② 运行中的 `asyncio.Task` 存入模块级集合防 GC |
-| 崩溃恢复 | 启动时 `mark_stale_jobs_failed`：遗留 `PENDING/RUNNING` 置 `FAILED` + `error_code=SERVER_RESTARTED`，并删除临时文件 |
-| 保留与去重 | 临时文件在任务 `finally` 中即删；任务行由启动时 `cleanup_finished_jobs(retention_days=30)` 清理（**无周期性 worker**）；精简模式导入对「名称+规格+单位+数量+备注」完全相同的行只保留一条，返回 `imported_count` / `deduplicated_count` |
-### 6. Excel 导出（异步任务）
+
+```mermaid
+flowchart LR
+    A["进程重启"] --> B["启动时把遗留的待处理 / 处理中任务标记为失败，错误码记为服务重启，并删除临时文件"]
+    C["任务行"] --> D["启动时清理 30 天前的终态行，没有周期性清理 worker"]
+    E["精简库存导入"] --> F["「名称 + 规格 + 单位 + 数量 + 备注」完全相同的行只保留一条<br/>分别返回导入条数与去重条数"]
+    G["协程锁按导入类型串行化「检查进行中 + 登记」"] --> H["单进程 worker 内有效，保证并发上传时判断原子"]
+```
+
+### Excel 导出
+
 ```mermaid
 sequenceDiagram
     participant U as 浏览器
-    participant API as POST .../export-results
-    participant S as excel_export_job_service
+    participant API as 导出接口
+    participant S as 导出服务
     participant BG as 后台协程
-    U->>API: 当前筛选条件（+ 导出列）
-    API->>S: enqueue_export（导出只读，允许并发，不做 409）
-    S-->>U: 202 + {job_id, status=PENDING}
-    BG->>BG: status=RUNNING，确定目标 data/uploads/exports/{uuid7}.xlsx
-    BG->>BG: 独立会话查库 → asyncio.to_thread(openpyxl 渲染，含嵌入图片)
-    BG->>BG: 先写 .tmp 再原子改名
+    U->>API: 当前筛选条件与导出列
+    API->>S: 登记导出任务（只读，允许并发）
+    S-->>U: 任务号与状态
+    BG->>BG: 置为处理中，确定目标文件路径
+    BG->>BG: 独立会话查库，在线程中用 openpyxl 渲染（含嵌入图片）
+    BG->>BG: 先写临时文件再原子改名
     alt 成功
-        BG->>S: status=SUCCEEDED + download_filename + result{rows, image_count}
-        U->>API: GET /excel-export-jobs/files/{file_uuid}（匿名下载）
+        BG->>S: 写成功状态与文件名、行数、图片数
+        U->>API: 按文件号匿名下载
     else 失败
-        BG->>S: status=FAILED + error_code/error_message
-        BG->>BG: 立即删除目标文件
+        BG->>S: 写失败状态与错误码
+        BG->>BG: 立即删除半成品文件
     end
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `POST /purchase-records/export-results`、`POST /purchase-materials/export-results`、`GET /excel-export-jobs/{job_id}`、`GET /excel-export-jobs/files/{file_uuid}` |
-| 表 | `excel_export_job`（`params` 保存请求快照，供后台任务重放筛选条件） |
-| 事务 | 登记与写终态各一个独立事务；渲染查库用处理器自己的会话 |
-| 并发 | 导出只读，允许并发；`_running_tasks` 防 GC；单次导出行数上限 10000（超出 `400 EXPORT_RESULT_LIMIT_EXCEEDED`） |
-| 可见性 | 状态查询仅创建者本人或超管（否则 `400 NOT_FOUND`）；**文件下载不鉴权**，安全性依赖 uuid7 不可猜解 + 文件仅存在于 `exports/` 目录 |
-| 清理 | `run_cleanup_worker` 每 24 小时删除 3 天前的终态任务行及其文件，并顺带删除超过 24 小时的 `.tmp` 孤儿文件；启动时 `mark_stale_exports_failed` 处理重启残留 |
 
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `GET /purchase-materials/export-uncoded`（物料编码申请表）、`POST /purchase-materials/export-purchase-application`、`POST /purchase-materials/export-purchase-approval` |
-| 特点 | 不走任务队列，由 `excel_export_service.render_excel` 读 `server/app/templates/*.json` 在内存生成工作簿后直接返回 |
-| 错误 | 模板缺失 `EXPORT_TEMPLATE_MISSING`、模板非法 `EXPORT_TEMPLATE_INVALID` |
-### 7. 图片上传与读取（含悬空文件清理）
+```mermaid
+flowchart LR
+    A["导出"] --> B["异步任务：计划结果、记录结果<br/>登记任务、轮询进度、按文件号下载"]
+    A --> C["同步返回：未编码清单、采购申请表、采购审批表<br/>内存中按模板生成后直接返回"]
+    C --> D["模板缺失或非法、必填字段不足都会被拒绝"]
+    B --> E["状态查询仅创建者与超管可见；文件下载不鉴权，依赖文件号不可猜解"]
+    B --> F["每 24 小时清理 3 天前的终态任务与文件，并清理超过 24 小时的临时文件"]
+    B --> G["请求参数整体存进任务行，后台任务据此重放筛选条件"]
+```
+
+### 图片上传与读取
+
 ```mermaid
 sequenceDiagram
-    participant U as 浏览器/小程序
-    participant API as POST /files/images
-    participant FS as file_service
-    participant DB as file_object
-    U->>API: multipart 图片（jpeg/png/webp，≤10MB）
-    FS->>FS: Pillow 解码 → 转 RGBA/RGB → 重新编码为 PNG
-    FS->>FS: sha256(重编码后的字节)
-    FS->>FS: 按摘要获取模块级 asyncio.Lock
-    FS->>DB: select FileObject where sha256 = ?（按 created_at, id 排序）
-    alt 已有记录且磁盘文件字节一致
-        FS-->>U: 复用已有 FileObjectRead（不新增行、不写盘）
+    participant U as 浏览器 / 小程序
+    participant API as 图片接口
+    participant FS as 文件服务
+    participant DB as 文件表
+    U->>API: 上传图片（jpeg / png / webp，不超过 10MB）
+    FS->>FS: 解码后统一重编码为 PNG
+    FS->>FS: 计算重编码字节的摘要，并按摘要加协程锁
+    FS->>DB: 按摘要查已有文件记录
+    alt 已有记录且磁盘文件一致
+        FS-->>U: 复用已有文件（不新增行、不写盘）
     else 有记录但磁盘文件缺失
-        FS->>FS: 补写文件 + 更新元数据 + commit（失败则删文件）
+        FS->>FS: 补写文件并更新元数据后提交
         FS-->>U: 该记录
     else 全新图片
-        FS->>FS: 写 data/uploads/{uuid7}.png
-        FS->>DB: INSERT file_object(sha256, mime_type=image/png, width/height/size)
-        FS->>DB: commit（独立事务，提交成功后才返回；失败则删文件）
-        FS-->>U: 201 FileObjectRead
+        FS->>FS: 写磁盘文件
+        FS->>DB: 插入文件记录并提交（独立事务，提交成功才返回）
+        FS-->>U: 文件信息
     end
 ```
-| 项 | 内容 |
-| --- | --- |
-| 表 | `file_object` + 关联表 `stock_material_image`、`purchase_material_image`、`purchase_request_line_image`（`(owner_id, file_id, sort_order)`） |
-| 磁盘 | `APP_UPLOAD_DIR`（默认 `server/data/uploads`），文件名 `{file_id}.png`；`lifespan` 启动时确保目录存在 |
-| 事务 | 上传与删除是**独立事务**（显式 `commit`），与业务单据保存分开：先上传拿到 `file_id`，再在表单提交时把 `image_ids` 带进 POST/PATCH |
-| 并发 | 同一摘要的并发上传用模块级 `asyncio.Lock`（`_digest_lock`，引用计数归零后回收）串行化，避免重复写盘 |
-| 约束 | 类型白名单 `image/jpeg|png|webp`（其它 `400 INVALID_IMAGE_TYPE`）；大小上限 10MB（`413 IMAGE_TOO_LARGE`）；`image_ids` 含不存在的 id 报 `INVALID_IMAGE_ID` |
-| 读取 | `GET /files/images/{id}` **不鉴权**（`<img>` 无法携带鉴权头），`Cache-Control: public, max-age=86400, s-maxage=2592000`；带 `size=16..2048` 时用 Pillow 生成等比 WebP 预览（quality 82） |
-| 删除与悬空清理 | `DELETE /files/images/{id}`：被任一业务关联表引用则 `409 FILE_IN_USE`，否则删行并删磁盘文件。`GET /files/images/orphans?older_than_hours=24`（超管）报告三类：超过保护期且未被引用的记录、无记录但命名匹配 `{uuid7}.png` 的磁盘文件、有记录但磁盘缺失的文件；`DELETE /files/images/orphans` 删除前两类（**不删除「磁盘缺失」记录**） |
-图片地址由 `file_id` 推导，不持久化域名或路径：前端 `web/src/utils/image.ts` 用 `VITE_IMAGE_BASE_URL`（可被「图片加速服务器地址」配置覆盖）拼接，`imagePreviewUrl` 追加 `?size=`。
+
+```mermaid
+flowchart TD
+    A["读取图片"] --> B["不鉴权：页面标签无法携带鉴权头；长期缓存"]
+    B --> C["带尺寸参数时用 Pillow 生成等比 WebP 预览"]
+    D["删除图片"] --> E{"被任一业务关联表引用？"}
+    E -- "是" --> F["拒绝：文件正在被使用"]
+    E -- "否" --> G["删行并删磁盘文件"]
+    H["悬空文件排查（超管）"] --> I["报告三类：超期未被引用的记录、无记录但命名符合规则的磁盘文件、有记录但磁盘缺失"]
+    I --> J["清理前两类，不删除「磁盘缺失」的记录"]
+```
+
+图片地址由文件标识推导，不持久化域名或路径：前端用图片加速配置或构建变量拼接，预览地址追加尺寸参数。
+
+读取图片响应缓存 1 天、共享缓存 30 天；上传先拿到文件标识，再随业务表单一起提交给计划 / 物资接口；磁盘目录由环境变量指定（默认 `server/data/uploads`），文件名即文件标识。
 
 </TabsContent>
 
 <TabsContent id="t3">
 
-### 8. 链接分享公开页
+### 链接分享公开页
+
 ```mermaid
 sequenceDiagram
     participant U as 登录用户
-    participant API as /shares
-    participant DB as share_link
+    participant API as 分享接口
+    participant DB as 分享表
     participant V as 访客（未登录）
-    U->>API: POST /shares {share_type, item_ids[], expires_in, columns?}
-    API->>DB: 校验勾选项存在 → INSERT share_link(token=uuid7, expires_at, columns)
-    API-->>U: 201 {token, expires_at}（前端拼 /share/{token}）
-    V->>API: GET /shares/{token}（不鉴权）
-    API->>DB: select ShareLink by token → 校验未过期
-    API->>DB: 按 share.item_ids 实时读取计划 / 记录行（保持创建时的顺序）
-    API-->>V: 仅展示列 + 行身份键 + unit_name（隐藏列数据不下发）
+    U->>API: 创建分享：类型、条目、有效期、展示列
+    API->>DB: 校验勾选项存在，写入分享记录（不可猜解的标识 + 到期时间）
+    API-->>U: 分享标识与到期时间
+    V->>API: 打开分享页（不鉴权）
+    API->>DB: 按标识查分享记录并校验未过期
+    API->>DB: 按创建时勾选的条目实时读取计划 / 记录行，保持创建时顺序
+    API-->>V: 仅展示列 + 行标识 + 数量单位（隐藏列不下发）
 ```
-| 项 | 内容 |
-| --- | --- |
-| 表 | `share_link`（`token` UUIDv7 主键、`share_type`、`item_ids` JSON、`columns` JSON/NULL、`expires_at`、`created_by`） |
-| 事务与并发 | 创建/更新/撤回都是请求级事务，定期清理是独立事务；无行锁，撤回即物理删除，删除后匿名读取立即失败 |
-| 校验 | `SHARE_NOT_FOUND` / `SHARE_EXPIRED`（均 400）；改/删仅创建者或超管（否则 403）；列名非法 `422 VALIDATION_ERROR` |
-| 展示列 | `columns = NULL` → 默认列（该类型全部列去掉「状态」）；`unit_name` 始终下发用于渲染数量单位；`id`（计划）/`line_id`（记录）作为行身份键始终下发 |
-| 前端 | 公开路由 `/share/:token` → `web/src/views/public/ShareView.vue`（`meta.public = true`，路由守卫不要求登录） |
-| 清理 | 启动时 + 每日 worker（`share-link-cleanup-worker`）删除 `expires_at < now` 的行 |
-### 9. 采购记录同步（外部平台回写）
+
+```mermaid
+flowchart LR
+    A["展示列留空"] --> B["默认列：该类型全部列去掉「状态」"]
+    C["修改列或撤销"] --> D["仅创建者或超管；列名非法被拒绝"]
+    E["撤回"] --> F["物理删除记录，匿名读取立即失败"]
+    G["启动时与每日清理"] --> H["删除已过期的分享记录"]
+    I["公开路由"] --> J["不要求登录；展示列与顺序取自创建时的勾选"]
+```
+
+### 采购记录同步（外部平台回写）
+
 ```mermaid
 sequenceDiagram
     participant X as 外部平台脚本
-    participant API as /purchase-record-sync
+    participant API as 同步接口
     participant DB as MySQL
-    X->>API: GET /targets（或 /order-targets）limit + cursor + fields + min_purchase_order_no
-    API->>DB: 按追溯号（或申购单号）统计仍待补字段的记录行
-    API-->>X: {items, has_more, next_cursor}
-    X->>X: 每个申购单 / 追溯号调用外部平台一次（脚本侧聚合）
-    X->>API: POST /trace/{trace_no} 或 /orders/{purchase_order_no}/apply
-    API->>DB: 锁定命中行与其 PurchaseRequest（FOR UPDATE）
-    API->>DB: 文本仅当空才填 / 日期仅当 NULL 才填 / 状态只进不退，仅变更时 version += 1
-    API-->>X: {affected_headers, affected_lines}（整单另返回 applied / not_found）
+    X->>API: 拉取待补字段的目标（游标分页 + 字段白名单）
+    API->>DB: 按追溯号或申购单号统计仍待补字段的记录行
+    API-->>X: 目标列表与下一页游标
+    X->>X: 脚本侧按申购单或追溯号聚合后查询外部平台
+    X->>API: 回写采购进度
+    API->>DB: 锁定命中行与其单据头
+    API->>DB: 文本仅当空才填、日期仅当空才填、状态只进不退，仅变更时递增版本
+    API-->>X: 变更的单据数与行数（整单回写另返回命中与未命中数）
 ```
-| 项 | 内容 |
-| --- | --- |
-| 表 | `purchase_request`（合同号/船号/集港日期与港口/发船日期/申购日期/备注）、`purchase_request_line`（业务员/合同签订日期/状态/追溯号） |
-| 事务 | 一次请求一个事务，`flush()` 后由 `get_db` 统一提交 |
-| 并发 | 命中行与单据头 `FOR UPDATE`；`version` 逐条自增供前端乐观锁；整单回写中某追溯号不存在只计入 `not_found` 并继续处理其余项 |
-| 同步字段白名单 | `salesperson`、`contract_no`、`vessel_no`、`consolidation_port`、`consolidation_date`、`sailing_date`、`contract_sign_date`、`status`；未知字段 `422 VALIDATION_ERROR` |
-| 分页 | 游标分页（`cursor` → `next_cursor`，非 `page/page_size` 模型），`limit` 1..200 |
-| 权限 | 全部端点要求 `PurchaseWriter`（读接口也要求） |
-### 10. Webhook 投递
+
+可回写的字段是固定白名单：业务员、合同号、船号、集港港口与集港日期、发船日期、合同签订日期、状态；未知字段被拒绝。全部端点（含只读）都要求申购写权限；整单回写中某个追溯号不存在时只计入未命中并继续处理其余项。
+
+### Webhook 投递
+
 ```mermaid
 sequenceDiagram
-    participant B as 业务事务（入/出库、小程序建档）
-    participant Q as webhook_delivery
-    participant W as run_delivery_worker（每 2s）
+    participant B as 业务事务（出入库、小程序建档）
+    participant Q as 投递队列表
+    participant W as 投递 worker（每 2 秒）
     participant P as 飞书 / 钉钉
-    B->>Q: enqueue_event：按启用渠道 ∩ subscribed_events 插入 PENDING 行（同一事务）
-    W->>Q: 认领 1 条（PENDING 且 next_retry_at<=now，或 SENDING 且 updated_at<=now-5min）FOR UPDATE SKIP LOCKED
-    W->>Q: status=SENDING, attempts+=1, commit（独立事务）
-    W->>P: POST（飞书 text + timestamp/sign；钉钉 markdown + URL 追加 timestamp/sign）
-    alt 平台返回 code / errcode == 0
-        W->>Q: SUCCEEDED + delivered_at + response_status/excerpt
+    B->>Q: 按「启用渠道 ∩ 订阅事件」插入待投递行（复用业务事务）
+    W->>Q: 认领一条：到期或租约超时的行，跳过已锁定行
+    W->>Q: 置为投递中并递增尝试次数（独立事务）
+    W->>P: 推送消息（带时间戳与签名）
+    alt 平台返回成功
+        W->>Q: 置为成功，记录响应状态与时间
     else 失败
-        W->>Q: attempts < 5 → PENDING 且 next_retry_at = now + 退避；否则 FAILED + last_error
+        W->>Q: 未满 5 次则按退避时间重排，第 5 次置为失败并记录原因
     end
 ```
-| 项 | 内容 |
-| --- | --- |
-| 表 | `webhook_channel`（渠道配置，地址与密钥 Fernet 加密）、`webhook_delivery`（投递队列，`uq(event_id, channel_id)` 去重） |
-| 事件 | `stock.outbound.created`、`stock.inbound.created`、`mini_program.user.bound`（另有测试事件 `webhook.test`，不入库） |
-| 事务 | 入队复用业务请求事务；认领与结算是两个独立 `SessionLocal` 事务 |
-| 并发 | `with_for_update(skip_locked=True)` 下单 worker 安全；`SENDING` 5 分钟租约处理进程崩溃；HTTP 客户端 `httpx.AsyncClient(timeout=8s, connect=3s)` |
-| 退避 | `1/5/15/60/180` 分钟，最多 5 次尝试（第 5 次失败置 `FAILED`） |
-| 配置校验 | 地址必须 https 且域名/路径匹配平台（飞书 `open.feishu.cn`/`open.larksuite.com` + `/open-apis/bot/v2/hook/`；钉钉 `oapi.dingtalk.com` + `/robot/send`），否则 `422 INVALID_WEBHOOK_URL` |
-| 关闭 | `lifespan` 退出时置 stop_event、等待 worker 结束并 `close_client()` |
-### 11. AI 搜索
+
+```mermaid
+flowchart LR
+    A["可订阅事件"] --> A1["出库已创建、入库已创建、小程序用户已绑定"]
+    B["渠道配置"] --> B1["地址与密钥加密入库，读取解密回显"]
+    B --> B2["地址须为该平台的 https 域名与路径，否则拒绝"]
+    C["退避"] --> C1["1 / 5 / 15 / 60 / 180 分钟，最多 5 次"]
+    E["投递行"] --> E1["同一事件 + 同一渠道唯一，重复入队被去重"]
+    D["发送超时"] --> D1["响应 8 秒、连接 3 秒"]
+```
+
+### AI 搜索
+
 ```mermaid
 flowchart TD
-    A[查询接口带 ai_expand=true] --> B[expand_search_value non-strict]
-    B --> C{配置存在且 enabled 且有 API Key?}
-    C -->|否| D[原样返回关键词，不报错]
-    C -->|是| E{缓存命中（key = 配置 version + 关键词，<br/>TTL 30 分钟，上限 1000 条）?}
-    E -->|是| F[返回缓存的同义词/近义词组]
-    E -->|否| G[POST {endpoint}/chat/completions（OpenAI 兼容）<br/>10s 响应超时 / 3s 连接超时]
-    G --> H{上游返回}
-    H -->|成功| I[解析 JSON → 每组最多 6 个扩展词 → 用 | 连接]
-    H -->|失败| J[non-strict：记 warning 并回退原关键词<br/>strict（/ai-search/expand）：抛 AI_* 错误]
-    I --> K[写缓存]
-    K --> L[作为 OR 关键词交给 repository 的 contains_any]
+    A["业务查询带「AI 扩词」参数"] --> B["非严格扩词：失败不影响结果"]
+    B --> C{"配置存在、已启用且有密钥？"}
+    C -- "否" --> D["原样返回关键词，不报错"]
+    C -- "是" --> E{"缓存命中？（键 = 配置版本 + 关键词，30 分钟，上限 1000 条）"}
+    E -- "是" --> F["返回缓存的同义词 / 近义词组"]
+    E -- "否" --> G["调用上游模型（响应 10 秒、连接 3 秒超时）"]
+    G --> H{"上游返回"}
+    H -- "成功" --> I["解析 JSON，每组最多 6 个扩展词，用竖线连接"]
+    H -- "失败" --> J["非严格模式记警告并回退原关键词<br/>显式扩词接口则抛上游错误"]
+    I --> K["写缓存"]
+    K --> L["作为 OR 关键词交给查询层"]
 ```
-| 项 | 内容 |
-| --- | --- |
-| 接口 | `GET /ai-search/status`（任意登录用户）、`POST /ai-search/expand`（strict）、`GET/PUT /ai-search/settings`（`SuperAdmin`）、`POST /ai-search/settings/test`（30s 超时、不走缓存） |
-| 表 | `system_setting`（`setting_key = ai_search_config`，JSON 含 endpoint/model/enabled/加密 API Key 与小程序、二级库各开关）、`business_event_log`（`action=AI_SEARCH_CONFIG_UPDATED`，记录前后配置） |
-| 事务与并发 | 配置写入走请求事务 + `version` 乐观锁（不符 `409 VERSION_CONFLICT`），AI 调用本身无事务；进程内字典缓存 `_cache` + `httpx.AsyncClient` 单例，多实例部署时缓存不共享 |
-| 密钥 | `_encrypt_api_key` / `_decrypt_api_key` 用 Fernet 加密入库、读取回显；解密失败 `503 AI_API_KEY_DECRYPT_FAILED` |
-| 降级 | 业务查询的 `ai_expand` 失败**不影响结果**（回退原关键词）；仅显式 `/ai-search/expand` 返回 `503 AI_NOT_CONFIGURED` 或上游错误码（`AI_RESPONSE_TIMEOUT` 等） |
-| 搜索语义 | 关键词可用 `|` 或 `｜` 分隔多词，同一参数内 OR、不同参数间 AND（`common.split_or_search_terms`、`common.contains_any`） |
+
+```mermaid
+flowchart LR
+    A["配置写入"] --> B["请求级事务 + 版本号乐观锁，冲突提示刷新"]
+    C["密钥"] --> D["Fernet 加密入库，读取解密回显；解密失败返回服务不可用"]
+    E["缓存"] --> F["进程内字典 + 单一 HTTP 客户端；多实例部署时缓存不共享"]
+    E --> F2["配置存在系统设置表，变更同时写事件日志（记录前后配置）"]
+    G["搜索语义"] --> H["同一参数内多词是 OR，不同参数之间是 AND"]
+```
+
+显式扩词接口在未配置时返回「AI 未配置」，上游超时等错误按上游错误码透出。
 
 </TabsContent>
 
 <TabsContent id="t4">
 
-### 12. 其它链路索引
-| 链路 | 关键接口 | 主要表 |
+### 其它链路索引
+
+| 链路 | 触发 | 主要表 |
 | --- | --- | --- |
-| 二级库物资建档与安全库存 | `POST/PATCH /stock-materials`、`PUT /stock-materials/{id}/replenishment-policy` | `stock_material`、`stock_material_image`、`stock_balance`、`stock_replenishment_policy` |
-| 周期性计划一键生成 | `POST /purchase-plan-templates/{id}/generate` | `purchase_plan_template`（读） → `purchase_material`（写，计划日期取生成当天） |
-| 小程序扫码与出库 | `GET /mini-program/materials/{uuid}`、`GET /mini-program/inventory`、`POST /mini-program/outbound` | `stock_material`、`stock_balance`、`stock_operation(_line)` |
-| 小程序码生成 | `GET /stock-materials/{id}/mini-program-code`（307 重定向 → 带 uuid 的接口） | 无（微信接口 + 内存缓存） |
-| 物料编码存在性校验 | `GET /material-code-library/exists` | `material_code_library` |
-| 备忘录 | `GET/POST/PATCH/DELETE /memos` | `memo`（草稿与字号存浏览器本地） |
-| 版本信息 | `GET /version` | 无（读构建期注入的 `APP_BUILD_TIME` / `APP_GIT_SHA`） |
-字段级细节见 [/dev-data-model](/dev-data-model)，状态迁移与错误码见 [/dev-state-machines](/dev-state-machines)，后端分层与配置见 [架构设计](/dev-architecture)。
+| 二级库物资建档与安全库存 | 物资表单保存、安全库存设置 | `stock_material`、`stock_material_image`、`stock_balance`、`stock_replenishment_policy` |
+| 周期性计划一键生成 | 模板一键生成 | `purchase_plan_template`（读） → `purchase_material`（写，计划日期取生成当天） |
+| 小程序扫码与出库 | 扫物资码、库存查询、扫码出库 | `stock_material`、`stock_balance`、`stock_operation(_line)` |
+| 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
+| 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
+| 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
+| 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
+
+字段级细节见[数据模型](/dev-data-model)，状态迁移与错误码见[状态机](/dev-state-machines)，分层与配置见[架构设计](/dev-architecture)。
 
 </TabsContent>
 
