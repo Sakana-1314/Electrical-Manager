@@ -618,6 +618,7 @@ server/app/
 | --- | --- | --- | --- |
 | `webhook-delivery-worker` | `webhook_service.run_delivery_worker(stop_event)` | 循环投递待发送 webhook，无可投递时 `asyncio.wait_for(stop_event.wait(), timeout=2.0)` 轮询 | `_POLL_INTERVAL_SECONDS=2.0`；`_MAX_ATTEMPTS=5`；退避 `_RETRY_MINUTES=(1,5,15,60,180)`；`_SENDING_LEASE_MINUTES=5`；HTTP 超时 8s/连接 3s |
 | `purchase-plan-cleanup-worker` | `purchase_plan_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理直到无候选 | 仅当 `settings.purchase_plan_cleanup_enabled` 为真时创建；批次 `_BATCH_SIZE=50`；先解绑 `purchase_request_line.purchase_material_id` 再物理删除计划；`with_for_update(skip_locked=True)` |
+| `attachment-cleanup-worker` | `attachment_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理直到无候选 | 仅当 `settings.attachment_cleanup_enabled` 为真时创建；批次上限 200；对 `file_object.deleted_at` 非空的待删除附件**逐张复查被引用次数**：仍无引用才物理删除数据库行与磁盘文件，复查到新增引用则撤销删除；`with_for_update(skip_locked=True)`。物理清除只能由本任务完成，**没有手动物理删除接口** |
 | `excel-export-cleanup-worker` | `excel_export_job_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 终态任务保留 3 天；顺带清理 `upload_dir/exports` 下超过 24 小时的 `.tmp` 孤儿文件 |
 | `share-link-cleanup-worker` | `share_link_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 删除 `expires_at < utcnow()` 的行 |
 

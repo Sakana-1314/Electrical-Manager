@@ -1,7 +1,13 @@
 import { apiClient } from './client'
-import type { Attachment, AttachmentCleanup, AttachmentDelete, FileObject, Page } from './generated'
+import type {
+  Attachment,
+  AttachmentBulkDelete,
+  AttachmentDelete,
+  FileObject,
+  Page,
+} from './generated'
 
-/** 附件列表筛选：status 默认只看在用，deleted 查看待清理，all 全看。 */
+/** 附件列表筛选：不传 status / referenced 即「不限」。 */
 export interface AttachmentListQuery {
   page?: number
   page_size?: number
@@ -25,7 +31,12 @@ export const fileApi = {
       .then((r) => r.data),
   restoreAttachment: (id: string) =>
     apiClient.post<Attachment>(`/files/images/attachments/${id}/restore`).then((r) => r.data),
-  /** 立即执行待删除附件清理（与凌晨 2 点后台任务同一逻辑，仍会复查引用）。 */
-  purgeAttachments: () =>
-    apiClient.post<AttachmentCleanup>('/files/images/attachments/purge').then((r) => r.data),
+  /**
+   * 删除未引用：把所有 0 引用的附件批量标记为待删除（软删除）。
+   * 物理清除由次日凌晨 2 点的定时复查任务执行，没有手动物理删除入口。
+   */
+  deleteUnreferenced: () =>
+    apiClient
+      .post<AttachmentBulkDelete>('/files/images/attachments/delete-unreferenced')
+      .then((r) => r.data),
 }

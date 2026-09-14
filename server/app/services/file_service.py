@@ -15,7 +15,7 @@ from typing import Any
 
 from fastapi import UploadFile
 from PIL import Image, UnidentifiedImageError
-from sqlalchemy import Select, exists, func, select
+from sqlalchemy import Select, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -31,6 +31,7 @@ from app.models import (
     StockMaterialImage,
 )
 from app.schemas import (
+    AttachmentBulkDeleteRead,
     AttachmentCleanupRead,
     AttachmentDeleteRead,
     AttachmentRead,
@@ -327,6 +328,26 @@ async def soft_delete_image(session: AsyncSession, file_id: str) -> AttachmentDe
     return AttachmentDeleteRead(
         id=file_id,
         deleted_at=utc_aware(deleted_at),
+        purge_after=purge_after,
+    )
+
+
+async def soft_delete_unreferenced(session: AsyncSession) -> AttachmentBulkDeleteRead:
+    """批量软删除：把所有「在用且被引用次数为 0」的附件一次性标记为待删除。
+
+    引用条件直接写在 UPDATE 的 WHERE 里（不先查后改），避免两次操作之间被新引用插进来；
+    这里只落 `deleted_at`，物理删除仍由次日凌晨 2 点的引用复查执行。
+    """
+    deleted_at = utcnow()
+    result = await session.execute(
+        update(FileObject)
+        .where(FileObject.deleted_at.is_(None), _reference_count_expression() == 0)
+        .values(deleted_at=deleted_at)
+    )
+    await session.commit()
+    purge_after = next_local_hour(datetime.now(SHANGHAI), ATTACHMENT_PURGE_HOUR).astimezone(UTC)
+    return AttachmentBulkDeleteRead(
+        deleted_count=int(result.rowcount or 0),
         purge_after=purge_after,
     )
 

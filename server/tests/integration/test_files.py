@@ -395,18 +395,75 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
 
 
 @pytest.mark.asyncio
-async def test_purge_endpoint_requires_super_admin(client: AsyncClient) -> None:
+async def test_delete_unreferenced_requires_super_admin(client: AsyncClient) -> None:
     warehouse_headers = await auth_headers(client, "warehouse")
-    file_id = await upload_png(client, warehouse_headers, name="manual.png", color="olive")
-    await client.delete(f"/api/v1/files/images/{file_id}", headers=warehouse_headers)
-
     forbidden = await client.post(
-        "/api/v1/files/images/attachments/purge", headers=warehouse_headers
+        "/api/v1/files/images/attachments/delete-unreferenced", headers=warehouse_headers
     )
     assert forbidden.status_code == 403
 
+
+@pytest.mark.asyncio
+async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncClient) -> None:
+    """「删除未引用」只批量软删除 0 引用的附件：被引用的保持不动，且不物理删除。"""
+    headers = await auth_headers(client, "warehouse")
     admin_headers = await auth_headers(client, "admin")
-    purged = await client.post("/api/v1/files/images/attachments/purge", headers=admin_headers)
-    assert purged.status_code == 200, purged.text
-    assert purged.json()["purged_file_ids"] == [file_id]
-    assert not (settings.upload_dir / f"{file_id}.png").exists()
+    used_id = await upload_png(client, headers, name="used.png", color="red")
+    # 两张未引用图片必须用不同颜色：同色同尺寸会被内容去重成同一个文件。
+    free_ids = [
+        await upload_png(client, headers, name=f"free-{index}.png", color=color)
+        for index, color in enumerate(("green", "blue"))
+    ]
+    linked = await client.post(
+        "/api/v1/stock-materials",
+        headers=headers,
+        json={
+            "name": "批量删除物资",
+            "model_spec": "ATT-BULK-1",
+            "unit_name": "个",
+            "remark": None,
+            "image_ids": [used_id],
+        },
+    )
+    assert linked.status_code == 201, linked.text
+
+    response = await client.post(
+        "/api/v1/files/images/attachments/delete-unreferenced", headers=admin_headers
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["deleted_count"] == len(free_ids)
+    assert response.json()["purge_after"] is not None
+
+    # 只做软删除：数据库记录与磁盘文件都还在；被引用的图片不受影响。
+    async with SessionLocal() as session:
+        used = await session.get(FileObject, used_id)
+        free = [await session.get(FileObject, file_id) for file_id in free_ids]
+    assert used is not None and used.deleted_at is None
+    assert all(item is not None and item.deleted_at is not None for item in free)
+    for file_id in [used_id, *free_ids]:
+        assert (settings.upload_dir / f"{file_id}.png").is_file()
+
+    # 再次执行不会重复计数（已软删除的不再是候选）。
+    again = await client.post(
+        "/api/v1/files/images/attachments/delete-unreferenced", headers=admin_headers
+    )
+    assert again.json()["deleted_count"] == 0
+
+    # 物理删除仍只由凌晨 2 点的复查任务执行。
+    result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert sorted(result.purged_file_ids) == sorted(free_ids)
+    async with SessionLocal() as session:
+        assert await session.get(FileObject, used_id) is not None
+        for file_id in free_ids:
+            assert await session.get(FileObject, file_id) is None
+    assert (settings.upload_dir / f"{used_id}.png").is_file()
+
+
+@pytest.mark.asyncio
+async def test_manual_physical_purge_endpoint_is_gone(client: AsyncClient) -> None:
+    """物理删除必须定时执行：不存在手动物理清理接口。"""
+    admin_headers = await auth_headers(client, "admin")
+    response = await client.post("/api/v1/files/images/attachments/purge", headers=admin_headers)
+    # 未匹配路由按全局约定重映射为 400 + ROUTE_NOT_FOUND（项目不对外 404）。
+    assert response.status_code == 400
+    assert response.json()["code"] == "ROUTE_NOT_FOUND"
