@@ -1,6 +1,6 @@
 # HXNI 电气无忧 网页端
 
-按 [开发资料](../docs/websites/pages/dev-overview.md) 中的前端架构实现 Vue 3 + TypeScript 前端。本地开发把 `/api` 代理到本机后端，也可直接指向 [Apifox Mock](https://Sakana-1314.github.io/Electrical-Manager/api) 联调。
+按 [架构设计](../docs/websites/pages/dev-architecture.md) 中的前端架构实现 Vue 3 + TypeScript 前端。本地开发把 `/api` 代理到本机后端，也可直接指向 [Apifox Mock](https://Sakana-1314.github.io/Electrical-Manager/api) 联调。
 
 ## 启动
 
@@ -28,7 +28,7 @@ VITE_API_BASE_URL=https://api.example.com
 VITE_IMAGE_BASE_URL=https://img.example.com
 ```
 
-`VITE_API_BASE_URL` 和 `VITE_IMAGE_BASE_URL` 只填写服务器域名时会自动补全接口路径；`VITE_IMAGE_BASE_URL` 可省略，省略后图片从后端 API 读取。完整的前后端分离、跨域和 CDN 配置见 [前后端分离部署](../docs/websites/pages/frontend-separated-deployment.md)。
+`VITE_API_BASE_URL` 和 `VITE_IMAGE_BASE_URL` 只填写服务器域名时会自动补全接口路径；`VITE_IMAGE_BASE_URL` 可省略，省略后图片从后端 API 读取。完整的前后端分离、跨域和 CDN 配置见 [部署指南](../docs/websites/pages/guide.md#前后端分离部署)。
 
 运行 `npm run generate:api` 可依据 `../docs/openapi.yaml` 更新 `src/api/generated.ts`；页面和组件没有另建 DTO。
 

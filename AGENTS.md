@@ -24,13 +24,13 @@
 
 - `docs/openapi.yaml` — 接口契约；改后端接口时同步契约，并用 `npm run generate:api`（在 `web/` 目录）重新生成前端类型。
 - `docs/websites/pages/ui-design-guidelines.md` — UI 组件与样式约定。
-- `docs/websites/pages/api-error-conventions.md`（错误响应与状态码规则）、`docs/websites/pages/api-error-codes.md`（全部错误码总表，改错误码必须同步，见 `server/tests/test_error_code_docs.py`）。
+- `docs/websites/pages/api-conventions.md`（接口约定：错误响应与状态码规则）、`docs/websites/pages/api-error-codes.md`（全部错误码总表，改错误码必须同步，见 `server/tests/test_error_code_docs.py`）。
 - `.github/workflows/` — CI 流水线（契约一致性校验 / 接口测试 / 构建镜像 / 发布站点）。
 
 ## 项目站点（必须遵守）
 
 - 站点源码在 `docs/websites/`：`pages/` 是内容（VitePress `srcDir`），`.vitepress/config.ts` 是配置，`package.json` 管理依赖。
-- 已发布的文档（开发方案、UI 规范、API 约定、前后端分离部署、人工测试方案）都在 `pages/` 下，**不要再放回 `docs/` 根目录**；`docs/` 根只保留 `openapi.yaml`、`env/`、`references/` 与 `websites/`。
+- 已发布的文档（部署指南、接口约定、系统设计：数据模型 / 状态机 / 数据流 / 架构设计 / UI 设计）都在 `pages/` 下，**不要再放回 `docs/` 根目录**；`docs/` 根只保留 `openapi.yaml`、`env/`、`references/` 与 `websites/`。
 - `base` 必须与仓库路径一致（`/Electrical-Manager/`）；**仓库改名后要同步改** `.vitepress/config.ts` 的 `base` 与 README／AGENTS 里的站点地址。
 - 站点地址统一写作 `https://Sakana-1314.github.io/Electrical-Manager/`（大小写按账号名书写；域名解析本身不区分大小写，但文档里保持一致更易读）。
 - 发布由 `.github/workflows/website.yml` 在 `main` 变更时自动完成：构建 `docs/websites` 后推送到 `gh-pages` 分支，由 GitHub Pages 发布；不要手工提交构建产物。

@@ -75,7 +75,7 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 
 
 async def handle_http_exception(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-    # 约定：禁止对外产生 404 状态码（见 docs/websites/pages/api-error-conventions.md）。
+    # 约定：禁止对外产生 404 状态码（见 docs/websites/pages/api-conventions.md）。
     # 未匹配的 API 路径（框架级 404）重映射为 400 + code=ROUTE_NOT_FOUND，返回结构化业务错误体。
     # 其余 Starlette HTTP 异常（如 405/422）保持原状态码透传。
     if exc.status_code == 404:

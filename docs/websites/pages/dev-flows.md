@@ -431,7 +431,7 @@ flowchart TD
 | 物料编码存在性校验 | `GET /material-code-library/exists` | `material_code_library` |
 | 备忘录 | `GET/POST/PATCH/DELETE /memos` | `memo`（草稿与字号存浏览器本地） |
 | 版本信息 | `GET /version` | 无（读构建期注入的 `APP_BUILD_TIME` / `APP_GIT_SHA`） |
-字段级细节见 [/dev-data-model](/dev-data-model)，状态迁移与错误码见 [/dev-state-machines](/dev-state-machines)，后端分层与配置见 [/dev-backend](/dev-backend)。
+字段级细节见 [/dev-data-model](/dev-data-model)，状态迁移与错误码见 [/dev-state-machines](/dev-state-machines)，后端分层与配置见 [架构设计](/dev-architecture)。
 
 </TabsContent>
 

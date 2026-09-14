@@ -1,4 +1,4 @@
-# 数据模型与表结构
+# 数据模型
 
 MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **28 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
@@ -11,6 +11,7 @@ MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **28 张表**，结构出自 `do
 `server/tests/test_init_sql.py` 比对 `init.sql` 与 ORM（`server/app/models/__init__.py`）的表集合、列集合、约束名、索引名、NULL 约束、ENUM 取值、外键及 `ON DELETE` 行为，两边必须完全一致。
 
 <Tabs :tabs="[
+  { id: 'terms', title: '术语表' },
   { id: 't0', title: '公共约定与表清单' },
   { id: 't1', title: '基础与平台表' },
   { id: 't2', title: '导入、分享与快照表' },
@@ -19,6 +20,39 @@ MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **28 张表**，结构出自 `do
   { id: 't5', title: '申购记录行与库存流水行' },
   { id: 't6', title: '备忘表、关系与 ORM 对照' }
 ]">
+
+<TabsContent id="terms">
+
+| 术语 | 代码标识 | 定义 |
+| --- | --- | --- |
+| 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
+| 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting.secondary_warehouse_mode`，影响路由、菜单与写接口 |
+| 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
+| 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放 `inventory_service.replay_materials`；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
+| 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
+| 冲销 | `SourceType.REVERSAL` + `reversal_of_id` | 以反向类型的新流水抵消原流水，按行记录 `remaining_qty`（剩余可冲数量），累计冲销不得超过原数量 |
+| 初始化 / 小程序出库 | `SourceType.INITIALIZATION` / `SourceType.MINI_PROGRAM` | 初始化库存是首次建账入库（仍是正常入库流水，且只能是入库）；小程序出库落库时 `source_type` 记为 `MANUAL`，以 `mini_program_user_name_snapshot` 非空作为来源判据 |
+| 安全库存 / 最低库存 | `stock_replenishment_policy.minimum_qty` | 每物资一条策略，可单独启用；`enabled=false` 时不计入低库存，`CHECK (minimum_qty >= 0)` |
+| 低库存与建议申购数量 | `is_low_stock` / `suggested_purchase_qty` | 均查询时实时计算、不落库：低库存 = `policy.enabled && current_qty <= minimum_qty`；建议数量 = 近 6 个自然月内 `OUTBOUND` 且非冲销、未被冲销的流水数量之和 |
+| 补库 | `ReplenishmentDraft` | 低库存物资一键生成一条申购计划（不创建申购记录），复制名称/规格/单位/备注/图片/二级库关联，并尝试复用最近一次编码 |
+| 申购计划 | `purchase_material` | 一条记录代表一次申购计划；`plan_no` 形如 `PLAN-20260717-001`，同日序号递增，上限 999 |
+| 未编码物资 | `material_code IS NULL` | 无独立状态字段；未编码计划不能转入申购记录，也不能导出采购申请表 |
+| 申购记录 | `purchase_request` + `purchase_request_line` | 一条记录行对应一个计划快照 + 采购跟踪字段；转入时把计划字段全部快照到行上 |
+| 申购单号 / 追溯号 | `purchase_request.purchase_order_no` / `purchase_request_line.trace_no` | 申购单号是公司系统单据号，默认「申购 2026/7/17」，可编辑，整单同步按它分组；追溯号是外部平台查询键，同一追溯号可命中多行 |
+| 子项号 | `subitem_no` | 自由文本，用于标识设备/系统子项，非唯一键 |
+| 申购状态 | `purchase_request_line.status` | `VARCHAR(128)`，默认「已申购」；取值由数据决定（筛选项由 `purchase_status_options` 从库中 distinct 得出），同步时「只进不退」 |
+| 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅超级管理员可查询/打开已归档计划 |
+| 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
+| 编码库 / 华星总库存 | `material_code_library` / `huaxing_inventory` | 均为 Excel 全量替换导入：前者是公司编码参照表（用于编码存在性校验），后者是上游总库库存快照（仅查询） |
+| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
+| 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
+| 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
+| 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
+| 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏）/ `query_only`（只读）/ `read_write`（可出库） |
+| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
+| MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
+
+</TabsContent>
 
 <TabsContent id="t0">
 
@@ -426,7 +460,7 @@ erDiagram
 | `stock_operation_line` 唯一约束 | `(operation_id, stock_material_id)`（即 `stock_operation_line.stock_material_id` 与单头组合唯一）：一张单据内同一物资只能一行；`quantity > 0` 由 `CHECK` 保证，方向由单据头 `operation_type` 表达 |
 | `remaining_qty` 与冲销 | 冲销数量不得超过明细行 `remaining_qty`（`inventory_service`）；冲销单以 `source_type='REVERSAL'` + `reversal_of_id` 指向原单 |
 | `stock_operation.client_request_id` 幂等 | 唯一索引保证同一客户端请求只落一张单据，重复提交返回既有单据 |
-| `version` 乐观锁 | 更新前校验版本（`server/app/services/common.py` 的 `validate_version`），冲突按 [API 错误与状态码约定](/api-error-conventions) 返回 |
+| `version` 乐观锁 | 更新前校验版本（`server/app/services/common.py` 的 `validate_version`），冲突按 [接口约定](/api-conventions) 返回 |
 | `identity_hash` | `stock_material.identity_hash` = `name` + `model_spec` + `unit_name` 归一化后的 SHA-256（`server/app/services/common.py` 的 `identity_hash`），唯一索引用于物资去重 |
 | `material_code IS NULL` 即未编码 | `purchase_material.material_code`、`purchase_plan_template.material_code`、`purchase_request_line.material_code_snapshot` 均以 NULL 表示未编码，无独立状态字段；筛选即 `is_(None)` / `is_not(None)`（`server/app/services/material_service.py`） |
 | `enabled` 语义 | `user.enabled` 控制账号登录；`webhook_channel.enabled` 默认 0，启用时必须至少订阅一个事件；`stock_replenishment_policy.enabled` 默认 1 并参与低库存判定；`mini_program_user.enabled` 控制小程序可用性 |
@@ -460,7 +494,7 @@ erDiagram
 
 `server/tests/test_init_sql.py::test_init_sql_matches_current_model_schema` 逐表比对上述内容。
 
-相关页面：[/dev-overview](/dev-overview)、[/dev-state-machines](/dev-state-machines)、[/dev-flows](/dev-flows)、[/dev-backend](/dev-backend)、[/api-error-conventions](/api-error-conventions)
+相关页面：[状态机](/dev-state-machines)、[数据流](/dev-flows)、[架构设计](/dev-architecture)、[接口约定](/api-conventions)
 
 </TabsContent>
 

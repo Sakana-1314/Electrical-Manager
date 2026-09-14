@@ -365,7 +365,7 @@ stateDiagram-v2
 | `NOT_FOUND` | 400 | 按 id 查询的任意资源不存在 | 34 处 `not_found(...)` 调用 |
 | `ROUTE_NOT_FOUND` | 400 | 未匹配的 API 路径（框架级 404 重映射） | `exception_handlers.handle_http_exception` |
 | `DATA_CONFLICT` | 409 | 数据库唯一约束/完整性冲突 | `exception_handlers.handle_integrity_error` |
-接口与错误体结构约定见 [/api-error-conventions](/api-error-conventions)，各枚举与表的落库细节见 [/dev-data-model](/dev-data-model)，这些状态在请求链路中的时序见 [/dev-flows](/dev-flows)。
+接口与错误体结构约定见 [接口约定](/api-conventions)，各枚举与表的落库细节见 [/dev-data-model](/dev-data-model)，这些状态在请求链路中的时序见 [/dev-flows](/dev-flows)。
 
 </TabsContent>
 
