@@ -32,7 +32,7 @@ import {
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
-import { renderTwoLineText } from '@/utils/tableText'
+import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
 import { formatShanghaiTime } from '@/utils/time'
 import { routeQueryString } from '@/utils/routeQuery'
 
@@ -209,7 +209,7 @@ const availableColumns: Array<{
       title: '物料编码',
       key: 'material_code',
       width: tableColumnWidths.code,
-      render: (row) => renderTwoLineText(row.material_code, '-'),
+      render: (row) => renderMaterialCode(row.material_code),
     },
   },
   {
