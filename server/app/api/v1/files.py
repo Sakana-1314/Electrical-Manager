@@ -9,7 +9,7 @@ from app.core.permissions import DbSession, SuperAdmin, require_roles
 from app.domain.enums import Role
 from app.models import FileObject, User
 from app.schemas import (
-    AttachmentCleanupRead,
+    AttachmentBulkDeleteRead,
     AttachmentDeleteRead,
     AttachmentRead,
     FileId,
@@ -93,13 +93,19 @@ async def list_attachments(
 
 
 @router.post(
-    "/attachments/purge",
-    response_model=AttachmentCleanupRead,
-    summary="立即执行待删除附件清理",
+    "/attachments/delete-unreferenced",
+    response_model=AttachmentBulkDeleteRead,
+    summary="删除未引用附件",
 )
-async def purge_attachments(session: DbSession, user: SuperAdmin) -> AttachmentCleanupRead:
-    """手动触发一次引用复查（与凌晨 2 点后台任务同一逻辑，仍会复查引用后才物理删除）。"""
-    return await file_service.purge_deleted_attachments(session)
+async def delete_unreferenced_attachments(
+    session: DbSession, user: SuperAdmin
+) -> AttachmentBulkDeleteRead:
+    """把当前所有未被引用的附件批量标记为待删除。
+
+    只做软删除：数据库记录与磁盘文件都保留，次日凌晨 2 点的定时任务复查引用后
+    才真正物理清除（复查发现新增引用则自动撤销删除）。不提供手动物理删除入口。
+    """
+    return await file_service.soft_delete_unreferenced(session)
 
 
 @router.post(

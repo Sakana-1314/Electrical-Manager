@@ -15,17 +15,18 @@ import { imagePreviewUrl } from '@/utils/image'
 const message = useMessage()
 const dialog = useDialog()
 
-type AttachmentStatus = 'active' | 'deleted' | 'all'
-type ReferencedFilter = 'all' | 'used' | 'free'
+type AttachmentStatus = 'active' | 'deleted'
+type ReferencedFilter = 'used' | 'free'
 type AttachmentFilters = {
   keyword: string
-  status: AttachmentStatus
-  referenced: ReferencedFilter
+  // 下拉不提供「全部」选项：未选择即为不限，因此空值用 null 表达而不是 'all'。
+  status: AttachmentStatus | null
+  referenced: ReferencedFilter | null
 }
 
 const deletingId = ref<string | null>(null)
 const restoringId = ref<string | null>(null)
-const purging = ref(false)
+const deletingUnreferenced = ref(false)
 
 const {
   items,
@@ -43,23 +44,22 @@ const {
   fetch: (f, pager) =>
     fileApi.listAttachments({
       keyword: f.keyword.trim() || undefined,
-      status: f.status,
-      referenced: f.referenced === 'all' ? undefined : f.referenced === 'used',
+      status: f.status ?? 'all',
+      referenced: f.referenced === null ? undefined : f.referenced === 'used',
       page: pager.page,
       page_size: pager.page_size,
     }),
-  initialFilters: () => ({ keyword: '', status: 'all', referenced: 'all' }),
+  initialFilters: () => ({ keyword: '', status: null, referenced: null }),
   onError: (error) => message.error(error instanceof Error ? error.message : '加载附件列表失败'),
   pageSizeOptions: [20, 50, 100, 200],
 })
 
+// 不含「全部」：清空选择就代表不限（两个下拉都可 clearable 清回不限）。
 const statusOptions = [
   { label: '在用', value: 'active' },
   { label: '待删除', value: 'deleted' },
-  { label: '全部', value: 'all' },
 ]
 const referencedOptions = [
-  { label: '全部', value: 'all' },
   { label: '已被引用', value: 'used' },
   { label: '未被引用', value: 'free' },
 ]
@@ -118,30 +118,32 @@ async function restore(row: Attachment) {
   }
 }
 
-function runPurge() {
+function deleteUnreferenced() {
   dialog.warning({
     draggable: true,
-    title: '清理待删除附件',
+    title: '删除未引用附件',
     content:
-      '将立即扫描全库待删除附件，逐张复查被引用次数：' +
-      '仍无引用的删除数据库记录与磁盘文件；期间又被业务引用的自动撤销删除。' +
-      '凌晨 2 点的定时任务执行同一逻辑。',
-    positiveText: '开始清理',
+      '将把所有「被引用次数为 0」的图片一次性标记为待删除，被业务引用的图片不受影响。' +
+      '这只是软删除：图片会立即从业务中隐藏，但数据库记录与磁盘文件会保留到次日凌晨 2 点——' +
+      '系统复查全库确认仍无新增引用，才真正删除（期间可撤销删除）。',
+    positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
-      purging.value = true
+      deletingUnreferenced.value = true
       try {
-        const result = await fileApi.purgeAttachments()
+        const result = await fileApi.deleteUnreferenced()
         message.success(
-          `已扫描 ${result.scanned} 张：物理清除 ${result.purged_file_ids.length} 张，` +
-            `撤销删除 ${result.restored_file_ids.length} 张`,
+          result.deleted_count > 0
+            ? `已提交 ${result.deleted_count} 张未引用图片的删除，将于 ` +
+                `${formatShanghaiTime(result.purge_after)} 复查后清除`
+            : '当前没有被引用的图片需要删除',
         )
         await load()
       } catch (error) {
-        message.error(error instanceof Error ? error.message : '清理失败')
+        message.error(error instanceof Error ? error.message : '删除未引用失败')
         return false
       } finally {
-        purging.value = false
+        deletingUnreferenced.value = false
       }
     },
   })
@@ -263,8 +265,8 @@ const tableScrollX = getTableScrollX(columns)
 const activeFilterCount = computed(
   () =>
     [filters.keyword.trim()].filter(Boolean).length +
-    (filters.status === 'all' ? 0 : 1) +
-    (filters.referenced === 'all' ? 0 : 1),
+    (filters.status === null ? 0 : 1) +
+    (filters.referenced === null ? 0 : 1),
 )
 </script>
 
@@ -276,7 +278,9 @@ const activeFilterCount = computed(
       </div>
       <div class="page-actions">
         <n-space>
-          <n-button secondary :loading="purging" @click="runPurge">清理待删除</n-button>
+          <n-button secondary :loading="deletingUnreferenced" @click="deleteUnreferenced">
+            删除未引用
+          </n-button>
         </n-space>
       </div>
     </div>
@@ -293,16 +297,21 @@ const activeFilterCount = computed(
           style="width: 220px"
           @keyup.enter="query"
         />
+        <!-- 不设「全部」选项：清空选择即为不限 -->
         <n-select
           v-model:value="filters.status"
           :options="statusOptions"
-          style="width: 130px"
+          placeholder="删除状态"
+          clearable
+          style="width: 150px"
           aria-label="删除状态"
         />
         <n-select
           v-model:value="filters.referenced"
           :options="referencedOptions"
-          style="width: 140px"
+          placeholder="引用情况"
+          clearable
+          style="width: 150px"
           aria-label="引用情况"
         />
         <n-button type="primary" @click="query">查询</n-button>

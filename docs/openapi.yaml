@@ -15168,27 +15168,28 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-  /api/v1/files/images/attachments/purge:
+  /api/v1/files/images/attachments/delete-unreferenced:
     post:
       tags:
       - 图片
-      summary: 立即执行待删除附件清理
-      description: 手动触发一次引用复查（与凌晨 2 点后台任务同一逻辑，仍会复查引用后才物理删除）。
-      operationId: purge_attachments_api_v1_files_images_attachments_purge_post
+      summary: 删除未引用附件
+      description: '把当前所有未被引用的附件批量标记为待删除。
+
+
+        只做软删除：数据库记录与磁盘文件都保留，次日凌晨 2 点的定时任务复查引用后
+
+        才真正物理清除（复查发现新增引用则自动撤销删除）。不提供手动物理删除入口。'
+      operationId: delete_unreferenced_attachments_api_v1_files_images_attachments_delete_unreferenced_post
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttachmentCleanupRead'
+                $ref: '#/components/schemas/AttachmentBulkDeleteRead'
               example:
-                scanned: 1
-                purged_file_ids:
-                - 37c333f3-fbfe-79fa-8568-0af0db99be20
-                purged_file_names:
-                - 37c333f3-fbfe-79fa-8568-0af0db99be20.png
-                restored_file_ids: []
+                deleted_count: 81
+                purge_after: '2026-09-15T02:00:00+08:00'
         '400':
           description: 业务校验失败
           content:
@@ -15871,43 +15872,24 @@ components:
         details:
           material_id: 404
         request_id: 967336b6-a5d9-4d99-ab62-3fb99f380371
-    AttachmentCleanupRead:
+    AttachmentBulkDeleteRead:
       properties:
-        scanned:
+        deleted_count:
           type: integer
-          title: Scanned
-        purged_file_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          title: Purged File Ids
-        purged_file_names:
-          items:
-            type: string
-          type: array
-          title: Purged File Names
-        restored_file_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          title: Restored File Ids
+          title: Deleted Count
+        purge_after:
+          type: string
+          format: date-time
+          title: Purge After
       type: object
       required:
-      - scanned
-      - purged_file_ids
-      - purged_file_names
-      - restored_file_ids
-      title: AttachmentCleanupRead
-      description: 凌晨 2 点引用复查的清理结果。
+      - deleted_count
+      - purge_after
+      title: AttachmentBulkDeleteRead
+      description: 批量软删除未引用附件的回执：真正物理删除仍要等次日凌晨 2 点的引用复查。
       examples:
-      - scanned: 1
-        purged_file_ids:
-        - 37c333f3-fbfe-79fa-8568-0af0db99be20
-        purged_file_names:
-        - 37c333f3-fbfe-79fa-8568-0af0db99be20.png
-        restored_file_ids: []
+      - deleted_count: 81
+        purge_after: '2026-09-15T02:00:00+08:00'
     AttachmentDeleteRead:
       properties:
         id:

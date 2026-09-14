@@ -1545,11 +1545,9 @@ def _build_schema_examples() -> dict[str, Any]:
             "deleted_at": "2026-09-13T10:20:00+08:00",
             "purge_after": "2026-09-14T02:00:00+08:00",
         },
-        "AttachmentCleanupRead": {
-            "scanned": 1,
-            "purged_file_ids": [_file_id(952)],
-            "purged_file_names": [f"{_file_id(952)}.png"],
-            "restored_file_ids": [],
+        "AttachmentBulkDeleteRead": {
+            "deleted_count": 81,
+            "purge_after": "2026-09-15T02:00:00+08:00",
         },
         "Page_AttachmentRead_": _page(
             [

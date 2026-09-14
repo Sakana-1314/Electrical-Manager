@@ -507,8 +507,15 @@ class AttachmentDeleteRead(ReadModel):
     purge_after: UtcDateTime
 
 
+class AttachmentBulkDeleteRead(ReadModel):
+    """批量软删除未引用附件的回执：真正物理删除仍要等次日凌晨 2 点的引用复查。"""
+
+    deleted_count: int
+    purge_after: UtcDateTime
+
+
 class AttachmentCleanupRead(ReadModel):
-    """凌晨 2 点引用复查的清理结果。"""
+    """凌晨 2 点引用复查的清理结果（仅供后台任务内部使用，不对外暴露接口）。"""
 
     scanned: int
     purged_file_ids: list[FileId]
