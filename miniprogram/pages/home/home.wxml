@@ -98,14 +98,26 @@
         </view>
       </view>
       <view class="user-profile-appearance">
-        <view class="user-profile-appearance-label">{{i18n.appearanceTitle}}</view>
-        <t-segmented
-          class="appearance-segmented"
-          block
-          options="{{themeOptions}}"
-          value="{{themeMode}}"
-          bind:change="onThemeModeChange"
-        />
+        <view
+          class="appearance-trigger"
+          hover-class="appearance-trigger-active"
+          aria-role="button"
+          aria-expanded="{{appearanceExpanded}}"
+          bind:tap="toggleAppearance"
+        >
+          <view class="appearance-trigger-label">{{i18n.appearanceTitle}}</view>
+          <view class="appearance-trigger-value">
+            <view class="appearance-trigger-text">{{themeLabel}}</view>
+            <t-icon class="appearance-arrow" name="{{appearanceExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+          </view>
+        </view>
+        <view wx:if="{{appearanceExpanded}}" class="appearance-options">
+          <t-radio-group
+            value="{{themeMode}}"
+            options="{{themeOptions}}"
+            bind:change="onThemeModeChange"
+          />
+        </view>
       </view>
       <view
         wx:if="{{!liteMode}}"

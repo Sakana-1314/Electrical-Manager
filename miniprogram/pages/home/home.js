@@ -26,6 +26,7 @@ Page(withTheme({
     featureReady: false,
     liteMode: false,
     userProfileVisible: false,
+    appearanceExpanded: false,
     themeOptions: getAppearanceOptions(),
     miniProgramUpdatedAt: buildUploadTime || t('unknown'),
     i18n: getMessages(),
@@ -109,15 +110,23 @@ Page(withTheme({
   },
 
   onUserProfileVisibleChange(event) {
-    this.setData({ userProfileVisible: event.detail.visible });
+    const visible = event.detail.visible;
+    // 关闭弹窗时收起外观下拉，下次打开恢复收起状态。
+    this.setData(visible ? { userProfileVisible: true } : { userProfileVisible: false, appearanceExpanded: false });
+  },
+
+  toggleAppearance() {
+    this.setData({ appearanceExpanded: !this.data.appearanceExpanded });
   },
 
   onThemeModeChange(event) {
     setThemeMode(this, event.detail.value);
+    // 选完即收起，展开态只用于选择过程。
+    this.setData({ appearanceExpanded: false });
   },
 
   openRecords() {
-    this.setData({ userProfileVisible: false });
+    this.setData({ userProfileVisible: false, appearanceExpanded: false });
     wx.navigateTo({ url: '/pages/records/records' });
   },
 

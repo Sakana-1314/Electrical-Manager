@@ -685,7 +685,7 @@ server/app/
 
 ### 界面外观（明 / 暗）
 
-三档语义与网页端一致：`auto`（自动，跟随系统，默认）、`light`、`dark`；档位按本机存在 storage（`miniProgramThemeMode`），不落库、不产生请求，入口在首页「个人信息」弹窗的「外观」分段控件（`t-segmented`）。
+三档语义与网页端一致：`auto`（自动，跟随系统，默认）、`light`、`dark`；档位按本机存在 storage（`miniProgramThemeMode`），不落库、不产生请求，入口在首页「个人信息」弹窗的「外观」下拉菜单（收起态显示当前档位，展开后用 `t-radio-group` 列出三档，与列表页筛选下拉同一种表现）。
 
 | 层 | 实现 |
 | --- | --- |
