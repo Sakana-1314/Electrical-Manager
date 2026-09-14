@@ -1,7 +1,7 @@
 <view class="page-shell home-page">
   <view class="page-header">
     <view class="header-row">
-      <view class="page-title">{{i18n.appTitle}}</view>
+      <view class="page-title">{{i18n.brandTitle}}</view>
       <view wx:if="{{user}}" class="operator-badge" hover-class="operator-badge-active" bind:tap="showUserProfile">
         <view class="operator-dot"></view>
         <view class="operator-name">{{user.display_name}}</view>
