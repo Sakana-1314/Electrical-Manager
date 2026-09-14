@@ -1,48 +1,111 @@
-# 数据模型与表结构
+# 数据模型
 
 MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **28 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
-| 类型 | 字段 | 说明 |
-| --- | --- | --- |
-| `DECIMAL(18,1)` | `stock_operation_line.quantity/remaining_qty/before_qty/after_qty`、`stock_balance.quantity`、`planned_qty`、`purchase_qty`、`minimum_qty` | 业务数量统一 1 位小数 |
-| `DECIMAL(18,2)` | `huaxing_inventory.quantity`、`lite_inventory.quantity` | 外部导入，保留原始精度 |
-| `DATETIME(6)` | 所有时间字段 | UTC 语义，默认 `CURRENT_TIMESTAMP(6)`，写入侧由 `models/__init__.py` 的 `_utcnow()` 提供 |
-
-`server/tests/test_init_sql.py` 比对 `init.sql` 与 ORM（`server/app/models/__init__.py`）的表集合、列集合、约束名、索引名、NULL 约束、ENUM 取值、外键及 `ON DELETE` 行为，两边必须完全一致。
+```mermaid
+flowchart LR
+    SQL["init.sql<br/>结构与种子数据唯一来源"]
+    ORM["ORM 模型<br/>server/app/models/__init__.py"]
+    SQL <-->|"必须完全一致"| ORM
+    CHECK["test_init_sql.py<br/>比对表、列、约束名、索引名、NULL、ENUM、外键与 ON DELETE"] -.->|守护| SQL
+    CHECK -.->|守护| ORM
+```
 
 <Tabs :tabs="[
-  { id: 't0', title: '公共约定与表清单' },
-  { id: 't1', title: '基础与平台表' },
-  { id: 't2', title: '导入、分享与快照表' },
-  { id: 't3', title: '申购单据与物资' },
-  { id: 't4', title: '余额、策略、模板与图片' },
-  { id: 't5', title: '申购记录行与库存流水行' },
-  { id: 't6', title: '备忘表、关系与 ORM 对照' }
+  { id: 'terms', title: '术语表' },
+  { id: 'conventions', title: '公共约定' },
+  { id: 'relations', title: '表清单与域关系' },
+  { id: 'basics', title: '基础与平台表' },
+  { id: 'imports', title: '导入、分享与快照表' },
+  { id: 'purchase', title: '申购单据与物资' },
+  { id: 'balance', title: '余额、策略、模板与图片' },
+  { id: 'stock', title: '记录行、流水行与备忘' },
+  { id: 'constraints', title: '约束与种子数据' }
 ]">
 
-<TabsContent id="t0">
+<TabsContent id="terms">
 
-### 公共字段约定
-
-`AuditMixin` 提供 `created_at` / `updated_at`（`DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)`，`updated_at` 在 ORM 侧带 `onupdate`）与 `version`（`INT UNSIGNED NOT NULL DEFAULT 1`）。下表字段明细**不再重复列出审计列**，各表的审计列组合如下：
-
-| 审计列组合 | 表 |
-| --- | --- |
-| `id` 自增 `BIGINT UNSIGNED`（主键）+ `created_at` + `updated_at` + `version` | `user`、`mini_program_user`、`mini_program_identity`、`webhook_channel`、`purchase_material`、`purchase_plan_template`、`purchase_request`、`purchase_request_line`、`stock_material`、`stock_operation`、`stock_operation_line`、`memo` |
-| `id` = `VARCHAR(36)`（UUID 字符串）+ `created_at` + `updated_at` + `version` | `file_object` |
-| `id` + `created_at` + `updated_at`（无 `version`） | `excel_import_job`、`excel_export_job`、`share_link`、`webhook_delivery` |
-| `id` + `created_at`（无 `updated_at` / `version`） | `material_code_library`、`huaxing_inventory`、`lite_inventory` |
-| 无 `id`，主键 `stock_material_id`（1:1 物资）+ `created_at` + `updated_at` + `version` | `stock_replenishment_policy` |
-| 无 `id`，主键分别为 `stock_material_id`（1:1 物资）/ `setting_key`，+ `updated_at` + `version`（无 `created_at`） | `stock_balance`、`system_setting` |
-| 无 `id`、无审计列，主键 = 父级列 + `file_id` | `stock_material_image`、`purchase_material_image`、`purchase_plan_template_image`、`purchase_request_line_image` |
-| 只有 `id` + 业务时间 `occurred_at` | `business_event_log` |
-
-| 审计列 | 出现范围 | 说明 |
+| 术语 | 代码标识 | 定义 |
 | --- | --- | --- |
-| `created_by` | `excel_import_job`、`excel_export_job`、`share_link`（可 NULL）、`memo`（NOT NULL，随用户删除级联） | 外键指向 `user.id` |
-| `updated_by` | — | **全库没有该列** |
-| 软删除列（`deleted_at` / `is_deleted`） | — | 不存在，删除均为物理删除 |
-| 级联删除 | `stock_balance`、`stock_replenishment_policy`、图片关联表 | 随主表 `ON DELETE CASCADE` |
+| 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
+| 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting.secondary_warehouse_mode`，影响路由、菜单与写接口 |
+| 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
+| 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放 `inventory_service.replay_materials`；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
+| 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
+| 冲销 | `SourceType.REVERSAL` + `reversal_of_id` | 以反向类型的新流水抵消原流水，按行记录 `remaining_qty`（剩余可冲数量），累计冲销不得超过原数量 |
+| 初始化 / 小程序出库 | `SourceType.INITIALIZATION` / `SourceType.MINI_PROGRAM` | 初始化库存是首次建账入库（仍是正常入库流水，且只能是入库）；小程序出库落库时 `source_type` 记为 `MANUAL`，以 `mini_program_user_name_snapshot` 非空作为来源判据 |
+| 安全库存 / 最低库存 | `stock_replenishment_policy.minimum_qty` | 每物资一条策略，可单独启用；`enabled=false` 时不计入低库存，`CHECK (minimum_qty >= 0)` |
+| 低库存与建议申购数量 | `is_low_stock` / `suggested_purchase_qty` | 均查询时实时计算、不落库：低库存 = `policy.enabled && current_qty <= minimum_qty`；建议数量 = 近 6 个自然月内 `OUTBOUND` 且非冲销、未被冲销的流水数量之和 |
+| 补库 | `ReplenishmentDraft` | 低库存物资一键生成一条申购计划（不创建申购记录），复制名称/规格/单位/备注/图片/二级库关联，并尝试复用最近一次编码 |
+| 申购计划 | `purchase_material` | 一条记录代表一次申购计划；`plan_no` 形如 `PLAN-20260717-001`，同日序号递增，上限 999 |
+| 未编码物资 | `material_code IS NULL` | 无独立状态字段；未编码计划不能转入申购记录，也不能导出采购申请表 |
+| 申购记录 | `purchase_request` + `purchase_request_line` | 一条记录行对应一个计划快照 + 采购跟踪字段；转入时把计划字段全部快照到行上 |
+| 申购单号 / 追溯号 | `purchase_request.purchase_order_no` / `purchase_request_line.trace_no` | 申购单号是公司系统单据号，默认「申购 2026/7/17」，可编辑，整单同步按它分组；追溯号是外部平台查询键，同一追溯号可命中多行 |
+| 子项号 | `subitem_no` | 自由文本，用于标识设备/系统子项，非唯一键 |
+| 申购状态 | `purchase_request_line.status` | `VARCHAR(128)`，默认「已申购」；取值由数据决定（筛选项由 `purchase_status_options` 从库中 distinct 得出），同步时「只进不退」 |
+| 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅超级管理员可查询/打开已归档计划 |
+| 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
+| 编码库 / 华星总库存 | `material_code_library` / `huaxing_inventory` | 均为 Excel 全量替换导入：前者是公司编码参照表（用于编码存在性校验），后者是上游总库库存快照（仅查询） |
+| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
+| 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
+| 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
+| 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
+| 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏）/ `query_only`（只读）/ `read_write`（可出库） |
+| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
+| MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
+
+</TabsContent>
+
+<TabsContent id="conventions">
+
+### 类型与精度
+
+```mermaid
+flowchart LR
+    subgraph Q["业务数量：DECIMAL(18,1)，最多 1 位小数"]
+        Q1["出入库数量 / 剩余可冲量 / 前后数量快照"]
+        Q2["物资库存余额"]
+        Q3["计划数量 / 申购数量 / 最低库存"]
+    end
+    subgraph X["外部导入数量：DECIMAL(18,2)，保留原始精度"]
+        X1["华星总库存"]
+        X2["精简库存"]
+    end
+    subgraph D["时间：DATETIME(6)，UTC 语义"]
+        D1["默认取当前时间；写入侧统一取 UTC 当前时刻"]
+    end
+```
+
+### 审计列组合
+
+`AuditMixin` 提供 `created_at`、`updated_at`（更新时自动刷新）与 `version`（乐观锁版本）；字段明细表不再重复列出审计列。
+
+```mermaid
+flowchart TD
+    M["AuditMixin：创建时间 / 更新时间 / 乐观锁版本"]
+    M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、微信身份绑定、Webhook 渠道、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录"]
+    M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
+    M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
+    M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、华星总库存、精简库存"]
+    M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，只有更新时间"]
+    M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>四张图片关联表"]
+    M --> G["只有 id 与业务时间<br/>业务事件日志"]
+```
+
+### 归属、删除与级联
+
+```mermaid
+flowchart TD
+    R["数据生命周期"]
+    R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
+    R --> U["没有 updated_by 列"]
+    R --> S["没有软删除列：删除一律物理删除"]
+    R --> D["ON DELETE CASCADE：库存余额、补库策略、四张图片关联表随主表一并删除"]
+```
+
+</TabsContent>
+
+<TabsContent id="relations">
 
 ### 表清单（含 ORM 类名）
 
@@ -81,9 +144,81 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 
 `MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
 
+### 用户与身份
+
+```mermaid
+erDiagram
+    user ||--o{ memo : "拥有备忘录"
+    user ||--o{ share_link : "创建分享链接"
+    user ||--o{ excel_import_job : "创建导入任务"
+    user ||--o{ excel_export_job : "创建导出任务"
+    mini_program_user ||--o{ mini_program_identity : "绑定微信身份（一个用户多个 AppID 身份）"
+```
+
+`user` 一人一个角色，接口令牌双列存储（查询用哈希 + 回显用密文）。
+
+### 二级库库存
+
+```mermaid
+erDiagram
+    stock_material ||--|| stock_balance : "当前余额（逐行重放维护）"
+    stock_material ||--|| stock_replenishment_policy : "补库策略（最低库存）"
+    stock_material ||--o{ stock_material_image : "物资图片"
+    stock_material ||--o{ stock_operation_line : "出入库明细"
+    stock_operation ||--o{ stock_operation_line : "单据明细行"
+    stock_operation ||--o{ stock_operation : "冲销原单"
+    file_object ||--o{ stock_material_image : "被图片引用"
+```
+
+精简库存是独立表，与完整模式的物资、余额、流水没有外键关系。
+
+### 申购与采购跟踪
+
+```mermaid
+erDiagram
+    stock_material ||--o{ purchase_material : "补库计划来源"
+    stock_material ||--o{ purchase_plan_template : "模板关联物资"
+    purchase_material ||--o{ purchase_material_image : "计划图片"
+    purchase_material ||--o{ purchase_request_line : "转入申购记录（计划清理后置空）"
+    purchase_plan_template ||--o{ purchase_plan_template_image : "模板图片"
+    purchase_request ||--o{ purchase_request_line : "记录物料行"
+    purchase_request_line ||--o{ purchase_request_line_image : "行图片"
+    file_object ||--o{ purchase_material_image : "被图片引用"
+    file_object ||--o{ purchase_plan_template_image : "被图片引用"
+    file_object ||--o{ purchase_request_line_image : "被图片引用"
+```
+
+记录行保存计划快照，因此计划被每日清理任务删除后，采购跟踪字段仍然完整。
+
+### 导入、文件与分享
+
+```mermaid
+erDiagram
+    user ||--o{ excel_import_job : "创建导入任务"
+    user ||--o{ excel_export_job : "创建导出任务"
+    user ||--o{ share_link : "创建分享链接"
+    file_object ||--o{ excel_export_job : "导出结果文件"
+```
+
+物料编码库、华星总库存、精简库存三张表是各自模块的全量替换导入结果，没有外键。
+
+### Webhook、事件日志与设置
+
+```mermaid
+erDiagram
+    webhook_channel ||--o{ webhook_delivery : "投递记录（事件 + 渠道幂等）"
+    business_event_log {
+        VARCHAR business_type
+        BIGINT business_id
+    }
+```
+
+`business_event_log` 没有外键：`business_type` + `business_id` 弱关联任意业务表，仅靠实体索引检索。
+
+
 </TabsContent>
 
-<TabsContent id="t1">
+<TabsContent id="basics">
 
 ### 字段明细：基础与平台表
 
@@ -155,7 +290,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 
 </TabsContent>
 
-<TabsContent id="t2">
+<TabsContent id="imports">
 
 ### 字段明细：导入、分享与快照表
 
@@ -222,7 +357,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 
 </TabsContent>
 
-<TabsContent id="t3">
+<TabsContent id="purchase">
 
 ### 字段明细：申购单据与物资
 
@@ -283,7 +418,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 
 </TabsContent>
 
-<TabsContent id="t4">
+<TabsContent id="balance">
 
 ### 字段明细：余额、策略、模板与图片
 
@@ -327,7 +462,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 
 </TabsContent>
 
-<TabsContent id="t5">
+<TabsContent id="stock">
 
 ### 字段明细：申购记录行与库存流水行
 
@@ -373,10 +508,6 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `stock_operation_line` | `unit_name_snapshot` | VARCHAR(32) | 否 | 无 | 单位快照 |
 | `stock_operation_line` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation_line(id)`；唯一 `uq_stock_operation_line_operation_id(operation_id, stock_material_id)`；`ix_operation_line_material_operation(stock_material_id, operation_id)`；检查约束 `ck_stock_operation_line_operation_quantity_positive`；外键 `operation_id → stock_operation.id`（`ON DELETE CASCADE`）、`stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
-</TabsContent>
-
-<TabsContent id="t6">
-
 ### 字段明细：备忘表
 
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
@@ -387,54 +518,104 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `memo` | `created_by` | BIGINT UNSIGNED | 否 | 无 | 归属用户（不可为空） |
 | `memo` | *索引 / 外键* | — | — | — | 索引 `pk_memo(id)`、`ix_memo_created_by(created_by)`；外键 `created_by → user.id`，`ON DELETE CASCADE` |
 
-### 表关系
+</TabsContent>
+
+<TabsContent id="constraints">
+
+### 库存写入与余额
+
 ```mermaid
-erDiagram
-    user ||--o{ excel_import_job : "创建导入任务"
-    user ||--o{ excel_export_job : "创建导出任务"
-    user ||--o{ share_link : "创建分享链接"
-    user ||--o{ memo : "拥有备忘录"
-    mini_program_user ||--o{ mini_program_identity : "绑定微信身份"
-    stock_material ||--|| stock_balance : "当前余额（逐行重放维护）"
-    stock_material ||--|| stock_replenishment_policy : "补库策略"
-    stock_material ||--o{ stock_material_image : "物资图片"
-    stock_material ||--o{ stock_operation_line : "出入库明细"
-    stock_material ||--o{ purchase_material : "补库计划来源"
-    stock_material ||--o{ purchase_plan_template : "模板关联物资"
-    stock_operation ||--o{ stock_operation_line : "单据明细行"
-    stock_operation ||--o{ stock_operation : "冲销原单（reversal_of_id）"
-    file_object ||--o{ stock_material_image : "被图片引用"
-    file_object ||--o{ purchase_material_image : "被图片引用"
-    file_object ||--o{ purchase_request_line_image : "被图片引用"
-    purchase_material ||--o{ purchase_material_image : "计划图片"
-    purchase_material ||--o{ purchase_request_line : "转入申购记录（计划清理后置 NULL）"
-    purchase_request ||--o{ purchase_request_line : "记录物料行"
-    purchase_request_line ||--o{ purchase_request_line_image : "行图片"
-    webhook_channel ||--o{ webhook_delivery : "投递记录（event_id+channel_id 幂等）"
-    business_event_log {
-        VARCHAR business_type
-        BIGINT business_id
-    }
+flowchart TD
+    O["入库 / 出库 / 修改流水 / 冲销"] --> L["按物资加锁（按 id 升序，固定加锁顺序）"]
+    L --> R["重放该物资的全部流水<br/>按发生时间、单据、明细行顺序累加"]
+    R --> S["回写每行的前后数量快照"]
+    R --> Q["更新库存余额与乐观锁版本"]
+    Q --> G["余额没有直接写入接口，只能由流水重放改变"]
 ```
 
-`business_event_log` 无外键：`business_type` + `business_id` 弱关联任意业务表，仅靠 `ix_business_event_entity` 检索。
+一张单据内同一物资只能有一行明细，数量必须为正，出入方向由单据头类型表达。
 
-### 约定与约束
+### 冲销
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> 未冲销 : 建立流水，剩余可冲量 = 数量
+    未冲销 --> 部分冲销 : 冲销数量不超过剩余可冲量
+    部分冲销 --> 部分冲销 : 继续部分冲销
+    未冲销 --> 全部冲销 : 一次冲销原数量
+    部分冲销 --> 全部冲销 : 累计冲销 = 原数量
+    全部冲销 --> 全部冲销 : 再冲销被拒绝
+    note right of 部分冲销
+        剩余可冲量逐行扣减，超额被拒
+        冲销单以「冲销」来源指向原单
+    end note
+```
+
+### 幂等与乐观锁
+
+```mermaid
+flowchart TD
+    A["提交出入库：携带客户端幂等键"] --> B{"库里已有同键单据？"}
+    B -- "是" --> C["返回原单据，不重复改库存"]
+    B -- "否" --> D["落新单据"]
+    E["修改 / 删除：携带版本号"] --> F{"版本一致？"}
+    F -- "否" --> G["版本冲突，提示刷新后重试"]
+    F -- "是" --> H["写入并递增版本"]
+```
+
+### 编号、编码与去重
+
+```mermaid
+flowchart TD
+    A["物料编码为空"] --> A1["视为未编码：不能转入申购记录，也不能导出采购申请表"]
+    B["二级库物资去重"] --> B1["名称 + 型号规格 + 单位归一化后取 SHA-256<br/>唯一索引防重"]
+    C["计划单号"] --> C1["按日期序列生成，单日上限 999 条，撞号回滚保存点后重试"]
+    C --> C2["出入库单号：前缀 IN / OUT + 日期 + 序号"]
+```
+
+### 开关语义
+
+```mermaid
+flowchart LR
+    U["用户启用开关"] --> U1["决定能否登录"]
+    W["Webhook 渠道开关"] --> W1["默认关闭；启用时必须至少订阅一个事件"]
+    P["补库策略开关"] --> P1["默认开启；关闭后不计入低库存判定"]
+    M["小程序用户开关"] --> M1["决定小程序端是否可用"]
+```
+
+### 凭证加密与回显
+
+```mermaid
+sequenceDiagram
+    participant U as 管理端界面
+    participant S as 服务端
+    participant DB as MySQL
+    U->>S: 生成或保存接口令牌 / Webhook 地址与密钥
+    S->>S: 计算哈希（用于认证查找）并加密（用于回显）
+    S->>DB: 写入哈希列与密文列
+    U->>S: 再次打开配置页
+    S->>DB: 读取密文列
+    S->>U: 解密回显明文，无需重新生成
+    note over S,DB: 历史仅存哈希的接口令牌，在下次成功用于接口调用时自动加密回填
+```
+
+### 快照字段
+
+```mermaid
+flowchart LR
+    A["业务发生时写入快照<br/>计划 / 单据 / 物资的名称与规格"] --> B["读取历史记录不再依赖主数据表"]
+    B --> C["主数据改名或清理后，记录仍可完整读出"]
+```
+
+### 其它约定（参考表）
+
 | 约定 | 说明 |
 | --- | --- |
-| 余额是查询加速数据 | `stock_balance.quantity` 由出入库事务内基于 `before_qty` / `after_qty` 维护（`server/app/services/inventory_service.py`）并递增 `version`；`/api/v1/inventory/balances` 只有 GET，不存在直接改余额的写接口 |
-| `stock_operation_line` 唯一约束 | `(operation_id, stock_material_id)`（即 `stock_operation_line.stock_material_id` 与单头组合唯一）：一张单据内同一物资只能一行；`quantity > 0` 由 `CHECK` 保证，方向由单据头 `operation_type` 表达 |
-| `remaining_qty` 与冲销 | 冲销数量不得超过明细行 `remaining_qty`（`inventory_service`）；冲销单以 `source_type='REVERSAL'` + `reversal_of_id` 指向原单 |
-| `stock_operation.client_request_id` 幂等 | 唯一索引保证同一客户端请求只落一张单据，重复提交返回既有单据 |
-| `version` 乐观锁 | 更新前校验版本（`server/app/services/common.py` 的 `validate_version`），冲突按 [API 错误与状态码约定](/api-error-conventions) 返回 |
-| `identity_hash` | `stock_material.identity_hash` = `name` + `model_spec` + `unit_name` 归一化后的 SHA-256（`server/app/services/common.py` 的 `identity_hash`），唯一索引用于物资去重 |
-| `material_code IS NULL` 即未编码 | `purchase_material.material_code`、`purchase_plan_template.material_code`、`purchase_request_line.material_code_snapshot` 均以 NULL 表示未编码，无独立状态字段；筛选即 `is_(None)` / `is_not(None)`（`server/app/services/material_service.py`） |
-| `enabled` 语义 | `user.enabled` 控制账号登录；`webhook_channel.enabled` 默认 0，启用时必须至少订阅一个事件；`stock_replenishment_policy.enabled` 默认 1 并参与低库存判定；`mini_program_user.enabled` 控制小程序可用性 |
-| 敏感凭证回显 | `user.api_token_hash` 仅用于认证查找，`user.api_token_enc` 为可逆密文用于界面回显；`webhook_channel.webhook_url_encrypted` / `secret_encrypted` 同样加密存储、读取解密回显 |
-| 快照字段不可回查 | `purchase_request_line.*_snapshot` 与 `stock_operation_line.*_snapshot` 在业务发生时写入，读取不依赖主数据表，主数据改名或清理后记录仍可读 |
 | JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 MySQL `JSON` 类型，不建额外索引 |
 | 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，ORM 侧另有 `default=""` / `server_default=""`；`file_object.mime_type` 同样只在 ORM 侧有 `default="image/png"`（`test_init_sql.py` 不校验默认值） |
 | DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、软删除列、`updated_by` 列与数据库分区/视图，表结构变更必须同时改 `init.sql` 与 ORM 模型 |
+
 
 ### 种子数据
 `init.sql` 末尾只有一段 `INSERT`，插入 `user` 表 4 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
@@ -460,7 +641,7 @@ erDiagram
 
 `server/tests/test_init_sql.py::test_init_sql_matches_current_model_schema` 逐表比对上述内容。
 
-相关页面：[/dev-overview](/dev-overview)、[/dev-state-machines](/dev-state-machines)、[/dev-flows](/dev-flows)、[/dev-backend](/dev-backend)、[/api-error-conventions](/api-error-conventions)
+相关页面：[状态机](/dev-state-machines)、[数据流](/dev-flows)、[架构设计](/dev-architecture)、[接口约定](/api-conventions)
 
 </TabsContent>
 

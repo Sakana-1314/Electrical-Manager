@@ -3,7 +3,7 @@ from typing import Any
 # 业务错误码 → 默认 HTTP 状态码映射。
 # 传了 status_code 时以显式值为准；未传时按 code 推断，避免同类错误状态码不一致。
 #
-# 约定：本项目禁用 HTTP 404 状态码（见 docs/websites/pages/api-error-conventions.md）。
+# 约定：本项目禁用 HTTP 404 状态码（见 docs/websites/pages/api-conventions.md）。
 # 「资源不存在」属于正常业务分支，统一用 400 + code=NOT_FOUND 表达，
 # 由前端按业务码区分，避免与「路由/文件不存在」的 404 混淆。
 _DEFAULT_STATUS_BY_CODE: dict[str, int] = {

@@ -45,7 +45,7 @@ async def test_cors_preflight_falls_back_to_origin(client: AsyncClient) -> None:
 
 async def test_cors_headers_are_added_to_not_found_response(client: AsyncClient) -> None:
     # 框架级路由 404 会被全局处理重映射为 400 + ROUTE_NOT_FOUND（禁止 404，见
-    # docs/websites/pages/api-error-conventions.md），CORS 头仍应补齐在结构化错误响应上。
+    # docs/websites/pages/api-conventions.md），CORS 头仍应补齐在结构化错误响应上。
     response = await client.post(
         "/auth/login",
         headers={

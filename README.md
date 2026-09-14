@@ -32,9 +32,9 @@
 
 站点：<https://Sakana-1314.github.io/Electrical-Manager/>
 
-- [使用与部署指南](https://Sakana-1314.github.io/Electrical-Manager/guide)：Compose 部署、环境变量、本地开发与数据库初始化。
-- [开发资料](https://Sakana-1314.github.io/Electrical-Manager/dev-overview)：系统概述、数据模型（表结构）、状态机、核心数据流、后端/前端架构、测试与质量。
-- [接口文档与 Mock](https://Sakana-1314.github.io/Electrical-Manager/api)（Apifox）；[错误码总表](https://Sakana-1314.github.io/Electrical-Manager/api-error-codes)、[API 错误与状态码约定](https://Sakana-1314.github.io/Electrical-Manager/api-error-conventions)、[UI 设计规范](https://Sakana-1314.github.io/Electrical-Manager/ui-design-guidelines)、[人工功能测试方案](https://Sakana-1314.github.io/Electrical-Manager/manual-functional-test-plan)。
+- [部署指南](https://Sakana-1314.github.io/Electrical-Manager/guide)：Compose 部署、环境变量、运行形态、前后端分离部署与数据库初始化。
+- [系统设计](https://Sakana-1314.github.io/Electrical-Manager/dev-data-model)：数据模型（表结构）、状态机、数据流、架构设计（前端 / 后端 / 小程序）、UI 设计。
+- [接口文档](https://Sakana-1314.github.io/Electrical-Manager/api)（内嵌 Apifox）；[接口约定](https://Sakana-1314.github.io/Electrical-Manager/api-conventions)、[错误码总表](https://Sakana-1314.github.io/Electrical-Manager/api-error-codes)。
 - 接口契约：[docs/openapi.yaml](docs/openapi.yaml)；数据库结构与种子数据：[docs/references/database/init.sql](docs/references/database/init.sql)。
 
 开发与提交约定见 [AGENTS.md](AGENTS.md)。

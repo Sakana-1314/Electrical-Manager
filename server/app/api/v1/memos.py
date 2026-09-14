@@ -1,7 +1,7 @@
 """管理端个人备忘录接口：纯文本，一级 tab 快捷切换多条。
 
 所有登录用户（含只读角色）均可使用：个人备忘录按创建人隔离，
-接口只操作当前用户自己的数据。错误遵循 docs/websites/pages/api-error-conventions.md
+接口只操作当前用户自己的数据。错误遵循 docs/websites/pages/api-conventions.md
 （资源不存在 → 400 + NOT_FOUND，版本冲突 → 409 + VERSION_CONFLICT）。
 """
 
