@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
-  NTag,
   useDialog,
   useMessage,
   type DataTableBaseColumn,
@@ -63,7 +62,7 @@ import { useExportJob } from '@/composables/useExportJob'
 import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
-import { renderTwoLineText } from '@/utils/tableText'
+import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -418,9 +417,7 @@ const availableColumns: Array<{
       title: '物料编码',
       key: 'material_code',
       width: tableColumnWidths.code,
-      render: (row) =>
-        (row.material_code && renderTwoLineText(row.material_code)) ||
-        h(NTag, { type: 'warning', size: 'small' }, { default: () => '暂无编码' }),
+      render: (row) => renderMaterialCode(row.material_code),
     },
   },
   {
