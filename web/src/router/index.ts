@@ -11,6 +11,8 @@ declare module 'vue-router' {
      * 上一级标题：桌面端顶栏面包屑按「上级 / 当前」展示，移动端只展示当前标题（宽度不够）。
      * 二级条目用所属菜单分组名（二级库 / 申购管理 / 系统管理），详情页与操作页用所属列表页标题，
      * 让「当前在哪、能返回哪里」一眼可读。
+     * 顶级条目（工作台、备忘录、二级库、华星总库存）不设本字段：顶栏不再挂「备件管理」这类根名称，
+     * 页面只展示自己的标题，只有二级菜单才展示两级。
      */
     parent?: string
     permission?: Permission
@@ -94,13 +96,13 @@ const router = createRouter({
           path: 'warehouse/hua-xing-stock',
           name: 'hua-xing-stock',
           component: () => import('@/views/warehouse/HuaXingStockView.vue'),
-          meta: { title: '华星总库存', parent: '备件管理' },
+          meta: { title: '华星总库存' },
         },
         {
           path: 'warehouse/lite',
           name: 'warehouse-lite',
           component: () => import('@/views/warehouse/SecondaryWarehouseLiteView.vue'),
-          meta: { title: '二级库', parent: '备件管理' },
+          meta: { title: '二级库' },
         },
         {
           path: 'warehouse/operations',
