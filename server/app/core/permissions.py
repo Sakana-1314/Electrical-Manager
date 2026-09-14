@@ -174,4 +174,6 @@ def require_roles(*roles: Role) -> Callable[[CurrentUser], Awaitable[User]]:
 
 WarehouseWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.WAREHOUSE_ADMIN))]
 PurchaseWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.PURCHASE_ADMIN))]
+# 隐患管理写权限：超级管理员 + 隐患管理员；读取对所有登录用户开放（CurrentUser）。
+HazardWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.HAZARD_ADMIN))]
 SuperAdmin = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN))]

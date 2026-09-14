@@ -6,6 +6,7 @@ from app.api.v1 import (
     dictionaries,
     excel_export_jobs,
     files,
+    hazards,
     huaxing_inventory,
     inventory,
     material_code_library,
@@ -52,3 +53,5 @@ router.include_router(dictionaries.router)
 router.include_router(excel_export_jobs.router)
 router.include_router(files.router)
 router.include_router(version.router)
+# 新增模块追加在末尾：注册顺序即 openapi 里 paths 的顺序，追加可让契约 diff 保持纯增量。
+router.include_router(hazards.router)
