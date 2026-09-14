@@ -19,6 +19,8 @@ from pydantic import (
 from app.domain.enums import (
     ExcelExportJobStatus,
     ExcelImportJobStatus,
+    HazardLevel,
+    HazardStatus,
     MiniProgramCodeEnv,
     MiniProgramFeatureMode,
     MiniProgramStockStatus,
@@ -1793,6 +1795,148 @@ class DashboardSummaryRead(ReadModel):
     low_stock_count: int
     uncoded_purchase_material_count: int
     purchase_record_count: int
+
+
+# ===== 隐患管理（隐患台账 / 隐患类型 / 责任单位） =====
+# 单条隐患每侧（整改前 / 整改后）最多 9 张图片，与全站 ImageUploader 默认上限一致。
+HAZARD_IMAGE_LIMIT = 9
+HazardText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=128)]
+HazardPerson = Annotated[str, StringConstraints(strip_whitespace=True, max_length=64)]
+HazardImageIds = Annotated[list[FileId], Field(max_length=HAZARD_IMAGE_LIMIT)]
+
+
+class HazardUnitRead(ReadModel):
+    """责任单位（单位与责任人一一对应）。"""
+
+    id: int
+    name: str
+    person: str
+    remark: str | None = None
+    enabled: bool
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class HazardUnitCreate(RequestModel):
+    name: NonBlank
+    person: NonBlank
+    remark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)] | None = None
+    enabled: bool = True
+
+
+class HazardUnitUpdate(RequestModel):
+    name: NonBlank | None = None
+    person: NonBlank | None = None
+    remark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=255)] | None = None
+    enabled: bool | None = None
+    version: int
+
+
+class HazardTypeRead(ReadModel):
+    """隐患类型：一行一个「大类 + 小类」组合。"""
+
+    id: int
+    major: str
+    minor: str
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class HazardTypeCreate(RequestModel):
+    major: NonBlank
+    minor: NonBlank
+
+
+class HazardTypeUpdate(RequestModel):
+    major: NonBlank | None = None
+    minor: NonBlank | None = None
+    version: int
+
+
+class HazardRead(ReadModel):
+    """隐患台账记录：含责任单位/类型名称快照与整改前/后图片。"""
+
+    id: int
+    inspection_area: str
+    inspection_date: date
+    inspector: str
+    description: str
+    suggestion: str | None = None
+    hazard_unit_id: int
+    hazard_unit_name: str
+    person: str
+    due_date: date
+    recheck_person: str | None = None
+    rectify_person: str | None = None
+    status: HazardStatus
+    hazard_type_id: int
+    major: str
+    minor: str
+    level: HazardLevel
+    remark: str | None = None
+    before_images: list[FileObjectRead]
+    after_images: list[FileObjectRead]
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class HazardCreate(RequestModel):
+    inspection_area: HazardText | None = None
+    inspection_date: date | None = None
+    inspector: HazardPerson | None = None
+    description: NonBlank
+    suggestion: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    hazard_unit_id: int
+    due_date: date | None = None
+    recheck_person: HazardPerson | None = None
+    rectify_person: HazardPerson | None = None
+    status: HazardStatus = HazardStatus.PENDING
+    hazard_type_id: int
+    level: HazardLevel = HazardLevel.GENERAL
+    remark: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    before_image_ids: HazardImageIds = Field(default_factory=list)
+    after_image_ids: HazardImageIds = Field(default_factory=list)
+
+    @field_validator("before_image_ids", "after_image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str]) -> list[str]:
+        return _ensure_unique_image_ids(value)
+
+
+class HazardUpdate(RequestModel):
+    inspection_area: HazardText | None = None
+    inspection_date: date | None = None
+    inspector: HazardPerson | None = None
+    description: NonBlank | None = None
+    suggestion: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    hazard_unit_id: int | None = None
+    due_date: date | None = None
+    recheck_person: HazardPerson | None = None
+    rectify_person: HazardPerson | None = None
+    status: HazardStatus | None = None
+    hazard_type_id: int | None = None
+    level: HazardLevel | None = None
+    remark: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    before_image_ids: list[FileId] | None = Field(default=None, max_length=HAZARD_IMAGE_LIMIT)
+    after_image_ids: list[FileId] | None = Field(default=None, max_length=HAZARD_IMAGE_LIMIT)
+    version: int
+
+    @field_validator("before_image_ids", "after_image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
+
+
+class HazardStatsRead(ReadModel):
+    """工作台隐患概览：三状态计数 + 逾期未整改数（今天到期不算逾期）。"""
+
+    pending: int
+    blocked: int
+    done: int
+    overdue: int
 
 
 __all__ = [name for name in globals() if not name.startswith("_")]

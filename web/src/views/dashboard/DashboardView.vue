@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { inventoryApi } from '@/api/inventory'
-import type { DashboardSummary, InventoryBalance } from '@/api/generated'
+import { hazardApi } from '@/api/hazards'
+import type { DashboardSummary, HazardStats, InventoryBalance } from '@/api/generated'
 import LoadingMask from '@/components/LoadingMask.vue'
 
 const router = useRouter()
@@ -13,42 +14,62 @@ const summary = ref<DashboardSummary>({
   uncoded_purchase_material_count: 0,
   purchase_record_count: 0,
 })
+const hazardStats = ref<HazardStats>({ pending: 0, blocked: 0, done: 0, overdue: 0 })
 const lowStock = ref<InventoryBalance[]>([])
+// 卡片只有名称 + 数字，不放小字说明（工作台统一口径）。
 const cards = computed(() => [
   {
     label: '库存物资',
     value: summary.value.stock_material_count,
-    hint: '已建立档案的二级库物资',
     color: 'var(--color-primary)',
   },
   {
     label: '低库存',
     value: summary.value.low_stock_count,
-    hint: '当前库存已达到预警阈值',
     color: 'var(--color-danger)',
   },
   {
     label: '未编码物资',
     value: summary.value.uncoded_purchase_material_count,
-    hint: '正常计划中待补录物料编码',
     color: 'var(--color-warning)',
   },
   {
     label: '申购记录',
     value: summary.value.purchase_record_count,
-    hint: '已转入申购记录的物资明细',
     color: 'var(--color-success)',
+  },
+  {
+    label: '待整改隐患',
+    value: hazardStats.value.pending,
+    color: 'var(--color-warning)',
+  },
+  {
+    label: '整改受阻',
+    value: hazardStats.value.blocked,
+    color: 'var(--color-danger)',
+  },
+  {
+    label: '已整改',
+    value: hazardStats.value.done,
+    color: 'var(--color-success)',
+  },
+  {
+    label: '逾期未整改',
+    value: hazardStats.value.overdue,
+    color: 'var(--color-primary)',
   },
 ])
 async function load() {
   loading.value = true
   try {
-    const [sum, low] = await Promise.all([
+    const [sum, low, hazard] = await Promise.all([
       inventoryApi.summary(),
       inventoryApi.lowStock({ page_size: 5 }),
+      hazardApi.stats(),
     ])
     summary.value = sum
     lowStock.value = low.items
+    hazardStats.value = hazard
   } finally {
     loading.value = false
   }
@@ -71,8 +92,7 @@ onMounted(load)
       <n-card v-for="card in cards" :key="card.label"
         ><div class="stat">
           <span class="stat-label">{{ card.label }}</span
-          ><strong :style="{ color: card.color }">{{ card.value }}</strong
-          ><span class="muted">{{ card.hint }}</span>
+          ><strong :style="{ color: card.color }">{{ card.value }}</strong>
         </div></n-card
       >
     </div>

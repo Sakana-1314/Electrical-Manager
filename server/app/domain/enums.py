@@ -5,7 +5,23 @@ class Role(StrEnum):
     SUPER_ADMIN = "SUPER_ADMIN"
     WAREHOUSE_ADMIN = "WAREHOUSE_ADMIN"
     PURCHASE_ADMIN = "PURCHASE_ADMIN"
+    HAZARD_ADMIN = "HAZARD_ADMIN"
     READ_ONLY = "READ_ONLY"
+
+
+class HazardStatus(StrEnum):
+    """隐患整改状态：登记后待整改，受阻则暂挂，整改完成即闭环。"""
+
+    PENDING = "待整改"
+    BLOCKED = "整改受阻"
+    DONE = "已整改"
+
+
+class HazardLevel(StrEnum):
+    """隐患等级：一般隐患 / 重大隐患。"""
+
+    GENERAL = "一般隐患"
+    MAJOR = "重大隐患"
 
 
 class OperationType(StrEnum):

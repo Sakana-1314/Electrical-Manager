@@ -46,6 +46,10 @@
 | `MINI_PROGRAM_IDENTITY_CONFLICT` | 409 | 两个账号包含相同小程序身份，无法直接合并 | `mini_program_service` |
 | `MINI_PROGRAM_USER_PROFILE_MISMATCH` | 409 | 姓名和部门单位必须一致才能合并账号 | `mini_program_service` |
 | `WECHAT_USER_CREATE_CONFLICT` | 409 | 微信用户创建冲突，请重新登录 | `mini_program_service` |
+| `DUPLICATE_HAZARD_UNIT` | 409 | 责任单位名称已存在 | `hazard_service` |
+| `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `hazard_service` |
+| `HAZARD_UNIT_IN_USE` | 409 | 责任单位已被隐患记录引用，无法删除 | `hazard_service` |
+| `HAZARD_TYPE_IN_USE` | 409 | 隐患类型已被隐患记录引用，只能修改，不能删除 | `hazard_service` |
 
 ## 请求与业务校验
 
@@ -67,13 +71,14 @@
 | `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `webhook_service` |
 | `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `mini_program_service` |
 | `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `ai_search_service` |
+| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `hazard_service` |
 
 ## 图片与文件
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
 | `INVALID_IMAGE` | 400 | 图片无法解码 | `file_service` |
-| `INVALID_IMAGE_ID` | 400 | 图片不存在 | `material_service` |
+| `INVALID_IMAGE_ID` | 400 | 图片不存在 | `material_service`、`hazard_service` |
 | `FILE_MISSING` | 400 | 图片文件不存在（记录在库但磁盘缺失） | `file_service` |
 | `INVALID_IMAGE_TYPE` | 400 | 仅支持 JPEG、PNG 或 WebP 图片 | `file_service` |
 | `IMAGE_TOO_LARGE` | 413 | 单张图片超过 10 MB | `file_service` |

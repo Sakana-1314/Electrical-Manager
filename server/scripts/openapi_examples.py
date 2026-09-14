@@ -526,6 +526,12 @@ _USERS: list[dict[str, Any]] = [
         "api_token": "a4c8e2f6-1b3d-4e7a-8c95-2f6d1a0e4b73",
     },
     {
+        "username": "hazard",
+        "display_name": "隐患管理员",
+        "role": "HAZARD_ADMIN",
+        "api_token": "e5a9c1d7-4b8f-42e6-9d13-7c0a5b3f8e24",
+    },
+    {
         "username": "readonly",
         "display_name": "只读用户",
         "role": "READ_ONLY",
@@ -1400,6 +1406,53 @@ def _build_schema_examples() -> dict[str, Any]:
             ),
             "purchase_record_count": len(_RECORD_ROWS),
         },
+        # —— 隐患管理（隐患台账 / 隐患类型 / 责任单位）——
+        "HazardUnitRead": _HAZARD_UNIT_ROWS[0],
+        "HazardUnitCreate": {
+            "name": "仪表班",
+            "person": "黄立群",
+            "remark": "现场仪表与在线分析仪的维护",
+            "enabled": True,
+        },
+        "HazardUnitUpdate": {
+            "name": _HAZARD_UNIT_ROWS[0]["name"],
+            "person": "孙浩宇",
+            "remark": _HAZARD_UNIT_ROWS[0]["remark"],
+            "enabled": True,
+            "version": 2,
+        },
+        "HazardTypeRead": _HAZARD_TYPE_ROWS[2],
+        "HazardTypeCreate": {"major": "消防设施", "minor": "消防通道堵塞"},
+        "HazardTypeUpdate": {
+            "major": _HAZARD_TYPE_ROWS[2]["major"],
+            "minor": "绝缘受潮",
+            "version": 2,
+        },
+        "HazardRead": _HAZARD_READ_ROWS[0],
+        "HazardCreate": {
+            "inspection_area": "202-熔炼车间",
+            "inspection_date": "2026-09-13",
+            "inspector": "电气自查",
+            "description": "3 号行车电源箱内接线端子松动，运行时打火",
+            "suggestion": "停电紧固端子并测量接触电阻",
+            "hazard_unit_id": 1,
+            "due_date": "2026-09-20",
+            "recheck_person": "李建军",
+            "rectify_person": "孙浩宇",
+            "status": "待整改",
+            "hazard_type_id": 2,
+            "level": "一般隐患",
+            "remark": None,
+            "before_image_ids": [_file_id(17)],
+            "after_image_ids": [],
+        },
+        "HazardUpdate": {
+            "status": "已整改",
+            "remark": "端子已紧固，接触电阻合格",
+            "version": _HAZARD_READ_ROWS[1]["version"],
+        },
+        "HazardStatsRead": _HAZARD_STATS,
+        "Page_HazardRead_": _page(_HAZARD_READ_ROWS),
         "AiSearchSettingsRead": {
             "endpoint": _AI_ENDPOINT,
             "api_key": _AI_API_KEY,
@@ -2300,6 +2353,258 @@ def _object_example(spec: dict[str, Any], depth: int, schemas: dict[str, Any]) -
     if not isinstance(properties, dict):
         return {}
     return {key: _example_for(key, sub, depth, schemas) for key, sub in properties.items()}
+
+
+# ===========================================================================
+# 隐患管理台账（责任单位 / 隐患类型 / 隐患记录）
+# ===========================================================================
+# 与其它台账同一口径：华星镍业检修维护部电气自动化车间的现场隐患排查记录。
+# 统计示例（工作台卡片）由下面的隐患行聚合得出，不单独编数。
+_HAZARD_UNITS: list[dict[str, Any]] = [
+    {
+        "name": "电气车间",
+        "person": "李建军",
+        "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+        "enabled": True,
+    },
+    {
+        "name": "动力车间",
+        "person": "王海涛",
+        "remark": "动力管网、照明与配电室运行值守",
+        "enabled": True,
+    },
+    {
+        "name": "自动化班组",
+        "person": "陈志远",
+        "remark": "仪表、PLC 与自动化控制系统的维护",
+        "enabled": True,
+    },
+    {
+        "name": "外委施工队",
+        "person": "刘振华",
+        "remark": "停用：外委项目结束，暂不派单",
+        "enabled": False,
+    },
+]
+
+_HAZARD_TYPES: list[tuple[str, str]] = [
+    ("电气设备", "线路老化"),
+    ("电气设备", "接线不规范"),
+    ("电气设备", "绝缘破损"),
+    ("安全防护", "警示标识缺失"),
+    ("安全防护", "防护罩缺失"),
+    ("消防设施", "灭火器过期"),
+]
+
+# 字段与隐患列表接口一一对应；责任单位/类型只记下标，名称与责任人由此处派生，保证不打架。
+_HAZARD_ROWS: list[dict[str, Any]] = [
+    {
+        "area": "201-冶炼主厂房",
+        "inspection_date": "2026-09-02",
+        "inspector": "电气自查",
+        "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+        "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+        "unit": 0,
+        "due_date": "2026-09-09",
+        "recheck_person": "李建军",
+        "rectify_person": "孙浩宇",
+        "status": "已整改",
+        "type": 2,
+        "level": "重大隐患",
+        "remark": "已复查验收，绝缘电阻合格",
+        "before_seeds": (11,),
+        "after_seeds": (12,),
+    },
+    {
+        "area": "202-熔炼车间",
+        "inspection_date": "2026-09-05",
+        "inspector": "电气自查",
+        "description": "行车滑触线接头处积灰严重，集电器接触不良并偶发打火",
+        "suggestion": "停电清扫滑触线并紧固接头螺栓，加装防尘护罩",
+        "unit": 0,
+        "due_date": "2026-09-12",
+        "recheck_person": "李建军",
+        "rectify_person": None,
+        "status": "待整改",
+        "type": 1,
+        "level": "一般隐患",
+        "remark": None,
+        "before_seeds": (13,),
+        "after_seeds": (),
+    },
+    {
+        "area": "301-选矿厂",
+        "inspection_date": "2026-09-08",
+        "inspector": "王海涛",
+        "description": "球磨机检修平台联轴器防护罩缺失，人员靠近时有卷入风险",
+        "suggestion": "按原图纸补装防护罩并固定牢靠",
+        "unit": 2,
+        "due_date": "2026-09-15",
+        "recheck_person": "陈志远",
+        "rectify_person": "周立新",
+        "status": "整改受阻",
+        "type": 4,
+        "level": "重大隐患",
+        "remark": "防护罩备件到货延迟，已协调采购催货",
+        "before_seeds": (14,),
+        "after_seeds": (),
+    },
+    {
+        "area": "305-硫酸厂",
+        "inspection_date": "2026-09-06",
+        "inspector": "电气自查",
+        "description": "酸泵区照明线路护套开裂，接线盒进线口未做密封",
+        "suggestion": "更换老化线路并更换防腐蚀接线盒",
+        "unit": 1,
+        "due_date": "2026-09-10",
+        "recheck_person": "王海涛",
+        "rectify_person": "杨明辉",
+        "status": "待整改",
+        "type": 0,
+        "level": "一般隐患",
+        "remark": "已超期，现场已加设临时警示围栏",
+        "before_seeds": (15,),
+        "after_seeds": (),
+    },
+    {
+        "area": "401-公辅设施",
+        "inspection_date": "2026-09-10",
+        "inspector": "陈志远",
+        "description": "配电室门口「高压危险」警示标识被油污覆盖，字迹无法辨识",
+        "suggestion": "清理油污并重新张贴反光警示标识",
+        "unit": 2,
+        "due_date": "2026-09-17",
+        "recheck_person": "陈志远",
+        "rectify_person": None,
+        "status": "待整改",
+        "type": 3,
+        "level": "一般隐患",
+        "remark": None,
+        "before_seeds": (16,),
+        "after_seeds": (),
+    },
+    {
+        "area": "401-公辅设施",
+        "inspection_date": "2026-09-11",
+        "inspector": "电气自查",
+        "description": "配电室手提式灭火器压力表指针进入红区，已超过检验有效期",
+        "suggestion": "送检充装或更换同规格灭火器，并更新检验标签",
+        "unit": 1,
+        "due_date": "2026-09-18",
+        "recheck_person": "王海涛",
+        "rectify_person": "何丽娟",
+        "status": "待整改",
+        "type": 5,
+        "level": "一般隐患",
+        "remark": None,
+        "before_seeds": (),
+        "after_seeds": (),
+    },
+]
+
+# 隐患图片（整改前/整改后各按需生成），文件名体现隐患内容。
+_HAZARD_IMAGE_NAMES: dict[int, str] = {
+    11: "配电柜进线电缆绝缘破损.jpg",
+    12: "更换后电缆绝缘测试.jpg",
+    13: "行车滑触线接头积灰.jpg",
+    14: "球磨机联轴器防护罩缺失.jpg",
+    15: "酸泵区照明线路护套开裂.jpg",
+    16: "配电室警示标识油污.jpg",
+}
+
+
+def _hazard_unit_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": index,
+            "name": item["name"],
+            "person": item["person"],
+            "remark": item["remark"],
+            "enabled": item["enabled"],
+            "created_at": "2026-08-20T09:15:00+08:00",
+            "updated_at": "2026-09-05T14:20:00+08:00",
+            "version": 1,
+        }
+        for index, item in enumerate(_HAZARD_UNITS, start=1)
+    ]
+
+
+def _hazard_type_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": index,
+            "major": major,
+            "minor": minor,
+            "created_at": "2026-08-20T09:20:00+08:00",
+            "updated_at": "2026-08-20T09:20:00+08:00",
+            "version": 1,
+        }
+        for index, (major, minor) in enumerate(_HAZARD_TYPES, start=1)
+    ]
+
+
+def _hazard_rows() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for index, item in enumerate(_HAZARD_ROWS, start=1):
+        unit = _HAZARD_UNITS[item["unit"]]
+        major, minor = _HAZARD_TYPES[item["type"]]
+        rows.append(
+            {
+                "id": index,
+                "inspection_area": item["area"],
+                "inspection_date": item["inspection_date"],
+                "inspector": item["inspector"],
+                "description": item["description"],
+                "suggestion": item["suggestion"],
+                "hazard_unit_id": item["unit"] + 1,
+                "hazard_unit_name": unit["name"],
+                "person": unit["person"],
+                "due_date": item["due_date"],
+                "recheck_person": item["recheck_person"],
+                "rectify_person": item["rectify_person"],
+                "status": item["status"],
+                "hazard_type_id": item["type"] + 1,
+                "major": major,
+                "minor": minor,
+                "level": item["level"],
+                "remark": item["remark"],
+                "before_images": [
+                    _file_row(seed, _HAZARD_IMAGE_NAMES[seed], 512_400)
+                    for seed in item["before_seeds"]
+                ],
+                "after_images": [
+                    _file_row(seed, _HAZARD_IMAGE_NAMES[seed], 498_200)
+                    for seed in item["after_seeds"]
+                ],
+                "created_at": f"{item['inspection_date']}T10:30:00+08:00",
+                "updated_at": f"{item['due_date']}T16:05:00+08:00",
+                "version": 1,
+            }
+        )
+    return rows
+
+
+_HAZARD_UNIT_ROWS = _hazard_unit_rows()
+_HAZARD_TYPE_ROWS = _hazard_type_rows()
+_HAZARD_READ_ROWS = _hazard_rows()
+# 逾期基准取示例时间锚点：要求完成时间早于 2026-09-13 且未整改的才算逾期。
+_HAZARD_ANCHOR_DATE = _LATEST_DATE
+
+
+def _hazard_stats() -> dict[str, int]:
+    return {
+        "pending": sum(1 for row in _HAZARD_READ_ROWS if row["status"] == "待整改"),
+        "blocked": sum(1 for row in _HAZARD_READ_ROWS if row["status"] == "整改受阻"),
+        "done": sum(1 for row in _HAZARD_READ_ROWS if row["status"] == "已整改"),
+        "overdue": sum(
+            1
+            for row in _HAZARD_READ_ROWS
+            if row["due_date"] < _HAZARD_ANCHOR_DATE and row["status"] != "已整改"
+        ),
+    }
+
+
+_HAZARD_STATS = _hazard_stats()
 
 
 _SCHEMA_EXAMPLES: dict[str, Any] = _build_schema_examples()

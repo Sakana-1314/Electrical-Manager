@@ -24,7 +24,14 @@ router = APIRouter(prefix="/files/images", tags=["图片"])
 CACHE_CONTROL = "public, max-age=86400, s-maxage=2592000"
 FileWriter = Annotated[
     User,
-    Depends(require_roles(Role.SUPER_ADMIN, Role.WAREHOUSE_ADMIN, Role.PURCHASE_ADMIN)),
+    Depends(
+        require_roles(
+            Role.SUPER_ADMIN,
+            Role.WAREHOUSE_ADMIN,
+            Role.PURCHASE_ADMIN,
+            Role.HAZARD_ADMIN,
+        )
+    ),
 ]
 
 

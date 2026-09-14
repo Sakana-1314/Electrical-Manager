@@ -88,6 +88,18 @@ export type SharePublicView = components['schemas']['SharePublicView']
 export type Memo = components['schemas']['MemoRead']
 export type MemoCreate = components['schemas']['MemoCreate']
 export type MemoUpdate = components['schemas']['MemoUpdate']
+export type Hazard = components['schemas']['HazardRead']
+export type HazardWrite = components['schemas']['HazardCreate']
+export type HazardUpdate = components['schemas']['HazardUpdate']
+export type HazardStats = components['schemas']['HazardStatsRead']
+export type HazardStatus = components['schemas']['HazardStatus']
+export type HazardLevel = components['schemas']['HazardLevel']
+export type HazardType = components['schemas']['HazardTypeRead']
+export type HazardTypeWrite = components['schemas']['HazardTypeCreate']
+export type HazardTypeUpdate = components['schemas']['HazardTypeUpdate']
+export type HazardUnit = components['schemas']['HazardUnitRead']
+export type HazardUnitWrite = components['schemas']['HazardUnitCreate']
+export type HazardUnitUpdate = components['schemas']['HazardUnitUpdate']
 
 /* ===== 前端自建视图模型 / 泛型 / Literal（openapi 无对应 schema，手写保留） ===== */
 

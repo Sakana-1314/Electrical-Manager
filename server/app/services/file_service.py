@@ -25,6 +25,8 @@ from app.core.errors import AppError, not_found
 from app.core.identifiers import uuid7_string
 from app.models import (
     FileObject,
+    HazardAfterImage,
+    HazardBeforeImage,
     PurchaseMaterialImage,
     PurchasePlanTemplateImage,
     PurchaseRequestLineImage,
@@ -62,11 +64,13 @@ REFERENCE_MODELS: tuple[type[Any], ...] = (
     PurchaseMaterialImage,
     PurchasePlanTemplateImage,
     PurchaseRequestLineImage,
+    HazardBeforeImage,
+    HazardAfterImage,
 )
 
 
 def _reference_count_expression() -> ColumnElement[int]:
-    """被引用次数表达式：四张图片关联表中指向 `FileObject.id` 的记录数之和。
+    """被引用次数表达式：全部图片关联表中指向 `FileObject.id` 的记录数之和。
 
     以相关子查询形式书写，可直接放进 select 列或 where 条件（不依赖 group by）。
     """
@@ -118,6 +122,8 @@ def _unreferenced() -> ColumnElement[bool]:
         & ~exists().where(PurchaseMaterialImage.file_id == FileObject.id)
         & ~exists().where(PurchasePlanTemplateImage.file_id == FileObject.id)
         & ~exists().where(PurchaseRequestLineImage.file_id == FileObject.id)
+        & ~exists().where(HazardBeforeImage.file_id == FileObject.id)
+        & ~exists().where(HazardAfterImage.file_id == FileObject.id)
     )
 
 
@@ -239,7 +245,7 @@ async def render_preview(path: Path, size: int) -> bytes:
 
 
 async def count_references(session: AsyncSession, file_id: str) -> int:
-    """该图片当前的被引用次数（四张关联表之和）。"""
+    """该图片当前的被引用次数（全部图片关联表之和）。"""
     return int(
         await session.scalar(
             select(_reference_count_expression()).where(FileObject.id == file_id)

@@ -15580,6 +15580,1542 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/hazards:
+    get:
+      tags:
+      - 隐患管理
+      summary: 隐患台账列表
+      operationId: list_hazards_api_v1_hazards_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/HazardStatus'
+          - type: 'null'
+          title: Status
+      - name: level
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/HazardLevel'
+          - type: 'null'
+          title: Level
+      - name: hazard_type_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Hazard Type Id
+      - name: hazard_unit_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Hazard Unit Id
+      - name: area
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Area
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Keyword
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date To
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_HazardRead_'
+              example:
+                items:
+                - id: 1
+                  inspection_area: 201-冶炼主厂房
+                  inspection_date: '2026-09-02'
+                  inspector: 电气自查
+                  description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+                  suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+                  hazard_unit_id: 1
+                  hazard_unit_name: 电气车间
+                  person: 李建军
+                  due_date: '2026-09-09'
+                  recheck_person: 李建军
+                  rectify_person: 孙浩宇
+                  status: 已整改
+                  hazard_type_id: 3
+                  major: 电气设备
+                  minor: 绝缘破损
+                  level: 重大隐患
+                  remark: 已复查验收，绝缘电阻合格
+                  before_images:
+                  - id: 23ee8930-737f-739e-83d0-69076b428b66
+                    original_name: 配电柜进线电缆绝缘破损.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  after_images:
+                  - id: 83f45373-5982-7707-8003-2f16a4783a0b
+                    original_name: 更换后电缆绝缘测试.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 498200
+                    width: 1600
+                    height: 1200
+                  created_at: '2026-09-02T10:30:00+08:00'
+                  updated_at: '2026-09-09T16:05:00+08:00'
+                  version: 1
+                - id: 2
+                  inspection_area: 202-熔炼车间
+                  inspection_date: '2026-09-05'
+                  inspector: 电气自查
+                  description: 行车滑触线接头处积灰严重，集电器接触不良并偶发打火
+                  suggestion: 停电清扫滑触线并紧固接头螺栓，加装防尘护罩
+                  hazard_unit_id: 1
+                  hazard_unit_name: 电气车间
+                  person: 李建军
+                  due_date: '2026-09-12'
+                  recheck_person: 李建军
+                  rectify_person: null
+                  status: 待整改
+                  hazard_type_id: 2
+                  major: 电气设备
+                  minor: 接线不规范
+                  level: 一般隐患
+                  remark: null
+                  before_images:
+                  - id: d426a7d4-07b5-7cac-8bcd-f373d8189600
+                    original_name: 行车滑触线接头积灰.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  after_images: []
+                  created_at: '2026-09-05T10:30:00+08:00'
+                  updated_at: '2026-09-12T16:05:00+08:00'
+                  version: 1
+                - id: 3
+                  inspection_area: 301-选矿厂
+                  inspection_date: '2026-09-08'
+                  inspector: 王海涛
+                  description: 球磨机检修平台联轴器防护罩缺失，人员靠近时有卷入风险
+                  suggestion: 按原图纸补装防护罩并固定牢靠
+                  hazard_unit_id: 3
+                  hazard_unit_name: 自动化班组
+                  person: 陈志远
+                  due_date: '2026-09-15'
+                  recheck_person: 陈志远
+                  rectify_person: 周立新
+                  status: 整改受阻
+                  hazard_type_id: 5
+                  major: 安全防护
+                  minor: 防护罩缺失
+                  level: 重大隐患
+                  remark: 防护罩备件到货延迟，已协调采购催货
+                  before_images:
+                  - id: 0b71e5c4-484e-748e-8c5a-464e0b28be45
+                    original_name: 球磨机联轴器防护罩缺失.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  after_images: []
+                  created_at: '2026-09-08T10:30:00+08:00'
+                  updated_at: '2026-09-15T16:05:00+08:00'
+                  version: 1
+                - id: 4
+                  inspection_area: 305-硫酸厂
+                  inspection_date: '2026-09-06'
+                  inspector: 电气自查
+                  description: 酸泵区照明线路护套开裂，接线盒进线口未做密封
+                  suggestion: 更换老化线路并更换防腐蚀接线盒
+                  hazard_unit_id: 2
+                  hazard_unit_name: 动力车间
+                  person: 王海涛
+                  due_date: '2026-09-10'
+                  recheck_person: 王海涛
+                  rectify_person: 杨明辉
+                  status: 待整改
+                  hazard_type_id: 1
+                  major: 电气设备
+                  minor: 线路老化
+                  level: 一般隐患
+                  remark: 已超期，现场已加设临时警示围栏
+                  before_images:
+                  - id: f6007e76-2f7c-7df3-899a-7352673240d1
+                    original_name: 酸泵区照明线路护套开裂.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  after_images: []
+                  created_at: '2026-09-06T10:30:00+08:00'
+                  updated_at: '2026-09-10T16:05:00+08:00'
+                  version: 1
+                - id: 5
+                  inspection_area: 401-公辅设施
+                  inspection_date: '2026-09-10'
+                  inspector: 陈志远
+                  description: 配电室门口「高压危险」警示标识被油污覆盖，字迹无法辨识
+                  suggestion: 清理油污并重新张贴反光警示标识
+                  hazard_unit_id: 3
+                  hazard_unit_name: 自动化班组
+                  person: 陈志远
+                  due_date: '2026-09-17'
+                  recheck_person: 陈志远
+                  rectify_person: null
+                  status: 待整改
+                  hazard_type_id: 4
+                  major: 安全防护
+                  minor: 警示标识缺失
+                  level: 一般隐患
+                  remark: null
+                  before_images:
+                  - id: 73af22a5-b53b-7a38-8ef7-1ad6a11e0cf7
+                    original_name: 配电室警示标识油污.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  after_images: []
+                  created_at: '2026-09-10T10:30:00+08:00'
+                  updated_at: '2026-09-17T16:05:00+08:00'
+                  version: 1
+                - id: 6
+                  inspection_area: 401-公辅设施
+                  inspection_date: '2026-09-11'
+                  inspector: 电气自查
+                  description: 配电室手提式灭火器压力表指针进入红区，已超过检验有效期
+                  suggestion: 送检充装或更换同规格灭火器，并更新检验标签
+                  hazard_unit_id: 2
+                  hazard_unit_name: 动力车间
+                  person: 王海涛
+                  due_date: '2026-09-18'
+                  recheck_person: 王海涛
+                  rectify_person: 何丽娟
+                  status: 待整改
+                  hazard_type_id: 6
+                  major: 消防设施
+                  minor: 灭火器过期
+                  level: 一般隐患
+                  remark: null
+                  before_images: []
+                  after_images: []
+                  created_at: '2026-09-11T10:30:00+08:00'
+                  updated_at: '2026-09-18T16:05:00+08:00'
+                  version: 1
+                page: 1
+                page_size: 20
+                total: 6
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 隐患管理
+      summary: 登记隐患
+      operationId: create_hazard_api_v1_hazards_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardRead'
+              example:
+                id: 1
+                inspection_area: 201-冶炼主厂房
+                inspection_date: '2026-09-02'
+                inspector: 电气自查
+                description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+                suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+                hazard_unit_id: 1
+                hazard_unit_name: 电气车间
+                person: 李建军
+                due_date: '2026-09-09'
+                recheck_person: 李建军
+                rectify_person: 孙浩宇
+                status: 已整改
+                hazard_type_id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                level: 重大隐患
+                remark: 已复查验收，绝缘电阻合格
+                before_images:
+                - id: 23ee8930-737f-739e-83d0-69076b428b66
+                  original_name: 配电柜进线电缆绝缘破损.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                after_images:
+                - id: 83f45373-5982-7707-8003-2f16a4783a0b
+                  original_name: 更换后电缆绝缘测试.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 498200
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:30:00+08:00'
+                updated_at: '2026-09-09T16:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/hazards/stats:
+    get:
+      tags:
+      - 隐患管理
+      summary: 隐患概览统计（工作台卡片）
+      operationId: hazard_stats_api_v1_hazards_stats_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardStatsRead'
+              example:
+                pending: 4
+                blocked: 1
+                done: 1
+                overdue: 2
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+  /api/v1/hazards/{hazard_id}:
+    get:
+      tags:
+      - 隐患管理
+      summary: 隐患详情
+      operationId: get_hazard_api_v1_hazards__hazard_id__get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: hazard_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Hazard Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardRead'
+              example:
+                id: 1
+                inspection_area: 201-冶炼主厂房
+                inspection_date: '2026-09-02'
+                inspector: 电气自查
+                description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+                suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+                hazard_unit_id: 1
+                hazard_unit_name: 电气车间
+                person: 李建军
+                due_date: '2026-09-09'
+                recheck_person: 李建军
+                rectify_person: 孙浩宇
+                status: 已整改
+                hazard_type_id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                level: 重大隐患
+                remark: 已复查验收，绝缘电阻合格
+                before_images:
+                - id: 23ee8930-737f-739e-83d0-69076b428b66
+                  original_name: 配电柜进线电缆绝缘破损.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                after_images:
+                - id: 83f45373-5982-7707-8003-2f16a4783a0b
+                  original_name: 更换后电缆绝缘测试.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 498200
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:30:00+08:00'
+                updated_at: '2026-09-09T16:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    patch:
+      tags:
+      - 隐患管理
+      summary: 更新隐患
+      operationId: update_hazard_api_v1_hazards__hazard_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: hazard_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Hazard Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardRead'
+              example:
+                id: 1
+                inspection_area: 201-冶炼主厂房
+                inspection_date: '2026-09-02'
+                inspector: 电气自查
+                description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+                suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+                hazard_unit_id: 1
+                hazard_unit_name: 电气车间
+                person: 李建军
+                due_date: '2026-09-09'
+                recheck_person: 李建军
+                rectify_person: 孙浩宇
+                status: 已整改
+                hazard_type_id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                level: 重大隐患
+                remark: 已复查验收，绝缘电阻合格
+                before_images:
+                - id: 23ee8930-737f-739e-83d0-69076b428b66
+                  original_name: 配电柜进线电缆绝缘破损.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                after_images:
+                - id: 83f45373-5982-7707-8003-2f16a4783a0b
+                  original_name: 更换后电缆绝缘测试.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 498200
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:30:00+08:00'
+                updated_at: '2026-09-09T16:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 隐患管理
+      summary: 删除隐患
+      operationId: delete_hazard_api_v1_hazards__hazard_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: hazard_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Hazard Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/hazard-units:
+    get:
+      tags:
+      - 隐患管理
+      summary: 责任单位列表
+      operationId: list_hazard_units_api_v1_hazard_units_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Keyword
+      - name: enabled
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HazardUnitRead'
+                title: Response List Hazard Units Api V1 Hazard Units Get
+              example:
+              - id: 1
+                name: 电气车间
+                person: 李建军
+                remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+                enabled: true
+                created_at: '2026-08-20T09:15:00+08:00'
+                updated_at: '2026-09-05T14:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 隐患管理
+      summary: 新增责任单位
+      operationId: create_hazard_unit_api_v1_hazard_units_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardUnitCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardUnitRead'
+              example:
+                id: 1
+                name: 电气车间
+                person: 李建军
+                remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+                enabled: true
+                created_at: '2026-08-20T09:15:00+08:00'
+                updated_at: '2026-09-05T14:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/hazard-units/{unit_id}:
+    patch:
+      tags:
+      - 隐患管理
+      summary: 更新责任单位
+      operationId: update_hazard_unit_api_v1_hazard_units__unit_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Unit Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardUnitUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardUnitRead'
+              example:
+                id: 1
+                name: 电气车间
+                person: 李建军
+                remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+                enabled: true
+                created_at: '2026-08-20T09:15:00+08:00'
+                updated_at: '2026-09-05T14:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 隐患管理
+      summary: 删除责任单位
+      operationId: delete_hazard_unit_api_v1_hazard_units__unit_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: unit_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Unit Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/hazard-types:
+    get:
+      tags:
+      - 隐患管理
+      summary: 隐患类型列表
+      operationId: list_hazard_types_api_v1_hazard_types_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/HazardTypeRead'
+                type: array
+                title: Response List Hazard Types Api V1 Hazard Types Get
+              example:
+              - id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                created_at: '2026-08-20T09:20:00+08:00'
+                updated_at: '2026-08-20T09:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+    post:
+      tags:
+      - 隐患管理
+      summary: 新增隐患类型
+      operationId: create_hazard_type_api_v1_hazard_types_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardTypeCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardTypeRead'
+              example:
+                id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                created_at: '2026-08-20T09:20:00+08:00'
+                updated_at: '2026-08-20T09:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+  /api/v1/hazard-types/{type_id}:
+    patch:
+      tags:
+      - 隐患管理
+      summary: 更新隐患类型
+      operationId: update_hazard_type_api_v1_hazard_types__type_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: type_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Type Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardTypeUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardTypeRead'
+              example:
+                id: 3
+                major: 电气设备
+                minor: 绝缘破损
+                created_at: '2026-08-20T09:20:00+08:00'
+                updated_at: '2026-08-20T09:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 隐患管理
+      summary: 删除隐患类型
+      operationId: delete_hazard_type_api_v1_hazard_types__type_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: type_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Type Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
 components:
   schemas:
     AiSearchExpandRead:
@@ -16561,6 +18097,604 @@ components:
         size_bytes: 486912
         width: 1600
         height: 1200
+    HazardCreate:
+      properties:
+        inspection_area:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Inspection Area
+        inspection_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Inspection Date
+        inspector:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Inspector
+        description:
+          type: string
+          minLength: 1
+          title: Description
+        suggestion:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Suggestion
+        hazard_unit_id:
+          type: integer
+          title: Hazard Unit Id
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        recheck_person:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Recheck Person
+        rectify_person:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Rectify Person
+        status:
+          $ref: '#/components/schemas/HazardStatus'
+          default: 待整改
+        hazard_type_id:
+          type: integer
+          title: Hazard Type Id
+        level:
+          $ref: '#/components/schemas/HazardLevel'
+          default: 一般隐患
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Remark
+        before_image_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          type: array
+          maxItems: 9
+          title: Before Image Ids
+        after_image_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          type: array
+          maxItems: 9
+          title: After Image Ids
+      additionalProperties: false
+      type: object
+      required:
+      - description
+      - hazard_unit_id
+      - hazard_type_id
+      title: HazardCreate
+      examples:
+      - inspection_area: 202-熔炼车间
+        inspection_date: '2026-09-13'
+        inspector: 电气自查
+        description: 3 号行车电源箱内接线端子松动，运行时打火
+        suggestion: 停电紧固端子并测量接触电阻
+        hazard_unit_id: 1
+        due_date: '2026-09-20'
+        recheck_person: 李建军
+        rectify_person: 孙浩宇
+        status: 待整改
+        hazard_type_id: 2
+        level: 一般隐患
+        remark: null
+        before_image_ids:
+        - 6280e904-3c11-7dad-83a4-d2f8b4a9979d
+        after_image_ids: []
+    HazardLevel:
+      type: string
+      enum:
+      - 一般隐患
+      - 重大隐患
+      title: HazardLevel
+      description: 隐患等级：一般隐患 / 重大隐患。
+    HazardRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        inspection_area:
+          type: string
+          title: Inspection Area
+        inspection_date:
+          type: string
+          format: date
+          title: Inspection Date
+        inspector:
+          type: string
+          title: Inspector
+        description:
+          type: string
+          title: Description
+        suggestion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Suggestion
+        hazard_unit_id:
+          type: integer
+          title: Hazard Unit Id
+        hazard_unit_name:
+          type: string
+          title: Hazard Unit Name
+        person:
+          type: string
+          title: Person
+        due_date:
+          type: string
+          format: date
+          title: Due Date
+        recheck_person:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recheck Person
+        rectify_person:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rectify Person
+        status:
+          $ref: '#/components/schemas/HazardStatus'
+        hazard_type_id:
+          type: integer
+          title: Hazard Type Id
+        major:
+          type: string
+          title: Major
+        minor:
+          type: string
+          title: Minor
+        level:
+          $ref: '#/components/schemas/HazardLevel'
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        before_images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: Before Images
+        after_images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: After Images
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - inspection_area
+      - inspection_date
+      - inspector
+      - description
+      - hazard_unit_id
+      - hazard_unit_name
+      - person
+      - due_date
+      - status
+      - hazard_type_id
+      - major
+      - minor
+      - level
+      - before_images
+      - after_images
+      - created_at
+      - updated_at
+      - version
+      title: HazardRead
+      description: 隐患台账记录：含责任单位/类型名称快照与整改前/后图片。
+      examples:
+      - id: 1
+        inspection_area: 201-冶炼主厂房
+        inspection_date: '2026-09-02'
+        inspector: 电气自查
+        description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+        suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+        hazard_unit_id: 1
+        hazard_unit_name: 电气车间
+        person: 李建军
+        due_date: '2026-09-09'
+        recheck_person: 李建军
+        rectify_person: 孙浩宇
+        status: 已整改
+        hazard_type_id: 3
+        major: 电气设备
+        minor: 绝缘破损
+        level: 重大隐患
+        remark: 已复查验收，绝缘电阻合格
+        before_images:
+        - id: 23ee8930-737f-739e-83d0-69076b428b66
+          original_name: 配电柜进线电缆绝缘破损.jpg
+          mime_type: image/jpeg
+          size_bytes: 512400
+          width: 1600
+          height: 1200
+        after_images:
+        - id: 83f45373-5982-7707-8003-2f16a4783a0b
+          original_name: 更换后电缆绝缘测试.jpg
+          mime_type: image/jpeg
+          size_bytes: 498200
+          width: 1600
+          height: 1200
+        created_at: '2026-09-02T10:30:00+08:00'
+        updated_at: '2026-09-09T16:05:00+08:00'
+        version: 1
+    HazardStatsRead:
+      properties:
+        pending:
+          type: integer
+          title: Pending
+        blocked:
+          type: integer
+          title: Blocked
+        done:
+          type: integer
+          title: Done
+        overdue:
+          type: integer
+          title: Overdue
+      type: object
+      required:
+      - pending
+      - blocked
+      - done
+      - overdue
+      title: HazardStatsRead
+      description: 工作台隐患概览：三状态计数 + 逾期未整改数（今天到期不算逾期）。
+      examples:
+      - pending: 4
+        blocked: 1
+        done: 1
+        overdue: 2
+    HazardStatus:
+      type: string
+      enum:
+      - 待整改
+      - 整改受阻
+      - 已整改
+      title: HazardStatus
+      description: 隐患整改状态：登记后待整改，受阻则暂挂，整改完成即闭环。
+    HazardTypeCreate:
+      properties:
+        major:
+          type: string
+          minLength: 1
+          title: Major
+        minor:
+          type: string
+          minLength: 1
+          title: Minor
+      additionalProperties: false
+      type: object
+      required:
+      - major
+      - minor
+      title: HazardTypeCreate
+      examples:
+      - major: 消防设施
+        minor: 消防通道堵塞
+    HazardTypeRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        major:
+          type: string
+          title: Major
+        minor:
+          type: string
+          title: Minor
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - major
+      - minor
+      - created_at
+      - updated_at
+      - version
+      title: HazardTypeRead
+      description: 隐患类型：一行一个「大类 + 小类」组合。
+      examples:
+      - id: 3
+        major: 电气设备
+        minor: 绝缘破损
+        created_at: '2026-08-20T09:20:00+08:00'
+        updated_at: '2026-08-20T09:20:00+08:00'
+        version: 1
+    HazardTypeUpdate:
+      properties:
+        major:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Major
+        minor:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Minor
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: HazardTypeUpdate
+      examples:
+      - major: 电气设备
+        minor: 绝缘受潮
+        version: 2
+    HazardUnitCreate:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        person:
+          type: string
+          minLength: 1
+          title: Person
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Remark
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - person
+      title: HazardUnitCreate
+      examples:
+      - name: 仪表班
+        person: 黄立群
+        remark: 现场仪表与在线分析仪的维护
+        enabled: true
+    HazardUnitRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        person:
+          type: string
+          title: Person
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        enabled:
+          type: boolean
+          title: Enabled
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - name
+      - person
+      - enabled
+      - created_at
+      - updated_at
+      - version
+      title: HazardUnitRead
+      description: 责任单位（单位与责任人一一对应）。
+      examples:
+      - id: 1
+        name: 电气车间
+        person: 李建军
+        remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+        enabled: true
+        created_at: '2026-08-20T09:15:00+08:00'
+        updated_at: '2026-09-05T14:20:00+08:00'
+        version: 1
+    HazardUnitUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Name
+        person:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Person
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Remark
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: HazardUnitUpdate
+      examples:
+      - name: 电气车间
+        person: 孙浩宇
+        remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+        enabled: true
+        version: 2
+    HazardUpdate:
+      properties:
+        inspection_area:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Inspection Area
+        inspection_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Inspection Date
+        inspector:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Inspector
+        description:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Description
+        suggestion:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Suggestion
+        hazard_unit_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hazard Unit Id
+        due_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Due Date
+        recheck_person:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Recheck Person
+        rectify_person:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Rectify Person
+        status:
+          anyOf:
+          - $ref: '#/components/schemas/HazardStatus'
+          - type: 'null'
+        hazard_type_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Hazard Type Id
+        level:
+          anyOf:
+          - $ref: '#/components/schemas/HazardLevel'
+          - type: 'null'
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 2000
+          - type: 'null'
+          title: Remark
+        before_image_ids:
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: Before Image Ids
+        after_image_ids:
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: After Image Ids
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: HazardUpdate
+      examples:
+      - status: 已整改
+        remark: 端子已紧固，接触电阻合格
+        version: 1
     HuaXingFilterOptions:
       properties:
         purchase_departments:
@@ -18564,6 +20698,208 @@ components:
         page: 1
         page_size: 20
         total: 2
+    Page_HazardRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/HazardRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[HazardRead]
+      examples:
+      - items:
+        - id: 1
+          inspection_area: 201-冶炼主厂房
+          inspection_date: '2026-09-02'
+          inspector: 电气自查
+          description: 1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险
+          suggestion: 停电更换破损段电缆，整改后做绝缘电阻测试并留存记录
+          hazard_unit_id: 1
+          hazard_unit_name: 电气车间
+          person: 李建军
+          due_date: '2026-09-09'
+          recheck_person: 李建军
+          rectify_person: 孙浩宇
+          status: 已整改
+          hazard_type_id: 3
+          major: 电气设备
+          minor: 绝缘破损
+          level: 重大隐患
+          remark: 已复查验收，绝缘电阻合格
+          before_images:
+          - id: 23ee8930-737f-739e-83d0-69076b428b66
+            original_name: 配电柜进线电缆绝缘破损.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          after_images:
+          - id: 83f45373-5982-7707-8003-2f16a4783a0b
+            original_name: 更换后电缆绝缘测试.jpg
+            mime_type: image/jpeg
+            size_bytes: 498200
+            width: 1600
+            height: 1200
+          created_at: '2026-09-02T10:30:00+08:00'
+          updated_at: '2026-09-09T16:05:00+08:00'
+          version: 1
+        - id: 2
+          inspection_area: 202-熔炼车间
+          inspection_date: '2026-09-05'
+          inspector: 电气自查
+          description: 行车滑触线接头处积灰严重，集电器接触不良并偶发打火
+          suggestion: 停电清扫滑触线并紧固接头螺栓，加装防尘护罩
+          hazard_unit_id: 1
+          hazard_unit_name: 电气车间
+          person: 李建军
+          due_date: '2026-09-12'
+          recheck_person: 李建军
+          rectify_person: null
+          status: 待整改
+          hazard_type_id: 2
+          major: 电气设备
+          minor: 接线不规范
+          level: 一般隐患
+          remark: null
+          before_images:
+          - id: d426a7d4-07b5-7cac-8bcd-f373d8189600
+            original_name: 行车滑触线接头积灰.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          after_images: []
+          created_at: '2026-09-05T10:30:00+08:00'
+          updated_at: '2026-09-12T16:05:00+08:00'
+          version: 1
+        - id: 3
+          inspection_area: 301-选矿厂
+          inspection_date: '2026-09-08'
+          inspector: 王海涛
+          description: 球磨机检修平台联轴器防护罩缺失，人员靠近时有卷入风险
+          suggestion: 按原图纸补装防护罩并固定牢靠
+          hazard_unit_id: 3
+          hazard_unit_name: 自动化班组
+          person: 陈志远
+          due_date: '2026-09-15'
+          recheck_person: 陈志远
+          rectify_person: 周立新
+          status: 整改受阻
+          hazard_type_id: 5
+          major: 安全防护
+          minor: 防护罩缺失
+          level: 重大隐患
+          remark: 防护罩备件到货延迟，已协调采购催货
+          before_images:
+          - id: 0b71e5c4-484e-748e-8c5a-464e0b28be45
+            original_name: 球磨机联轴器防护罩缺失.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          after_images: []
+          created_at: '2026-09-08T10:30:00+08:00'
+          updated_at: '2026-09-15T16:05:00+08:00'
+          version: 1
+        - id: 4
+          inspection_area: 305-硫酸厂
+          inspection_date: '2026-09-06'
+          inspector: 电气自查
+          description: 酸泵区照明线路护套开裂，接线盒进线口未做密封
+          suggestion: 更换老化线路并更换防腐蚀接线盒
+          hazard_unit_id: 2
+          hazard_unit_name: 动力车间
+          person: 王海涛
+          due_date: '2026-09-10'
+          recheck_person: 王海涛
+          rectify_person: 杨明辉
+          status: 待整改
+          hazard_type_id: 1
+          major: 电气设备
+          minor: 线路老化
+          level: 一般隐患
+          remark: 已超期，现场已加设临时警示围栏
+          before_images:
+          - id: f6007e76-2f7c-7df3-899a-7352673240d1
+            original_name: 酸泵区照明线路护套开裂.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          after_images: []
+          created_at: '2026-09-06T10:30:00+08:00'
+          updated_at: '2026-09-10T16:05:00+08:00'
+          version: 1
+        - id: 5
+          inspection_area: 401-公辅设施
+          inspection_date: '2026-09-10'
+          inspector: 陈志远
+          description: 配电室门口「高压危险」警示标识被油污覆盖，字迹无法辨识
+          suggestion: 清理油污并重新张贴反光警示标识
+          hazard_unit_id: 3
+          hazard_unit_name: 自动化班组
+          person: 陈志远
+          due_date: '2026-09-17'
+          recheck_person: 陈志远
+          rectify_person: null
+          status: 待整改
+          hazard_type_id: 4
+          major: 安全防护
+          minor: 警示标识缺失
+          level: 一般隐患
+          remark: null
+          before_images:
+          - id: 73af22a5-b53b-7a38-8ef7-1ad6a11e0cf7
+            original_name: 配电室警示标识油污.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          after_images: []
+          created_at: '2026-09-10T10:30:00+08:00'
+          updated_at: '2026-09-17T16:05:00+08:00'
+          version: 1
+        - id: 6
+          inspection_area: 401-公辅设施
+          inspection_date: '2026-09-11'
+          inspector: 电气自查
+          description: 配电室手提式灭火器压力表指针进入红区，已超过检验有效期
+          suggestion: 送检充装或更换同规格灭火器，并更新检验标签
+          hazard_unit_id: 2
+          hazard_unit_name: 动力车间
+          person: 王海涛
+          due_date: '2026-09-18'
+          recheck_person: 王海涛
+          rectify_person: 何丽娟
+          status: 待整改
+          hazard_type_id: 6
+          major: 消防设施
+          minor: 灭火器过期
+          level: 一般隐患
+          remark: null
+          before_images: []
+          after_images: []
+          created_at: '2026-09-11T10:30:00+08:00'
+          updated_at: '2026-09-18T16:05:00+08:00'
+          version: 1
+        page: 1
+        page_size: 20
+        total: 6
     Page_HuaXingInventoryRead_:
       properties:
         items:
@@ -23746,6 +26082,7 @@ components:
       - SUPER_ADMIN
       - WAREHOUSE_ADMIN
       - PURCHASE_ADMIN
+      - HAZARD_ADMIN
       - READ_ONLY
       title: Role
     SecondaryWarehouseMode:
