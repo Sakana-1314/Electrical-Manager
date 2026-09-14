@@ -1911,6 +1911,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hazards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 隐患台账列表 */
+        get: operations["list_hazards_api_v1_hazards_get"];
+        put?: never;
+        /** 登记隐患 */
+        post: operations["create_hazard_api_v1_hazards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hazards/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 隐患概览统计（工作台卡片） */
+        get: operations["hazard_stats_api_v1_hazards_stats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hazards/{hazard_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 隐患详情 */
+        get: operations["get_hazard_api_v1_hazards__hazard_id__get"];
+        put?: never;
+        post?: never;
+        /** 删除隐患 */
+        delete: operations["delete_hazard_api_v1_hazards__hazard_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新隐患 */
+        patch: operations["update_hazard_api_v1_hazards__hazard_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hazard-units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 责任单位列表 */
+        get: operations["list_hazard_units_api_v1_hazard_units_get"];
+        put?: never;
+        /** 新增责任单位 */
+        post: operations["create_hazard_unit_api_v1_hazard_units_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hazard-units/{unit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除责任单位 */
+        delete: operations["delete_hazard_unit_api_v1_hazard_units__unit_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新责任单位 */
+        patch: operations["update_hazard_unit_api_v1_hazard_units__unit_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hazard-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 隐患类型列表 */
+        get: operations["list_hazard_types_api_v1_hazard_types_get"];
+        put?: never;
+        /** 新增隐患类型 */
+        post: operations["create_hazard_type_api_v1_hazard_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hazard-types/{type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除隐患类型 */
+        delete: operations["delete_hazard_type_api_v1_hazard_types__type_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新隐患类型 */
+        patch: operations["update_hazard_type_api_v1_hazard_types__type_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2569,6 +2695,380 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+        };
+        /**
+         * HazardCreate
+         * @example {
+         *       "inspection_area": "202-熔炼车间",
+         *       "inspection_date": "2026-09-13",
+         *       "inspector": "电气自查",
+         *       "description": "3 号行车电源箱内接线端子松动，运行时打火",
+         *       "suggestion": "停电紧固端子并测量接触电阻",
+         *       "hazard_unit_id": 1,
+         *       "due_date": "2026-09-20",
+         *       "recheck_person": "李建军",
+         *       "rectify_person": "孙浩宇",
+         *       "status": "待整改",
+         *       "hazard_type_id": 2,
+         *       "level": "一般隐患",
+         *       "remark": null,
+         *       "before_image_ids": [
+         *         "6280e904-3c11-7dad-83a4-d2f8b4a9979d"
+         *       ],
+         *       "after_image_ids": []
+         *     }
+         */
+        HazardCreate: {
+            /** Inspection Area */
+            inspection_area?: string | null;
+            /** Inspection Date */
+            inspection_date?: string | null;
+            /** Inspector */
+            inspector?: string | null;
+            /** Description */
+            description: string;
+            /** Suggestion */
+            suggestion?: string | null;
+            /** Hazard Unit Id */
+            hazard_unit_id: number;
+            /** Due Date */
+            due_date?: string | null;
+            /** Recheck Person */
+            recheck_person?: string | null;
+            /** Rectify Person */
+            rectify_person?: string | null;
+            /** @default 待整改 */
+            status: components["schemas"]["HazardStatus"];
+            /** Hazard Type Id */
+            hazard_type_id: number;
+            /** @default 一般隐患 */
+            level: components["schemas"]["HazardLevel"];
+            /** Remark */
+            remark?: string | null;
+            /** Before Image Ids */
+            before_image_ids?: string[];
+            /** After Image Ids */
+            after_image_ids?: string[];
+        };
+        /**
+         * HazardLevel
+         * @description 隐患等级：一般隐患 / 重大隐患。
+         * @enum {string}
+         */
+        HazardLevel: "一般隐患" | "重大隐患";
+        /**
+         * HazardRead
+         * @description 隐患台账记录：含责任单位/类型名称快照与整改前/后图片。
+         * @example {
+         *       "id": 1,
+         *       "inspection_area": "201-冶炼主厂房",
+         *       "inspection_date": "2026-09-02",
+         *       "inspector": "电气自查",
+         *       "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+         *       "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+         *       "hazard_unit_id": 1,
+         *       "hazard_unit_name": "电气车间",
+         *       "person": "李建军",
+         *       "due_date": "2026-09-09",
+         *       "recheck_person": "李建军",
+         *       "rectify_person": "孙浩宇",
+         *       "status": "已整改",
+         *       "hazard_type_id": 3,
+         *       "major": "电气设备",
+         *       "minor": "绝缘破损",
+         *       "level": "重大隐患",
+         *       "remark": "已复查验收，绝缘电阻合格",
+         *       "before_images": [
+         *         {
+         *           "id": "23ee8930-737f-739e-83d0-69076b428b66",
+         *           "original_name": "配电柜进线电缆绝缘破损.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 512400,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "after_images": [
+         *         {
+         *           "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+         *           "original_name": "更换后电缆绝缘测试.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 498200,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "created_at": "2026-09-02T10:30:00+08:00",
+         *       "updated_at": "2026-09-09T16:05:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        HazardRead: {
+            /** Id */
+            id: number;
+            /** Inspection Area */
+            inspection_area: string;
+            /**
+             * Inspection Date
+             * Format: date
+             */
+            inspection_date: string;
+            /** Inspector */
+            inspector: string;
+            /** Description */
+            description: string;
+            /** Suggestion */
+            suggestion?: string | null;
+            /** Hazard Unit Id */
+            hazard_unit_id: number;
+            /** Hazard Unit Name */
+            hazard_unit_name: string;
+            /** Person */
+            person: string;
+            /**
+             * Due Date
+             * Format: date
+             */
+            due_date: string;
+            /** Recheck Person */
+            recheck_person?: string | null;
+            /** Rectify Person */
+            rectify_person?: string | null;
+            status: components["schemas"]["HazardStatus"];
+            /** Hazard Type Id */
+            hazard_type_id: number;
+            /** Major */
+            major: string;
+            /** Minor */
+            minor: string;
+            level: components["schemas"]["HazardLevel"];
+            /** Remark */
+            remark?: string | null;
+            /** Before Images */
+            before_images: components["schemas"]["FileObjectRead"][];
+            /** After Images */
+            after_images: components["schemas"]["FileObjectRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * HazardStatsRead
+         * @description 工作台隐患概览：三状态计数 + 逾期未整改数（今天到期不算逾期）。
+         * @example {
+         *       "pending": 4,
+         *       "blocked": 1,
+         *       "done": 1,
+         *       "overdue": 2
+         *     }
+         */
+        HazardStatsRead: {
+            /** Pending */
+            pending: number;
+            /** Blocked */
+            blocked: number;
+            /** Done */
+            done: number;
+            /** Overdue */
+            overdue: number;
+        };
+        /**
+         * HazardStatus
+         * @description 隐患整改状态：登记后待整改，受阻则暂挂，整改完成即闭环。
+         * @enum {string}
+         */
+        HazardStatus: "待整改" | "整改受阻" | "已整改";
+        /**
+         * HazardTypeCreate
+         * @example {
+         *       "major": "消防设施",
+         *       "minor": "消防通道堵塞"
+         *     }
+         */
+        HazardTypeCreate: {
+            /** Major */
+            major: string;
+            /** Minor */
+            minor: string;
+        };
+        /**
+         * HazardTypeRead
+         * @description 隐患类型：一行一个「大类 + 小类」组合。
+         * @example {
+         *       "id": 3,
+         *       "major": "电气设备",
+         *       "minor": "绝缘破损",
+         *       "created_at": "2026-08-20T09:20:00+08:00",
+         *       "updated_at": "2026-08-20T09:20:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        HazardTypeRead: {
+            /** Id */
+            id: number;
+            /** Major */
+            major: string;
+            /** Minor */
+            minor: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * HazardTypeUpdate
+         * @example {
+         *       "major": "电气设备",
+         *       "minor": "绝缘受潮",
+         *       "version": 2
+         *     }
+         */
+        HazardTypeUpdate: {
+            /** Major */
+            major?: string | null;
+            /** Minor */
+            minor?: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * HazardUnitCreate
+         * @example {
+         *       "name": "仪表班",
+         *       "person": "黄立群",
+         *       "remark": "现场仪表与在线分析仪的维护",
+         *       "enabled": true
+         *     }
+         */
+        HazardUnitCreate: {
+            /** Name */
+            name: string;
+            /** Person */
+            person: string;
+            /** Remark */
+            remark?: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
+        /**
+         * HazardUnitRead
+         * @description 责任单位（单位与责任人一一对应）。
+         * @example {
+         *       "id": 1,
+         *       "name": "电气车间",
+         *       "person": "李建军",
+         *       "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+         *       "enabled": true,
+         *       "created_at": "2026-08-20T09:15:00+08:00",
+         *       "updated_at": "2026-09-05T14:20:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        HazardUnitRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Person */
+            person: string;
+            /** Remark */
+            remark?: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * HazardUnitUpdate
+         * @example {
+         *       "name": "电气车间",
+         *       "person": "孙浩宇",
+         *       "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+         *       "enabled": true,
+         *       "version": 2
+         *     }
+         */
+        HazardUnitUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Person */
+            person?: string | null;
+            /** Remark */
+            remark?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * HazardUpdate
+         * @example {
+         *       "status": "已整改",
+         *       "remark": "端子已紧固，接触电阻合格",
+         *       "version": 1
+         *     }
+         */
+        HazardUpdate: {
+            /** Inspection Area */
+            inspection_area?: string | null;
+            /** Inspection Date */
+            inspection_date?: string | null;
+            /** Inspector */
+            inspector?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Suggestion */
+            suggestion?: string | null;
+            /** Hazard Unit Id */
+            hazard_unit_id?: number | null;
+            /** Due Date */
+            due_date?: string | null;
+            /** Recheck Person */
+            recheck_person?: string | null;
+            /** Rectify Person */
+            rectify_person?: string | null;
+            status?: components["schemas"]["HazardStatus"] | null;
+            /** Hazard Type Id */
+            hazard_type_id?: number | null;
+            level?: components["schemas"]["HazardLevel"] | null;
+            /** Remark */
+            remark?: string | null;
+            /** Before Image Ids */
+            before_image_ids?: string[] | null;
+            /** After Image Ids */
+            after_image_ids?: string[] | null;
+            /** Version */
+            version: number;
         };
         /**
          * HuaXingFilterOptions
@@ -3969,6 +4469,230 @@ export interface components {
         Page_AttachmentRead_: {
             /** Items */
             items: components["schemas"]["AttachmentRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[HazardRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "inspection_area": "201-冶炼主厂房",
+         *           "inspection_date": "2026-09-02",
+         *           "inspector": "电气自查",
+         *           "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+         *           "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+         *           "hazard_unit_id": 1,
+         *           "hazard_unit_name": "电气车间",
+         *           "person": "李建军",
+         *           "due_date": "2026-09-09",
+         *           "recheck_person": "李建军",
+         *           "rectify_person": "孙浩宇",
+         *           "status": "已整改",
+         *           "hazard_type_id": 3,
+         *           "major": "电气设备",
+         *           "minor": "绝缘破损",
+         *           "level": "重大隐患",
+         *           "remark": "已复查验收，绝缘电阻合格",
+         *           "before_images": [
+         *             {
+         *               "id": "23ee8930-737f-739e-83d0-69076b428b66",
+         *               "original_name": "配电柜进线电缆绝缘破损.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "after_images": [
+         *             {
+         *               "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+         *               "original_name": "更换后电缆绝缘测试.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 498200,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "created_at": "2026-09-02T10:30:00+08:00",
+         *           "updated_at": "2026-09-09T16:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 2,
+         *           "inspection_area": "202-熔炼车间",
+         *           "inspection_date": "2026-09-05",
+         *           "inspector": "电气自查",
+         *           "description": "行车滑触线接头处积灰严重，集电器接触不良并偶发打火",
+         *           "suggestion": "停电清扫滑触线并紧固接头螺栓，加装防尘护罩",
+         *           "hazard_unit_id": 1,
+         *           "hazard_unit_name": "电气车间",
+         *           "person": "李建军",
+         *           "due_date": "2026-09-12",
+         *           "recheck_person": "李建军",
+         *           "rectify_person": null,
+         *           "status": "待整改",
+         *           "hazard_type_id": 2,
+         *           "major": "电气设备",
+         *           "minor": "接线不规范",
+         *           "level": "一般隐患",
+         *           "remark": null,
+         *           "before_images": [
+         *             {
+         *               "id": "d426a7d4-07b5-7cac-8bcd-f373d8189600",
+         *               "original_name": "行车滑触线接头积灰.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "after_images": [],
+         *           "created_at": "2026-09-05T10:30:00+08:00",
+         *           "updated_at": "2026-09-12T16:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 3,
+         *           "inspection_area": "301-选矿厂",
+         *           "inspection_date": "2026-09-08",
+         *           "inspector": "王海涛",
+         *           "description": "球磨机检修平台联轴器防护罩缺失，人员靠近时有卷入风险",
+         *           "suggestion": "按原图纸补装防护罩并固定牢靠",
+         *           "hazard_unit_id": 3,
+         *           "hazard_unit_name": "自动化班组",
+         *           "person": "陈志远",
+         *           "due_date": "2026-09-15",
+         *           "recheck_person": "陈志远",
+         *           "rectify_person": "周立新",
+         *           "status": "整改受阻",
+         *           "hazard_type_id": 5,
+         *           "major": "安全防护",
+         *           "minor": "防护罩缺失",
+         *           "level": "重大隐患",
+         *           "remark": "防护罩备件到货延迟，已协调采购催货",
+         *           "before_images": [
+         *             {
+         *               "id": "0b71e5c4-484e-748e-8c5a-464e0b28be45",
+         *               "original_name": "球磨机联轴器防护罩缺失.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "after_images": [],
+         *           "created_at": "2026-09-08T10:30:00+08:00",
+         *           "updated_at": "2026-09-15T16:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 4,
+         *           "inspection_area": "305-硫酸厂",
+         *           "inspection_date": "2026-09-06",
+         *           "inspector": "电气自查",
+         *           "description": "酸泵区照明线路护套开裂，接线盒进线口未做密封",
+         *           "suggestion": "更换老化线路并更换防腐蚀接线盒",
+         *           "hazard_unit_id": 2,
+         *           "hazard_unit_name": "动力车间",
+         *           "person": "王海涛",
+         *           "due_date": "2026-09-10",
+         *           "recheck_person": "王海涛",
+         *           "rectify_person": "杨明辉",
+         *           "status": "待整改",
+         *           "hazard_type_id": 1,
+         *           "major": "电气设备",
+         *           "minor": "线路老化",
+         *           "level": "一般隐患",
+         *           "remark": "已超期，现场已加设临时警示围栏",
+         *           "before_images": [
+         *             {
+         *               "id": "f6007e76-2f7c-7df3-899a-7352673240d1",
+         *               "original_name": "酸泵区照明线路护套开裂.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "after_images": [],
+         *           "created_at": "2026-09-06T10:30:00+08:00",
+         *           "updated_at": "2026-09-10T16:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 5,
+         *           "inspection_area": "401-公辅设施",
+         *           "inspection_date": "2026-09-10",
+         *           "inspector": "陈志远",
+         *           "description": "配电室门口「高压危险」警示标识被油污覆盖，字迹无法辨识",
+         *           "suggestion": "清理油污并重新张贴反光警示标识",
+         *           "hazard_unit_id": 3,
+         *           "hazard_unit_name": "自动化班组",
+         *           "person": "陈志远",
+         *           "due_date": "2026-09-17",
+         *           "recheck_person": "陈志远",
+         *           "rectify_person": null,
+         *           "status": "待整改",
+         *           "hazard_type_id": 4,
+         *           "major": "安全防护",
+         *           "minor": "警示标识缺失",
+         *           "level": "一般隐患",
+         *           "remark": null,
+         *           "before_images": [
+         *             {
+         *               "id": "73af22a5-b53b-7a38-8ef7-1ad6a11e0cf7",
+         *               "original_name": "配电室警示标识油污.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "after_images": [],
+         *           "created_at": "2026-09-10T10:30:00+08:00",
+         *           "updated_at": "2026-09-17T16:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 6,
+         *           "inspection_area": "401-公辅设施",
+         *           "inspection_date": "2026-09-11",
+         *           "inspector": "电气自查",
+         *           "description": "配电室手提式灭火器压力表指针进入红区，已超过检验有效期",
+         *           "suggestion": "送检充装或更换同规格灭火器，并更新检验标签",
+         *           "hazard_unit_id": 2,
+         *           "hazard_unit_name": "动力车间",
+         *           "person": "王海涛",
+         *           "due_date": "2026-09-18",
+         *           "recheck_person": "王海涛",
+         *           "rectify_person": "何丽娟",
+         *           "status": "待整改",
+         *           "hazard_type_id": 6,
+         *           "major": "消防设施",
+         *           "minor": "灭火器过期",
+         *           "level": "一般隐患",
+         *           "remark": null,
+         *           "before_images": [],
+         *           "after_images": [],
+         *           "created_at": "2026-09-11T10:30:00+08:00",
+         *           "updated_at": "2026-09-18T16:05:00+08:00",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 6
+         *     }
+         */
+        Page_HazardRead_: {
+            /** Items */
+            items: components["schemas"]["HazardRead"][];
             /** Page */
             page: number;
             /** Page Size */
@@ -8583,7 +9307,7 @@ export interface components {
          * Role
          * @enum {string}
          */
-        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "READ_ONLY";
+        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY";
         /**
          * SecondaryWarehouseMode
          * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
@@ -28783,6 +29507,1954 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["VersionInfoRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_hazards_api_v1_hazards_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: components["schemas"]["HazardStatus"] | null;
+                level?: components["schemas"]["HazardLevel"] | null;
+                hazard_type_id?: number | null;
+                hazard_unit_id?: number | null;
+                area?: string | null;
+                keyword?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": 1,
+                     *           "inspection_area": "201-冶炼主厂房",
+                     *           "inspection_date": "2026-09-02",
+                     *           "inspector": "电气自查",
+                     *           "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+                     *           "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+                     *           "hazard_unit_id": 1,
+                     *           "hazard_unit_name": "电气车间",
+                     *           "person": "李建军",
+                     *           "due_date": "2026-09-09",
+                     *           "recheck_person": "李建军",
+                     *           "rectify_person": "孙浩宇",
+                     *           "status": "已整改",
+                     *           "hazard_type_id": 3,
+                     *           "major": "电气设备",
+                     *           "minor": "绝缘破损",
+                     *           "level": "重大隐患",
+                     *           "remark": "已复查验收，绝缘电阻合格",
+                     *           "before_images": [
+                     *             {
+                     *               "id": "23ee8930-737f-739e-83d0-69076b428b66",
+                     *               "original_name": "配电柜进线电缆绝缘破损.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "after_images": [
+                     *             {
+                     *               "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+                     *               "original_name": "更换后电缆绝缘测试.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 498200,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "created_at": "2026-09-02T10:30:00+08:00",
+                     *           "updated_at": "2026-09-09T16:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 2,
+                     *           "inspection_area": "202-熔炼车间",
+                     *           "inspection_date": "2026-09-05",
+                     *           "inspector": "电气自查",
+                     *           "description": "行车滑触线接头处积灰严重，集电器接触不良并偶发打火",
+                     *           "suggestion": "停电清扫滑触线并紧固接头螺栓，加装防尘护罩",
+                     *           "hazard_unit_id": 1,
+                     *           "hazard_unit_name": "电气车间",
+                     *           "person": "李建军",
+                     *           "due_date": "2026-09-12",
+                     *           "recheck_person": "李建军",
+                     *           "rectify_person": null,
+                     *           "status": "待整改",
+                     *           "hazard_type_id": 2,
+                     *           "major": "电气设备",
+                     *           "minor": "接线不规范",
+                     *           "level": "一般隐患",
+                     *           "remark": null,
+                     *           "before_images": [
+                     *             {
+                     *               "id": "d426a7d4-07b5-7cac-8bcd-f373d8189600",
+                     *               "original_name": "行车滑触线接头积灰.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "after_images": [],
+                     *           "created_at": "2026-09-05T10:30:00+08:00",
+                     *           "updated_at": "2026-09-12T16:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 3,
+                     *           "inspection_area": "301-选矿厂",
+                     *           "inspection_date": "2026-09-08",
+                     *           "inspector": "王海涛",
+                     *           "description": "球磨机检修平台联轴器防护罩缺失，人员靠近时有卷入风险",
+                     *           "suggestion": "按原图纸补装防护罩并固定牢靠",
+                     *           "hazard_unit_id": 3,
+                     *           "hazard_unit_name": "自动化班组",
+                     *           "person": "陈志远",
+                     *           "due_date": "2026-09-15",
+                     *           "recheck_person": "陈志远",
+                     *           "rectify_person": "周立新",
+                     *           "status": "整改受阻",
+                     *           "hazard_type_id": 5,
+                     *           "major": "安全防护",
+                     *           "minor": "防护罩缺失",
+                     *           "level": "重大隐患",
+                     *           "remark": "防护罩备件到货延迟，已协调采购催货",
+                     *           "before_images": [
+                     *             {
+                     *               "id": "0b71e5c4-484e-748e-8c5a-464e0b28be45",
+                     *               "original_name": "球磨机联轴器防护罩缺失.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "after_images": [],
+                     *           "created_at": "2026-09-08T10:30:00+08:00",
+                     *           "updated_at": "2026-09-15T16:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 4,
+                     *           "inspection_area": "305-硫酸厂",
+                     *           "inspection_date": "2026-09-06",
+                     *           "inspector": "电气自查",
+                     *           "description": "酸泵区照明线路护套开裂，接线盒进线口未做密封",
+                     *           "suggestion": "更换老化线路并更换防腐蚀接线盒",
+                     *           "hazard_unit_id": 2,
+                     *           "hazard_unit_name": "动力车间",
+                     *           "person": "王海涛",
+                     *           "due_date": "2026-09-10",
+                     *           "recheck_person": "王海涛",
+                     *           "rectify_person": "杨明辉",
+                     *           "status": "待整改",
+                     *           "hazard_type_id": 1,
+                     *           "major": "电气设备",
+                     *           "minor": "线路老化",
+                     *           "level": "一般隐患",
+                     *           "remark": "已超期，现场已加设临时警示围栏",
+                     *           "before_images": [
+                     *             {
+                     *               "id": "f6007e76-2f7c-7df3-899a-7352673240d1",
+                     *               "original_name": "酸泵区照明线路护套开裂.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "after_images": [],
+                     *           "created_at": "2026-09-06T10:30:00+08:00",
+                     *           "updated_at": "2026-09-10T16:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 5,
+                     *           "inspection_area": "401-公辅设施",
+                     *           "inspection_date": "2026-09-10",
+                     *           "inspector": "陈志远",
+                     *           "description": "配电室门口「高压危险」警示标识被油污覆盖，字迹无法辨识",
+                     *           "suggestion": "清理油污并重新张贴反光警示标识",
+                     *           "hazard_unit_id": 3,
+                     *           "hazard_unit_name": "自动化班组",
+                     *           "person": "陈志远",
+                     *           "due_date": "2026-09-17",
+                     *           "recheck_person": "陈志远",
+                     *           "rectify_person": null,
+                     *           "status": "待整改",
+                     *           "hazard_type_id": 4,
+                     *           "major": "安全防护",
+                     *           "minor": "警示标识缺失",
+                     *           "level": "一般隐患",
+                     *           "remark": null,
+                     *           "before_images": [
+                     *             {
+                     *               "id": "73af22a5-b53b-7a38-8ef7-1ad6a11e0cf7",
+                     *               "original_name": "配电室警示标识油污.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "after_images": [],
+                     *           "created_at": "2026-09-10T10:30:00+08:00",
+                     *           "updated_at": "2026-09-17T16:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 6,
+                     *           "inspection_area": "401-公辅设施",
+                     *           "inspection_date": "2026-09-11",
+                     *           "inspector": "电气自查",
+                     *           "description": "配电室手提式灭火器压力表指针进入红区，已超过检验有效期",
+                     *           "suggestion": "送检充装或更换同规格灭火器，并更新检验标签",
+                     *           "hazard_unit_id": 2,
+                     *           "hazard_unit_name": "动力车间",
+                     *           "person": "王海涛",
+                     *           "due_date": "2026-09-18",
+                     *           "recheck_person": "王海涛",
+                     *           "rectify_person": "何丽娟",
+                     *           "status": "待整改",
+                     *           "hazard_type_id": 6,
+                     *           "major": "消防设施",
+                     *           "minor": "灭火器过期",
+                     *           "level": "一般隐患",
+                     *           "remark": null,
+                     *           "before_images": [],
+                     *           "after_images": [],
+                     *           "created_at": "2026-09-11T10:30:00+08:00",
+                     *           "updated_at": "2026-09-18T16:05:00+08:00",
+                     *           "version": 1
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 6
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_HazardRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_hazard_api_v1_hazards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "inspection_area": "201-冶炼主厂房",
+                     *       "inspection_date": "2026-09-02",
+                     *       "inspector": "电气自查",
+                     *       "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+                     *       "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+                     *       "hazard_unit_id": 1,
+                     *       "hazard_unit_name": "电气车间",
+                     *       "person": "李建军",
+                     *       "due_date": "2026-09-09",
+                     *       "recheck_person": "李建军",
+                     *       "rectify_person": "孙浩宇",
+                     *       "status": "已整改",
+                     *       "hazard_type_id": 3,
+                     *       "major": "电气设备",
+                     *       "minor": "绝缘破损",
+                     *       "level": "重大隐患",
+                     *       "remark": "已复查验收，绝缘电阻合格",
+                     *       "before_images": [
+                     *         {
+                     *           "id": "23ee8930-737f-739e-83d0-69076b428b66",
+                     *           "original_name": "配电柜进线电缆绝缘破损.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "after_images": [
+                     *         {
+                     *           "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+                     *           "original_name": "更换后电缆绝缘测试.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 498200,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:30:00+08:00",
+                     *       "updated_at": "2026-09-09T16:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    hazard_stats_api_v1_hazards_stats_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "pending": 4,
+                     *       "blocked": 1,
+                     *       "done": 1,
+                     *       "overdue": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardStatsRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_hazard_api_v1_hazards__hazard_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hazard_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "inspection_area": "201-冶炼主厂房",
+                     *       "inspection_date": "2026-09-02",
+                     *       "inspector": "电气自查",
+                     *       "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+                     *       "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+                     *       "hazard_unit_id": 1,
+                     *       "hazard_unit_name": "电气车间",
+                     *       "person": "李建军",
+                     *       "due_date": "2026-09-09",
+                     *       "recheck_person": "李建军",
+                     *       "rectify_person": "孙浩宇",
+                     *       "status": "已整改",
+                     *       "hazard_type_id": 3,
+                     *       "major": "电气设备",
+                     *       "minor": "绝缘破损",
+                     *       "level": "重大隐患",
+                     *       "remark": "已复查验收，绝缘电阻合格",
+                     *       "before_images": [
+                     *         {
+                     *           "id": "23ee8930-737f-739e-83d0-69076b428b66",
+                     *           "original_name": "配电柜进线电缆绝缘破损.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "after_images": [
+                     *         {
+                     *           "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+                     *           "original_name": "更换后电缆绝缘测试.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 498200,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:30:00+08:00",
+                     *       "updated_at": "2026-09-09T16:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_hazard_api_v1_hazards__hazard_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                hazard_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_hazard_api_v1_hazards__hazard_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hazard_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "inspection_area": "201-冶炼主厂房",
+                     *       "inspection_date": "2026-09-02",
+                     *       "inspector": "电气自查",
+                     *       "description": "1 号配电柜进线电缆绝缘层破损，铜芯外露，存在漏电与短路风险",
+                     *       "suggestion": "停电更换破损段电缆，整改后做绝缘电阻测试并留存记录",
+                     *       "hazard_unit_id": 1,
+                     *       "hazard_unit_name": "电气车间",
+                     *       "person": "李建军",
+                     *       "due_date": "2026-09-09",
+                     *       "recheck_person": "李建军",
+                     *       "rectify_person": "孙浩宇",
+                     *       "status": "已整改",
+                     *       "hazard_type_id": 3,
+                     *       "major": "电气设备",
+                     *       "minor": "绝缘破损",
+                     *       "level": "重大隐患",
+                     *       "remark": "已复查验收，绝缘电阻合格",
+                     *       "before_images": [
+                     *         {
+                     *           "id": "23ee8930-737f-739e-83d0-69076b428b66",
+                     *           "original_name": "配电柜进线电缆绝缘破损.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "after_images": [
+                     *         {
+                     *           "id": "83f45373-5982-7707-8003-2f16a4783a0b",
+                     *           "original_name": "更换后电缆绝缘测试.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 498200,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:30:00+08:00",
+                     *       "updated_at": "2026-09-09T16:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_hazard_units_api_v1_hazard_units_get: {
+        parameters: {
+            query?: {
+                keyword?: string | null;
+                enabled?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 1,
+                     *         "name": "电气车间",
+                     *         "person": "李建军",
+                     *         "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+                     *         "enabled": true,
+                     *         "created_at": "2026-08-20T09:15:00+08:00",
+                     *         "updated_at": "2026-09-05T14:20:00+08:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["HazardUnitRead"][];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_hazard_unit_api_v1_hazard_units_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardUnitCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "电气车间",
+                     *       "person": "李建军",
+                     *       "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+                     *       "enabled": true,
+                     *       "created_at": "2026-08-20T09:15:00+08:00",
+                     *       "updated_at": "2026-09-05T14:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardUnitRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_hazard_unit_api_v1_hazard_units__unit_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                unit_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_hazard_unit_api_v1_hazard_units__unit_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                unit_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardUnitUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "电气车间",
+                     *       "person": "李建军",
+                     *       "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+                     *       "enabled": true,
+                     *       "created_at": "2026-08-20T09:15:00+08:00",
+                     *       "updated_at": "2026-09-05T14:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardUnitRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_hazard_types_api_v1_hazard_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 3,
+                     *         "major": "电气设备",
+                     *         "minor": "绝缘破损",
+                     *         "created_at": "2026-08-20T09:20:00+08:00",
+                     *         "updated_at": "2026-08-20T09:20:00+08:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["HazardTypeRead"][];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_hazard_type_api_v1_hazard_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardTypeCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 3,
+                     *       "major": "电气设备",
+                     *       "minor": "绝缘破损",
+                     *       "created_at": "2026-08-20T09:20:00+08:00",
+                     *       "updated_at": "2026-08-20T09:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardTypeRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_hazard_type_api_v1_hazard_types__type_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                type_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_hazard_type_api_v1_hazard_types__type_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HazardTypeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 3,
+                     *       "major": "电气设备",
+                     *       "minor": "绝缘破损",
+                     *       "created_at": "2026-08-20T09:20:00+08:00",
+                     *       "updated_at": "2026-08-20T09:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HazardTypeRead"];
                 };
             };
             /** @description 业务校验失败 */
