@@ -11,6 +11,7 @@ import {
   LogOutOutline,
   MenuOutline,
   SettingsOutline,
+  WarningOutline,
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
@@ -77,6 +78,17 @@ const menuOptions = computed<MenuOption[]>(() => {
       link('未编码物资', 'uncoded-materials'),
       link('物料编码库', 'material-code-library'),
       link('申购记录', 'purchase-records'),
+    ],
+  })
+  // 隐患管理：读取对所有登录用户开放，因此菜单不做权限过滤（写操作在页面内按权限隐藏）。
+  items.push({
+    label: '隐患管理',
+    key: 'hazard-group',
+    icon: renderIcon(WarningOutline),
+    children: [
+      link('隐患管理', 'hazard-records'),
+      link('隐患类型', 'hazard-types'),
+      link('责任单位', 'hazard-units'),
     ],
   })
   if (auth.can('settings:write'))

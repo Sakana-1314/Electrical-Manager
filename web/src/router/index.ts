@@ -159,6 +159,24 @@ const router = createRouter({
           meta: { title: '申购记录详情', parent: '申购记录' },
         },
         {
+          path: 'hazards',
+          name: 'hazard-records',
+          component: () => import('@/views/hazard/HazardRecordsView.vue'),
+          meta: { title: '隐患管理', parent: '隐患管理', keepAlive: true },
+        },
+        {
+          path: 'hazard-types',
+          name: 'hazard-types',
+          component: () => import('@/views/hazard/HazardTypesView.vue'),
+          meta: { title: '隐患类型', parent: '隐患管理' },
+        },
+        {
+          path: 'hazard-units',
+          name: 'hazard-units',
+          component: () => import('@/views/hazard/HazardUnitsView.vue'),
+          meta: { title: '责任单位', parent: '隐患管理' },
+        },
+        {
           path: 'settings/advanced',
           name: 'advanced-settings',
           component: () => import('@/views/settings/AdvancedSettingsView.vue'),
