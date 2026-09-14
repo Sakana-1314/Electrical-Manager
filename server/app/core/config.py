@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     cors_max_age: int = Field(default=86400, ge=0)
     # 每日凌晨2点定时清理已转入申购记录的计划（记录自包含快照后删除计划是安全的）
     purchase_plan_cleanup_enabled: bool = True
+    # 每日凌晨2点复查已软删除附件的引用情况，确认无引用后才物理删除数据库行与文件
+    attachment_cleanup_enabled: bool = True
     # 构建期注入的版本信息（Docker ARG/ENV，见 server/Dockerfile 与 CI build-images.yml）
     build_time: str | None = None
     git_sha: str | None = None

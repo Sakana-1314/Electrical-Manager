@@ -120,8 +120,10 @@ CREATE TABLE IF NOT EXISTS `file_object` (
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  `deleted_at` DATETIME(6) NULL,
   CONSTRAINT `pk_file_object` PRIMARY KEY (`id`),
-  INDEX `ix_file_object_sha256` (`sha256`)
+  INDEX `ix_file_object_sha256` (`sha256`),
+  INDEX `ix_file_object_deleted_at` (`deleted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `material_code_library` (

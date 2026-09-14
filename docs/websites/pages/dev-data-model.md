@@ -149,7 +149,8 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `file_object` | `width` | INT | 否 | 无 | 图片宽度 |
 | `file_object` | `height` | INT | 否 | 无 | 图片高度 |
 | `file_object` | `sha256` | VARCHAR(64) | 否 | 无 | 内容哈希（非唯一索引） |
-| `file_object` | *索引 / 外键* | — | — | — | 索引 `pk_file_object(id)`、`ix_file_object_sha256(sha256)`；外键：无（由各图片关联表引用本表） |
+| `file_object` | `deleted_at` | DATETIME(6) | 是 | NULL | 软删除时间；非空表示等待次日凌晨 2 点复查引用后物理清除 |
+| `file_object` | *索引 / 外键* | — | — | — | 索引 `pk_file_object(id)`、`ix_file_object_sha256(sha256)`、`ix_file_object_deleted_at(deleted_at)`；外键：无（由各图片关联表引用本表） |
 
 </TabsContent>
 

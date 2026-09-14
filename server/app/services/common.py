@@ -4,7 +4,7 @@ import hashlib
 import re
 import unicodedata
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -35,6 +35,19 @@ def operation_source_type(item: StockOperation) -> SourceType:
 
 def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
+
+
+def next_local_hour(now: datetime, hour: int) -> datetime:
+    """下一个「当地 hour 点整」的时间点。纯函数便于单测；`now` 需带时区。"""
+    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += timedelta(days=1)
+    return target
+
+
+def seconds_until_local_hour(now: datetime, hour: int) -> float:
+    """距下一个「当地 hour 点整」的秒数。纯函数便于单测；`now` 需带时区。"""
+    return (next_local_hour(now, hour) - now).total_seconds()
 
 
 def utc_naive(value: datetime) -> datetime:

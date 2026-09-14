@@ -1810,6 +1810,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/images/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 附件列表
+         * @description 系统管理「附件管理」列表：每张图片一行，列出被引用次数与删除状态。
+         */
+        get: operations["list_attachments_api_v1_files_images_attachments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/images/attachments/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 立即执行待删除附件清理
+         * @description 手动触发一次引用复查（与凌晨 2 点后台任务同一逻辑，仍会复查引用后才物理删除）。
+         */
+        post: operations["purge_attachments_api_v1_files_images_attachments_purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/files/images/attachments/{file_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 撤销删除附件 */
+        post: operations["restore_attachment_api_v1_files_images_attachments__file_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/images/{file_id}": {
         parameters: {
             query?: never;
@@ -1821,7 +1878,10 @@ export interface paths {
         get: operations["read_image_api_v1_files_images__file_id__get"];
         put?: never;
         post?: never;
-        /** 删除图片 */
+        /**
+         * 删除图片
+         * @description 软删除：被引用次数为 0 才允许；真正清除要等次日凌晨 2 点的引用复查。
+         */
         delete: operations["remove_api_v1_files_images__file_id__delete"];
         options?: never;
         head?: never;
@@ -2072,6 +2132,101 @@ export interface components {
             };
             /** Request Id */
             request_id: string;
+        };
+        /**
+         * AttachmentCleanupRead
+         * @description 凌晨 2 点引用复查的清理结果。
+         * @example {
+         *       "scanned": 1,
+         *       "purged_file_ids": [
+         *         "37c333f3-fbfe-79fa-8568-0af0db99be20"
+         *       ],
+         *       "purged_file_names": [
+         *         "37c333f3-fbfe-79fa-8568-0af0db99be20.png"
+         *       ],
+         *       "restored_file_ids": []
+         *     }
+         */
+        AttachmentCleanupRead: {
+            /** Scanned */
+            scanned: number;
+            /** Purged File Ids */
+            purged_file_ids: string[];
+            /** Purged File Names */
+            purged_file_names: string[];
+            /** Restored File Ids */
+            restored_file_ids: string[];
+        };
+        /**
+         * AttachmentDeleteRead
+         * @description 软删除回执：真正物理删除要等次日凌晨 2 点的引用复查。
+         * @example {
+         *       "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
+         *       "deleted_at": "2026-09-13T10:20:00+08:00",
+         *       "purge_after": "2026-09-14T02:00:00+08:00"
+         *     }
+         */
+        AttachmentDeleteRead: {
+            /** Id */
+            id: string;
+            /**
+             * Deleted At
+             * Format: date-time
+             */
+            deleted_at: string;
+            /**
+             * Purge After
+             * Format: date-time
+             */
+            purge_after: string;
+        };
+        /**
+         * AttachmentRead
+         * @description 附件管理列表行：图片对象 + 被引用次数 + 软删除状态。
+         * @example {
+         *       "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+         *       "original_name": "交流接触器-CJX2-2510-正面.jpg",
+         *       "mime_type": "image/png",
+         *       "size_bytes": 486912,
+         *       "width": 1600,
+         *       "height": 1200,
+         *       "created_at": "2026-06-05T09:10:00+08:00",
+         *       "reference_count": 1,
+         *       "deleted_at": null,
+         *       "file_exists": true
+         *     }
+         */
+        AttachmentRead: {
+            /** Id */
+            id: string;
+            /** Original Name */
+            original_name: string;
+            /**
+             * Mime Type
+             * @default image/png
+             * @constant
+             */
+            mime_type: "image/png";
+            /** Size Bytes */
+            size_bytes: number;
+            /** Width */
+            width: number;
+            /** Height */
+            height: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Reference Count */
+            reference_count: number;
+            /** Deleted At */
+            deleted_at?: string | null;
+            /**
+             * File Exists
+             * @default true
+             */
+            file_exists: boolean;
         };
         /**
          * BatchMovePurchasePlansRequest
@@ -3776,6 +3931,50 @@ export interface components {
             untracked_file_names: string[];
             /** Missing File Ids */
             missing_file_ids: string[];
+        };
+        /**
+         * Page[AttachmentRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+         *           "original_name": "交流接触器-CJX2-2510-正面.jpg",
+         *           "mime_type": "image/png",
+         *           "size_bytes": 486912,
+         *           "width": 1600,
+         *           "height": 1200,
+         *           "created_at": "2026-06-05T09:10:00+08:00",
+         *           "reference_count": 1,
+         *           "deleted_at": null,
+         *           "file_exists": true
+         *         },
+         *         {
+         *           "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
+         *           "original_name": "IMG_20260612_103512.jpg",
+         *           "mime_type": "image/png",
+         *           "size_bytes": 742400,
+         *           "width": 1600,
+         *           "height": 1200,
+         *           "created_at": "2026-06-12T10:35:12+08:00",
+         *           "reference_count": 0,
+         *           "deleted_at": "2026-09-13T10:20:00+08:00",
+         *           "file_exists": true
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 2
+         *     }
+         */
+        Page_AttachmentRead_: {
+            /** Items */
+            items: components["schemas"]["AttachmentRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
         };
         /**
          * Page[HuaXingInventoryRead]
@@ -27950,6 +28149,388 @@ export interface operations {
             };
         };
     };
+    list_attachments_api_v1_files_images_attachments_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                keyword?: string | null;
+                referenced?: boolean | null;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+                     *           "original_name": "交流接触器-CJX2-2510-正面.jpg",
+                     *           "mime_type": "image/png",
+                     *           "size_bytes": 486912,
+                     *           "width": 1600,
+                     *           "height": 1200,
+                     *           "created_at": "2026-06-05T09:10:00+08:00",
+                     *           "reference_count": 1,
+                     *           "deleted_at": null,
+                     *           "file_exists": true
+                     *         },
+                     *         {
+                     *           "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
+                     *           "original_name": "IMG_20260612_103512.jpg",
+                     *           "mime_type": "image/png",
+                     *           "size_bytes": 742400,
+                     *           "width": 1600,
+                     *           "height": 1200,
+                     *           "created_at": "2026-06-12T10:35:12+08:00",
+                     *           "reference_count": 0,
+                     *           "deleted_at": "2026-09-13T10:20:00+08:00",
+                     *           "file_exists": true
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_AttachmentRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    purge_attachments_api_v1_files_images_attachments_purge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "scanned": 1,
+                     *       "purged_file_ids": [
+                     *         "37c333f3-fbfe-79fa-8568-0af0db99be20"
+                     *       ],
+                     *       "purged_file_names": [
+                     *         "37c333f3-fbfe-79fa-8568-0af0db99be20.png"
+                     *       ],
+                     *       "restored_file_ids": []
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AttachmentCleanupRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    restore_attachment_api_v1_files_images_attachments__file_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+                     *       "original_name": "交流接触器-CJX2-2510-正面.jpg",
+                     *       "mime_type": "image/png",
+                     *       "size_bytes": 486912,
+                     *       "width": 1600,
+                     *       "height": 1200,
+                     *       "created_at": "2026-06-05T09:10:00+08:00",
+                     *       "reference_count": 1,
+                     *       "deleted_at": null,
+                     *       "file_exists": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AttachmentRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     read_image_api_v1_files_images__file_id__get: {
         parameters: {
             query?: {
@@ -28071,11 +28652,20 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    /**
+                     * @example {
+                     *       "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
+                     *       "deleted_at": "2026-09-13T10:20:00+08:00",
+                     *       "purge_after": "2026-09-14T02:00:00+08:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AttachmentDeleteRead"];
+                };
             };
             /** @description 业务校验失败 */
             400: {

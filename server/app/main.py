@@ -18,6 +18,7 @@ from app.core.middleware import RealIPMiddleware, RefererCORSMiddleware, request
 from app.mcp_server import bind_application, mcp, mcp_http_app
 from app.services import (
     ai_search_service,
+    attachment_cleanup_service,
     excel_export_job_service,
     import_job_service,
     purchase_plan_cleanup_service,
@@ -69,6 +70,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         excel_export_job_service.run_cleanup_worker(export_cleanup_stop_event),
         name="excel-export-cleanup-worker",
     )
+    attachment_cleanup_stop_event = asyncio.Event()
+    attachment_cleanup_worker: asyncio.Task[None] | None = None
+    if settings.attachment_cleanup_enabled:
+        attachment_cleanup_worker = asyncio.create_task(
+            attachment_cleanup_service.run_cleanup_worker(attachment_cleanup_stop_event),
+            name="attachment-cleanup-worker",
+        )
     share_cleanup_stop_event = asyncio.Event()
     share_cleanup_worker = asyncio.create_task(
         share_link_service.run_cleanup_worker(share_cleanup_stop_event),
@@ -86,6 +94,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await cleanup_worker
         export_cleanup_stop_event.set()
         await export_cleanup_worker
+        attachment_cleanup_stop_event.set()
+        if attachment_cleanup_worker is not None:
+            await attachment_cleanup_worker
         share_cleanup_stop_event.set()
         await share_cleanup_worker
         await ai_search_service.close_client()
