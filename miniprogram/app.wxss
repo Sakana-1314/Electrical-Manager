@@ -74,26 +74,28 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-/* 深色档：与浅色档一一对应，只覆盖颜色 / 阴影 / 渐变类令牌。 */
+/* 深色档：与浅色档一一对应，只覆盖颜色 / 阴影 / 渐变类令牌。
+ * 深色刻意用比网页端更大的明度台阶：手机在环境光下容易糊成一片，
+ * 因此页面底（--app-bg）压到近黑，卡片/弹窗再抬高一级，搜索框与输入框等控件再高一级。 */
 .theme-dark {
-  --app-bg: #13171d;
-  --app-surface: #191e26;
-  --app-surface-soft: #1c222b;
-  --app-form-surface: #1e242d;
-  --app-control-surface: #2c3441;
-  --app-card-border: #2a313b;
-  --app-border-strong: #333b47;
-  --app-divider: #262d38;
-  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(107, 140, 240, 0.1), transparent 28%);
-  --app-surface-gradient: linear-gradient(135deg, #191e26 0%, #232f4a 100%);
-  --app-surface-gradient-soft: linear-gradient(145deg, #191e26 0%, #1c222b 100%);
-  --app-entry-gradient: linear-gradient(135deg, #1c222b 0%, #232f4a 100%);
+  --app-bg: #0a0d12;
+  --app-surface: #222c39;
+  --app-surface-soft: #2e3a49;
+  --app-form-surface: #2e3a49;
+  --app-control-surface: #2e3a49;
+  --app-card-border: #3d4956;
+  --app-border-strong: #4e5d70;
+  --app-divider: #333f4d;
+  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(107, 140, 240, 0.14), transparent 30%);
+  --app-surface-gradient: linear-gradient(135deg, #222c39 0%, #2b3956 100%);
+  --app-surface-gradient-soft: linear-gradient(145deg, #222c39 0%, #2e3a49 100%);
+  --app-entry-gradient: linear-gradient(135deg, #2e3a49 0%, #2b3956 100%);
   --app-brand: #6b8cf0;
   --app-brand-active: #5f7fe0;
   --app-brand-disabled: #46557d;
-  --app-brand-soft: #232f4a;
-  --app-brand-soft-active: #2a3757;
-  --app-brand-border: #33456f;
+  --app-brand-soft: #2b3956;
+  --app-brand-soft-active: #35456a;
+  --app-brand-border: #435a80;
   --app-brand-text: #9fb5ff;
   --app-brand-icon: #9fb5ff;
   --app-brand-strong-gradient: linear-gradient(145deg, #1f3a86, #2f55c4);
@@ -103,30 +105,33 @@ page {
   --app-on-brand-glow: rgba(255, 255, 255, 0.18);
   --app-on-brand-ring: rgba(255, 255, 255, 0.04);
   --app-on-brand-ring-soft: rgba(255, 255, 255, 0.025);
-  --app-shadow-color: rgba(0, 0, 0, 0.34);
-  --app-shadow-color-strong: rgba(0, 0, 0, 0.45);
-  --app-brand-shadow-color: rgba(0, 0, 0, 0.38);
-  --app-brand-shadow-color-strong: rgba(0, 0, 0, 0.52);
-  --app-brand-shadow-color-soft: rgba(0, 0, 0, 0.26);
-  --app-brand-strong-shadow-color: rgba(0, 0, 0, 0.42);
-  --app-brand-halo-color: rgba(107, 140, 240, 0.22);
+  --app-shadow-color: rgba(0, 0, 0, 0.45);
+  --app-shadow-color-strong: rgba(0, 0, 0, 0.6);
+  --app-brand-shadow-color: rgba(0, 0, 0, 0.5);
+  --app-brand-shadow-color-strong: rgba(0, 0, 0, 0.62);
+  --app-brand-shadow-color-soft: rgba(0, 0, 0, 0.35);
+  --app-brand-strong-shadow-color: rgba(0, 0, 0, 0.55);
+  --app-brand-halo-color: rgba(107, 140, 240, 0.24);
   --app-text-strong: #e6eaf2;
   --app-text-title: #cfd9f2;
   --app-text: #aeb8c9;
   --app-text-value: #c6cedb;
   --app-text-secondary: #9aa4b5;
-  --app-text-muted: #8791a3;
+  --app-text-muted: #8b95a6;
   --app-text-subtle: #98a2b3;
-  --app-text-placeholder: #7f8899;
+  --app-text-placeholder: #8d97a8;
   --app-status-success: #7aa2f7;
-  --app-status-success-soft: #22304a;
+  --app-status-success-soft: #27354f;
   --app-status-warning: #6b8cf0;
-  --app-status-warning-soft: #232f4a;
+  --app-status-warning-soft: #2b3956;
   --app-status-danger: #9fb5ff;
-  --app-status-danger-soft: #2a3550;
-  --app-scrim: rgba(6, 9, 13, 0.62);
+  --app-status-danger-soft: #303d59;
+  --app-scrim: rgba(4, 6, 10, 0.68);
   --td-toast-bg-color: rgba(0, 0, 0, 0.82);
   --td-toast-color: #ffffff;
+  /* 分段控件在深色下做「凹槽 + 亮起选中项」，与浅色档的层次观感一致。 */
+  --td-segmented-bg-color: var(--app-bg);
+  --td-segmented-item-active-bg: var(--app-surface-soft);
 }
 
 /* TDesign 桥接：两个作用域共用一套声明，取值一律引用 --app-* 令牌。 */
