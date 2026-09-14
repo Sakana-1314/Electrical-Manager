@@ -160,10 +160,9 @@ function onUserMenuSelect(key: string) {
           >
             <n-icon :size="20"><MenuOutline /></n-icon>
           </button>
-          <!-- 顶栏标题：桌面端「系统名 / 上级 / 当前」，移动端只保留当前标题（宽度不够） -->
+          <!-- 顶栏标题：桌面端「上级 / 当前」，顶级页面只有当前标题；移动端只保留当前标题（宽度不够） -->
           <div class="topbar-title">
             <n-breadcrumb>
-              <n-breadcrumb-item v-if="!isMobile">备件管理</n-breadcrumb-item>
               <n-breadcrumb-item v-if="!isMobile && route.meta.parent">
                 {{ route.meta.parent }}
               </n-breadcrumb-item>
