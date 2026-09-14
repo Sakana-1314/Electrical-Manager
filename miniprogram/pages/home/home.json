@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "备件管理",
+  "navigationBarTitleText": "电气无忧",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",

@@ -4,7 +4,7 @@
     <view class="brand-orbit brand-orbit-small"></view>
     <view class="brand-content">
       <view class="brand-eyebrow">ELECTRICAL WORKSHOP</view>
-      <view class="brand-title">{{i18n.electricalWorkshopParts}}</view>
+      <view class="brand-title">{{i18n.brandTitle}}</view>
     </view>
   </view>
 

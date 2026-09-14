@@ -3,7 +3,7 @@
   "compileType": "miniprogram",
   "libVersion": "trial",
   "miniprogramRoot": "./",
-  "projectname": "电气无忧扫码出库",
+  "projectname": "HXNI 电气无忧",
   "setting": {
     "es6": true,
     "minified": true,
