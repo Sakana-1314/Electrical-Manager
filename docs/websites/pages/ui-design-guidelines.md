@@ -69,13 +69,15 @@
 | 不设快捷按钮 | 顶栏不放独立的明暗切换图标，外观只从「外观」二级菜单切换（避免同一功能两个入口） |
 | 新增样式 | 只引用上文令牌，不写死颜色；确需新颜色时先在设计令牌表里加一组浅 / 深值，再引用变量 |
 
-小程序端沿用同一套三档语义与调色板（深色值对齐网页端 `[data-theme='dark']`）：
+小程序端沿用同一套三档语义与令牌分层；深色档的**页面底比网页端更暗、容器更亮**（手机在环境光下容易糊成一片），
+因此深色档按「页面底 < 卡片/弹窗 < 搜索框与输入框」三级递增明度，不直接照搬网页端色值：
 
 | 项 | 要求 |
 | --- | --- |
 | 档位与存储 | 同样三档 `auto`（跟随系统，默认）/ `light` / `dark`，档位存本机 storage `miniProgramThemeMode`，不落库、不产生请求 |
 | 入口 | 首页「个人信息」弹窗里的「外观」分段控件（`t-segmented`），不另加切换入口 |
 | 落地 | 浅色令牌定义在 `app.wxss` 的 `page`，深色同名覆盖在 `.theme-dark`（由 `themeClass` 加到各页面根节点）；`page, .theme-dark` 把 TDesign 的 `--td-*` 桥接到 `--app-*` |
+| 深色层次 | 深色邻接色阶至少留出可辨差异（页面底 → 卡片/弹窗 → 控件），不靠描边单独撑层次；`--app-bg` / `--app-surface` / `--app-surface-soft` 三级递增 |
 | 原生外观 | `app.json` 的 `darkmode` + `themeLocation` 让窗口与导航栏跟随系统；显式档由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正 |
 | 新增样式 | 页面与组件样式只引用 `--app-*` 令牌，不写颜色字面量，也不用 `@media (prefers-color-scheme)` 切换主题；新增令牌时明暗两档必须同名同义（`npm run check` 在 `miniprogram/` 下校验） |
 
