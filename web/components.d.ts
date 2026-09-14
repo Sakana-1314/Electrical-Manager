@@ -61,7 +61,6 @@ declare module 'vue' {
     NSwitch: typeof import('naive-ui')['NSwitch']
     NTable: typeof import('naive-ui')['NTable']
     NTag: typeof import('naive-ui')['NTag']
-    NTooltip: typeof import('naive-ui')['NTooltip']
     OperationLinesEditor: typeof import('./src/components/OperationLinesEditor.vue')['default']
     PurchaseRecordHistoryDialog: typeof import('./src/components/PurchaseRecordHistoryDialog.vue')['default']
     QuantityInput: typeof import('./src/components/QuantityInput.vue')['default']

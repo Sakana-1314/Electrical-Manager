@@ -25,8 +25,8 @@ web/src/
 ├── env.d.ts                ImportMetaEnv 声明 + __BUILD_TIME__
 ├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
 ├── api/client.ts           axios 实例、拦截器、AppError
-├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 顶栏外观快捷键与用户菜单
-├── layouts/appearanceMenu.ts 用户菜单「外观」分组与档位判定（纯逻辑，有单测）
+├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 顶栏用户菜单（外观二级菜单）
+├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
@@ -224,7 +224,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、系统管理），顶栏含外观快捷按钮（只切明暗）、用户信息与下拉（「外观」分组三档 + 退出登录，`auth.logout()` + 跳 `login`）；`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、系统管理），顶栏含用户信息与下拉（「外观」二级菜单：悬浮父项向左展开自动/浅色/深色三档，另有「退出登录」调 `auth.logout()` + 跳 `login`；顶栏不放独立的明暗切换图标）；`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
 
 
 </TabsContent>
