@@ -480,6 +480,40 @@ class OrphanFileCleanupRead(ReadModel):
     deleted_file_names: list[str]
 
 
+class AttachmentRead(ReadModel):
+    """附件管理列表行：图片对象 + 被引用次数 + 软删除状态。"""
+
+    id: FileId
+    original_name: str
+    mime_type: Literal["image/png"] = "image/png"
+    size_bytes: int
+    width: int
+    height: int
+    created_at: UtcDateTime
+    # 被引用次数 = 四张图片关联表中指向本文件的记录数之和；为 0 才允许删除。
+    reference_count: int
+    # 非空表示已提交删除、等待次日凌晨 2 点复查引用后物理清除。
+    deleted_at: UtcDateTime | None = None
+    file_exists: bool = True
+
+
+class AttachmentDeleteRead(ReadModel):
+    """软删除回执：真正物理删除要等次日凌晨 2 点的引用复查。"""
+
+    id: FileId
+    deleted_at: UtcDateTime
+    purge_after: UtcDateTime
+
+
+class AttachmentCleanupRead(ReadModel):
+    """凌晨 2 点引用复查的清理结果。"""
+
+    scanned: int
+    purged_file_ids: list[FileId]
+    purged_file_names: list[str]
+    restored_file_ids: list[FileId]
+
+
 class ReplenishmentPolicyRead(ReadModel):
     minimum_qty: Decimal
     enabled: bool

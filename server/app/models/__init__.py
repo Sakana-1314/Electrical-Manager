@@ -286,6 +286,9 @@ class FileObject(AuditMixin, Base):
     width: Mapped[int] = mapped_column(Integer, nullable=False)
     height: Mapped[int] = mapped_column(Integer, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # 软删除时间：非空表示已提交删除、等待次日凌晨 2 点的引用复查，
+    # 复查确认仍无任何引用后才物理删除数据库行与磁盘文件（见 attachment_cleanup_service）。
+    deleted_at: Mapped[datetime | None] = mapped_column(UTC_DATETIME, nullable=True, index=True)
 
 
 class StockMaterial(AuditMixin, Base):

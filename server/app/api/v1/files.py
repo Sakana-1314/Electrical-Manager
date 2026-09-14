@@ -3,10 +3,21 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 
+from app.api.deps import PageNo, PageSize
+from app.core.errors import not_found
 from app.core.permissions import DbSession, SuperAdmin, require_roles
 from app.domain.enums import Role
-from app.models import User
-from app.schemas import FileId, FileObjectRead, OrphanFileCleanupRead, OrphanFileReportRead
+from app.models import FileObject, User
+from app.schemas import (
+    AttachmentCleanupRead,
+    AttachmentDeleteRead,
+    AttachmentRead,
+    FileId,
+    FileObjectRead,
+    OrphanFileCleanupRead,
+    OrphanFileReportRead,
+    Page,
+)
 from app.services import file_service
 
 router = APIRouter(prefix="/files/images", tags=["图片"])
@@ -54,6 +65,62 @@ async def remove_orphans(
 
 
 @router.get(
+    "/attachments",
+    response_model=Page[AttachmentRead],
+    summary="附件列表",
+)
+async def list_attachments(
+    session: DbSession,
+    user: SuperAdmin,
+    page: PageNo = 1,
+    page_size: PageSize = 20,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+    referenced: Annotated[bool | None, Query()] = None,
+    status_filter: Annotated[
+        str, Query(alias="status", pattern="^(active|deleted|all)$")
+    ] = "active",
+) -> Page[AttachmentRead]:
+    """系统管理「附件管理」列表：每张图片一行，列出被引用次数与删除状态。"""
+    items, total = await file_service.list_attachments(
+        session,
+        keyword=keyword,
+        referenced=referenced,
+        status=status_filter,
+        page=page,
+        page_size=page_size,
+    )
+    return Page(items=items, page=page, page_size=page_size, total=total)
+
+
+@router.post(
+    "/attachments/purge",
+    response_model=AttachmentCleanupRead,
+    summary="立即执行待删除附件清理",
+)
+async def purge_attachments(session: DbSession, user: SuperAdmin) -> AttachmentCleanupRead:
+    """手动触发一次引用复查（与凌晨 2 点后台任务同一逻辑，仍会复查引用后才物理删除）。"""
+    return await file_service.purge_deleted_attachments(session)
+
+
+@router.post(
+    "/attachments/{file_id}/restore",
+    response_model=AttachmentRead,
+    summary="撤销删除附件",
+)
+async def restore_attachment(
+    file_id: FileId, session: DbSession, user: SuperAdmin
+) -> AttachmentRead:
+    await file_service.restore_image(session, file_id)
+    item = await session.get(FileObject, file_id)
+    if item is None:  # pragma: no cover - restore_image 已保证存在
+        raise not_found("图片")
+    reference_count = await file_service.count_references(session, file_id)
+    return file_service.attachment_read(
+        item, reference_count, file_exists=file_service.file_path(file_id).is_file()
+    )
+
+
+@router.get(
     "/{file_id}",
     summary="读取图片",
 )
@@ -84,9 +151,9 @@ async def read_image(
 
 @router.delete(
     "/{file_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=AttachmentDeleteRead,
     summary="删除图片",
 )
-async def remove(file_id: FileId, session: DbSession, user: FileWriter) -> Response:
-    await file_service.delete_image(session, file_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+async def remove(file_id: FileId, session: DbSession, user: FileWriter) -> AttachmentDeleteRead:
+    """软删除：被引用次数为 0 才允许；真正清除要等次日凌晨 2 点的引用复查。"""
+    return await file_service.soft_delete_image(session, file_id)

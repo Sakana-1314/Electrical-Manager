@@ -1523,6 +1523,58 @@ def _build_schema_examples() -> dict[str, Any]:
             "deleted_record_ids": [_file_id(950)],
             "deleted_file_names": ["IMG_20260612_103512.jpg"],
         },
+        # —— 系统管理：附件管理 ——
+        "AttachmentRead": {
+            "id": _file_id(1),
+            "original_name": "交流接触器-CJX2-2510-正面.jpg",
+            "mime_type": "image/png",
+            "size_bytes": 486912,
+            "width": 1600,
+            "height": 1200,
+            "created_at": "2026-06-05T09:10:00+08:00",
+            "reference_count": 1,
+            "deleted_at": None,
+            "file_exists": True,
+        },
+        "AttachmentDeleteRead": {
+            "id": _file_id(952),
+            "deleted_at": "2026-09-13T10:20:00+08:00",
+            "purge_after": "2026-09-14T02:00:00+08:00",
+        },
+        "AttachmentCleanupRead": {
+            "scanned": 1,
+            "purged_file_ids": [_file_id(952)],
+            "purged_file_names": [f"{_file_id(952)}.png"],
+            "restored_file_ids": [],
+        },
+        "Page_AttachmentRead_": _page(
+            [
+                {
+                    "id": _file_id(1),
+                    "original_name": "交流接触器-CJX2-2510-正面.jpg",
+                    "mime_type": "image/png",
+                    "size_bytes": 486912,
+                    "width": 1600,
+                    "height": 1200,
+                    "created_at": "2026-06-05T09:10:00+08:00",
+                    "reference_count": 1,
+                    "deleted_at": None,
+                    "file_exists": True,
+                },
+                {
+                    "id": _file_id(952),
+                    "original_name": "IMG_20260612_103512.jpg",
+                    "mime_type": "image/png",
+                    "size_bytes": 742400,
+                    "width": 1600,
+                    "height": 1200,
+                    "created_at": "2026-06-12T10:35:12+08:00",
+                    "reference_count": 0,
+                    "deleted_at": "2026-09-13T10:20:00+08:00",
+                    "file_exists": True,
+                },
+            ]
+        ),
         "VersionInfoRead": {
             "app_name": "电气车间备件管理系统",
             "version": "1.0.0",

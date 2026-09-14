@@ -93,6 +93,7 @@ const menuOptions = computed<MenuOption[]>(() => {
       children: [
         link('管理端用户', 'users'),
         link('小程序用户', 'mini-program-users'),
+        link('附件管理', 'attachments'),
         link('高级设置', 'advanced-settings'),
         link('分享链接', 'share-links'),
         link('关于', 'about'),

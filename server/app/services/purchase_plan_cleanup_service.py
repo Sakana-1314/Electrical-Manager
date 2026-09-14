@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, update
@@ -19,6 +19,7 @@ from sqlalchemy import func, select, update
 from app.core.constants import SHANGHAI
 from app.core.database import SessionLocal
 from app.models import PurchaseMaterial, PurchaseRequestLine
+from app.services.common import seconds_until_local_hour
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +29,7 @@ _BATCH_SIZE = 50
 
 def _seconds_until_two_am(now: datetime) -> float:
     """距下一个凌晨 2 点（北京时间）的秒数。纯函数便于单测。"""
-    target = now.replace(hour=_CLEANUP_HOUR, minute=0, second=0, microsecond=0)
-    if now >= target:
-        target += timedelta(days=1)
-    return (target - now).total_seconds()
+    return seconds_until_local_hour(now, _CLEANUP_HOUR)
 
 
 async def cleanup_moved_plans_once() -> int:

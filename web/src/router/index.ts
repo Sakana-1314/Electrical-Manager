@@ -179,6 +179,12 @@ const router = createRouter({
           meta: { title: '小程序用户', parent: '系统管理', permission: 'settings:write' },
         },
         {
+          path: 'settings/attachments',
+          name: 'attachments',
+          component: () => import('@/views/settings/AttachmentsView.vue'),
+          meta: { title: '附件管理', parent: '系统管理', permission: 'settings:write' },
+        },
+        {
           path: 'settings/about',
           name: 'about',
           component: () => import('@/views/settings/AboutView.vue'),
