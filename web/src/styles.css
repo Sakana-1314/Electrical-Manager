@@ -26,8 +26,8 @@
   --radius-card: 14px;
   --shadow-card: 0 8px 24px rgb(15 23 42 / 5%);
   --shadow-card-hover: 0 12px 30px rgb(15 23 42 / 8%);
-  /* 筛选区：统一各页面筛选输入框宽度 */
-  --filter-col-min-width: 240px;
+  /* 筛选区：统一各页面筛选输入框宽度（桌面端常见宽度下一行 5 个，过窄自动降列） */
+  --filter-col-min-width: 190px;
   --filter-grid-gap: 16px;
   --filter-field-label-gap: 7px;
   /* 表格：与 Naive UI DataTable 的表头 / 行悬停保持一致（明暗各一套） */
