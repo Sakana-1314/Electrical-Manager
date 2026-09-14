@@ -1,4 +1,4 @@
-<view class="page-shell closed-page">
+<view class="page-shell closed-page {{themeClass}}">
   <view class="closed-card">
     <t-result
       theme="warning"

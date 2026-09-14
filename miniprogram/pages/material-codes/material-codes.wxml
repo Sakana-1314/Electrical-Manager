@@ -1,4 +1,4 @@
-<view class="page-shell material-codes-page">
+<view class="page-shell material-codes-page {{themeClass}}">
   <view class="list-header"><view class="page-title">{{i18n.materialCodesTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
@@ -43,7 +43,7 @@
     aria-label="{{i18n.backToTop}}"
     bind:tap="scrollToTop"
   >
-    <t-icon name="backtop" size="52rpx" color="#ffffff" />
+    <t-icon name="backtop" size="52rpx" />
   </button>
 
   <t-popup

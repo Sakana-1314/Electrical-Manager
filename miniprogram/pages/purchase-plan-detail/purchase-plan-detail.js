@@ -3,6 +3,7 @@ const { request } = require('../../utils/request');
 const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 function present(value, fallback) {
@@ -10,7 +11,7 @@ function present(value, fallback) {
   return text && !['\\', '/', '-', '—'].includes(text) ? text : fallback;
 }
 
-Page({
+Page(withTheme({
   data: {
     plan: null,
     loading: true,
@@ -102,4 +103,4 @@ Page({
       direction: 'column',
     });
   },
-});
+}));

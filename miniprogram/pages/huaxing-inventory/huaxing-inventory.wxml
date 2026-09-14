@@ -1,4 +1,4 @@
-<view class="page-shell huaxing-inventory-page">
+<view class="page-shell huaxing-inventory-page {{themeClass}}">
   <view class="list-header"><view class="page-title">{{i18n.huaxingInventoryTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
@@ -49,7 +49,7 @@
     aria-label="{{i18n.backToTop}}"
     bind:tap="scrollToTop"
   >
-    <t-icon name="backtop" size="52rpx" color="#ffffff" />
+    <t-icon name="backtop" size="52rpx" />
   </button>
 
   <t-popup

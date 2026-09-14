@@ -2,6 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 function formatDateTime(value) {
@@ -12,7 +13,7 @@ function formatDateTime(value) {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-Page({
+Page(withTheme({
   data: {
     items: [],
     keyword: '',
@@ -161,4 +162,4 @@ Page({
       direction: 'column',
     });
   },
-});
+}));

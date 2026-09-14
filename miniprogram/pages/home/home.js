@@ -4,6 +4,7 @@ const { canOutbound, isFeatureDisabled, SECONDARY_WAREHOUSE_LITE } = require('..
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { apiBaseUrl } = require('../../config/index');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
+const { getAppearanceOptions, setThemeMode, withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 const SHARE_IMAGE_URL = `${apiBaseUrl.replace(/\/api\/v1\/?$/, '')}/logo.png`;
@@ -17,7 +18,7 @@ function formatDateTime(value) {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-Page({
+Page(withTheme({
   data: {
     user: null,
     scanning: false,
@@ -25,6 +26,7 @@ Page({
     featureReady: false,
     liteMode: false,
     userProfileVisible: false,
+    themeOptions: getAppearanceOptions(),
     miniProgramUpdatedAt: buildUploadTime || t('unknown'),
     i18n: getMessages(),
   },
@@ -110,6 +112,10 @@ Page({
     this.setData({ userProfileVisible: event.detail.visible });
   },
 
+  onThemeModeChange(event) {
+    setThemeMode(this, event.detail.value);
+  },
+
   openRecords() {
     this.setData({ userProfileVisible: false });
     wx.navigateTo({ url: '/pages/records/records' });
@@ -148,4 +154,4 @@ Page({
       direction: 'column',
     });
   },
-});
+}));

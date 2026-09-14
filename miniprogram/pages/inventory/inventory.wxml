@@ -1,4 +1,4 @@
-<view class="page-shell inventory-page">
+<view class="page-shell inventory-page {{themeClass}}">
   <view class="inventory-header">
     <view class="page-title">{{i18n.inventoryTitle}}</view>
   </view>
@@ -64,7 +64,7 @@
           <view class="meta-label">{{i18n.unit}}</view>
           <view class="meta-value">{{item.unit_name}}</view>
         </view>
-        <t-icon wx:if="{{!item.is_lite}}" name="chevron-right" size="36rpx" color="#a1a9b7" />
+        <t-icon wx:if="{{!item.is_lite}}" class="card-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>
   </view>

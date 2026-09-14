@@ -1,36 +1,186 @@
+/**
+ * 全局主题令牌。
+ *
+ * 明暗两套调色板同名同义：浅色是 `page` 上的默认值，深色在 `.theme-dark` 里逐项覆盖；
+ * `.theme-dark` 由 utils/theme.js 按「自动 / 浅色 / 深色」解析后加到每个页面的根节点上
+ * （自动档跟随系统，显式档覆盖系统）。页面与组件样式只引用这里的令牌，不写颜色字面量。
+ *
+ * TDesign 组件库的 `--td-*` 语义令牌由第三个作用域（`page, .theme-dark`）桥接到 `--app-*`，
+ * 两个作用域共用一套声明，各自按本作用域的调色板解析，因此组件库在两种档位下都跟着本项目配色，
+ * 不依赖组件库自己的 `@media (prefers-color-scheme)` 主题（该主题文件未被引入）。
+ */
 page {
-  --td-brand-color: #3f63d8;
-  --td-brand-color-active: #3151bd;
-  --td-brand-color-disabled: #aebce8;
-  --td-brand-color-light: #edf2ff;
-  --td-brand-color-light-active: #e6edff;
-  --td-success-color: #2e7ad6;
-  --td-success-color-1: #e8f1fd;
-  --td-warning-color: #3f63d8;
-  --td-warning-color-1: #edf2ff;
-  --td-error-color: #1d4fa8;
-  --td-error-color-1: #dfe9fb;
-  --td-error-color-6: #1d4fa8;
-  --td-bg-color-page: #f4f6fa;
-  --td-bg-color-container: #ffffff;
-  --td-bg-color-secondarycontainer: #f8faff;
-  --td-bg-color-component: #f4f6fa;
-  --td-bg-color-container-active: #f4f7ff;
-  --td-text-color-primary: #172033;
-  --td-text-color-secondary: #4b5565;
-  --td-text-color-placeholder: #a1a9b7;
-  --td-text-color-brand: #3f63d8;
-  --td-border-level-1-color: #edf0f5;
-  --td-border-level-2-color: #e2e7ef;
-  --td-component-stroke: #edf0f5;
-  --td-component-border: #e2e7ef;
+  /* 底色与结构 */
+  --app-bg: #f4f6fa;
+  --app-surface: #ffffff;
+  --app-surface-soft: #f8faff;
+  --app-form-surface: #ffffff;
+  --app-control-surface: #e7e7e7;
+  --app-card-border: #edf0f5;
+  --app-border-strong: #e2e7ef;
+  --app-divider: #f0f2f6;
+  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(63, 99, 216, 0.08), transparent 28%);
+  --app-surface-gradient: linear-gradient(135deg, #ffffff 0%, #edf2ff 100%);
+  --app-surface-gradient-soft: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
+  --app-entry-gradient: linear-gradient(135deg, #f8faff 0%, #edf2ff 100%);
+  /* 主色 */
+  --app-brand: #3f63d8;
+  --app-brand-active: #3151bd;
+  --app-brand-disabled: #aebce8;
+  --app-brand-soft: #edf2ff;
+  --app-brand-soft-active: #e3eaff;
+  --app-brand-border: #dce5ff;
+  --app-brand-text: #3658c7;
+  --app-brand-icon: #5573d1;
+  --app-brand-strong-gradient: linear-gradient(145deg, #2947a6, #5579e7);
+  --app-on-brand: #ffffff;
+  --app-on-brand-soft: rgba(255, 255, 255, 0.82);
+  --app-on-brand-line: rgba(255, 255, 255, 0.16);
+  --app-on-brand-glow: rgba(255, 255, 255, 0.18);
+  --app-on-brand-ring: rgba(255, 255, 255, 0.04);
+  --app-on-brand-ring-soft: rgba(255, 255, 255, 0.025);
+  /* 阴影（只抽颜色，偏移与模糊由各页面决定） */
+  --app-shadow-color: rgba(15, 23, 42, 0.05);
+  --app-shadow-color-strong: rgba(15, 23, 42, 0.08);
+  --app-brand-shadow-color: rgba(63, 99, 216, 0.2);
+  --app-brand-shadow-color-strong: rgba(63, 99, 216, 0.35);
+  --app-brand-shadow-color-soft: rgba(63, 99, 216, 0.08);
+  --app-brand-strong-shadow-color: rgba(41, 71, 166, 0.2);
+  --app-brand-halo-color: rgba(63, 99, 216, 0.12);
+  /* 文本 */
+  --app-text-strong: #172033;
+  --app-text-title: #243765;
+  --app-text: #4b5565;
+  --app-text-value: #30394a;
+  --app-text-secondary: #687386;
+  --app-text-muted: #7d8798;
+  --app-text-subtle: #8a94a5;
+  --app-text-placeholder: #a1a9b7;
+  /* 状态语义（沿用单主色的蓝色语义） */
+  --app-status-success: #2e7ad6;
+  --app-status-success-soft: #e8f1fd;
+  --app-status-warning: #3f63d8;
+  --app-status-warning-soft: #edf2ff;
+  --app-status-danger: #1d4fa8;
+  --app-status-danger-soft: #dfe9fb;
+  --app-scrim: rgba(0, 0, 0, 0.6);
+  /* 结构令牌（明暗共用一套） */
   --td-radius-default: 18rpx;
   --td-radius-large: 28rpx;
   --td-button-border-radius: 18rpx;
   min-height: 100%;
-  background: #f4f6fa;
-  color: #172033;
+  background: var(--app-bg);
+  color: var(--app-text-strong);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* 深色档：与浅色档一一对应，只覆盖颜色 / 阴影 / 渐变类令牌。 */
+.theme-dark {
+  --app-bg: #13171d;
+  --app-surface: #191e26;
+  --app-surface-soft: #1c222b;
+  --app-form-surface: #1e242d;
+  --app-control-surface: #2c3441;
+  --app-card-border: #2a313b;
+  --app-border-strong: #333b47;
+  --app-divider: #262d38;
+  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(107, 140, 240, 0.1), transparent 28%);
+  --app-surface-gradient: linear-gradient(135deg, #191e26 0%, #232f4a 100%);
+  --app-surface-gradient-soft: linear-gradient(145deg, #191e26 0%, #1c222b 100%);
+  --app-entry-gradient: linear-gradient(135deg, #1c222b 0%, #232f4a 100%);
+  --app-brand: #6b8cf0;
+  --app-brand-active: #5f7fe0;
+  --app-brand-disabled: #46557d;
+  --app-brand-soft: #232f4a;
+  --app-brand-soft-active: #2a3757;
+  --app-brand-border: #33456f;
+  --app-brand-text: #9fb5ff;
+  --app-brand-icon: #9fb5ff;
+  --app-brand-strong-gradient: linear-gradient(145deg, #1f3a86, #2f55c4);
+  --app-on-brand: #ffffff;
+  --app-on-brand-soft: rgba(255, 255, 255, 0.82);
+  --app-on-brand-line: rgba(255, 255, 255, 0.16);
+  --app-on-brand-glow: rgba(255, 255, 255, 0.18);
+  --app-on-brand-ring: rgba(255, 255, 255, 0.04);
+  --app-on-brand-ring-soft: rgba(255, 255, 255, 0.025);
+  --app-shadow-color: rgba(0, 0, 0, 0.34);
+  --app-shadow-color-strong: rgba(0, 0, 0, 0.45);
+  --app-brand-shadow-color: rgba(0, 0, 0, 0.38);
+  --app-brand-shadow-color-strong: rgba(0, 0, 0, 0.52);
+  --app-brand-shadow-color-soft: rgba(0, 0, 0, 0.26);
+  --app-brand-strong-shadow-color: rgba(0, 0, 0, 0.42);
+  --app-brand-halo-color: rgba(107, 140, 240, 0.22);
+  --app-text-strong: #e6eaf2;
+  --app-text-title: #cfd9f2;
+  --app-text: #aeb8c9;
+  --app-text-value: #c6cedb;
+  --app-text-secondary: #9aa4b5;
+  --app-text-muted: #8791a3;
+  --app-text-subtle: #98a2b3;
+  --app-text-placeholder: #7f8899;
+  --app-status-success: #7aa2f7;
+  --app-status-success-soft: #22304a;
+  --app-status-warning: #6b8cf0;
+  --app-status-warning-soft: #232f4a;
+  --app-status-danger: #9fb5ff;
+  --app-status-danger-soft: #2a3550;
+  --app-scrim: rgba(6, 9, 13, 0.62);
+  --td-toast-bg-color: rgba(0, 0, 0, 0.82);
+  --td-toast-color: #ffffff;
+}
+
+/* TDesign 桥接：两个作用域共用一套声明，取值一律引用 --app-* 令牌。 */
+page,
+.theme-dark {
+  --td-brand-color: var(--app-brand);
+  --td-brand-color-active: var(--app-brand-active);
+  --td-brand-color-disabled: var(--app-brand-disabled);
+  --td-brand-color-light: var(--app-brand-soft);
+  --td-brand-color-light-active: var(--app-brand-soft-active);
+  --td-brand-color-focus: var(--app-brand-soft);
+  --td-text-color-brand: var(--app-brand);
+  --td-text-color-link: var(--app-brand);
+  --td-success-color: var(--app-status-success);
+  --td-success-color-1: var(--app-status-success-soft);
+  --td-success-color-5: var(--app-status-success);
+  --td-warning-color: var(--app-status-warning);
+  --td-warning-color-1: var(--app-status-warning-soft);
+  --td-warning-color-5: var(--app-status-warning);
+  --td-error-color: var(--app-status-danger);
+  --td-error-color-1: var(--app-status-danger-soft);
+  --td-error-color-6: var(--app-status-danger);
+  --td-bg-color-page: var(--app-bg);
+  --td-bg-color-container: var(--app-surface);
+  --td-bg-color-container-active: var(--app-brand-soft);
+  --td-bg-color-secondarycontainer: var(--app-surface-soft);
+  --td-bg-color-secondarycontainer-active: var(--app-brand-soft-active);
+  --td-bg-color-component: var(--app-control-surface);
+  --td-bg-color-component-active: var(--app-brand-soft-active);
+  --td-bg-color-component-disabled: var(--app-control-surface);
+  --td-text-color-primary: var(--app-text-strong);
+  --td-text-color-secondary: var(--app-text);
+  --td-text-color-placeholder: var(--app-text-placeholder);
+  --td-text-color-disabled: var(--app-text-placeholder);
+  --td-text-color-anti: var(--app-on-brand);
+  --td-border-level-1-color: var(--app-card-border);
+  --td-border-level-2-color: var(--app-border-strong);
+  --td-component-stroke: var(--app-card-border);
+  --td-component-border: var(--app-border-strong);
+  --td-mask-active: var(--app-scrim);
+  --td-popup-bg-color: var(--app-surface);
+  --td-input-bg-color: var(--app-form-surface);
+  --td-input-border-color: var(--app-card-border);
+  --td-search-bg-color: var(--app-surface-soft);
+  --td-dropdown-menu-bg-color: var(--app-surface);
+  --td-dropdown-menu-color: var(--app-text);
+  --td-dropdown-menu-active-color: var(--app-brand);
+}
+
+/* 系统深色时 page 元素自身的底色（显式浅色档由 wx.setBackgroundColor 纠正）。 */
+@media (prefers-color-scheme: dark) {
+  page {
+    background: #13171d;
+  }
 }
 
 .page-shell {
@@ -38,8 +188,9 @@ page {
   min-height: 100vh;
   padding: 36rpx 32rpx;
   background:
-    radial-gradient(circle at 100% 0%, rgba(63, 99, 216, 0.08), transparent 28%),
-    #f4f6fa;
+    var(--app-page-glow),
+    var(--app-bg);
+  color: var(--app-text-strong);
 }
 
 .page-header {
@@ -48,7 +199,7 @@ page {
 
 .page-eyebrow {
   margin-bottom: 10rpx;
-  color: #3f63d8;
+  color: var(--app-brand);
   font-size: 22rpx;
   font-weight: 600;
   letter-spacing: 3rpx;
@@ -56,7 +207,7 @@ page {
 }
 
 .page-title {
-  color: #172033;
+  color: var(--app-text-strong);
   font-size: 48rpx;
   font-weight: 650;
   letter-spacing: -1rpx;
@@ -65,7 +216,7 @@ page {
 
 .page-description {
   margin-top: 12rpx;
-  color: #7d8798;
+  color: var(--app-text-muted);
   font-size: 26rpx;
   line-height: 1.6;
 }
@@ -73,10 +224,10 @@ page {
 .section-card {
   overflow: hidden;
   margin-bottom: 24rpx;
-  border: 2rpx solid #edf0f5;
+  border: 2rpx solid var(--app-card-border);
   border-radius: 28rpx;
-  background: #ffffff;
-  box-shadow: 0 16rpx 48rpx rgba(15, 23, 42, 0.05);
+  background: var(--app-surface);
+  box-shadow: 0 16rpx 48rpx var(--app-shadow-color);
 }
 
 .section-heading {
@@ -84,7 +235,7 @@ page {
 }
 
 .section-title {
-  color: #172033;
+  color: var(--app-text-strong);
   font-size: 30rpx;
   font-weight: 600;
   line-height: 1.4;
@@ -92,7 +243,7 @@ page {
 
 .section-description {
   margin-top: 8rpx;
-  color: #7d8798;
+  color: var(--app-text-muted);
   font-size: 24rpx;
   line-height: 1.55;
 }
@@ -100,15 +251,10 @@ page {
 .section-divider {
   height: 2rpx;
   margin: 0 32rpx;
-  background: #edf0f5;
+  background: var(--app-card-border);
 }
 
 .primary-action {
   margin-top: 32rpx;
-  --td-button-primary-bg-color: #3f63d8;
-  --td-button-primary-border-color: #3f63d8;
-  --td-button-primary-active-bg-color: #3151bd;
-  --td-button-primary-active-border-color: #3151bd;
-  --td-button-border-radius: 18rpx;
-  box-shadow: 0 12rpx 28rpx rgba(63, 99, 216, 0.2);
+  box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color);
 }
