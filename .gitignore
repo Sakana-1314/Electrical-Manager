@@ -12,6 +12,8 @@ server/data/template/
 
 # Web
 web/node_modules/
+# worktree 里 node_modules 常以软链复用主检出，尾斜杠匹配不到软链，这里单独兜一条
+web/node_modules
 web/dist/
 web/.env
 web/.env.local
@@ -21,6 +23,9 @@ web/.env.local
 docs/env/.env
 server/.env
 server/*.db
+
+# 本地 git worktree（每个功能分支一个工作树，不进入版本库）
+.worktrees/
 
 # other
 outputs/
