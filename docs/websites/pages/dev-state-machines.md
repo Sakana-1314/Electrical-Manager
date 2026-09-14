@@ -13,7 +13,8 @@ flowchart LR
   { id: 't0', title: '枚举与申购计划' },
   { id: 't1', title: '库存流水与冲销' },
   { id: 't2', title: '异步任务与推送' },
-  { id: 't3', title: '小程序与分享' }
+  { id: 't3', title: '小程序与分享' },
+  { id: 't4', title: '隐患整改闭环' }
 ]">
 
 <TabsContent id="t0">
@@ -22,7 +23,7 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
+| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
@@ -314,6 +315,42 @@ flowchart TD
 ```
 
 新建渠道时传入的版本号与库中不一致会被拒绝；地址与事件缺失、地址非法分别报缺少地址 / 缺少订阅事件 / 地址不合法。
+
+</TabsContent>
+
+<TabsContent id="t4">
+
+### 隐患整改状态
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> 待整改 : 登记隐患
+    待整改 --> 整改受阻 : 客观条件不允许（备件未到、需停产窗口）
+    待整改 --> 已整改 : 整改完成并复查验收
+    整改受阻 --> 待整改 : 条件恢复后继续整改
+    整改受阻 --> 已整改 : 条件恢复并完成整改
+    已整改 --> 待整改 : 复查不通过，退回重新整改
+```
+
+状态是**普通可编辑字段**，没有服务端流转校验，也不记录流转历史：登记时缺省「待整改」，
+之后由 `PATCH /api/v1/hazards/{id}`（带 `version` 乐观锁）任意改写。
+判「逾期」只看数据不看状态机：`due_date` 早于今天且状态不是「已整改」，因此
+待整改与整改受阻都可能逾期，今天到期不算逾期（与工作台卡片的统计口径一致）。
+
+### 责任单位与隐患类型字典
+
+```mermaid
+flowchart TD
+    A["删除责任单位 / 隐患类型"] --> B{"是否已被隐患记录引用"}
+    B -- "是" --> C["409 拒绝：HAZARD_UNIT_IN_USE / HAZARD_TYPE_IN_USE"]
+    B -- "否" --> D["物理删除"]
+    D --> E["名称 / 大类+小类组合可被后续新建复用"]
+```
+
+隐患、责任单位与隐患类型都是**物理删除**（无软删除列）：删除后名称与「大类+小类」组合
+即可重新使用，不存在软删行占用唯一索引的问题。责任单位停用（`enabled=false`）只影响登记
+下拉是否可选，不影响历史隐患。
 
 </TabsContent>
 

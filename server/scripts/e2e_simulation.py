@@ -69,12 +69,13 @@ def main() -> int:
         assert health.status_code == 200 and health.json()["database"] == "ok", "健康检查失败"
         print("✅ 健康检查")
 
-        # 2. 四种角色登录
+        # 2. 五种角色登录
         warehouse = _auth(client, "warehouse")
         purchase = _auth(client, "purchase")
+        hazard = _auth(client, "hazard")
         readonly = _auth(client, "readonly")
         admin = _auth(client, "admin")
-        print("✅ 四种角色登录")
+        print("✅ 五种角色登录")
 
         # 3. 只读用户越权创建物资应 403
         denied = client.post(
@@ -182,6 +183,74 @@ def main() -> int:
         )
         assert plans.status_code == 200, plans.text
         print("✅ 申购计划列表查询")
+
+        # 12. 隐患管理员登记责任单位与隐患类型
+        unit = client.post(
+            "/api/v1/hazard-units",
+            headers=hazard,
+            json={"name": f"E2E 责任单位 {run}", "person": "E2E 责任人"},
+        )
+        assert unit.status_code == 201, unit.text
+        unit_id = unit.json()["id"]
+        hazard_type = client.post(
+            "/api/v1/hazard-types",
+            headers=hazard,
+            json={"major": "E2E 大类", "minor": f"E2E 小类 {run}"},
+        )
+        assert hazard_type.status_code == 201, hazard_type.text
+        print("✅ 创建责任单位与隐患类型")
+
+        # 13. 登记隐患（默认值由服务端兜底：区域/检查人员/要求完成时间=检查日期+7 天）
+        created = client.post(
+            "/api/v1/hazards",
+            headers=hazard,
+            json={
+                "description": f"E2E 隐患 {run}",
+                "hazard_unit_id": unit_id,
+                "hazard_type_id": hazard_type.json()["id"],
+            },
+        )
+        assert created.status_code == 201, created.text
+        hazard_row = created.json()
+        assert hazard_row["person"] == "E2E 责任人" and hazard_row["status"] == "待整改"
+        print(f"✅ 登记隐患 #{hazard_row['id']}")
+
+        # 14. 只读用户不能写隐患，但可以看到统计
+        denied_hazard = client.post(
+            "/api/v1/hazards",
+            headers=readonly,
+            json={
+                "description": "E2E 越权",
+                "hazard_unit_id": unit_id,
+                "hazard_type_id": hazard_type.json()["id"],
+            },
+        )
+        assert denied_hazard.status_code == 403, denied_hazard.text
+        stats = client.get("/api/v1/hazards/stats", headers=readonly)
+        assert stats.status_code == 200, stats.text
+        print("✅ 隐患写权限拦截与工作台统计")
+
+        # 15. 被隐患引用的责任单位不可删除
+        in_use = client.delete(
+            f"/api/v1/hazard-units/{unit_id}",
+            headers={**hazard, "If-Match": str(unit.json()["version"])},
+        )
+        assert in_use.status_code == 409, in_use.text
+        print("✅ 责任单位引用保护")
+
+        # 16. 整改闭环：更新状态为已整改并删除隐患
+        updated = client.patch(
+            f"/api/v1/hazards/{hazard_row['id']}",
+            headers=hazard,
+            json={"status": "已整改", "version": hazard_row["version"]},
+        )
+        assert updated.status_code == 200, updated.text
+        deleted = client.delete(
+            f"/api/v1/hazards/{hazard_row['id']}",
+            headers={**hazard, "If-Match": str(updated.json()["version"])},
+        )
+        assert deleted.status_code == 204, deleted.text
+        print("✅ 隐患整改与删除")
 
     print(f"🎉 模拟用户操作全部通过（run={run}）")
     return 0

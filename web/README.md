@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-演示账号密码均为 `123456`：`admin`、`warehouse`、`purchase`、`readonly`，分别对应四种角色。
+演示账号密码均为 `123456`：`admin`、`warehouse`、`purchase`、`hazard`、`readonly`，分别对应五种角色。
 
 ## 接入后端
 

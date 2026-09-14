@@ -1,6 +1,6 @@
 # 数据模型
 
-MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **28 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **33 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -53,6 +53,10 @@ flowchart LR
 | 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏）/ `query_only`（只读）/ `read_write`（可出库） |
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
 | MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
+| 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
+| 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id |
+| 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
+| 整改状态 / 隐患等级 | `HazardStatus` / `HazardLevel` | 状态三态：待整改 / 整改受阻 / 已整改；等级两档：一般隐患 / 重大隐患。逾期 = `due_date` 早于今天且状态非已整改（今天到期不算逾期） |
 
 </TabsContent>
 
@@ -141,6 +145,11 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `purchase_request_line_image` | `PurchaseRequestLineImage` | 申购记录行图片关联 | 申购 |
 | `memo` | `Memo` | 个人备忘录 | 备忘 |
 | `huaxing_inventory` | `HuaXingInventory` | 华兴库存（外部库存导入数据） | 华兴库存 |
+| `hazard_unit` | `HazardUnit` | 隐患责任单位（单位与责任人一一对应） | 隐患管理 |
+| `hazard_type` | `HazardType` | 隐患类型（一行一个「大类 + 小类」组合） | 隐患管理 |
+| `hazard` | `Hazard` | 隐患台账主表（检查信息 + 责任人快照 + 整改状态） | 隐患管理 |
+| `hazard_before_image` | `HazardBeforeImage` | 隐患「整改前」图片关联 | 隐患管理 |
+| `hazard_after_image` | `HazardAfterImage` | 隐患「整改后」图片关联 | 隐患管理 |
 
 `MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
 
@@ -214,6 +223,20 @@ erDiagram
 ```
 
 `business_event_log` 没有外键：`business_type` + `business_id` 弱关联任意业务表，仅靠实体索引检索。
+
+### 隐患管理
+
+```mermaid
+erDiagram
+    hazard_unit ||--o{ hazard : "责任单位（登记时快照责任人）"
+    hazard_type ||--o{ hazard : "隐患类型（大类 + 小类）"
+    hazard ||--o{ hazard_before_image : "整改前图片"
+    hazard ||--o{ hazard_after_image : "整改后图片"
+    file_object ||--o{ hazard_before_image : "图片对象"
+    file_object ||--o{ hazard_after_image : "图片对象"
+```
+
+隐患的两张图片关联表与二级库/申购模块同一写法，因此附件管理的「被引用次数」把它们一并计入。
 
 
 </TabsContent>
@@ -508,6 +531,51 @@ erDiagram
 | `stock_operation_line` | `unit_name_snapshot` | VARCHAR(32) | 否 | 无 | 单位快照 |
 | `stock_operation_line` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation_line(id)`；唯一 `uq_stock_operation_line_operation_id(operation_id, stock_material_id)`；`ix_operation_line_material_operation(stock_material_id, operation_id)`；检查约束 `ck_stock_operation_line_operation_quantity_positive`；外键 `operation_id → stock_operation.id`（`ON DELETE CASCADE`）、`stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
+### 字段明细：隐患管理表
+
+| 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `hazard_unit` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `hazard_unit` | `name` | VARCHAR(128) | 否 | 无 | 单位名称（唯一） |
+| `hazard_unit` | `person` | VARCHAR(64) | 否 | 无 | 责任人（与单位一一对应，登记隐患时快照到隐患） |
+| `hazard_unit` | `remark` | VARCHAR(255) | 是 | 无 | 备注 |
+| `hazard_unit` | `enabled` | TINYINT(1) | 否 | `1` | 0=停用（登记下拉不可选）1=启用 |
+| `hazard_unit` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `hazard_unit` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `hazard_unit` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_unit(id)`；唯一 `uq_hazard_unit_name(name)` |
+| `hazard_type` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `hazard_type` | `major` | VARCHAR(128) | 否 | 无 | 大类 |
+| `hazard_type` | `minor` | VARCHAR(128) | 否 | 无 | 小类 |
+| `hazard_type` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `hazard_type` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `hazard_type` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_type(id)`；唯一 `uq_hazard_type_major(major, minor)` |
+| `hazard` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `hazard` | `inspection_area` | VARCHAR(128) | 否 | `'华星现场'` | 检查区域 |
+| `hazard` | `inspection_date` | DATE | 否 | 无 | 检查日期 |
+| `hazard` | `inspector` | VARCHAR(64) | 否 | `'电气自查'` | 检查人员 |
+| `hazard` | `description` | TEXT | 否 | 无 | 隐患描述 |
+| `hazard` | `suggestion` | TEXT | 是 | 无 | 建议整改方案 |
+| `hazard` | `hazard_unit_id` | BIGINT UNSIGNED | 否 | 无 | 责任单位 |
+| `hazard` | `person` | VARCHAR(64) | 否 | `''` | 责任人快照（登记时取自单位，之后单位换人不回写） |
+| `hazard` | `due_date` | DATE | 否 | 无 | 要求完成整改时间（缺省 = 检查日期 + 7 天） |
+| `hazard` | `recheck_person` | VARCHAR(64) | 是 | 无 | 复查人员（缺省同检查人员） |
+| `hazard` | `rectify_person` | VARCHAR(64) | 是 | 无 | 整改员工（可选） |
+| `hazard` | `status` | ENUM('PENDING','BLOCKED','DONE') | 否 | `'PENDING'` | 整改状态：待整改 / 整改受阻 / 已整改 |
+| `hazard` | `hazard_type_id` | BIGINT UNSIGNED | 否 | 无 | 隐患类型（「大类+小类」组合行） |
+| `hazard` | `level` | ENUM('GENERAL','MAJOR') | 否 | `'GENERAL'` | 隐患等级：一般隐患 / 重大隐患 |
+| `hazard` | `remark` | TEXT | 是 | 无 | 备注 |
+| `hazard` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `hazard` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
+| `hazard_before_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
+| `hazard_before_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
+| `hazard_before_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序） |
+| `hazard_before_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_before_image(hazard_id, file_id)`；外键 `hazard_id → hazard.id`（`ON DELETE CASCADE`）、`file_id → file_object.id` |
+| `hazard_after_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
+| `hazard_after_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
+| `hazard_after_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序 |
+| `hazard_after_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_after_image(hazard_id, file_id)`；外键同整改前表 |
+
 ### 字段明细：备忘表
 
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
@@ -618,16 +686,17 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 末尾只有一段 `INSERT`，插入 `user` 表 4 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
+`init.sql` 末尾只有一段 `INSERT`，插入 `user` 表 5 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
 | `admin` | 系统管理员 | `SUPER_ADMIN` | 1 | `SHA2(@admin_api_token, 256)` |
 | `warehouse` | 仓库管理员 | `WAREHOUSE_ADMIN` | 1 | `SHA2(@warehouse_api_token, 256)` |
 | `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `SHA2(@purchase_api_token, 256)` |
+| `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `SHA2(@hazard_api_token, 256)` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
 
-四个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。其余 27 张表当前不含种子数据，由运行期接口或导入任务写入。
+五个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。其余 32 张表当前不含种子数据（含隐患类型与责任单位两张字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 

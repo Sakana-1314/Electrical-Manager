@@ -113,6 +113,9 @@ web/src/
 | `/procurement/material-code-library` | `material-code-library` | `views/procurement/MaterialCodeLibraryView.vue` | 需登录 | 编码库列表 + Excel 导入 |
 | `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出 |
 | `/procurement/records/:id` | `purchase-record-detail` | `views/procurement/PurchaseRequestDetailView.vue` | 需登录 | 记录详情与编辑（含图片） |
+| `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
+| `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：大类+小类组合 CRUD、按大类筛选 |
+| `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
@@ -135,7 +138,7 @@ web/src/
 | 项 | 实现 | 位置 |
 | --- | --- | --- |
 | 是否已登录 | `isAuthenticated` = `token && user` 同时存在 | `stores/auth.ts` |
-| 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 4 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
+| 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 5 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
 | 无权限时 | 静默重定向到工作台；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
 | keep-alive | `meta.keepAlive` 只在 3 个列表路由声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
@@ -192,6 +195,7 @@ web/src/
 | `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展、状态、配置读取/更新/测试 |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
+| `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD 与概览统计、隐患类型与责任单位字典维护 |
 | `files.ts` | `/files/images*` | 图片上传与删除 |
 | `version.ts` | `/version` | 版本信息（关于页） |
 `web/src/utils/download.ts` 的 `exportDownloadUrl(fileUuid)` 直接拼导出文件下载地址（该端点不鉴权）。
@@ -254,7 +258,7 @@ web/src/
 | `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = '/logo.png'`；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
 | `constants/shareColumns.ts` | 分享页可展示列定义（键名与后端 Literal 严格一致）：`SHARE_PLAN_COLUMNS`、`SHARE_RECORD_COLUMNS`、`shareColumnOptions()`、`SHARE_DEFAULT_HIDDEN_KEYS = ['status']`、`defaultShareColumnKeys()`，供 `ShareView` 渲染与 `ShareLinksView` 勾选共用 |
 | `constants/table.ts` | `tableColumnWidths`（unit/quantity/date/datetime/status/person/code/identifier/name/material/model/text/action）、`preventTableColumnCompression`、`getTableScrollX` |
-| `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
+| `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
 | `types/export.ts` / `config/env.ts` | `ExportOption = DropdownOption & { label: string; key: string }`；VITE_* 解析（见 API 客户端一节的 baseURL 说明） |
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
@@ -373,11 +377,12 @@ server/app/
 #### 角色与依赖注入器（`server/app/core/permissions.py`、`server/app/domain/enums.py`）
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `READ_ONLY` | 四值 `StrEnum`，存 `user.role` |
+| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `READ_ONLY` | 五值 `StrEnum`，存 `user.role` |
 | `require_roles(*roles)` | 工厂函数 | 角色不在集合内抛 `FORBIDDEN`（403） |
 | `CurrentUser` | `depends(get_current_user)` | 管理端用户（Bearer JWT 或 `X-API-Token`） |
 | `WarehouseWriter` | `require_roles(SUPER_ADMIN, WAREHOUSE_ADMIN)` | 库存写操作 |
 | `PurchaseWriter` | `require_roles(SUPER_ADMIN, PURCHASE_ADMIN)` | 申购写操作 |
+| `HazardWriter` | `require_roles(SUPER_ADMIN, HAZARD_ADMIN)` | 隐患管理写操作（台账与两张字典表） |
 | `SuperAdmin` | `require_roles(SUPER_ADMIN)` | 系统配置、用户、文件治理 |
 | `CurrentMiniProgramUser` | `depends(get_current_mini_program_user)` | 小程序用户；未审核（`enabled=False`）抛 `ACCOUNT_DISABLED`（403） |
 | `MiniProgramRegistrationOpenId` | `depends(get_mini_program_registration_openid)` | 返回 `(app_id, openid)`，供注册/绑定用 |
@@ -392,7 +397,7 @@ server/app/
 | `api/v1/ai_search.py` | `SuperAdmin`、`CurrentUser` | 5 |
 | `api/v1/system_settings.py` | `SuperAdmin` | 5 |
 | `api/v1/dictionaries.py` | `SuperAdmin` | 5 |
-| `api/v1/files.py` | `SuperAdmin` | 5 |
+| `api/v1/files.py` | `SuperAdmin`、`FileWriter`（含 `HAZARD_ADMIN`） | 5 |
 | `api/v1/inventory.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse` | 12 |
 | `api/v1/stock_materials.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse`、`IfMatchVersion` | 8 |
 | `api/v1/secondary_warehouse.py` | `CurrentUser`、`WarehouseWriter` | 4 |
@@ -403,6 +408,7 @@ server/app/
 | `api/v1/purchase_plan_templates.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 7 |
 | `api/v1/purchase_requests.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 7 |
 | `api/v1/purchase_record_sync.py` | `PurchaseWriter` | 4 |
+| `api/v1/hazards.py` | `CurrentUser`、`HazardWriter`、`IfMatchVersion` | 13 |
 | `api/v1/share.py` | `CurrentUser` | 5 |
 | `api/v1/excel_export_jobs.py` | `CurrentUser` | 2 |
 | `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 25（管理端 4 + 小程序 21） |
@@ -433,10 +439,11 @@ server/app/
 
 | 角色 | 权限点 | 能力 |
 | --- | --- | --- |
-| `SUPER_ADMIN` 超级管理员 | `warehouse:write`、`purchase:write`、`settings:write`、`read` | 全部能力：二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、查询已归档计划（`status=ARCHIVED`）、管理端用户/接口令牌/小程序用户合并、高级设置（AI 搜索、精简模式、小程序功能模式、Webhook）、图片孤儿文件排查清理、创建/撤回分享链接、创建导出任务 |
+| `SUPER_ADMIN` 超级管理员 | `warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`read` | 全部能力：二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、查询已归档计划（`status=ARCHIVED`）、管理端用户/接口令牌/小程序用户合并、高级设置（AI 搜索、精简模式、小程序功能模式、Webhook）、图片孤儿文件排查清理、隐患台账与隐患类型/责任单位维护、创建/撤回分享链接、创建导出任务 |
 | `WAREHOUSE_ADMIN` 仓库管理员 | `warehouse:write`、`read` | 二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、创建/撤回分享链接、创建导出任务；其余只读 |
 | `PURCHASE_ADMIN` 申购管理员 | `purchase:write`、`read` | 申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、创建/撤回分享链接、创建导出任务；其余只读 |
-| `READ_ONLY` 只读角色 | `read` | 工作台、备忘录、华星总库存、库存/流水查询、创建/撤回自己的分享链接、创建导出任务 |
+| `HAZARD_ADMIN` 隐患管理员 | `hazard:write`、`read` | 隐患台账增删改、隐患类型与责任单位维护、隐患图片上传；其余只读 |
+| `READ_ONLY` 只读角色 | `read` | 工作台、备忘录、华星总库存、库存/流水查询、隐患台账查询、创建/撤回自己的分享链接、创建导出任务 |
 
 #### 越权结果
 
@@ -459,6 +466,9 @@ server/app/
 | `INVALID_STATUS_TRANSITION` | 409 | `INVALID_TOKEN` | 401 |
 | `DATA_CONFLICT` | 409 | `UNAUTHORIZED` | 401 |
 | `VALIDATION_ERROR` | 422 | `USER_DISABLED` | 401 |
+| `DUPLICATE_HAZARD_UNIT` | 409 | `DUPLICATE_HAZARD_TYPE` | 409 |
+| `HAZARD_UNIT_IN_USE` | 409 | `HAZARD_TYPE_IN_USE` | 409 |
+| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | — | — |
 错误响应体统一为 `{code, message, details, request_id}`（`exception_handlers.error_response`），`request_id` 取 `request.state.request_id`。全量业务错误码清单见 [/api-error-codes](/api-error-codes)，约定背景见 [接口约定](/api-conventions)。
 #### 全局异常处理器（`register_exception_handlers`）
 | 注册的异常类型 | handler | 返回 code / status |
