@@ -2,6 +2,13 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
 const { canOutbound, isFeatureDisabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const {
+  ensureProject,
+  getCurrentProject,
+  getEnabledProjects,
+  switchProject,
+  takeProjectSwitchNotice,
+} = require('../../utils/project');
 const { apiBaseUrl } = require('../../config/index');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
 const { getAppearanceOptions, setThemeMode, withTheme } = require('../../utils/theme');
@@ -27,6 +34,11 @@ Page(withTheme({
     liteMode: false,
     userProfileVisible: false,
     appearanceExpanded: false,
+    // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）。
+    projectsExpanded: false,
+    projectOptions: [],
+    currentProjectId: 0,
+    currentProjectLabel: t('projectNotSelected'),
     themeOptions: getAppearanceOptions(),
     miniProgramUpdatedAt: buildUploadTime || t('unknown'),
     i18n: getMessages(),
@@ -61,6 +73,53 @@ Page(withTheme({
       });
     } catch (error) {
       this.showError(error);
+    }
+  },
+
+  onShow() {
+    // 每次回到首页都同步一次项目：项目列表一次会话只拉一次，重复调用不产生额外请求。
+    this.loadCurrentProject();
+  },
+
+  /**
+   * 拉取项目列表并把当前项目同步到「个人信息」弹窗。
+   *
+   * 等静默登录完成再请求，避免冷启动时无 token 触发重复登录；项目接口失败时静默降级：
+   * 弹窗退回本机缓存 / 「未选择」，业务请求仍由后端落到默认项目。
+   */
+  async loadCurrentProject() {
+    let session = null;
+    try {
+      session = await getApp().globalData.authPromise;
+    } catch (_error) {
+      // 静默登录失败由 onLoad 的既有分支提示，这里继续用本机缓存渲染弹窗。
+    }
+    // 账号待审核 / 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
+    if (
+      session &&
+      (session.account_disabled || session.registration_disabled || session.requires_profile)
+    ) {
+      return;
+    }
+    await ensureProject();
+    const currentProject = getCurrentProject();
+    this.setData({
+      projectOptions: getEnabledProjects().map((project) => ({
+        id: project.id,
+        label: `${project.code} ${project.name}`,
+      })),
+      currentProjectId: currentProject ? currentProject.id : 0,
+      currentProjectLabel: currentProject ? currentProject.label : t('projectNotSelected'),
+    });
+    // 切换项目是整页重启，提示由重启前的标记带过来；此时页面已渲染，toast 组件可用。
+    if (takeProjectSwitchNotice()) {
+      Toast({
+        context: this,
+        selector: '#home-toast',
+        message: t('projectSwitched'),
+        theme: 'success',
+        direction: 'column',
+      });
     }
   },
 
@@ -116,12 +175,30 @@ Page(withTheme({
 
   onUserProfileVisibleChange(event) {
     const visible = event.detail.visible;
-    // 关闭弹窗时收起外观下拉，下次打开恢复收起状态。
-    this.setData(visible ? { userProfileVisible: true } : { userProfileVisible: false, appearanceExpanded: false });
+    // 关闭弹窗时收起外观与项目下拉，下次打开恢复收起状态。
+    this.setData(
+      visible
+        ? { userProfileVisible: true }
+        : { userProfileVisible: false, appearanceExpanded: false, projectsExpanded: false },
+    );
   },
 
   toggleAppearance() {
     this.setData({ appearanceExpanded: !this.data.appearanceExpanded });
+  },
+
+  toggleProjects() {
+    this.setData({ projectsExpanded: !this.data.projectsExpanded });
+  },
+
+  /** 选择项目：切换后整页重启（见 utils/project.js 的 switchProject），本页无需刷新数据。 */
+  onProjectSelect(event) {
+    const projectId = Number(event.currentTarget.dataset.projectId);
+    if (!projectId || projectId === this.data.currentProjectId) {
+      this.setData({ projectsExpanded: false });
+      return;
+    }
+    switchProject(projectId);
   },
 
   onThemeModeChange(event) {
@@ -131,7 +208,7 @@ Page(withTheme({
   },
 
   openRecords() {
-    this.setData({ userProfileVisible: false, appearanceExpanded: false });
+    this.setData({ userProfileVisible: false, appearanceExpanded: false, projectsExpanded: false });
     wx.navigateTo({ url: '/pages/records/records' });
   },
 
