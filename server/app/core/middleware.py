@@ -13,8 +13,38 @@ from starlette.responses import PlainTextResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.core.db_timing import begin_database_timing, finish_database_timing
+from app.core.project_scope import pop_current_project, push_current_project
 
 logger = logging.getLogger("spare_parts.api")
+
+
+def _project_id_from_header(request: Request) -> int | None:
+    raw = (request.headers.get("X-Project-Id") or "").strip()
+    if not raw:
+        return None
+    try:
+        project_id = int(raw)
+    except ValueError:
+        return None
+    return project_id if project_id > 0 else None
+
+
+async def project_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    """把 `X-Project-Id` 落到请求上下文：带上该头的请求一律按项目过滤。
+
+    这里只「设定」、不查库校验：业务路由上的 `require_current_project` 依赖负责
+    校验并给出明确错误；匿名入口（分享、导出下载）与小程序、MCP 各自显式解析项目。
+    没带头时保持「未设定」，项目域语句会 fail-closed 报 `PROJECT_REQUIRED`。
+    """
+    project_id = _project_id_from_header(request)
+    if project_id is None:
+        return await call_next(request)
+    request.state.project_id = project_id
+    token = push_current_project(project_id)
+    try:
+        return await call_next(request)
+    finally:
+        pop_current_project(token)
 
 
 def _real_ip(scope: Scope) -> str | None:

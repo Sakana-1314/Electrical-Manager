@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.errors import AppError
+from app.core.project_scope import set_current_project
 from app.core.security import decode_access_token, encrypt_secret
 from app.domain.enums import Role
-from app.models import MiniProgramUser, User
+from app.models import MiniProgramUser, Project, User
 
 bearer = HTTPBearer(auto_error=False)
 api_token_header = APIKeyHeader(name="X-API-Token", auto_error=False)
@@ -132,6 +133,8 @@ async def get_current_mini_program_user(
         raise AppError("INVALID_TOKEN", "登录凭证无效或已过期", status_code=401)
     if not user.enabled:
         raise AppError("ACCOUNT_DISABLED", "您的账号待审核，请联系管理员", status_code=403)
+    # 小程序端点统一在此落定项目上下文（缺头时用默认项目），端点本身无需声明依赖。
+    await resolve_mini_program_project(request, session)
     request.state.mini_program_user_id = user.id
     request.state.username = f"mini:{user.id}"
     return user
@@ -179,3 +182,70 @@ HazardWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.HAZA
 # 台账管理写权限：超级管理员 + 台账管理员；读取同样对所有登录用户开放（CurrentUser）。
 LedgerWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.LEDGER_ADMIN))]
 SuperAdmin = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN))]
+
+
+async def _project_from_header(session: DbSession, request: Request) -> Project | None:
+    """读取 `X-Project-Id` 头并校验项目；缺头或头值不可解析时返回 None（交给调用方兜底）。"""
+    raw = (request.headers.get("X-Project-Id") or "").strip()
+    if not raw:
+        return None
+    try:
+        project_id = int(raw)
+    except ValueError:
+        return None
+    if project_id <= 0:
+        return None
+    project = await session.get(Project, project_id)
+    if project is None:
+        raise AppError("PROJECT_NOT_FOUND", "项目不存在", status_code=400)
+    if not project.enabled:
+        raise AppError("PROJECT_DISABLED", "项目已停用，请切换到其他项目", status_code=400)
+    return project
+
+
+async def require_current_project(
+    request: Request,
+    session: DbSession,
+    project_id: Annotated[int | None, Header(alias="X-Project-Id")] = None,
+) -> Project:
+    """（业务接口）解析并校验当前项目，作为请求的项目上下文。
+
+    业务路由统一声明这个依赖：缺少 `X-Project-Id` 头返回 400 `PROJECT_REQUIRED`，
+    项目不存在 / 已停用分别返回 `PROJECT_NOT_FOUND` / `PROJECT_DISABLED`。
+    项目表是全局表（不参与项目过滤），这里的查询本身不需要项目上下文。
+    """
+    if project_id is None:
+        raise AppError(
+            "PROJECT_REQUIRED",
+            "请先在右上角选择项目（若页面已过期，请刷新后重试）",
+            status_code=400,
+        )
+    project = await session.get(Project, project_id)
+    if project is None:
+        raise AppError("PROJECT_NOT_FOUND", "项目不存在", status_code=400)
+    if not project.enabled:
+        raise AppError("PROJECT_DISABLED", "项目已停用，请切换到其他项目", status_code=400)
+    set_current_project(project.id)
+    request.state.project_id = project.id
+    return project
+
+
+# 业务接口的项目上下文：声明它的接口在文档里也会带上 X-Project-Id 头参数。
+CurrentProject = Annotated[Project, Depends(require_current_project)]
+
+
+async def resolve_mini_program_project(request: Request, session: DbSession) -> Project:
+    """（小程序）解析项目上下文：带头则按头校验，缺头时落到默认项目 P05。
+
+    小程序有独立的项目切换器，但旧版本客户端不带 `X-Project-Id`，必须能继续写默认项目，
+    所以缺头时兜底而不是报错。由 `get_current_mini_program_user` 统一调用，小程序所有
+    业务端点无需各自声明依赖。
+    """
+    from app.services import project_service
+
+    project = await _project_from_header(session, request)
+    if project is None:
+        project = await project_service.require_default_project(session)
+    set_current_project(project.id)
+    request.state.project_id = project.id
+    return project

@@ -13,6 +13,7 @@ from app.api.v1 import (
     material_code_library,
     memos,
     mini_program,
+    projects,
     purchase_materials,
     purchase_plan_templates,
     purchase_record_sync,
@@ -57,3 +58,4 @@ router.include_router(version.router)
 # 新增模块追加在末尾：注册顺序即 openapi 里 paths 的顺序，追加可让契约 diff 保持纯增量。
 router.include_router(hazards.router)
 router.include_router(ledger.router)
+router.include_router(projects.router)

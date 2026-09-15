@@ -32,6 +32,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.database import Base
 from app.core.identifiers import uuid7_string
+from app.core.project_scope import current_project_id
 from app.domain.enums import (
     ExcelExportJobStatus,
     ExcelImportJobStatus,
@@ -72,6 +73,39 @@ class AuditMixin:
         UTC_DATETIME, default=_utcnow, server_default=func.now(), onupdate=_utcnow
     )
     version: Mapped[int] = mapped_column(UINT, default=1, server_default="1")
+
+
+class ProjectScoped:
+    """项目域数据混入：所有业务表都带 `project_id`，由全局隔离层自动读写。
+
+    `default=current_project_id` 让 Core `insert()`（Excel 导入的批量插入）也能从当前
+    上下文补上项目；上下文缺失时直接报 `PROJECT_REQUIRED`，绝不静默落到某个项目。
+    """
+
+    project_id: Mapped[int] = mapped_column(
+        BIGINT_ID,
+        ForeignKey("project.id"),
+        nullable=False,
+        index=True,
+        default=current_project_id,
+    )
+
+
+class Project(AuditMixin, Base):
+    """项目：业务数据的隔离维度（当前 P05，后续可加 P06）。
+
+    `is_default` 标记唯一的默认项目：小程序 / MCP 未指定项目时的兜底，由 service 保证
+    「至多一个默认」；默认项目不可停用、不可删除，也不可把停用的项目设为默认。
+    """
+
+    __tablename__ = "project"
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    remark: Mapped[str | None] = mapped_column(String(500))
 
 
 class User(Base):
@@ -144,11 +178,17 @@ class MiniProgramIdentity(AuditMixin, Base):
     user: Mapped[MiniProgramUser] = relationship(back_populates="identities")
 
 
-class MaterialCodeLibrary(Base):
+class MaterialCodeLibrary(ProjectScoped, Base):
     __tablename__ = "material_code_library"
+    # 编码库按项目唯一：不同项目的物料编码库互不干扰（导入是整项目替换）。
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "material_code", name="uq_material_code_library_project_material_code"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
-    material_code: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    material_code: Mapped[str] = mapped_column(String(64), nullable=False)
     name: Mapped[str | None] = mapped_column(String(128))
     model_spec: Mapped[str | None] = mapped_column(String(255))
     unit_name: Mapped[str] = mapped_column(String(32), nullable=False)
@@ -157,7 +197,7 @@ class MaterialCodeLibrary(Base):
     )
 
 
-class ExcelImportJob(Base):
+class ExcelImportJob(ProjectScoped, Base):
     __tablename__ = "excel_import_job"
     __table_args__ = (Index("ix_excel_import_job_type_status", "import_type", "status", "id"),)
 
@@ -189,7 +229,7 @@ class ExcelImportJob(Base):
     )
 
 
-class HuaXingInventory(Base):
+class HuaXingInventory(ProjectScoped, Base):
     __tablename__ = "huaxing_inventory"
     # 首次入库日期是列表页的区间筛选条件，单独建索引（其余字段只做文本包含匹配）。
     __table_args__ = (Index("ix_huaxing_inventory_first_inbound_date", "first_inbound_date"),)
@@ -210,7 +250,7 @@ class HuaXingInventory(Base):
     )
 
 
-class LiteInventory(Base):
+class LiteInventory(ProjectScoped, Base):
     """精简二级库：Excel 一次性全量导入 + 只读查询（独立于完整模式 stock_material 等表）。
 
     仅当二级库处于精简模式时被读取/写入；完整模式数据不受影响。
@@ -229,7 +269,7 @@ class LiteInventory(Base):
     )
 
 
-class ExcelExportJob(Base):
+class ExcelExportJob(ProjectScoped, Base):
     """异步 Excel 导出任务（申购记录 / 申购计划结果导出共用）。
 
     与 excel_import_job 对称：PENDING → RUNNING → SUCCEEDED | FAILED。
@@ -298,8 +338,14 @@ class FileObject(AuditMixin, Base):
     deleted_at: Mapped[datetime | None] = mapped_column(UTC_DATETIME, nullable=True, index=True)
 
 
-class StockMaterial(AuditMixin, Base):
+class StockMaterial(ProjectScoped, AuditMixin, Base):
     __tablename__ = "stock_material"
+    # 项目域唯一：同一项目内「名称 + 型号 + 单位」唯一，不同项目可各有一份同名物资。
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "identity_hash", name="uq_stock_material_project_identity_hash"
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
     uuid: Mapped[str] = mapped_column(
@@ -311,7 +357,7 @@ class StockMaterial(AuditMixin, Base):
     model_spec: Mapped[str] = mapped_column(String(255), nullable=False)
     unit_name: Mapped[str] = mapped_column(String(32), nullable=False)
     remark: Mapped[str | None] = mapped_column(String(1000))
-    identity_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    identity_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     balance: Mapped[StockBalance | None] = relationship(
         back_populates="material", uselist=False, lazy="selectin", cascade="all, delete-orphan"
     )
@@ -326,7 +372,7 @@ class StockMaterial(AuditMixin, Base):
     )
 
 
-class StockMaterialImage(Base):
+class StockMaterialImage(ProjectScoped, Base):
     __tablename__ = "stock_material_image"
 
     material_id: Mapped[int] = mapped_column(
@@ -338,7 +384,7 @@ class StockMaterialImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class StockReplenishmentPolicy(Base):
+class StockReplenishmentPolicy(ProjectScoped, Base):
     __tablename__ = "stock_replenishment_policy"
     __table_args__ = (CheckConstraint("minimum_qty >= 0", name="minimum_nonnegative"),)
 
@@ -357,7 +403,7 @@ class StockReplenishmentPolicy(Base):
     material: Mapped[StockMaterial] = relationship(back_populates="replenishment_policy")
 
 
-class StockBalance(Base):
+class StockBalance(ProjectScoped, Base):
     __tablename__ = "stock_balance"
 
     stock_material_id: Mapped[int] = mapped_column(
@@ -371,11 +417,15 @@ class StockBalance(Base):
     material: Mapped[StockMaterial] = relationship(back_populates="balance")
 
 
-class PurchaseMaterial(AuditMixin, Base):
+class PurchaseMaterial(ProjectScoped, AuditMixin, Base):
     __tablename__ = "purchase_material"
+    # 计划号按项目唯一：编号规则是「本项目当天 MAX + 1」，跨项目必须允许同号。
+    __table_args__ = (
+        UniqueConstraint("project_id", "plan_no", name="uq_purchase_material_project_plan_no"),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
-    plan_no: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
+    plan_no: Mapped[str] = mapped_column(String(32), nullable=False)
     plan_date: Mapped[date] = mapped_column(Date, nullable=False)
     material_code: Mapped[str | None] = mapped_column(String(64))
     category: Mapped[str | None] = mapped_column(String(64))
@@ -413,7 +463,7 @@ class PurchaseMaterial(AuditMixin, Base):
     )
 
 
-class PurchaseMaterialImage(Base):
+class PurchaseMaterialImage(ProjectScoped, Base):
     __tablename__ = "purchase_material_image"
 
     material_id: Mapped[int] = mapped_column(
@@ -425,7 +475,7 @@ class PurchaseMaterialImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class PurchasePlanTemplate(AuditMixin, Base):
+class PurchasePlanTemplate(ProjectScoped, AuditMixin, Base):
     """周期性计划（申购计划模板）：字段与申购计划对齐，供手动一键生成申购计划。
 
     生成时复制为 purchase_material（plan_no/plan_date/status 在生成时赋值），
@@ -464,7 +514,7 @@ class PurchasePlanTemplate(AuditMixin, Base):
     )
 
 
-class PurchasePlanTemplateImage(Base):
+class PurchasePlanTemplateImage(ProjectScoped, Base):
     __tablename__ = "purchase_plan_template_image"
 
     plan_id: Mapped[int] = mapped_column(
@@ -476,7 +526,7 @@ class PurchasePlanTemplateImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class PurchaseRequest(AuditMixin, Base):
+class PurchaseRequest(ProjectScoped, AuditMixin, Base):
     __tablename__ = "purchase_request"
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
@@ -497,7 +547,7 @@ class PurchaseRequest(AuditMixin, Base):
     )
 
 
-class PurchaseRequestLine(AuditMixin, Base):
+class PurchaseRequestLine(ProjectScoped, AuditMixin, Base):
     __tablename__ = "purchase_request_line"
     __table_args__ = (
         CheckConstraint("purchase_qty > 0", name="purchase_positive"),
@@ -554,7 +604,7 @@ class PurchaseRequestLine(AuditMixin, Base):
     )
 
 
-class PurchaseRequestLineImage(Base):
+class PurchaseRequestLineImage(ProjectScoped, Base):
     __tablename__ = "purchase_request_line_image"
 
     line_id: Mapped[int] = mapped_column(
@@ -566,15 +616,24 @@ class PurchaseRequestLineImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class StockOperation(AuditMixin, Base):
+class StockOperation(ProjectScoped, AuditMixin, Base):
     __tablename__ = "stock_operation"
     __table_args__ = (
+        # 操作单号 / 幂等键按项目唯一：不同项目的流水互不干扰，同号允许并存。
+        UniqueConstraint(
+            "project_id", "operation_no", name="uq_stock_operation_project_operation_no"
+        ),
+        UniqueConstraint(
+            "project_id",
+            "client_request_id",
+            name="uq_stock_operation_project_client_request_id",
+        ),
         Index("ix_stock_operation_type_occurred", "operation_type", "occurred_at"),
         Index("ix_stock_operation_source_occurred", "source_type", "occurred_at"),
     )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
-    operation_no: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
+    operation_no: Mapped[str] = mapped_column(String(32), nullable=False)
     operation_type: Mapped[OperationType] = mapped_column(SAEnum(OperationType), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(UTC_DATETIME, nullable=False, index=True)
     business_reason: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -585,7 +644,7 @@ class StockOperation(AuditMixin, Base):
     reversal_of_id: Mapped[int | None] = mapped_column(
         BIGINT_ID, ForeignKey("stock_operation.id"), index=True
     )
-    client_request_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    client_request_id: Mapped[str] = mapped_column(String(64), nullable=False)
     mini_program_user_name_snapshot: Mapped[str | None] = mapped_column(String(128))
 
     lines: Mapped[list[StockOperationLine]] = relationship(
@@ -596,7 +655,7 @@ class StockOperation(AuditMixin, Base):
     )
 
 
-class StockOperationLine(AuditMixin, Base):
+class StockOperationLine(ProjectScoped, AuditMixin, Base):
     __tablename__ = "stock_operation_line"
     __table_args__ = (
         CheckConstraint("quantity > 0", name="operation_quantity_positive"),
@@ -623,7 +682,7 @@ class StockOperationLine(AuditMixin, Base):
     stock_material: Mapped[StockMaterial] = relationship(lazy="selectin")
 
 
-class ShareLink(Base):
+class ShareLink(ProjectScoped, Base):
     """匿名分享链接：把勾选的申购计划/申购记录分享为无鉴权页面。
 
     与导出文件的匿名下载同一信任模型——安全性依赖 token 为 UUIDv7（不可猜解），
@@ -773,16 +832,20 @@ class WebhookDelivery(Base):
     channel: Mapped[WebhookChannel] = relationship(lazy="joined")
 
 
-class HazardUnit(AuditMixin, Base):
+class HazardUnit(ProjectScoped, AuditMixin, Base):
     """隐患责任单位：每个单位对应一个责任人，隐患登记时按单位带出责任人快照。
 
     停用（enabled=False）的单位不再出现在新增隐患的下拉里，但历史隐患仍保留其名称快照。
+    单位名称按项目唯一。
     """
 
     __tablename__ = "hazard_unit"
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_hazard_unit_project_name"),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
     person: Mapped[str] = mapped_column(String(64), nullable=False)
     remark: Mapped[str | None] = mapped_column(String(255))
     enabled: Mapped[bool] = mapped_column(
@@ -790,21 +853,23 @@ class HazardUnit(AuditMixin, Base):
     )
 
 
-class HazardType(AuditMixin, Base):
-    """隐患类型：一行一个「大类 + 小类」组合，无父子层级，同一组合唯一。
+class HazardType(ProjectScoped, AuditMixin, Base):
+    """隐患类型：一行一个「大类 + 小类」组合，无父子层级，同一组合在项目内唯一。
 
     隐患只引用本表 id；删除为物理删除，删除前校验是否被隐患引用。
     """
 
     __tablename__ = "hazard_type"
-    __table_args__ = (UniqueConstraint("major", "minor"),)
+    __table_args__ = (
+        UniqueConstraint("project_id", "major", "minor", name="uq_hazard_type_project_major"),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
     major: Mapped[str] = mapped_column(String(128), nullable=False)
     minor: Mapped[str] = mapped_column(String(128), nullable=False)
 
 
-class Hazard(AuditMixin, Base):
+class Hazard(ProjectScoped, AuditMixin, Base):
     """隐患台账主表：检查信息 + 责任单位与责任人快照 + 整改前/后图片 + 整改状态。
 
     责任人（person）是登记时从责任单位带出的快照，之后单位换人不会回写历史隐患；
@@ -814,6 +879,9 @@ class Hazard(AuditMixin, Base):
 
     __tablename__ = "hazard"
     __table_args__ = (
+        UniqueConstraint(
+            "project_id", "client_request_id", name="uq_hazard_project_client_request_id"
+        ),
         Index("ix_hazard_unit_id", "hazard_unit_id"),
         Index("ix_hazard_type_id", "hazard_type_id"),
         Index("ix_hazard_status", "status"),
@@ -857,7 +925,7 @@ class Hazard(AuditMixin, Base):
     remark: Mapped[str | None] = mapped_column(Text)
     # 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）：手机端弱网重试时避免重复登记；
     # 网页端登记留空。它也用来区分「小程序登记」与「后台登记」的来源。
-    client_request_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    client_request_id: Mapped[str | None] = mapped_column(String(64))
 
     unit: Mapped[HazardUnit] = relationship(lazy="selectin")
     hazard_type: Mapped[HazardType] = relationship(lazy="selectin")
@@ -875,7 +943,7 @@ class Hazard(AuditMixin, Base):
     )
 
 
-class HazardBeforeImage(Base):
+class HazardBeforeImage(ProjectScoped, Base):
     """隐患「整改前」图片关联：一张图一行，sort_order 保留上传顺序。"""
 
     __tablename__ = "hazard_before_image"
@@ -889,7 +957,7 @@ class HazardBeforeImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class HazardAfterImage(Base):
+class HazardAfterImage(ProjectScoped, Base):
     """隐患「整改后」图片关联：与整改前分表，便于附件管理分别统计引用次数。"""
 
     __tablename__ = "hazard_after_image"
@@ -903,7 +971,7 @@ class HazardAfterImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class LedgerTag(AuditMixin, Base):
+class LedgerTag(ProjectScoped, AuditMixin, Base):
     """台账标签节点：自引用邻接表，至多 3 层（根节点 `parent_id IS NULL`）。
 
     层级上限与「同级名称唯一」都由 service 校验：MySQL 唯一索引对 `parent_id IS NULL`
@@ -936,7 +1004,7 @@ class LedgerTag(AuditMixin, Base):
     )
 
 
-class LedgerTagImage(Base):
+class LedgerTagImage(ProjectScoped, Base):
     """标签节点图片关联：一个节点最多 9 张，sort_order 保留上传顺序。"""
 
     __tablename__ = "ledger_tag_image"
@@ -950,7 +1018,7 @@ class LedgerTagImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
-class Ledger(AuditMixin, Base):
+class Ledger(ProjectScoped, AuditMixin, Base):
     """台账记录：电气台账总览的一行（名称 / 型号 / 数量 / 备注 / 图片 + 标签）。
 
     `tag_ids` 是英文逗号分隔的标签 id（如 `3,12,15`），由 service 统一规范化写入
@@ -975,7 +1043,7 @@ class Ledger(AuditMixin, Base):
     )
 
 
-class LedgerImage(Base):
+class LedgerImage(ProjectScoped, Base):
     """台账记录图片关联：一张图一行，sort_order 保留上传顺序。"""
 
     __tablename__ = "ledger_image"
@@ -989,7 +1057,43 @@ class LedgerImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
+# 项目域实体清单：全局隔离层（core.project_scope）按它给语句注入 `project_id` 过滤，
+# 并在 flush 时给新对象补项目。新增业务表时**必须**同时继承 ProjectScoped 并登记在这里，
+# 否则该表不会被隔离（详见 AGENTS.md「项目隔离约定」）。
+PROJECT_SCOPED_MODELS: tuple[type[ProjectScoped], ...] = (
+    ExcelExportJob,
+    ExcelImportJob,
+    Hazard,
+    HazardAfterImage,
+    HazardBeforeImage,
+    HazardType,
+    HazardUnit,
+    HuaXingInventory,
+    Ledger,
+    LedgerImage,
+    LedgerTag,
+    LedgerTagImage,
+    LiteInventory,
+    MaterialCodeLibrary,
+    PurchaseMaterial,
+    PurchaseMaterialImage,
+    PurchasePlanTemplate,
+    PurchasePlanTemplateImage,
+    PurchaseRequest,
+    PurchaseRequestLine,
+    PurchaseRequestLineImage,
+    ShareLink,
+    StockBalance,
+    StockMaterial,
+    StockMaterialImage,
+    StockOperation,
+    StockOperationLine,
+    StockReplenishmentPolicy,
+)
+
+
 __all__ = [
+    "PROJECT_SCOPED_MODELS",
     "Base",
     "BusinessEventLog",
     "ExcelExportJob",
@@ -1006,8 +1110,11 @@ __all__ = [
     "LedgerTag",
     "LedgerTagImage",
     "LiteInventory",
+    "MaterialCodeLibrary",
     "Memo",
     "MiniProgramUser",
+    "Project",
+    "ProjectScoped",
     "PurchaseMaterial",
     "PurchaseMaterialImage",
     "PurchasePlanTemplate",

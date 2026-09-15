@@ -27,6 +27,14 @@ _DEFAULT_STATUS_BY_CODE: dict[str, int] = {
     "ACCOUNT_DISABLED": 403,
     "FORBIDDEN": 403,
     "VALIDATION_ERROR": 422,
+    # 项目（project）隔离相关：未选定项目属于请求缺参数，用 400 而不是 401/403。
+    "PROJECT_REQUIRED": 400,
+    "PROJECT_NOT_FOUND": 400,
+    "PROJECT_DISABLED": 400,
+    "PROJECT_MISMATCH": 409,
+    "PROJECT_IS_DEFAULT": 409,
+    "PROJECT_IN_USE": 409,
+    "DUPLICATE_PROJECT_CODE": 409,
 }
 
 
