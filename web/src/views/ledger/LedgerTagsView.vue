@@ -73,9 +73,6 @@ void load()
 /** 树数据每次由列表派生，避免组件往节点写的 `$` 字段污染接口数据。 */
 const treeData = computed(() => buildLedgerTagTree(tags.value))
 
-/** 节点总数与孤立标签数：给筛选下拉一个直观的口径提示。 */
-const orphanCount = computed(() => tags.value.filter((tag) => isOrphanTag(tag)).length)
-
 function openCreate(parent: LedgerTag | null = null): void {
   editingTag.value = null
   parentId.value = parent?.id ?? null
@@ -130,14 +127,7 @@ function hasDetail(node: unknown): boolean {
 
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">
-        <div>
-          <div class="filter-title">筛选条件</div>
-          <div class="filter-description">
-            孤立标签 = 既无父节点也无子节点的单节点；树标签 = 有父或有子、处在层级里的节点。 当前共
-            {{ tags.length }} 个节点，其中孤立 {{ orphanCount }} 个；标签最多
-            {{ LEDGER_TAG_MAX_LEVEL }} 层。
-          </div>
-        </div>
+        <div class="filter-title">筛选条件</div>
       </div>
       <div class="filter-grid">
         <label class="filter-field">
