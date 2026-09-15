@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import type { HazardType } from '@/api/generated'
 import {
+  buildHazardTypeTree,
   hazardQuery,
   hazardStatusTypes,
   initialHazardFilters,
@@ -78,5 +80,56 @@ describe('状态标签配色', () => {
     expect(hazardStatusTypes['待整改']).toBe('warning')
     expect(hazardStatusTypes['整改受阻']).toBe('error')
     expect(hazardStatusTypes['已整改']).toBe('success')
+  })
+})
+
+describe('隐患类型 → 两级横向树', () => {
+  const type = (id: number, major: string, minor: string): HazardType =>
+    ({
+      id,
+      major,
+      minor,
+      created_at: '2026-09-01T00:00:00+08:00',
+      updated_at: '2026-09-01T00:00:00+08:00',
+      version: 1,
+    }) as HazardType
+
+  it('按大类分组，同组小类保持入参顺序（后端已排序）', () => {
+    const tree = buildHazardTypeTree([
+      type(3, '电气设备', '绝缘破损'),
+      type(4, '电气设备', '接线松动'),
+      type(5, '安全防护', '护栏缺失'),
+    ])
+    expect(tree.map((branch) => branch.label)).toEqual(['电气设备', '安全防护'])
+    expect(tree[0].children.map((leaf) => leaf.label)).toEqual(['绝缘破损', '接线松动'])
+    expect(tree[0].count).toBe(2)
+    expect(tree[1].count).toBe(1)
+  })
+
+  it('大类节点与叶子节点用互不冲突的唯一 id', () => {
+    const tree = buildHazardTypeTree([type(3, '电气设备', '绝缘破损')])
+    expect(tree[0].id).toBe('major:电气设备')
+    expect(tree[0].children[0].id).toBe('type:3')
+  })
+
+  it('叶子保留原始行数据，供编辑与删除使用', () => {
+    const row = type(7, '电气设备', '接地不良')
+    const tree = buildHazardTypeTree([row])
+    expect(tree[0].children[0].type).toEqual(row)
+  })
+
+  it('空输入返回空数组（页面据此渲染空状态）', () => {
+    expect(buildHazardTypeTree([])).toEqual([])
+  })
+
+  it('不与入参共享引用（树组件会往节点写 $ 字段，不能污染列表数据）', () => {
+    const rows = [type(3, '电气设备', '绝缘破损')]
+    const tree = buildHazardTypeTree(rows)
+    expect(tree[0]).not.toBe(rows[0])
+    expect(tree[0].children[0]).not.toBe(rows[0])
+    // 原始行不被加上树结构字段；其 id 仍是接口返回的数字主键
+    expect(rows[0]).not.toHaveProperty('children')
+    expect(rows[0].id).toBe(3)
+    expect(tree[0].children[0].id).toBe('type:3')
   })
 })
