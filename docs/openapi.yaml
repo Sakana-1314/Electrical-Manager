@@ -5534,7 +5534,8 @@ paths:
       tags:
       - 华星库存
       summary: 华星库存列表
-      description: 华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选）。
+      description: 华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选；date_from/date_to
+        按首次入库日期闭区间）。
       operationId: list_huaxing_inventory_api_v1_huaxing_inventory_get
       security:
       - HTTPBearer: []
@@ -5602,6 +5603,24 @@ paths:
             maxLength: 128
           - type: 'null'
           title: Purchaser
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Date To
       responses:
         '200':
           description: Successful Response

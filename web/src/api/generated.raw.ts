@@ -618,7 +618,7 @@ export interface paths {
         };
         /**
          * 华星库存列表
-         * @description 华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选）。
+         * @description 华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选；date_from/date_to 按首次入库日期闭区间）。
          */
         get: operations["list_huaxing_inventory_api_v1_huaxing_inventory_get"];
         put?: never;
@@ -17575,6 +17575,8 @@ export interface operations {
                 model_spec?: string | null;
                 purchase_department?: string | null;
                 purchaser?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path?: never;

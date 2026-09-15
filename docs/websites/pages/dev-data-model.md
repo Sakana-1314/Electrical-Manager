@@ -370,7 +370,7 @@ erDiagram
 | `huaxing_inventory` | `purchaser` | VARCHAR(128) | 是 | NULL | 申购人 |
 | `huaxing_inventory` | `purchase_department` | VARCHAR(128) | 是 | NULL | 申购部门 |
 | `huaxing_inventory` | `subitem_no_name` | VARCHAR(255) | 是 | NULL | 子项号名称 |
-| `huaxing_inventory` | *索引 / 外键* | — | — | — | 索引 `pk_huaxing_inventory(id)`；外键：无 |
+| `huaxing_inventory` | *索引 / 外键* | — | — | — | 索引 `pk_huaxing_inventory(id)`、`ix_huaxing_inventory_first_inbound_date(first_inbound_date)`；外键：无 |
 | `lite_inventory` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `lite_inventory` | `name` | VARCHAR(128) | 否 | 无 | 名称 |
 | `lite_inventory` | `model_spec` | VARCHAR(255) | 是 | NULL | 型号规格 |

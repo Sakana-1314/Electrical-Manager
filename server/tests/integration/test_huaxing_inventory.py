@@ -81,7 +81,7 @@ def _row(
     unit: str = "个",
     purchaser: str = "吴冰",
     department: str = "生产调度中心",
-    first_inbound_date: str = "2022-10-28",
+    first_inbound_date: str | None = "2022-10-28",
     subitem: str = "201-冶炼主厂房",
 ) -> list[object]:
     return [
@@ -422,3 +422,60 @@ async def test_filter_code_or_and_cross_field_and(client: AsyncClient) -> None:
     assert by_and.status_code == 200, by_and.text
     assert by_and.json()["total"] == 1
     assert by_and.json()["items"][0]["material_code"] == "L012-05048"
+
+
+@pytest.mark.asyncio
+async def test_filter_by_first_inbound_date_range(client: AsyncClient) -> None:
+    headers = await auth_headers(client, "warehouse")
+    await _import_ok(
+        client,
+        headers,
+        build_report(
+            [
+                _row("D001", "早期入库", first_inbound_date="2022-10-28"),
+                _row("D002", "区间内入库", first_inbound_date="2023-05-01"),
+                _row("D003", "最新入库", first_inbound_date="2024-12-31"),
+                _row("D004", "日期缺失", first_inbound_date=None),
+            ]
+        ),
+    )
+
+    async def search(**params: str) -> dict[str, object]:
+        response = await client.get("/api/v1/huaxing-inventory", headers=headers, params=params)
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    async def codes(**params: str) -> list[str]:
+        payload = await search(page_size="50", **params)
+        return [item["material_code"] for item in payload["items"]]
+
+    # 无日期条件：4 条全部返回，日期缺失的行也可见。
+    assert len(await codes()) == 4
+
+    # 只填起点：2023-01-01 之后的 2 条（闭区间，起点当天也算命中）。
+    assert await codes(date_from="2023-01-01") == ["D002", "D003"]
+    assert await codes(date_from="2023-05-01") == ["D002", "D003"]
+
+    # 只填终点：2023-12-31 及之前的 2 条。
+    assert await codes(date_to="2023-12-31") == ["D001", "D002"]
+
+    # 两端都填：闭区间命中，起点=终点时仅命中当天那一条。
+    assert await codes(date_from="2022-10-28", date_to="2024-12-31") == ["D001", "D002", "D003"]
+    assert await codes(date_from="2023-05-01", date_to="2023-05-01") == ["D002"]
+
+    # 日期缺失的行不参与区间匹配：任何一端有值都被排除。
+    assert "D004" not in await codes(date_from="2000-01-01")
+    assert "D004" not in await codes(date_to="2099-12-31")
+    assert len(await codes(date_from="2000-01-01", date_to="2099-12-31")) == 3
+
+    # 起点晚于终点：空结果而不是报错。
+    assert await codes(date_from="2024-01-01", date_to="2023-01-01") == []
+
+    # 与其它筛选条件按 AND 组合。
+    assert await codes(date_from="2022-10-28", date_to="2023-12-31", name="区间内入库") == ["D002"]
+
+    # 非法日期由契约校验拦下。
+    invalid = await client.get(
+        "/api/v1/huaxing-inventory", headers=headers, params={"date_from": "2023/05/01"}
+    )
+    assert invalid.status_code == 422, invalid.text
