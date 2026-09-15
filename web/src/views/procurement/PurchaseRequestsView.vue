@@ -43,7 +43,7 @@ import { useExportJob } from '@/composables/useExportJob'
 import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
-import { renderTwoLineText } from '@/utils/tableText'
+import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
 import { useAuthStore } from '@/stores/auth'
 import { purchaseCategoryOptions } from '@/constants/purchase'
 
@@ -485,22 +485,30 @@ const availableColumns: Array<{
       title: '物资',
       key: 'material_name',
       width: tableColumnWidths.material,
+      // 只显示名称 + 型号：物料编码是独立列（默认隐藏），需要时在「列」下拉里勾选
       render: (row) =>
         h(
           'div',
           {
             class: 'table-material-summary',
-            title: `${row.material_name}\n${row.material_code || '\\'}｜${row.model_spec}`,
+            title: `${row.material_name}\n${row.model_spec}`,
           },
           [
             h('div', { class: 'table-material-summary__name' }, row.material_name),
-            h(
-              'div',
-              { class: 'table-material-summary__meta' },
-              `${row.material_code || '\\'}｜${row.model_spec}`,
-            ),
+            h('div', { class: 'table-material-summary__meta' }, row.model_spec),
           ],
         ),
+    },
+  },
+  {
+    key: 'material_code',
+    label: '物料编码',
+    column: {
+      title: '物料编码',
+      key: 'material_code',
+      width: tableColumnWidths.code,
+      // 与申购计划 / 周期性计划同一渲染：缺编码时统一显示黄色「暂无编码」
+      render: (row) => renderMaterialCode(row.material_code),
     },
   },
   {
@@ -592,10 +600,13 @@ const optionalShippingColumnKeys = new Set<RecordColumnKey>([
   'sailing_date',
   'contract_sign_date',
 ])
+// 默认隐藏的列：运输信息（按需勾选）与物料编码（物资列已给出名称与型号，编码默认收起）
+const defaultHiddenColumnKeys = new Set<RecordColumnKey>([
+  ...optionalShippingColumnKeys,
+  'material_code',
+])
 const visibleColumnKeys = ref<RecordColumnKey[]>(
-  availableColumns
-    .filter((item) => !optionalShippingColumnKeys.has(item.key))
-    .map((item) => item.key),
+  availableColumns.filter((item) => !defaultHiddenColumnKeys.has(item.key)).map((item) => item.key),
 )
 const fieldOptions = availableColumns.map((item) => ({ label: item.label, value: item.key }))
 const columns = computed<DataTableColumns<PurchaseRecord>>(() => {
@@ -691,12 +702,18 @@ async function aiQuery() {
   }
 }
 async function exportResults() {
-  const exportColumns = availableColumns
-    .filter((item) => visibleColumnKeys.value.includes(item.key))
-    .flatMap((item): RecordColumnKey[] => {
-      if (item.key === 'material_name') return ['material_name', 'model_spec', 'material_code']
-      return [item.key]
-    })
+  // 物资列在导出时展开成「名称 / 型号 / 编码」三列（Excel 一直如此），
+  // 若用户又勾选了独立的「物料编码」列，这里用 Set 去重，避免导出两列编码。
+  const exportColumns = [
+    ...new Set(
+      availableColumns
+        .filter((item) => visibleColumnKeys.value.includes(item.key))
+        .flatMap((item): RecordColumnKey[] => {
+          if (item.key === 'material_name') return ['material_name', 'model_spec', 'material_code']
+          return [item.key]
+        }),
+    ),
+  ]
   if (!exportColumns.length) {
     message.warning('请至少显示一个字段')
     return
