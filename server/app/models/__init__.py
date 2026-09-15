@@ -191,6 +191,8 @@ class ExcelImportJob(Base):
 
 class HuaXingInventory(Base):
     __tablename__ = "huaxing_inventory"
+    # 首次入库日期是列表页的区间筛选条件，单独建索引（其余字段只做文本包含匹配）。
+    __table_args__ = (Index("ix_huaxing_inventory_first_inbound_date", "first_inbound_date"),)
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
     first_inbound_date: Mapped[date | None] = mapped_column(Date)

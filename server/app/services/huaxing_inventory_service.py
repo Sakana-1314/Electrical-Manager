@@ -238,6 +238,8 @@ async def search_huaxing_inventory(
     model_spec: str | None = None,
     purchase_department: str | None = None,
     purchaser: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     page: int,
     page_size: int,
 ) -> tuple[list[HuaXingInventoryRead], int]:
@@ -259,6 +261,11 @@ async def search_huaxing_inventory(
         terms = split_or_search_terms(value)
         if terms:
             query = query.where(column.in_(terms))
+    # 首次入库日期为闭区间筛选：只填一端时按单边过滤；NULL 日期不参与区间匹配。
+    if date_from is not None:
+        query = query.where(HuaXingInventory.first_inbound_date >= date_from)
+    if date_to is not None:
+        query = query.where(HuaXingInventory.first_inbound_date <= date_to)
     # keyword 兼容旧调用（小程序端仍按编码/名称/型号/申购人跨列 OR 匹配）。
     keyword_condition = contains_any(
         (

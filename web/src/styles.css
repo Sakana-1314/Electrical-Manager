@@ -358,6 +358,15 @@ a {
 .filter-field .n-input {
   background-color: var(--color-field-surface);
 }
+/* 日期区间等宽控件跨两列展示，避免两个日期输入挤在一格里；窄屏回到单列。 */
+.filter-field-wide {
+  grid-column: span 2;
+}
+@media (max-width: 900px) {
+  .filter-field-wide {
+    grid-column: auto;
+  }
+}
 /* 筛选区头部右侧操作（如「已启用 N 项」标签与折叠开关） */
 .filter-heading-actions {
   display: flex;

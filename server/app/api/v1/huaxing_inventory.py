@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import date
 from pathlib import Path
 from typing import Annotated
 
@@ -40,8 +41,10 @@ async def list_huaxing_inventory(
     model_spec: Annotated[str | None, Query(max_length=255)] = None,
     purchase_department: Annotated[str | None, Query(max_length=128)] = None,
     purchaser: Annotated[str | None, Query(max_length=128)] = None,
+    date_from: Annotated[date | None, Query()] = None,
+    date_to: Annotated[date | None, Query()] = None,
 ) -> Page[HuaXingInventoryRead]:
-    """华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选）。"""
+    """华星总库存列表查询（文本字段内多关键词按 | 分隔做 OR；申购部门/申购人为精确多值筛选；date_from/date_to 按首次入库日期闭区间）。"""
     items, total = await huaxing_inventory_service.search_huaxing_inventory(
         session,
         material_code=material_code,
@@ -49,6 +52,8 @@ async def list_huaxing_inventory(
         model_spec=model_spec,
         purchase_department=purchase_department,
         purchaser=purchaser,
+        date_from=date_from,
+        date_to=date_to,
         page=page,
         page_size=page_size,
     )

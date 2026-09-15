@@ -210,7 +210,8 @@ CREATE TABLE IF NOT EXISTS `huaxing_inventory` (
   `purchase_department` VARCHAR(128) NULL,
   `subitem_no_name` VARCHAR(255) NULL,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-  CONSTRAINT `pk_huaxing_inventory` PRIMARY KEY (`id`)
+  CONSTRAINT `pk_huaxing_inventory` PRIMARY KEY (`id`),
+  INDEX `ix_huaxing_inventory_first_inbound_date` (`first_inbound_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS `lite_inventory` (

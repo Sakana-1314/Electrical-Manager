@@ -53,7 +53,7 @@ function toShanghaiDate(timestamp: number): string {
   return `${shifted.getUTCFullYear()}-${month}-${day}`
 }
 
-/** 筛选条件 → 接口查询参数：空值一律不传，日期区间取两端。 */
+/** 筛选条件 → 接口查询参数：空值一律不传，日期区间取两端（只选了一端时另一端当成不限）。 */
 export function hazardQuery(filters: HazardFilters): Record<string, string | number | undefined> {
   const [from, to] = filters.dateRange ?? []
   return {
@@ -64,8 +64,8 @@ export function hazardQuery(filters: HazardFilters): Record<string, string | num
     rectify_person: filters.rectify_person ?? undefined,
     area: filters.area.trim() || undefined,
     keyword: filters.keyword.trim() || undefined,
-    date_from: from === undefined ? undefined : toShanghaiDate(from),
-    date_to: to === undefined ? undefined : toShanghaiDate(to),
+    date_from: from === undefined || from === null ? undefined : toShanghaiDate(from),
+    date_to: to === undefined || to === null ? undefined : toShanghaiDate(to),
   }
 }
 

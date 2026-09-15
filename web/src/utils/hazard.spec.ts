@@ -54,6 +54,20 @@ describe('隐患筛选条件 → 查询参数', () => {
     expect(query.date_from).toBe('2026-09-01')
     expect(query.date_to).toBe('2026-09-30')
   })
+
+  it('区间只选了一端时只传已选那一端，不把另一端当成 1970-01-01', () => {
+    const start = Date.parse('2026-09-01T00:00:00+08:00')
+    // naive-ui 的 daterange 在只点了起点时给的是 [时间戳, null]
+    const halfFrom = hazardQuery(
+      filters({ dateRange: [start, null] as unknown as [number, number] }),
+    )
+    expect(halfFrom.date_from).toBe('2026-09-01')
+    expect(halfFrom.date_to).toBeUndefined()
+
+    const halfTo = hazardQuery(filters({ dateRange: [null, start] as unknown as [number, number] }))
+    expect(halfTo.date_from).toBeUndefined()
+    expect(halfTo.date_to).toBe('2026-09-01')
+  })
 })
 
 describe('逾期判定', () => {
