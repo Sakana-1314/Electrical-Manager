@@ -113,7 +113,7 @@ web/src/
 | `/procurement/material-code-library` | `material-code-library` | `views/procurement/MaterialCodeLibraryView.vue` | 需登录 | 编码库列表 + Excel 导入 |
 | `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出 |
 | `/procurement/records/:id` | `purchase-record-detail` | `views/procurement/PurchaseRequestDetailView.vue` | 需登录 | 记录详情与编辑（含图片） |
-| `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
+| `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：大类+小类组合 CRUD、按大类筛选 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
@@ -195,7 +195,7 @@ web/src/
 | `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展、状态、配置读取/更新/测试 |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
-| `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD 与概览统计、隐患类型与责任单位字典维护 |
+| `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
 | `files.ts` | `/files/images*` | 图片上传与删除 |
 | `version.ts` | `/version` | 版本信息（关于页） |
 `web/src/utils/download.ts` 的 `exportDownloadUrl(fileUuid)` 直接拼导出文件下载地址（该端点不鉴权）。
@@ -411,7 +411,7 @@ server/app/
 | `api/v1/hazards.py` | `CurrentUser`、`HazardWriter`、`IfMatchVersion` | 13 |
 | `api/v1/share.py` | `CurrentUser` | 5 |
 | `api/v1/excel_export_jobs.py` | `CurrentUser` | 2 |
-| `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 25（管理端 4 + 小程序 21） |
+| `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 32（管理端 4 + 小程序 28） |
 | `api/v1/version.py` | 无（公开） | 1 |
 #### 接口令牌（`X-API-Token`）与双列存储
 | 项 | 规则 |
@@ -672,16 +672,17 @@ server/app/
 
 原生微信小程序（WXML / WXSS / CommonJS JS），组件库 TDesign Mini Program，通过 `wx.login` 静默登录后使用。
 
-### 页面构成（`miniprogram/app.json`，15 页）
+### 页面构成（`miniprogram/app.json`，18 页）
 
 | 分组 | 页面 |
 | --- | --- |
 | 入口与身份 | `pages/home/home`、`pages/bind/bind`、`pages/disabled/disabled`、`pages/registration-closed/registration-closed` |
 | 库存与出库 | `pages/inventory/inventory`、`pages/material-detail/material-detail`、`pages/outbound/outbound`、`pages/outbound-success/outbound-success` |
 | 申购与记录 | `pages/purchase-plans/purchase-plans`、`pages/purchase-plan-detail/purchase-plan-detail`、`pages/purchase-records/purchase-records`、`pages/purchase-record-detail/purchase-record-detail`、`pages/records/records` |
+| 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、图片上传与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 界面外观（明 / 暗）
 
@@ -744,6 +745,28 @@ flowchart TD
 
 出库必须填写用途；来源标记为小程序，领用人取当前小程序用户姓名并随流水保存快照。精简模式下小程序整体只读。
 
+### 隐患管理（登记与跟进）
+
+```mermaid
+flowchart TD
+    A["首页「隐患管理」入口"] --> B{"hazards_mode"}
+    B -- "disabled" --> B1["不展示入口"]
+    B -- "query_only / read_write" --> C["隐患列表<br/>搜索检查区域或隐患描述"]
+    C --> D["按整改状态、整改员工筛选"]
+    C --> E["点开详情：登记信息 + 整改前/后图片"]
+    B -- "read_write" --> F["登记隐患：区域、日期、描述、责任单位、类型、整改前图片"]
+    F --> G["生成一次幂等键 client_request_id<br/>（弱网重试复用，重复提交不新增）"]
+    G --> H["提交登记"]
+    E --> I["跟进整改：整改状态、整改员工、备注、整改后图片"]
+    I --> J["带 version 提交，冲突时提示刷新"]
+```
+
+- 列表搜索只匹配「检查区域 + 隐患描述」两个字段，按整改状态与整改员工筛选；筛选项里整改员工来自库中已有值去重（`/mini-program/hazards/filter-options`）。
+- 登记时检查人员缺省为当前小程序用户姓名，责任人仍由所选责任单位带出快照；`client_request_id` 是幂等键，重复提交返回同一条隐患而不是新增。
+- 跟进走与网页端同一个更新接口：状态是普通可编辑字段，`version` 为乐观锁，提交旧版本会被拒（`VERSION_CONFLICT`）。
+- 图片上传（`/mini-program/hazards/images`）与网页端共用同一套存储与去重规则，附件管理按两张关联表统计引用次数。
+- 隐患类型与责任单位只在小程序里选择，维护仍在网页端。
+
 ### 鉴权失效的静默重登（`utils/request.js`）
 
 ```mermaid
@@ -769,13 +792,15 @@ flowchart LR
     S --> P["申购计划<br/>query_only"]
     S --> R["申购记录<br/>query_only"]
     S --> C["物料编码库<br/>query_only"]
+    S --> Z["隐患管理<br/>read_write"]
     S --> L["二级库运行模式<br/>full"]
     I -- "disabled" --> I1["隐藏该功能页"]
     I -- "read_write" --> I2["可扫码出库"]
+    Z -- "read_write" --> Z2["可登记隐患、更新整改状态"]
     L -- "lite" --> L1["整体只读，只查精简库存"]
 ```
 
-每个功能页三档：`disabled`（隐藏）、`query_only`（只读）、`read_write`（可出库）。模式由服务端设置下发，小程序启动时拉取；拉取失败时回落到「库存可出库、其余只读、完整二级库模式」的默认值，避免因一次网络失败把出库关掉。
+每个功能页三档：`disabled`（隐藏）、`query_only`（只读）、`read_write`（可写：库存可出库、隐患可登记与跟进）。模式由服务端设置下发，小程序启动时拉取；拉取失败时回落到「库存可写、隐患可写、其余只读、完整二级库模式」的默认值，避免因一次网络失败把出库与隐患登记关掉。开关只用于小程序前端的入口拦截与展示，后端数据接口不按它鉴权。
 
 ### 构建与上传
 
