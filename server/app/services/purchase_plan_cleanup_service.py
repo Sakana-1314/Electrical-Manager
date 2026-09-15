@@ -17,7 +17,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, update
 
 from app.core.constants import SHANGHAI
-from app.core.database import SessionLocal
+from app.core.database import system_session
 from app.models import PurchaseMaterial, PurchaseRequestLine
 from app.services.common import seconds_until_local_hour
 
@@ -37,8 +37,10 @@ async def cleanup_moved_plans_once() -> int:
 
     迁移护栏：仅清理被引用的行快照已回填（plan_no_snapshot 非空）的计划，
     防止旧库未迁移时误删导致记录字段缺失。
+
+    系统级维护：本任务按日期跨项目批量清理，需显式 `system_scope()`。
     """
-    async with SessionLocal() as session:
+    async with system_session() as session:
         candidate_ids = list(
             (
                 await session.scalars(

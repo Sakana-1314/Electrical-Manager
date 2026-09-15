@@ -13,10 +13,16 @@ function redirectToLogin() {
   if (location.pathname !== loginPath) location.assign(loginPath)
 }
 
+/** 当前项目的本地键（stores/project.ts 读写同一个键）。 */
+const CURRENT_PROJECT_STORAGE_KEY = 'current_project_id'
+
+/** 会话失效（401 / 刷新令牌失败）时清掉本地登录态与当前项目选择。 */
 function clearSession() {
   localStorage.removeItem('access_token')
   localStorage.removeItem('refresh_token')
   localStorage.removeItem('auth_user')
+  // 项目选择一并清掉：换账号后必须重新解析当前项目，不能沿用上一个人的选择。
+  localStorage.removeItem(CURRENT_PROJECT_STORAGE_KEY)
 }
 
 async function renewAccessToken(): Promise<string> {
@@ -55,6 +61,9 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  // 业务数据按项目隔离：所有业务请求都带上当前项目，未选择时后端回 PROJECT_REQUIRED。
+  const projectId = localStorage.getItem(CURRENT_PROJECT_STORAGE_KEY)
+  if (projectId) config.headers['X-Project-Id'] = projectId
   // 一个逻辑请求一个 id：重试沿用同一个，服务端日志里多次尝试能串成同一次请求。
   config.headers['X-Request-ID'] ??= crypto.randomUUID()
   return config

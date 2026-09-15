@@ -69,6 +69,21 @@
 2. 在 [错误码总表](/api-error-codes) 对应分类补一行：code、HTTP 状态码、含义、来源文件。
 3. 跑 `cd server && pytest tests/test_error_code_docs.py`。
 
+## 项目上下文（`X-Project-Id`）
+
+业务数据按项目隔离：业务接口都必须带 `X-Project-Id: <项目 id>`，服务端据此只读写该项目的
+数据（实现见 [数据模型](/dev-data-model) 与 [架构设计](/dev-architecture)）。
+
+| 场景 | 行为 |
+| --- | --- |
+| 业务接口（库存、申购、隐患、台账、导入导出、分享链接等） | 必须带 `X-Project-Id`；缺失 → 400 `PROJECT_REQUIRED`；项目不存在 / 已停用 → 400 `PROJECT_NOT_FOUND` / `PROJECT_DISABLED` |
+| 全局接口（登录、项目列表、管理端用户、系统设置、图片读取） | 不需要项目上下文，带了也不改变行为 |
+| 匿名分享页 `GET /shares/{token}` | 不带项目头，服务端按分享记录所属项目读取数据 |
+| 匿名导出下载 `GET /excel-export-jobs/files/{file_uuid}` | 不带项目头（uuid 不可猜解；查任务行取下载名时按全项目处理） |
+| 小程序 | 可带 `X-Project-Id` 切换项目；不带时落默认项目（P05），旧版本客户端因此不受影响 |
+| MCP | 请求头 `X-Project-Id` 优先，缺省用默认项目；`operation_call` 会把项目头转发给业务接口 |
+| 后台任务（导入 / 导出 / 清理） | 按任务行上记录的项目恢复上下文；跨项目的系统级任务显式声明「全项目」上下文 |
+
 ## 前端如何消费
 
 - 前端不按 HTTP 状态码分支，统一读响应体 `code`：`web/src/api/client.ts` 的响应拦截器把错误体转成 `AppError`（含 `code` / `message` / `details` / `request_id`）。

@@ -8,10 +8,9 @@ from datetime import date, datetime, timedelta
 from httpx import AsyncClient
 
 from app.core.constants import SHANGHAI
-from app.core.database import SessionLocal
 from app.core.security import create_mini_program_access_token
 from app.models import MiniProgramUser
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 
 
 def today() -> date:
@@ -20,7 +19,7 @@ def today() -> date:
 
 async def mini_headers(display_name: str = "隐患巡检员") -> dict[str, str]:
     """直接造一个已启用的小程序用户并签发令牌（跳过微信登录链路）。"""
-    async with SessionLocal() as session:
+    async with project_session() as session:
         user = MiniProgramUser(display_name=display_name, enabled=True)
         session.add(user)
         await session.commit()
@@ -290,7 +289,7 @@ async def test_mini_program_hazard_identity_isolation(client: AsyncClient) -> No
     assert mini_on_management.status_code == 401, mini_on_management.text
 
     # 未启用的小程序用户被拒（账号待审核）
-    async with SessionLocal() as session:
+    async with project_session() as session:
         disabled = MiniProgramUser(display_name="待审核用户", enabled=False)
         session.add(disabled)
         await session.commit()

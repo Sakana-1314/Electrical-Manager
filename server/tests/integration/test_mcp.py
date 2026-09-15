@@ -3,9 +3,9 @@ from __future__ import annotations
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
 from app.mcp_server import mcp
 from app.models import User
+from tests.conftest import project_session
 
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
@@ -43,7 +43,7 @@ async def test_mcp_streamable_http_requires_api_token(client: AsyncClient) -> No
 async def test_mcp_streamable_http_lists_safe_tools_with_user_token(
     client: AsyncClient,
 ) -> None:
-    async with SessionLocal() as session:
+    async with project_session() as session:
         user = await session.scalar(select(User).where(User.username == "admin"))
         assert user is not None
         # 库中只存哈希，明文通过重新生成接口一次性获取。
@@ -81,6 +81,7 @@ async def test_mcp_streamable_http_lists_safe_tools_with_user_token(
     tools = response.json()["result"]["tools"]
     assert {item["name"] for item in tools} == {
         "system_whoami",
+        "projects_list",
         "operations_list",
         "operation_describe",
         "operation_call",

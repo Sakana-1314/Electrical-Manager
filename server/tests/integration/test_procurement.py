@@ -11,9 +11,8 @@ from PIL import Image
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.core.database import SessionLocal
 from app.models import PurchaseMaterial, PurchaseRequest, PurchaseRequestLine
-from tests.conftest import auth_headers, await_export_job, create_stock
+from tests.conftest import auth_headers, await_export_job, create_stock, project_session
 
 
 async def create_purchase_plan(
@@ -353,7 +352,7 @@ async def test_purchase_lists_support_field_like_and_person_filters(
         trace_no="TRACE-OTHER-002",
         salesperson="钱经理",
     )
-    async with SessionLocal() as session:
+    async with project_session() as session:
         line = await session.get(PurchaseRequestLine, int(first_record["line_id"]))
         assert line is not None
         line.status = ""
@@ -1011,7 +1010,7 @@ async def test_purchase_record_can_restore_to_purchase_plan(client: AsyncClient)
     )
     assert missing_record.status_code == 400
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         request = await session.get(PurchaseRequest, int(record["purchase_request_id"]))
         assert request is None
 
@@ -1029,7 +1028,7 @@ async def test_restore_rebuilds_plan_after_cleanup(client: AsyncClient) -> None:
 
     deleted = await purchase_plan_cleanup_service.cleanup_moved_plans_once()
     assert deleted == 1
-    async with SessionLocal() as session:
+    async with project_session() as session:
         # 清理后记录行已解绑外键（指向已删计划）
         line = await session.get(PurchaseRequestLine, int(record["line_id"]))
         assert line is not None
@@ -1045,7 +1044,7 @@ async def test_restore_rebuilds_plan_after_cleanup(client: AsyncClient) -> None:
     assert restored_plan["category"] == "工具"
     assert restored_plan["status"] == "正常"
     assert restored_plan["moved_to_record"] is False
-    async with SessionLocal() as session:
+    async with project_session() as session:
         # 恢复后重建出独立存在的计划，保留原计划号
         rebuilt = await session.scalar(
             select(PurchaseMaterial).where(PurchaseMaterial.plan_no == plan["plan_no"])
@@ -1354,7 +1353,7 @@ async def test_grouped_purchase_request_supports_line_tracking_fields(
     assert moved.status_code == 200, moved.text
     records = moved.json()
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         first_line = await session.get(PurchaseRequestLine, int(records[0]["line_id"]))
         second_line = await session.get(PurchaseRequestLine, int(records[1]["line_id"]))
         assert first_line is not None
@@ -1460,7 +1459,7 @@ async def test_purchase_record_supports_full_edit_and_free_text_status(
     assert "received_qty" not in changed.json()
     assert "remaining_qty" not in changed.json()
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         material = await session.get(PurchaseMaterial, int(first["id"]))
         assert material is not None
         # 编辑记录不再回写计划：计划的名称/型号/数量保持转入时原样
@@ -1642,7 +1641,7 @@ async def test_purchase_application_export_requires_code_subitem_and_usage(
         "缺用途计划",
         code="DQ-XLSX-3",
     )
-    async with SessionLocal() as session:
+    async with project_session() as session:
         material = await session.get(PurchaseMaterial, int(missing_usage["id"]))
         assert material is not None
         material.usage = " "
@@ -1740,7 +1739,7 @@ async def test_purchase_approval_export_requires_mandatory_fields(
         client, headers, "缺型号审批", code="DQ-APP-3"
     )
     missing_name = await create_purchase_plan(client, headers, "缺名称审批", code="DQ-APP-4")
-    async with SessionLocal() as session:
+    async with project_session() as session:
         for material_id, field, value in (
             (missing_model["id"], "model_spec", " "),
             (missing_name["id"], "name", " "),

@@ -4,17 +4,21 @@ import asyncio
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi import Path as FPath
 
 from app.api.deps import PageNo, PageSize
 from app.core.errors import AppError
-from app.core.permissions import CurrentUser, DbSession, WarehouseWriter
+from app.core.permissions import CurrentUser, DbSession, WarehouseWriter, require_current_project
 from app.schemas import ExcelImportJobRead, LastImportRead, LiteInventoryRead, Page
 from app.services import import_job_service, lite_inventory_service
 from app.services.import_file_reader import SUPPORTED_IMPORT_SUFFIXES
 
-router = APIRouter(prefix="/secondary-warehouse", tags=["二级库"])
+router = APIRouter(
+    prefix="/secondary-warehouse",
+    tags=["二级库"],
+    dependencies=[Depends(require_current_project)],
+)
 
 JOB_TYPE = "LITE_INVENTORY"
 

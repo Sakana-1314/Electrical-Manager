@@ -20,8 +20,9 @@ from datetime import datetime, timedelta
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import SessionLocal
+from app.core.database import system_session
 from app.core.errors import AppError, not_found
+from app.core.project_scope import project_scope, system_scope
 from app.domain.enums import Role, ShareExpiryOption, ShareType
 from app.models import PurchaseMaterial, PurchaseRequestLine, ShareLink, User
 from app.schemas import PurchaseMaterialRead, PurchaseRecordRead, SharePublicView
@@ -171,11 +172,24 @@ async def get_public_share(session: AsyncSession, *, token: str) -> SharePublicV
     columns 为 None 时使用默认展示列（全部列去掉「状态」）；否则只返回所选列。
     无论哪种情况都只返回展示列 + 行身份键 + 计量单位，隐藏列数据不下发。
     """
-    share = await session.scalar(select(ShareLink).where(ShareLink.token == token))
-    if share is None:
-        raise AppError("SHARE_NOT_FOUND", "分享链接不存在或已失效", status_code=400)
-    if share.expires_at is not None and share.expires_at < utcnow():
-        raise AppError("SHARE_EXPIRED", "分享链接已失效，请联系分享人重新分享", status_code=400)
+    # 匿名读取没有用户与项目上下文：先按 token（UUIDv7，不可猜解）在 system_scope 下定位
+    # 分享行，再切到该分享行记录的项目读取数据 —— 因此 P06 的分享以 P05 的项目上下文访问
+    # 也只会读到 P06 的行。
+    with system_scope():
+        share = await session.scalar(select(ShareLink).where(ShareLink.token == token))
+        if share is None:
+            raise AppError("SHARE_NOT_FOUND", "分享链接不存在或已失效", status_code=400)
+        if share.expires_at is not None and share.expires_at < utcnow():
+            raise AppError(
+                "SHARE_EXPIRED", "分享链接已失效，请联系分享人重新分享", status_code=400
+            )
+        project_id = share.project_id
+    with project_scope(project_id):
+        return await _build_public_view(session, share)
+
+
+async def _build_public_view(session: AsyncSession, share: ShareLink) -> SharePublicView:
+    """按分享行读取数据快照（调用方已在分享所属项目的上下文内）。"""
     if share.share_type == ShareType.PURCHASE_PLAN:
         typed_items: list[PurchaseMaterialRead | PurchaseRecordRead] = [
             await material_service.purchase_read(session, item)
@@ -288,9 +302,12 @@ async def update_share(
 
 
 async def cleanup_expired() -> int:
-    """删除已过期的分享行（startup + 每日 worker 调用），避免表无界增长。"""
+    """删除已过期的分享行（startup + 每日 worker 调用），避免表无界增长。
+
+    系统级维护：跨项目，需显式 `system_scope()`。
+    """
     now = utcnow()
-    async with SessionLocal() as session:
+    async with system_session() as session:
         expired = list(
             (
                 await session.scalars(

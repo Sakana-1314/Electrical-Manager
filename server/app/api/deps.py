@@ -1,11 +1,13 @@
 """API 层共享依赖注入：跨路由文件重复的 Annotated 参数类型。"""
 
+from collections.abc import AsyncIterator
 from typing import Annotated, Literal
 
 from fastapi import Depends, Query
 
 from app.core.errors import AppError
 from app.core.permissions import DbSession
+from app.core.project_scope import system_scope
 from app.services import ai_search_service
 
 PageNo = Annotated[int, Query(ge=1)]
@@ -32,3 +34,16 @@ async def _require_full_secondary_warehouse(session: DbSession) -> None:
 
 
 RequireFullSecondaryWarehouse = Annotated[None, Depends(_require_full_secondary_warehouse)]
+
+
+async def system_scope_dependency() -> AsyncIterator[None]:
+    """把整个请求放进「跨项目」上下文（`system_scope`）。
+
+    只给系统级接口用：附件管理/清理面向全局附件池（`file_object` 按 sha256 全局去重、
+    引用计数跨项目），如果按当前项目统计引用，会把别的项目仍在引用的文件判成可清理。
+    """
+    with system_scope():
+        yield
+
+
+SystemScope = Annotated[None, Depends(system_scope_dependency)]

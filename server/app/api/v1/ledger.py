@@ -8,10 +8,16 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import PageNo, PageSize
-from app.core.permissions import CurrentUser, DbSession, IfMatchVersion, LedgerWriter
+from app.core.permissions import (
+    CurrentUser,
+    DbSession,
+    IfMatchVersion,
+    LedgerWriter,
+    require_current_project,
+)
 from app.schemas import (
     LedgerItemCreate,
     LedgerItemRead,
@@ -23,7 +29,10 @@ from app.schemas import (
 )
 from app.services import ledger_service as service
 
-router = APIRouter(tags=["台账管理"])
+router = APIRouter(
+    tags=["台账管理"],
+    dependencies=[Depends(require_current_project)],
+)
 
 TagScope = Annotated[
     Literal["orphan", "tree"] | None,

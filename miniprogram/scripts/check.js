@@ -313,6 +313,122 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
+// 首页个人信息弹窗里的「当前项目」：展示当前项目并可切换到其它启用项目（切换后整页重启）。
+{
+  const homeScript = read('pages/home/home.js');
+  for (const snippet of [
+    'ensureProject',
+    'getEnabledProjects',
+    'switchProject',
+    'takeProjectSwitchNotice',
+    'projectsExpanded',
+  ]) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`pages/home/home.js must wire the current project switcher: ${snippet}`);
+    }
+  }
+  const homeMarkup = read('pages/home/home.wxml');
+  for (const snippet of ['i18n.currentProject', 'projectOptions', 'onProjectSelect']) {
+    if (!homeMarkup.includes(snippet)) {
+      throw new Error(`pages/home/home.wxml must render the current project switcher: ${snippet}`);
+    }
+  }
+}
+
+// 每个请求（含重试与图片上传）都要带上当前项目，并在项目失效时重新解析后重试一次。
+{
+  const requestScript = read('utils/request.js');
+  for (const snippet of [
+    "const headers = withProjectHeader({",
+    "const header = withProjectHeader({",
+    "headers['X-Project-Id']",
+    'recoverCurrentProject',
+    '_projectRetried',
+  ]) {
+    if (!requestScript.includes(snippet)) {
+      throw new Error(`utils/request.js must send and recover the current project: ${snippet}`);
+    }
+  }
+}
+
+// 用最小 wx 桩验证项目状态：id 存取、失效清理与弹窗展示用的项目对象缓存。
+{
+  const {
+    CURRENT_PROJECT_CACHE_KEY,
+    CURRENT_PROJECT_STORAGE_KEY,
+    clearCurrentProject,
+    getCurrentProject,
+    getCurrentProjectId,
+    setCurrentProjectId,
+    switchProject,
+    takeProjectSwitchNotice,
+  } = require(path.join(root, 'utils/project.js'));
+  if (CURRENT_PROJECT_STORAGE_KEY !== 'currentProjectId') {
+    throw new Error('Mini Program current project must be stored under currentProjectId.');
+  }
+  const storage = new Map();
+  global.wx = {
+    getStorageSync: (key) => (storage.has(key) ? storage.get(key) : ''),
+    setStorageSync: (key, value) => storage.set(key, value),
+    removeStorageSync: (key) => storage.delete(key),
+    reLaunch: (options) => storage.set('relaunch', options.url),
+  };
+
+  if (getCurrentProjectId() !== null) {
+    throw new Error('Mini Program current project must start unset.');
+  }
+  if (setCurrentProjectId('7') !== 7 || getCurrentProjectId() !== 7) {
+    throw new Error('Mini Program current project id must be persisted as a number.');
+  }
+  storage.set(CURRENT_PROJECT_CACHE_KEY, { id: 7, code: 'P05', name: '默认项目', label: 'P05 默认项目' });
+  if (!getCurrentProject() || getCurrentProject().code !== 'P05') {
+    throw new Error('Mini Program must show the cached current project.');
+  }
+  if (setCurrentProjectId(7) !== 7 || storage.has(CURRENT_PROJECT_CACHE_KEY)) {
+    throw new Error('Switching the current project must drop the cached project object.');
+  }
+  if (setCurrentProjectId(0) !== null || getCurrentProjectId() !== 7) {
+    throw new Error('Mini Program must reject invalid current project ids.');
+  }
+  clearCurrentProject();
+  if (getCurrentProjectId() !== null || getCurrentProject() !== null) {
+    throw new Error('Clearing the current project must drop the id and the cache.');
+  }
+  if (switchProject(6) !== 6 || storage.get('relaunch') !== '/pages/home/home') {
+    throw new Error('Switching the current project must persist and restart the home page.');
+  }
+  if (!takeProjectSwitchNotice() || takeProjectSwitchNotice()) {
+    throw new Error('The project switch notice must be consumed exactly once.');
+  }
+  delete global.wx;
+}
+
+/** 项目解析要等接口：请求层没有 wx.request 时必须返回 null 而不是抛错。 */
+function checkProjectResolution() {
+  const storage = new Map();
+  global.wx = {
+    getStorageSync: (key) => (storage.has(key) ? storage.get(key) : ''),
+    setStorageSync: (key, value) => storage.set(key, value),
+    removeStorageSync: (key) => storage.delete(key),
+  };
+  const { ensureProject } = require(path.join(root, 'utils/project.js'));
+  const done = () => {
+    delete global.wx;
+  };
+  return ensureProject().then(
+    (projectId) => {
+      done();
+      if (projectId !== null) {
+        throw new Error('Mini Program must not resolve a project when the API is unavailable.');
+      }
+    },
+    (error) => {
+      done();
+      throw new Error(`Mini Program project resolution must never throw: ${error && error.message}`);
+    },
+  );
+}
+
 for (const page of pages) {
   const pageScript = read(`pages/${page}.js`);
   if (!pageScript.includes('Page(withTheme({')) {
@@ -399,4 +515,11 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
   }
 }
 
-console.log('Mini Program static structure check passed.');
+// 项目解析是异步的：放在最后，成功才打印通过，失败时报错并以非零码退出。
+checkProjectResolution().then(
+  () => console.log('Mini Program static structure check passed.'),
+  (error) => {
+    console.error(error.message);
+    process.exit(1);
+  },
+);

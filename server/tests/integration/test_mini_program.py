@@ -9,11 +9,10 @@ import pytest
 from httpx import AsyncClient
 from PIL import Image
 
-from app.core.database import SessionLocal
 from app.domain.enums import MiniProgramCodeEnv
 from app.models import HuaXingInventory, MiniProgramUser
 from app.services import ai_search_service, mini_program_service
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 
 
 @pytest.mark.asyncio
@@ -1290,7 +1289,7 @@ async def test_mini_program_huaxing_inventory_search_and_pagination(
         "exchange_wechat_code",
         fake_exchange_wechat_code,
     )
-    async with SessionLocal() as session:
+    async with project_session() as session:
         session.add_all(
             [
                 HuaXingInventory(
@@ -1599,7 +1598,7 @@ async def test_last_used_at_tracks_mini_program_sign_in(
     assert created["version"] == 1
 
     # 制造「很久没登录」：把最近使用时间改写到 2020 年，再由登录刷新。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         row = await session.get(MiniProgramUser, created["id"])
         assert row is not None
         row.last_used_at = datetime(2020, 1, 1)

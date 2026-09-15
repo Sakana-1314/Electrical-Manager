@@ -19,6 +19,20 @@
 | `OUTBOUND_DISABLED` | 403 | 精简模式下不支持出入库 | `mini_program_service` |
 | `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅超级管理员可查询已归档申购计划 | `api/v1/purchase_materials.py` |
 
+## 项目（多项目数据隔离）
+
+> 业务数据按项目隔离：请求需带 `X-Project-Id`，同一时刻只能读写当前项目的数据。
+
+| code | HTTP | 含义 | 主要来源 |
+| --- | --- | --- | --- |
+| `PROJECT_REQUIRED` | 400 | 未选择项目（请求缺少 `X-Project-Id`，或系统级任务未声明项目上下文） | `core/project_scope.py`、`core/permissions.py` |
+| `PROJECT_NOT_FOUND` | 400 | 项目不存在 | `core/permissions.py`、`project_service` |
+| `PROJECT_DISABLED` | 400 | 项目已停用，请切换到其他项目 | `core/permissions.py` |
+| `PROJECT_MISMATCH` | 409 | 不能跨项目写入或删除数据 | `core/project_scope.py` |
+| `PROJECT_IS_DEFAULT` | 409 | 默认项目不能停用、删除或取消默认（请改设其他项目为默认） | `project_service` |
+| `PROJECT_IN_USE` | 409 | 项目下已有业务数据，不能删除（请改为停用） | `project_service` |
+| `DUPLICATE_PROJECT_CODE` | 409 | 项目编码已存在 | `project_service` |
+
 ## 并发与状态流转
 
 | code | HTTP | 含义 | 主要来源 |

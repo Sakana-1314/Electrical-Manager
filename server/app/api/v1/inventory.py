@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app.api.deps import PageNo, PageSize, RequireFullSecondaryWarehouse
 from app.core.errors import AppError
-from app.core.permissions import CurrentUser, DbSession, WarehouseWriter
+from app.core.permissions import CurrentUser, DbSession, WarehouseWriter, require_current_project
 from app.domain.enums import OperationType, SourceType
 from app.schemas import (
     DashboardSummaryRead,
@@ -21,7 +21,10 @@ from app.schemas import (
 )
 from app.services import dashboard_service, inventory_service, replenishment_service
 
-router = APIRouter(tags=["库存"])
+router = APIRouter(
+    tags=["库存"],
+    dependencies=[Depends(require_current_project)],
+)
 
 
 def _query_time(value: str | None) -> datetime | None:

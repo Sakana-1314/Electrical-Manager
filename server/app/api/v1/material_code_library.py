@@ -4,12 +4,12 @@ import asyncio
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi import Path as FPath
 
 from app.api.deps import PageNo, PageSize
 from app.core.errors import AppError
-from app.core.permissions import CurrentUser, DbSession, PurchaseWriter
+from app.core.permissions import CurrentUser, DbSession, PurchaseWriter, require_current_project
 from app.schemas import (
     ExcelImportJobRead,
     LastImportRead,
@@ -20,7 +20,11 @@ from app.schemas import (
 from app.services import import_job_service, material_code_library_service
 from app.services.import_file_reader import SUPPORTED_IMPORT_SUFFIXES
 
-router = APIRouter(prefix="/material-code-library", tags=["物料编码库"])
+router = APIRouter(
+    prefix="/material-code-library",
+    tags=["物料编码库"],
+    dependencies=[Depends(require_current_project)],
+)
 
 JOB_TYPE = "MATERIAL_CODE_LIBRARY"
 

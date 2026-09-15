@@ -505,6 +505,32 @@ _MINI_PROGRAM_USERS: list[dict[str, Any]] = [
     },
 ]
 
+# 项目（多项目数据隔离）：P05 是默认项目（现存数据都归它），P06 是后续新增项目示例。
+_PROJECT_ROWS: list[dict[str, Any]] = [
+    {
+        "id": 1,
+        "code": "P05",
+        "name": "P05 项目",
+        "enabled": True,
+        "is_default": True,
+        "remark": "华星现有项目",
+        "created_at": "2026-01-05T09:00:00+08:00",
+        "updated_at": "2026-01-05T09:00:00+08:00",
+        "version": 1,
+    },
+    {
+        "id": 2,
+        "code": "P06",
+        "name": "P06 项目",
+        "enabled": True,
+        "is_default": False,
+        "remark": "二期项目",
+        "created_at": "2026-01-20T09:00:00+08:00",
+        "updated_at": "2026-01-20T09:00:00+08:00",
+        "version": 1,
+    },
+]
+
 # 系统登录账号（文档站演示页的登录账号与之一致；密码均为 123456）
 _USERS: list[dict[str, Any]] = [
     {
@@ -1075,6 +1101,23 @@ def _build_schema_examples() -> dict[str, Any]:
             "version": 2,
         },
         "UserApiTokenRead": {**_USER_ROWS[1], "api_token": _USERS[1]["api_token"]},
+        # —— 项目（多项目数据隔离） ——
+        "ProjectRead": _PROJECT_ROWS[0],
+        "ProjectCreate": {
+            "code": "P07",
+            "name": "P07 项目",
+            "enabled": True,
+            "is_default": False,
+            "remark": "三期项目",
+        },
+        "ProjectUpdate": {
+            "code": "P06",
+            "name": "P06 项目（二期）",
+            "enabled": True,
+            "is_default": False,
+            "remark": "二期项目",
+            "version": 2,
+        },
         "UserApiTokenRegenerate": {"version": 1},
         "Page_UserApiTokenRead_": _page(
             [{**_USER_ROWS[1], "api_token": _USERS[1]["api_token"]}]

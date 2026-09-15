@@ -14,7 +14,12 @@ from app.core.config import settings
 from app.core.database import engine
 from app.core.exception_handlers import error_response, register_exception_handlers
 from app.core.logging import configure_logging
-from app.core.middleware import RealIPMiddleware, RefererCORSMiddleware, request_context
+from app.core.middleware import (
+    RealIPMiddleware,
+    RefererCORSMiddleware,
+    project_context,
+    request_context,
+)
 from app.mcp_server import bind_application, mcp, mcp_http_app
 from app.services import (
     ai_search_service,
@@ -116,6 +121,8 @@ app.add_middleware(
 )
 # 注意注册顺序：后注册的中间件更外层（先处理请求）。
 # request_context 需在 RealIP 内层，才能读到 RealIP 改写后的真实客户端 IP。
+# project_context 解析 X-Project-Id 到请求上下文，需在业务处理前生效。
+app.middleware("http")(project_context)
 app.middleware("http")(request_context)
 app.add_middleware(RealIPMiddleware)
 register_exception_handlers(app)

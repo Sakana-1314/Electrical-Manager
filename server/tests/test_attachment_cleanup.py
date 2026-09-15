@@ -5,11 +5,10 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
-from app.core.database import SessionLocal
 from app.models import FileObject
 from app.services import attachment_cleanup_service, file_service
 from app.services.common import next_local_hour, seconds_until_local_hour
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 from tests.integration.test_files import upload_png
 from tests.integration.test_purchase_plan_template import create_template
 
@@ -77,7 +76,7 @@ async def test_cleanup_restores_attachment_rescued_by_business(client: AsyncClie
     assert result.restored_file_ids == [file_id]
     assert result.purged_file_ids == []
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         item = await session.get(FileObject, file_id)
         assert item is not None
         assert item.deleted_at is None

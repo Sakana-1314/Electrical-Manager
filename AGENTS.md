@@ -103,6 +103,20 @@ npm run build             # 类型检查 + 生产构建
 - **用户接口令牌（已按约定改造）**：`user` 表双列存储——`api_token_hash`（SHA-256，认证快速查找）+ `api_token_enc`（Fernet 密文，可逆回显）；`/users` 读取与 PATCH 每次解密回显（见 `dictionary_service._echo_api_token`）。仅存哈希的历史数据在令牌下次成功用于接口调用时由认证路径自动加密回写（见 `core.permissions.find_user_by_api_token`），此后持续回显，无需用户重新生成。
 - **涉及此类存储 / 回显改动时**：同步更新 `docs/openapi.yaml` 契约并重新生成前端类型（在 `web/` 目录执行 `npm run generate:api`），在 PR 描述中说明加解密与回显方案。
 
+## 项目隔离约定（必须遵守）
+
+业务数据按「项目」隔离（现有 P05，可继续新增 P06 等），实现集中在 `server/app/core/project_scope.py`：
+请求头 `X-Project-Id` + `ContextVar` + ORM 事件（读过滤 / 写守卫）。改代码时遵守以下约定：
+
+- **新增业务表必须继承 `ProjectScoped` 并登记到 `app.models.PROJECT_SCOPED_MODELS`**（同时改 `init.sql`、ORM 与 `test_init_sql.py` 能过），否则该表不会被隔离。
+- **业务路由必须声明项目依赖**：`APIRouter(..., dependencies=[Depends(require_current_project)])`（`share` / `excel_export_jobs` 这类含匿名端点的路由按端点声明），让缺项目头时返回 400 `PROJECT_REQUIRED`。
+- **service 不要逐个写 `project_id` 过滤**：读过滤由全局事件注入；只有显式跨项目语义的地方（按 id 反查任意项目的数据）才写 `Model.project_id == ...`，并放在 `system_scope()` 内。
+- **后台任务与匿名入口必须显式声明上下文**：按行记录恢复用 `project_scope(job.project_id)` / `async with project_session(...)`；系统级（清理、附件引用统计、匿名导出下载）用 `system_scope()` / `async with system_session()`。调用 `SessionLocal()` 而不设上下文会 fail-closed 报 `PROJECT_REQUIRED`。
+- **项目域唯一键要带 `project_id`**（如 `(project_id, plan_no)`）：编号/编码按项目生成，跨项目必须允许同号。
+- **不隔离的全局表**（`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`）新增字段时不受隔离层影响。
+- **匿名分享/导出下载按记录自身解析项目**：分享页先在全项目上下文取 `share_link`，再切到该分享的项目读数据。
+- **老库升级**：仓库不提交迁移脚本；已有库的升级 SQL 放在 PR 描述或对话里（`outputs/` 下的脚本不入库），新库直接用 `init.sql`。
+
 ## 标准开发与发布工作流（必须遵守）
 
 > 目标：每个功能点独立成 PR，合并后不留残余分支。所有操作在仓库根目录执行。

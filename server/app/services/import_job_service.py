@@ -29,6 +29,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.errors import AppError
 from app.core.identifiers import uuid7_string
+from app.core.project_scope import project_scope, system_scope
 from app.domain.enums import ExcelImportJobStatus
 from app.models import ExcelImportJob
 from app.schemas import ExcelImportJobRead
@@ -158,31 +159,35 @@ async def latest_import_finished_at(
 
 
 async def mark_stale_jobs_failed() -> int:
-    """启动时清理：重启前遗留的 PENDING/RUNNING 任务标记失败并删除临时文件。"""
-    async with SessionLocal() as session:
-        stale_paths = list(
-            (
-                await session.scalars(
-                    select(ExcelImportJob.file_path).where(
-                        ExcelImportJob.status.in_(_INTERRUPTED_STATUSES)
+    """启动时清理：重启前遗留的 PENDING/RUNNING 任务标记失败并删除临时文件。
+
+    系统级维护：跨项目扫描，需显式 `system_scope()`（否则会被项目过滤收窄）。
+    """
+    with system_scope():
+        async with SessionLocal() as session:
+            stale_paths = list(
+                (
+                    await session.scalars(
+                        select(ExcelImportJob.file_path).where(
+                            ExcelImportJob.status.in_(_INTERRUPTED_STATUSES)
+                        )
+                    )
+                ).all()
+            )
+            if stale_paths:
+                now = utcnow()
+                await session.execute(
+                    update(ExcelImportJob)
+                    .where(ExcelImportJob.status.in_(_INTERRUPTED_STATUSES))
+                    .values(
+                        status=ExcelImportJobStatus.FAILED,
+                        error_code="SERVER_RESTARTED",
+                        error_message="服务重启，导入任务已中断",
+                        finished_at=now,
+                        updated_at=now,
                     )
                 )
-            ).all()
-        )
-        if stale_paths:
-            now = utcnow()
-            await session.execute(
-                update(ExcelImportJob)
-                .where(ExcelImportJob.status.in_(_INTERRUPTED_STATUSES))
-                .values(
-                    status=ExcelImportJobStatus.FAILED,
-                    error_code="SERVER_RESTARTED",
-                    error_message="服务重启，导入任务已中断",
-                    finished_at=now,
-                    updated_at=now,
-                )
-            )
-            await session.commit()
+                await session.commit()
     for path in stale_paths:
         await asyncio.to_thread(Path(path).unlink, missing_ok=True)
     return len(stale_paths)
@@ -192,38 +197,48 @@ async def cleanup_finished_jobs(*, retention_days: int = 30) -> int:
     """定期清理：删除 retention_days 天前已终态（SUCCEEDED/FAILED）的任务行。
 
     临时导入文件在 _run_job 的 finally 中已即时删除，这里只收敛历史行。
+    系统级维护：跨项目，需显式 `system_scope()`。
     """
-    async with SessionLocal() as session:
-        cutoff = utcnow() - timedelta(days=retention_days)
-        result = await session.execute(
-            delete(ExcelImportJob).where(
-                ExcelImportJob.status.in_(
-                    (ExcelImportJobStatus.SUCCEEDED, ExcelImportJobStatus.FAILED)
-                ),
-                ExcelImportJob.finished_at < cutoff,
+    with system_scope():
+        async with SessionLocal() as session:
+            cutoff = utcnow() - timedelta(days=retention_days)
+            result = await session.execute(
+                delete(ExcelImportJob).where(
+                    ExcelImportJob.status.in_(
+                        (ExcelImportJobStatus.SUCCEEDED, ExcelImportJobStatus.FAILED)
+                    ),
+                    ExcelImportJob.finished_at < cutoff,
+                )
             )
-        )
-        await session.commit()
-        # execute() 的静态返回类型是 Result[Any]，DELETE 实际返回带 rowcount 的 CursorResult。
-        return int(cast(CursorResult[Any], result).rowcount or 0)
+            await session.commit()
+            # execute() 的静态返回类型是 Result[Any]，DELETE 实际返回带 rowcount 的 CursorResult。
+            return int(cast(CursorResult[Any], result).rowcount or 0)
 
 
 async def _run_job(job_id: int, processor: ImportProcessor) -> None:
-    """后台执行：置 RUNNING → 运行处理器 → 写结果/错误 → 清理临时文件。"""
-    async with SessionLocal() as session:
-        job = await session.get(ExcelImportJob, job_id)
-        if job is None:
-            return
-        job.status = ExcelImportJobStatus.RUNNING
-        job.started_at = utcnow()
-        file_path = Path(job.file_path)
-        await session.commit()
+    """后台执行：置 RUNNING → 运行处理器 → 写结果/错误 → 清理临时文件。
+
+    后台任务没有请求上下文：先按 job id 在 `system_scope()` 下取出任务所属项目，
+    再用 `project_scope(job.project_id)` 跑处理器 —— 导入的「整表替换」因此只影响本
+    项目的数据（DELETE 被项目条件收窄，INSERT 由列默认值带上 project_id）。
+    """
+    with system_scope():
+        async with SessionLocal() as session:
+            job = await session.get(ExcelImportJob, job_id)
+            if job is None:
+                return
+            project_id = job.project_id
+            job.status = ExcelImportJobStatus.RUNNING
+            job.started_at = utcnow()
+            file_path = Path(job.file_path)
+            await session.commit()
 
     result: dict[str, object] | None = None
     error_code: str | None = None
     error_message: str | None = None
     try:
-        result = await processor(file_path)
+        with project_scope(project_id):
+            result = await processor(file_path)
     except AppError as exc:
         error_code = exc.code
         error_message = exc.message[:1000]
@@ -233,17 +248,18 @@ async def _run_job(job_id: int, processor: ImportProcessor) -> None:
         error_message = "导入任务发生未知错误"
         logger.exception("import job crashed job_id=%s", job_id)
     finally:
-        async with SessionLocal() as session:
-            job = await session.get(ExcelImportJob, job_id)
-            if job is not None:
-                job.status = (
-                    ExcelImportJobStatus.SUCCEEDED
-                    if error_code is None
-                    else ExcelImportJobStatus.FAILED
-                )
-                job.result = result
-                job.error_code = error_code
-                job.error_message = error_message
-                job.finished_at = utcnow()
-                await session.commit()
+        with project_scope(project_id):
+            async with SessionLocal() as session:
+                job = await session.get(ExcelImportJob, job_id)
+                if job is not None:
+                    job.status = (
+                        ExcelImportJobStatus.SUCCEEDED
+                        if error_code is None
+                        else ExcelImportJobStatus.FAILED
+                    )
+                    job.result = result
+                    job.error_code = error_code
+                    job.error_message = error_message
+                    job.finished_at = utcnow()
+                    await session.commit()
         await asyncio.to_thread(file_path.unlink, missing_ok=True)

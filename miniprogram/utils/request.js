@@ -48,6 +48,22 @@ function clearAuthStorage() {
 }
 
 /**
+ * 给请求头带上当前项目（业务数据按项目隔离）。
+ *
+ * 与 token 一样每次尝试都重新读取：项目重新解析后重试才能带上新项目；缺头时后端会落到
+ * 默认项目（P05）。调用方显式传了同名头时以调用方为准。
+ * 懒加载 project.js 以打破 request.js <-> project.js 的顶层循环依赖（CommonJS 按调用时机求值）。
+ */
+function withProjectHeader(headers) {
+  const { getCurrentProjectId } = require('./project');
+  const projectId = getCurrentProjectId();
+  if (projectId && !headers['X-Project-Id']) {
+    headers['X-Project-Id'] = projectId;
+  }
+  return headers;
+}
+
+/**
  * 静默重登（并发只触发一次）。request 与 uploadImage 共用同一段重登逻辑。
  * 懒加载 auth.js 以打破 auth.js <-> request.js 顶层循环依赖（CommonJS 按调用时机求值）。
  */
@@ -87,6 +103,32 @@ function refreshSessionAndRetry() {
   return refreshPromise;
 }
 
+// 模块级单例：并发的 PROJECT_DISABLED / PROJECT_NOT_FOUND 只重新解析一次项目。
+let projectRecoveryPromise = null;
+
+/**
+ * 项目恢复（并发只触发一次）：清掉失效的当前项目，重新拉项目列表并落到可用项目
+ * （通常是默认项目 P05）。与静默重登共用「单次重试」的思路，两者标志位独立
+ * （`_retried` / `_projectRetried`），不会互相触发成环。
+ *
+ * ensureProject 自身吞掉异常，正常不会失败；这里仍兜底重置单例，避免一次意外把后续恢复永久卡住。
+ */
+function recoverCurrentProject() {
+  if (projectRecoveryPromise) return projectRecoveryPromise;
+  const { clearCurrentProject, ensureProject } = require('./project');
+  clearCurrentProject();
+  projectRecoveryPromise = ensureProject({ force: true })
+    .then((projectId) => {
+      projectRecoveryPromise = null;
+      return projectId;
+    })
+    .catch((error) => {
+      projectRecoveryPromise = null;
+      throw error;
+    });
+  return projectRecoveryPromise;
+}
+
 function request(options) {
   // 可恢复的鉴权失败仅发生在：需要鉴权且未显式传入 token。
   // auth:false（登录/设置接口）与显式 options.token（绑定页注册 token）不参与重登重试。
@@ -109,11 +151,11 @@ function request(options) {
     function doRequest() {
       // 每次重试都重新读取 token，重登后自动带上新 token。
       const token = options.token || wx.getStorageSync('miniProgramAccessToken');
-      const headers = {
+      const headers = withProjectHeader({
         'content-type': 'application/json',
         'Accept-Language': getLocale(),
         ...(options.header || {}),
-      };
+      });
       if (token && options.auth !== false) {
         headers.Authorization = `Bearer ${token}`;
       }
@@ -170,6 +212,18 @@ function request(options) {
             wx.removeStorageSync('miniProgramAccessToken');
           }
 
+          // 项目被停用 / 已删除：清掉本地项目、重新解析一次后重发（后端缺头时会落默认项目）。
+          if (
+            (code === 'PROJECT_DISABLED' || code === 'PROJECT_NOT_FOUND') &&
+            !options._projectRetried
+          ) {
+            options._projectRetried = true;
+            recoverCurrentProject()
+              .then(() => doRequest())
+              .catch(reject);
+            return;
+          }
+
           // 服务端尚未受理：可重放的请求换个时机重发，不必让用户手点重试。
           if (retryIfPossible(response)) return;
 
@@ -208,7 +262,7 @@ function uploadImage(filePath, options = {}) {
   return new Promise((resolve, reject) => {
     function doUpload() {
       const token = wx.getStorageSync('miniProgramAccessToken');
-      const header = { 'Accept-Language': getLocale() };
+      const header = withProjectHeader({ 'Accept-Language': getLocale() });
       if (token) {
         header.Authorization = `Bearer ${token}`;
       }
@@ -250,6 +304,19 @@ function uploadImage(filePath, options = {}) {
               .catch(reject);
             return;
           }
+
+          // 项目被停用 / 已删除：与 request 同一套恢复，重新解析项目后重传一次。
+          if (
+            (code === 'PROJECT_DISABLED' || code === 'PROJECT_NOT_FOUND') &&
+            !options._projectRetried
+          ) {
+            options._projectRetried = true;
+            recoverCurrentProject()
+              .then(() => doUpload())
+              .catch(reject);
+            return;
+          }
+
           const messageKey = errorMessageKeys[code];
           const error = new Error(
             messageKey ? t(messageKey) : (payload && payload.message) || t('uploadFailed'),

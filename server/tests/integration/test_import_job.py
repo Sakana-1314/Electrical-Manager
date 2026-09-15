@@ -9,13 +9,12 @@ from httpx import AsyncClient
 from openpyxl import Workbook
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
 from app.core.errors import AppError
 from app.domain.enums import ExcelImportJobStatus
 from app.models import ExcelImportJob
 from app.services import import_job_service
 from app.services.common import utcnow
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 
 
 def build_workbook(rows: list[list[object]]) -> bytes:
@@ -36,7 +35,7 @@ async def _insert_job(
     status: ExcelImportJobStatus,
     file_path: str,
 ) -> int:
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = ExcelImportJob(
             import_type=import_type,
             status=status,
@@ -62,7 +61,7 @@ async def test_mark_stale_jobs_failed_marks_interrupted_and_unlinks(
         ExcelImportJobStatus.SUCCEEDED,
         ExcelImportJobStatus.FAILED,
     ]
-    async with SessionLocal() as session:
+    async with project_session() as session:
         for status, path in zip(statuses, paths, strict=False):
             session.add(
                 ExcelImportJob(
@@ -77,7 +76,7 @@ async def test_mark_stale_jobs_failed_marks_interrupted_and_unlinks(
     count = await import_job_service.mark_stale_jobs_failed()
 
     assert count == 2
-    async with SessionLocal() as session:
+    async with project_session() as session:
         rows = list(
             (await session.scalars(select(ExcelImportJob).order_by(ExcelImportJob.id))).all()
         )
@@ -100,7 +99,7 @@ async def test_cleanup_finished_jobs_deletes_only_old_terminal_rows(
     client: AsyncClient,
 ) -> None:
     now = utcnow()
-    async with SessionLocal() as session:
+    async with project_session() as session:
         old_finished = ExcelImportJob(
             import_type="CLEANUP_TEST",
             status=ExcelImportJobStatus.SUCCEEDED,
@@ -127,7 +126,7 @@ async def test_cleanup_finished_jobs_deletes_only_old_terminal_rows(
     count = await import_job_service.cleanup_finished_jobs(retention_days=30)
 
     assert count == 1
-    async with SessionLocal() as session:
+    async with project_session() as session:
         remaining = list(
             (
                 await session.scalars(select(ExcelImportJob).order_by(ExcelImportJob.id))
@@ -173,7 +172,7 @@ async def test_run_job_success_marks_succeeded(client: AsyncClient, tmp_path) ->
     )
     await import_job_service._run_job(job_id, ok_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)
     assert job is not None
     assert job.status == ExcelImportJobStatus.SUCCEEDED
@@ -195,7 +194,7 @@ async def test_run_job_app_error_marks_failed(client: AsyncClient, tmp_path) -> 
     )
     await import_job_service._run_job(job_id, failing_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)
     assert job is not None
     assert job.status == ExcelImportJobStatus.FAILED
@@ -217,7 +216,7 @@ async def test_run_job_unexpected_error_marks_failed(client: AsyncClient, tmp_pa
     )
     await import_job_service._run_job(job_id, crashing_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)
     assert job is not None
     assert job.status == ExcelImportJobStatus.FAILED

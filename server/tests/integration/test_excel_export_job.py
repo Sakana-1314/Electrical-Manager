@@ -12,13 +12,13 @@ from sqlalchemy import select
 
 import app.services.purchase_request_service as record_service
 from app.core.constants import EXPORT_ROW_LIMIT
-from app.core.database import SessionLocal
 from app.core.errors import AppError
+from app.core.project_scope import project_scope
 from app.domain.enums import ExcelExportJobStatus
 from app.models import ExcelExportJob, PurchaseMaterial
 from app.services import excel_export_job_service
 from app.services.common import utcnow
-from tests.conftest import auth_headers, await_export_job
+from tests.conftest import P05_PROJECT_ID, auth_headers, await_export_job, project_session
 
 
 async def _insert_job(
@@ -29,7 +29,7 @@ async def _insert_job(
     created_by: int | None = None,
     finished_at=None,
 ) -> int:
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = ExcelExportJob(
             export_type=export_type,
             status=status,
@@ -56,7 +56,7 @@ async def test_mark_stale_exports_failed_marks_interrupted_and_unlinks(
         ExcelExportJobStatus.SUCCEEDED,
         ExcelExportJobStatus.FAILED,
     ]
-    async with SessionLocal() as session:
+    async with project_session() as session:
         for status, path in zip(statuses, paths, strict=False):
             session.add(
                 ExcelExportJob(
@@ -70,7 +70,7 @@ async def test_mark_stale_exports_failed_marks_interrupted_and_unlinks(
     count = await excel_export_job_service.mark_stale_exports_failed()
 
     assert count == 2
-    async with SessionLocal() as session:
+    async with project_session() as session:
         rows = list(
             (await session.scalars(select(ExcelExportJob).order_by(ExcelExportJob.id))).all()
         )
@@ -97,7 +97,7 @@ async def test_cleanup_finished_exports_deletes_only_old_terminal_rows_and_files
     old_path.write_bytes(b"x")
     recent_path = tmp_path / "recent.xlsx"
     recent_path.write_bytes(b"x")
-    async with SessionLocal() as session:
+    async with project_session() as session:
         old_finished = ExcelExportJob(
             export_type="CLEANUP_TEST",
             status=ExcelExportJobStatus.SUCCEEDED,
@@ -123,7 +123,7 @@ async def test_cleanup_finished_exports_deletes_only_old_terminal_rows_and_files
     assert count == 1
     assert not old_path.exists()
     assert recent_path.exists()
-    async with SessionLocal() as session:
+    async with project_session() as session:
         remaining = list(
             (
                 await session.scalars(select(ExcelExportJob).order_by(ExcelExportJob.id))
@@ -152,7 +152,7 @@ async def test_run_job_success_keeps_file_and_marks_succeeded(
     )
     await excel_export_job_service._run_job(job_id, ok_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
     assert job is not None
     assert job.status == ExcelExportJobStatus.SUCCEEDED
@@ -177,7 +177,7 @@ async def test_run_job_app_error_marks_failed_and_unlinks_partial_file(
     )
     await excel_export_job_service._run_job(job_id, failing_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
     assert job is not None
     assert job.status == ExcelExportJobStatus.FAILED
@@ -199,7 +199,7 @@ async def test_run_job_invalid_result_marks_failed(client: AsyncClient, tmp_path
     )
     await excel_export_job_service._run_job(job_id, empty_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
     assert job is not None
     assert job.status == ExcelExportJobStatus.FAILED
@@ -222,7 +222,7 @@ async def test_run_job_unexpected_error_marks_failed_and_unlinks(
     )
     await excel_export_job_service._run_job(job_id, crashing_processor)
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
     assert job is not None
     assert job.status == ExcelExportJobStatus.FAILED
@@ -239,19 +239,21 @@ async def test_enqueue_export_returns_pending_job_and_job_runs_to_completion(
         await asyncio.to_thread(path.write_bytes, b"xlsx")
         return {"download_filename": "enqueued.xlsx", "rows": 1}
 
-    job = await excel_export_job_service.enqueue_export(
-        export_type="UNIT",
-        params={"columns": ["name"]},
-        processor=processor,
-        created_by=None,
-    )
+    # enqueue_export 从请求上下文取项目（真实调用发生在带 X-Project-Id 的接口里）。
+    with project_scope(P05_PROJECT_ID):
+        job = await excel_export_job_service.enqueue_export(
+            export_type="UNIT",
+            params={"columns": ["name"]},
+            processor=processor,
+            created_by=None,
+        )
     assert job.status == ExcelExportJobStatus.PENDING
     assert job.export_type == "UNIT"
     assert job.params == {"columns": ["name"]}
 
     deadline = time.monotonic() + 2.0
     while True:
-        async with SessionLocal() as session:
+        async with project_session() as session:
             row = await session.get(ExcelExportJob, job.id)
         if row.status == ExcelExportJobStatus.SUCCEEDED:
             break
@@ -366,7 +368,7 @@ async def test_download_guards_not_ready_and_expired(
     )
     assert created.status_code == 202, created.text
     job = await await_export_job(client, headers, created.json()["id"])
-    async with SessionLocal() as session:
+    async with project_session() as session:
         row = await session.get(ExcelExportJob, job["id"])
         target = Path(row.file_path)
         await asyncio.to_thread(target.unlink)
@@ -411,7 +413,7 @@ async def test_download_serves_file_even_when_job_row_missing(
     file_uuid = job["file_uuid"]
 
     # 模拟任务行被清理而文件残留（行与文件同生共死的清理逻辑异常时）
-    async with SessionLocal() as session:
+    async with project_session() as session:
         row = await session.get(ExcelExportJob, job["id"])
         await session.delete(row)
         await session.commit()

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { Permission } from '@/types/navigation'
 import { useAuthStore } from '@/stores/auth'
+import { useProjectStore } from '@/stores/project'
 import { useSettingsStore } from '@/stores/settings'
 
 declare module 'vue-router' {
@@ -199,6 +200,12 @@ const router = createRouter({
           redirect: { name: 'advanced-settings' },
         },
         {
+          path: 'settings/projects',
+          name: 'projects',
+          component: () => import('@/views/settings/ProjectsView.vue'),
+          meta: { title: '项目管理', parent: '系统管理', permission: 'settings:write' },
+        },
+        {
           path: 'settings/users',
           name: 'users',
           component: () => import('@/views/settings/UsersView.vue'),
@@ -244,7 +251,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
   // 浏览器标题带上级路径（如「申购管理 / 申购记录 - HXNI 电气无忧」），与顶栏面包屑同一套元信息
   const pageTitle = to.meta.parent
@@ -254,6 +261,9 @@ router.beforeEach((to) => {
   if (!to.meta.public && !auth.isAuthenticated)
     return { name: 'login', query: { redirect: to.fullPath } }
   if (to.name === 'login' && auth.isAuthenticated) return { name: 'dashboard' }
+  // 业务请求都要带 X-Project-Id：进入受保护页面前先确保当前项目已解析出来
+  // （拉取失败保持未加载，不拦导航，本次由后端按 PROJECT_REQUIRED / PROJECT_NOT_FOUND 提示）
+  if (!to.meta.public) await useProjectStore().ensureLoaded()
   if (to.meta.permission && !auth.can(to.meta.permission)) return { name: 'dashboard' }
   // 二级库精简模式下，完整模式仓库路由不可访问，统一重定向到精简视图。
   if (useSettingsStore().isLiteMode && to.name && FULL_WAREHOUSE_ROUTES.has(String(to.name))) {

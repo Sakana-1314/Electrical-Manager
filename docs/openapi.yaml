@@ -1117,6 +1117,14 @@ paths:
           - type: string
           - type: 'null'
           title: Keyword
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -1624,6 +1632,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -1739,6 +1756,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -1847,6 +1872,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -1961,6 +1994,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -2057,6 +2098,14 @@ paths:
           minLength: 1
           maxLength: 64
           title: Appid
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -2133,6 +2182,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '307':
           description: Successful Response
@@ -2207,6 +2264,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -2312,6 +2377,18 @@ paths:
       - 库存
       summary: 补库默认值
       operationId: replenishment_defaults_api_v1_inventory_replenishment_defaults_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -2377,9 +2454,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/inventory/balances:
     get:
       tags:
@@ -2442,6 +2516,14 @@ paths:
           type: boolean
           default: false
           title: Low Stock
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -2774,6 +2856,14 @@ paths:
           - type: string
           - type: 'null'
           title: Keyword
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -3087,6 +3177,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -3166,12 +3264,24 @@ paths:
       - 库存
       summary: 新增入库
       operationId: inbound_api_v1_inventory_inbounds_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/OperationCreate'
-        required: true
       responses:
         '201':
           description: Successful Response
@@ -3287,21 +3397,30 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/inventory/outbounds:
     post:
       tags:
       - 库存
       summary: 新增出库
       operationId: outbound_api_v1_inventory_outbounds_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/OperationCreate'
-        required: true
       responses:
         '201':
           description: Successful Response
@@ -3417,9 +3536,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/inventory/operations:
     get:
       tags:
@@ -3495,6 +3611,14 @@ paths:
           - type: string
           - type: 'null'
           title: End At
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -4038,6 +4162,14 @@ paths:
         schema:
           type: integer
           title: Operation Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -4168,6 +4300,14 @@ paths:
         schema:
           type: integer
           title: Operation Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -4305,6 +4445,14 @@ paths:
         schema:
           type: integer
           title: Operation Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -4442,6 +4590,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -4519,6 +4675,18 @@ paths:
       - 库存
       summary: 工作台概览
       operationId: summary_api_v1_dashboard_summary_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -4586,9 +4754,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/material-code-library:
     get:
       tags:
@@ -4652,6 +4817,14 @@ paths:
             maxLength: 64
           - type: 'null'
           title: Material Code
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -4870,6 +5043,18 @@ paths:
       - 物料编码库
       summary: 上次导入
       operationId: last_import_api_v1_material_code_library_last_import_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -4934,9 +5119,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/material-code-library/exists:
     get:
       tags:
@@ -4956,6 +5138,14 @@ paths:
           minLength: 1
           maxLength: 64
           title: Material Code
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -5027,12 +5217,24 @@ paths:
       - 物料编码库
       summary: 导入物料编码
       operationId: import_material_codes_api_v1_material_code_library_import_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Body_import_material_codes_api_v1_material_code_library_import_post'
-        required: true
       responses:
         '202':
           description: Successful Response
@@ -5107,9 +5309,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/material-code-library/import-jobs/{job_id}:
     get:
       tags:
@@ -5127,6 +5326,14 @@ paths:
           type: integer
           minimum: 1
           title: Job Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -5621,6 +5828,14 @@ paths:
             format: date
           - type: 'null'
           title: Date To
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -5827,6 +6042,18 @@ paths:
       summary: 筛选选项
       description: 华星库存筛选下拉选项（申购部门/申购人 distinct 值）。
       operationId: filter_options_api_v1_huaxing_inventory_filter_options_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -5898,15 +6125,24 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/huaxing-inventory/last-import:
     get:
       tags:
       - 华星库存
       summary: 上次导入
       operationId: last_import_api_v1_huaxing_inventory_last_import_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -5971,21 +6207,30 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/huaxing-inventory/import:
     post:
       tags:
       - 华星库存
       summary: 导入华星库存
       operationId: import_huaxing_inventory_api_v1_huaxing_inventory_import_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Body_import_huaxing_inventory_api_v1_huaxing_inventory_import_post'
-        required: true
       responses:
         '202':
           description: Successful Response
@@ -6060,9 +6305,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/huaxing-inventory/import-jobs/{job_id}:
     get:
       tags:
@@ -6080,6 +6322,14 @@ paths:
           type: integer
           minimum: 1
           title: Job Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -6200,6 +6450,14 @@ paths:
             maxLength: 255
           - type: 'null'
           title: Model Spec
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -6321,6 +6579,18 @@ paths:
       - 二级库
       summary: 上次导入
       operationId: last_import_api_v1_secondary_warehouse_last_import_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -6385,21 +6655,30 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/secondary-warehouse/import:
     post:
       tags:
       - 二级库
       summary: 导入精简库存
       operationId: import_lite_inventory_api_v1_secondary_warehouse_import_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/Body_import_lite_inventory_api_v1_secondary_warehouse_import_post'
-        required: true
       responses:
         '202':
           description: Successful Response
@@ -6474,9 +6753,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/secondary-warehouse/import-jobs/{job_id}:
     get:
       tags:
@@ -6494,6 +6770,14 @@ paths:
           type: integer
           minimum: 1
           title: Job Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -7127,6 +7411,94 @@ paths:
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+  /api/v1/mini-program/projects:
+    get:
+      tags:
+      - 小程序
+      summary: 项目列表
+      description: '小程序端项目列表（首页「个人信息」弹窗里切换当前项目用）。
+
+
+        业务接口不带头 `X-Project-Id` 时默认用默认项目 P05，因此旧版客户端不受影响。'
+      operationId: mini_program_projects_api_v1_mini_program_projects_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ProjectRead'
+                type: array
+                title: Response Mini Program Projects Api V1 Mini Program Projects
+                  Get
+              example:
+              - id: 1
+                code: P05
+                name: P05 项目
+                enabled: true
+                is_default: true
+                remark: 华星现有项目
+                created_at: '2026-01-05T09:00:00+08:00'
+                updated_at: '2026-01-05T09:00:00+08:00'
+                version: 1
         '400':
           description: 业务校验失败
           content:
@@ -10537,6 +10909,14 @@ paths:
           type: string
           default: asc
           title: Sort Order
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -10996,6 +11376,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -11107,6 +11496,14 @@ paths:
           - type: boolean
           - type: 'null'
           title: Moved
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -11198,12 +11595,24 @@ paths:
       summary: 导出申购计划
       description: 查询结果导出（含图片，耗时较长）：202 秒回任务，渲染在后台异步执行。
       operationId: export_material_results_api_v1_purchase_materials_export_results_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/PurchasePlanResultExportRequest'
-        required: true
       responses:
         '202':
           description: Successful Response
@@ -11283,9 +11692,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-materials/export-uncoded:
     get:
       tags:
@@ -11304,6 +11710,14 @@ paths:
           - type: string
           - type: 'null'
           title: Keyword
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -11371,12 +11785,24 @@ paths:
       - 申购计划
       summary: 导出采购申请表
       operationId: export_purchase_application_api_v1_purchase_materials_export_purchase_application_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/PurchasePlanExportRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -11438,21 +11864,30 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-materials/export-purchase-approval:
     post:
       tags:
       - 申购计划
       summary: 导出申购审批表
       operationId: export_purchase_approval_api_v1_purchase_materials_export_purchase_approval_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/PurchasePlanExportRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
@@ -11514,30 +11949,39 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-materials/batch-move-to-record:
     post:
       tags:
       - 申购计划
       summary: 批量转入申购记录
       operationId: batch_move_to_record_api_v1_purchase_materials_batch_move_to_record_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BatchMovePurchasePlansRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
+                type: array
                 items:
                   $ref: '#/components/schemas/PurchaseRecordRead'
-                type: array
                 title: Response Batch Move To Record Api V1 Purchase Materials Batch
                   Move To Record Post
               example:
@@ -11630,30 +12074,39 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-materials/batch:
     patch:
       tags:
       - 申购计划
       summary: 批量编辑申购计划
       operationId: batch_update_materials_api_v1_purchase_materials_batch_patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BatchUpdatePurchasePlansRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
+                type: array
                 items:
                   $ref: '#/components/schemas/PurchaseMaterialRead'
-                type: array
                 title: Response Batch Update Materials Api V1 Purchase Materials Batch
                   Patch
               example:
@@ -11736,9 +12189,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-materials/{material_id}:
     get:
       tags:
@@ -11755,6 +12205,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -11857,6 +12315,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -11965,6 +12431,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -12047,6 +12521,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -12156,6 +12638,14 @@ paths:
         schema:
           type: integer
           title: Material Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -12367,6 +12857,14 @@ paths:
           type: string
           default: asc
           title: Sort Order
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -12522,6 +13020,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -12617,6 +13124,18 @@ paths:
       - 周期性计划
       summary: 筛选选项
       operationId: filter_options_api_v1_purchase_plan_templates_filter_options_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -12691,9 +13210,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-plan-templates/{template_id}:
     get:
       tags:
@@ -12710,6 +13226,14 @@ paths:
         schema:
           type: integer
           title: Template Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -12808,6 +13332,14 @@ paths:
         schema:
           type: integer
           title: Template Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -12912,6 +13444,14 @@ paths:
         schema:
           type: integer
           title: Template Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -12995,6 +13535,14 @@ paths:
         schema:
           type: integer
           title: Template Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -13130,6 +13678,14 @@ paths:
           description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
           title: Min Purchase Order No
         description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -13215,6 +13771,14 @@ paths:
         schema:
           type: string
           title: Trace No
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -13335,6 +13899,14 @@ paths:
           description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
           title: Min Purchase Order No
         description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -13422,6 +13994,14 @@ paths:
         schema:
           type: string
           title: Purchase Order No
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -13742,6 +14322,14 @@ paths:
           type: string
           default: asc
           title: Sort Order
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -13985,6 +14573,18 @@ paths:
       - 申购记录
       summary: 筛选选项
       operationId: purchase_record_filter_options_api_v1_purchase_records_filter_options_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -14071,9 +14671,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-records/export-results:
     post:
       tags:
@@ -14081,12 +14678,24 @@ paths:
       summary: 导出申购记录
       description: 查询结果导出（含图片，耗时较长）：202 秒回任务，渲染在后台异步执行。
       operationId: export_purchase_record_results_api_v1_purchase_records_export_results_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/PurchaseRecordResultExportRequest'
-        required: true
       responses:
         '202':
           description: Successful Response
@@ -14166,30 +14775,39 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-records/batch:
     patch:
       tags:
       - 申购记录
       summary: 批量编辑申购记录
       operationId: batch_edit_purchase_records_api_v1_purchase_records_batch_patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/BatchUpdatePurchaseRecordsRequest'
-        required: true
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
+                type: array
                 items:
                   $ref: '#/components/schemas/PurchaseRecordRead'
-                type: array
                 title: Response Batch Edit Purchase Records Api V1 Purchase Records
                   Batch Patch
               example:
@@ -14282,9 +14900,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/purchase-records/{line_id}:
     get:
       tags:
@@ -14301,6 +14916,14 @@ paths:
         schema:
           type: integer
           title: Line Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -14413,6 +15036,14 @@ paths:
         schema:
           type: integer
           title: Line Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -14532,6 +15163,14 @@ paths:
         schema:
           type: integer
           title: Line Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -16646,6 +17285,14 @@ paths:
             format: date
           - type: 'null'
           title: Date To
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -16895,6 +17542,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -17005,6 +17661,18 @@ paths:
       - 隐患管理
       summary: 隐患列表筛选项
       operationId: hazard_filter_options_api_v1_hazards_filter_options_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -17073,15 +17741,24 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/hazards/stats:
     get:
       tags:
       - 隐患管理
       summary: 隐患概览统计（工作台卡片）
       operationId: hazard_stats_api_v1_hazards_stats_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -17149,9 +17826,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/hazards/{hazard_id}:
     get:
       tags:
@@ -17168,6 +17842,14 @@ paths:
         schema:
           type: integer
           title: Hazard Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -17281,6 +17963,14 @@ paths:
         schema:
           type: integer
           title: Hazard Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -17400,6 +18090,14 @@ paths:
         schema:
           type: integer
           title: Hazard Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -17493,6 +18191,14 @@ paths:
           - type: boolean
           - type: 'null'
           title: Enabled
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -17575,6 +18281,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -17668,6 +18383,14 @@ paths:
         schema:
           type: integer
           title: Unit Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -17760,6 +18483,14 @@ paths:
         schema:
           type: integer
           title: Unit Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -17832,15 +18563,27 @@ paths:
       - 隐患管理
       summary: 隐患类型列表
       operationId: list_hazard_types_api_v1_hazard_types_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
           content:
             application/json:
               schema:
+                type: array
                 items:
                   $ref: '#/components/schemas/HazardTypeRead'
-                type: array
                 title: Response List Hazard Types Api V1 Hazard Types Get
               example:
               - id: 3
@@ -17904,20 +18647,29 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
     post:
       tags:
       - 隐患管理
       summary: 新增隐患类型
       operationId: create_hazard_type_api_v1_hazard_types_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/HazardTypeCreate'
-        required: true
       responses:
         '201':
           description: Successful Response
@@ -17987,9 +18739,6 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
   /api/v1/hazard-types/{type_id}:
     patch:
       tags:
@@ -18006,6 +18755,14 @@ paths:
         schema:
           type: integer
           title: Type Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -18096,6 +18853,14 @@ paths:
         schema:
           type: integer
           title: Type Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -18194,6 +18959,14 @@ paths:
           description: orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签
           title: Scope
         description: orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -18284,6 +19057,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -18385,6 +19167,14 @@ paths:
         schema:
           type: integer
           title: Tag Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -18485,6 +19275,14 @@ paths:
         schema:
           type: integer
           title: Tag Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       - name: if-match
         in: header
         required: false
@@ -18598,6 +19396,14 @@ paths:
           description: 英文逗号分隔的标签 id，命中任一（含其子孙）即返回
           title: Tag Ids
         description: 英文逗号分隔的标签 id，命中任一（含其子孙）即返回
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -18770,6 +19576,15 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -18876,6 +19691,14 @@ paths:
         schema:
           type: integer
           title: Item Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       responses:
         '200':
           description: Successful Response
@@ -18975,6 +19798,14 @@ paths:
         schema:
           type: integer
           title: Item Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
       requestBody:
         required: true
         content:
@@ -19070,6 +19901,359 @@ paths:
       - 台账管理
       summary: 删除台账
       operationId: delete_ledger_item_api_v1_ledger_items__item_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/projects:
+    get:
+      tags:
+      - 项目管理
+      summary: 项目列表
+      operationId: list_projects_api_v1_projects_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/ProjectRead'
+                type: array
+                title: Response List Projects Api V1 Projects Get
+              example:
+              - id: 1
+                code: P05
+                name: P05 项目
+                enabled: true
+                is_default: true
+                remark: 华星现有项目
+                created_at: '2026-01-05T09:00:00+08:00'
+                updated_at: '2026-01-05T09:00:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+    post:
+      tags:
+      - 项目管理
+      summary: 新增项目
+      operationId: add_project_api_v1_projects_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectRead'
+              example:
+                id: 1
+                code: P05
+                name: P05 项目
+                enabled: true
+                is_default: true
+                remark: 华星现有项目
+                created_at: '2026-01-05T09:00:00+08:00'
+                updated_at: '2026-01-05T09:00:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+  /api/v1/projects/{item_id}:
+    patch:
+      tags:
+      - 项目管理
+      summary: 编辑项目
+      operationId: edit_project_api_v1_projects__item_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectRead'
+              example:
+                id: 1
+                code: P05
+                name: P05 项目
+                enabled: true
+                is_default: true
+                remark: 华星现有项目
+                created_at: '2026-01-05T09:00:00+08:00'
+                updated_at: '2026-01-05T09:00:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 项目管理
+      summary: 删除项目
+      operationId: remove_project_api_v1_projects__item_id__delete
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
@@ -26784,6 +27968,148 @@ components:
         page: 1
         page_size: 20
         total: 1
+    ProjectCreate:
+      properties:
+        code:
+          type: string
+          maxLength: 32
+          minLength: 2
+          title: Code
+          description: 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        enabled:
+          type: boolean
+          title: Enabled
+          default: true
+        is_default:
+          type: boolean
+          title: Is Default
+          default: false
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+      additionalProperties: false
+      type: object
+      required:
+      - code
+      - name
+      title: ProjectCreate
+      examples:
+      - code: P07
+        name: P07 项目
+        enabled: true
+        is_default: false
+        remark: 三期项目
+    ProjectRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        code:
+          type: string
+          title: Code
+        name:
+          type: string
+          title: Name
+        enabled:
+          type: boolean
+          title: Enabled
+        is_default:
+          type: boolean
+          title: Is Default
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - code
+      - name
+      - enabled
+      - is_default
+      - created_at
+      - updated_at
+      - version
+      title: ProjectRead
+      description: 项目：业务数据的隔离维度，切换当前项目后只能看到该项目的数据。
+      examples:
+      - id: 1
+        code: P05
+        name: P05 项目
+        enabled: true
+        is_default: true
+        remark: 华星现有项目
+        created_at: '2026-01-05T09:00:00+08:00'
+        updated_at: '2026-01-05T09:00:00+08:00'
+        version: 1
+    ProjectUpdate:
+      properties:
+        code:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 2
+            description: 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
+          - type: 'null'
+          title: Code
+        name:
+          anyOf:
+          - type: string
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+          title: Name
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+        is_default:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Is Default
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: ProjectUpdate
+      examples:
+      - code: P06
+        name: P06 项目（二期）
+        enabled: true
+        is_default: false
+        remark: 二期项目
+        version: 2
     PurchaseFilterOptions:
       properties:
         actual_demand_persons:

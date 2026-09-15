@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.core.permissions import DbSession, PurchaseWriter
+from app.core.permissions import DbSession, PurchaseWriter, require_current_project
 from app.schemas import (
     PurchaseRecordSyncOrderApply,
     PurchaseRecordSyncOrderApplyRead,
@@ -11,7 +11,10 @@ from app.schemas import (
 )
 from app.services import purchase_record_sync_service as service
 
-router = APIRouter(tags=["申购记录同步"])
+router = APIRouter(
+    tags=["申购记录同步"],
+    dependencies=[Depends(require_current_project)],
+)
 
 
 @router.get(

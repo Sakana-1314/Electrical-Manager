@@ -16,15 +16,22 @@ import {
 } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
+import { useProjectStore } from '@/stores/project'
 import { useSettingsStore } from '@/stores/settings'
 import { useThemeStore } from '@/stores/theme'
 import { roleLabels } from '@/types/navigation'
 import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
+import {
+  buildProjectMenuSubmenu,
+  isProjectMenuKey,
+  projectIdFromMenuKey,
+} from '@/layouts/projectMenu'
 import { LOGO_URL } from '@/constants/branding'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const project = useProjectStore()
 const settings = useSettingsStore()
 const theme = useThemeStore()
 const collapsed = ref(false)
@@ -105,6 +112,7 @@ const menuOptions = computed<MenuOption[]>(() => {
       key: 'settings-group',
       icon: renderIcon(SettingsOutline),
       children: [
+        link('项目管理', 'projects'),
         link('管理端用户', 'users'),
         link('小程序用户', 'mini-program-users'),
         link('附件管理', 'attachments'),
@@ -118,28 +126,44 @@ const menuOptions = computed<MenuOption[]>(() => {
 
 function logout() {
   auth.logout()
+  // 退出登录同时清掉项目选择：同一标签页换账号登录后要重新解析当前项目
+  project.clear()
   void router.push({ name: 'login' })
 }
 
-/* ============ 顶栏用户下拉：外观（自动 / 浅色 / 深色） ============
- * 一级是「外观」二级菜单：鼠标悬浮向左展开三个档位（顶栏在最右上角，
+/* ============ 顶栏用户下拉：当前项目 + 外观（自动 / 浅色 / 深色） ============
+ * 「当前项目」二级菜单列出所有启用项目，切换后布局会整页刷新（页面大量使用 keep-alive，
+ * 不刷新会继续显示上一个项目的数据）；菜单结构在 projectMenu.ts（有单测）。
+ * 「外观」一级同样是二级菜单：鼠标悬浮向左展开三个档位（顶栏在最右上角，
  * Naive UI 子菜单空间不足时自动向左翻转）。父项图标反映当前实际明暗，
  * 当前档位显示对勾；顶栏不再放独立的明暗切换图标，外观只从菜单里切换。
  * 菜单结构在 appearanceMenu.ts（有单测）。 */
 
 const userMenuOptions = computed<MenuOption[]>(() => [
   ...buildThemeMenuSubmenu(theme.mode, theme.isDark, renderIcon),
+  ...buildProjectMenuSubmenu(
+    project.enabledProjects,
+    project.currentProject?.id ?? null,
+    renderIcon,
+  ),
   { type: 'divider', key: 'logout-divider' },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ])
 
-/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）。 */
+/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）+ 项目切换（key 为 project:<id>）。 */
 function onUserMenuSelect(key: string) {
   if (key === 'logout') {
     logout()
     return
   }
-  if (isThemeModeKey(key)) theme.setMode(key)
+  if (isThemeModeKey(key)) {
+    theme.setMode(key)
+    return
+  }
+  if (isProjectMenuKey(key)) {
+    const id = projectIdFromMenuKey(key)
+    if (id !== null) project.select(id)
+  }
 }
 </script>
 
@@ -191,6 +215,13 @@ function onUserMenuSelect(key: string) {
           </div>
         </div>
         <div class="topbar-actions">
+          <!-- 当前项目：一眼看清数据属于哪个项目，切换走用户菜单的项目二级菜单 -->
+          <span
+            v-if="project.currentProject"
+            class="project-chip"
+            :title="`当前项目：${project.currentProject.name}`"
+            >{{ project.currentProject.code }}</span
+          >
           <!-- 外观只从用户菜单的「外观」二级菜单切换，顶栏不再放独立的明暗切换图标 -->
           <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
             <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
@@ -297,6 +328,18 @@ function onUserMenuSelect(key: string) {
   flex: none;
   align-items: center;
   gap: 8px;
+}
+/* 当前项目标记：与右侧的 .user-role 同一套小字弱化样式，窄屏也不占额外高度 */
+.project-chip {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 /* 顶栏弱图标按钮（移动端导航开关） */
 .menu-toggle {

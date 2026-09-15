@@ -15,13 +15,24 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.core.config import settings
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import Base, engine, system_session  # noqa: F401  (测试复用)
+from app.core.database import project_session as _project_session
 from app.core.security import hash_password
 from app.domain.enums import Role
 from app.main import app
-from app.models import User
+from app.models import Project, User
 
 settings.template_dir = Path(__file__).parents[1] / "app" / "templates"
+
+# 测试库固定两个项目：P05（默认项目，等同于线上现有项目）与 P06（用于隔离用例）。
+# `client` fixture 默认带上 X-Project-Id=1，因此既有接口测试无需逐个改请求头。
+P05_PROJECT_ID = 1
+P06_PROJECT_ID = 2
+
+
+def project_session(project_id: int = P05_PROJECT_ID):
+    """测试里直接开库会话时用：把上下文设成指定项目（默认 P05，与 client 默认头一致）。"""
+    return _project_session(project_id)
 
 
 @pytest_asyncio.fixture
@@ -29,7 +40,25 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
     settings.upload_dir = tmp_path / "uploads"
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-    async with SessionLocal() as session:
+    async with system_session() as session:
+        session.add_all(
+            [
+                Project(
+                    id=P05_PROJECT_ID,
+                    code="P05",
+                    name="P05 项目",
+                    enabled=True,
+                    is_default=True,
+                ),
+                Project(
+                    id=P06_PROJECT_ID,
+                    code="P06",
+                    name="P06 项目",
+                    enabled=True,
+                    is_default=False,
+                ),
+            ]
+        )
         session.add_all(
             [
                 User(
@@ -79,6 +108,8 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
         await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+        # 默认项目 P05：业务接口都要求项目上下文，这样既有测试不用逐个加请求头。
+        http.headers["X-Project-Id"] = str(P05_PROJECT_ID)
         yield http
 
     async with engine.begin() as connection:

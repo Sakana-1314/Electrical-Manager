@@ -105,6 +105,37 @@
           <view class="user-profile-value">{{miniProgramUpdatedAt}}</view>
         </view>
       </view>
+      <view class="user-profile-projects">
+        <view
+          class="project-trigger"
+          hover-class="project-trigger-active"
+          aria-role="button"
+          aria-expanded="{{projectsExpanded}}"
+          bind:tap="toggleProjects"
+        >
+          <view class="project-trigger-label">{{i18n.currentProject}}</view>
+          <view class="project-trigger-value">
+            <view class="project-trigger-text {{currentProjectId ? '' : 'project-trigger-empty'}}">{{currentProjectLabel}}</view>
+            <t-icon class="project-arrow" name="{{projectsExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+          </view>
+        </view>
+        <view wx:if="{{projectsExpanded}}" class="project-options">
+          <view class="project-options-title">{{i18n.switchProject}}</view>
+          <view
+            wx:for="{{projectOptions}}"
+            wx:key="id"
+            class="project-option"
+            hover-class="project-option-active"
+            aria-role="button"
+            data-project-id="{{item.id}}"
+            bind:tap="onProjectSelect"
+          >
+            <view class="project-option-text">{{item.label}}</view>
+            <t-icon wx:if="{{item.id === currentProjectId}}" class="project-option-check" name="check" size="28rpx" />
+          </view>
+          <view wx:if="{{!projectOptions.length}}" class="project-empty">{{i18n.noAvailableProject}}</view>
+        </view>
+      </view>
       <view class="user-profile-appearance">
         <view
           class="appearance-trigger"

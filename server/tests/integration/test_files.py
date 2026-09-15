@@ -10,10 +10,9 @@ from PIL import Image
 from sqlalchemy import func, select
 
 from app.core.config import settings
-from app.core.database import SessionLocal
 from app.models import FileObject, PurchaseRequest, PurchaseRequestLine, PurchaseRequestLineImage
 from app.services import attachment_cleanup_service
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 
 
 async def upload_png(
@@ -102,7 +101,7 @@ async def test_uploaded_image_is_reencoded_as_png(client: AsyncClient) -> None:
     invalid_preview = await client.get(image_url, params={"size": 15})
     assert invalid_preview.status_code == 422
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         persisted_id = await session.scalar(
             select(FileObject.id).where(FileObject.id == body["id"])
         )
@@ -128,7 +127,7 @@ async def test_purchase_request_line_image_is_never_treated_as_orphan(
     file_id = uploaded.json()["id"]
 
     # 构造一条只引用该图片的申购记录行（模拟 move-to-record 后的行级镜像）。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         request = PurchaseRequest(purchase_date=None)
         session.add(request)
         await session.flush()
@@ -291,7 +290,7 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
     assert body["purge_after"] is not None
 
     # 记录与文件都还在，只是打上了删除标记。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         item = await session.get(FileObject, file_id)
     assert item is not None
     assert item.deleted_at is not None
@@ -346,7 +345,7 @@ async def test_soft_deleted_image_is_not_reused_by_upload_dedup(client: AsyncCli
     second_id = await upload_png(client, headers, name="dedup.png", color="teal")
     assert second_id != first_id
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         second = await session.get(FileObject, second_id)
     assert second is not None
     assert second.deleted_at is None
@@ -382,7 +381,7 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
     assert result.purged_file_names == [f"{orphan_id}.png"]
     assert result.restored_file_ids == [rescued_id]
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         assert await session.get(FileObject, orphan_id) is None
         rescued = await session.get(FileObject, rescued_id)
     assert rescued is not None
@@ -435,7 +434,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
     assert response.json()["purge_after"] is not None
 
     # 只做软删除：数据库记录与磁盘文件都还在；被引用的图片不受影响。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         used = await session.get(FileObject, used_id)
         free = [await session.get(FileObject, file_id) for file_id in free_ids]
     assert used is not None and used.deleted_at is None
@@ -452,7 +451,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
     # 物理删除仍只由凌晨 2 点的复查任务执行。
     result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
     assert sorted(result.purged_file_ids) == sorted(free_ids)
-    async with SessionLocal() as session:
+    async with project_session() as session:
         assert await session.get(FileObject, used_id) is not None
         for file_id in free_ids:
             assert await session.get(FileObject, file_id) is None
