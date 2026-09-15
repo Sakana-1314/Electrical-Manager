@@ -188,7 +188,7 @@ function confirmDelete(): void {
 
     <n-card class="data-card" :bordered="false">
       <n-spin :show="loading">
-        <div v-if="treeData.length" class="hazard-type-tree">
+        <div v-if="treeData.length" class="org-tree-horizontal hazard-type-tree">
           <!-- 组件要求传入单个根节点对象；这里用一层无标签的虚拟根把多个大类挂上去，
                并在样式里隐藏该根节点，页面上只看到「大类 → 小类」两级。 -->
           <Vue3TreeOrg

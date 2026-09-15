@@ -211,76 +211,77 @@ a {
 .data-card .n-card__content {
   padding-top: 18px;
 }
-/* ============ 隐患类型横向树（vue3-tree-org 颜色令牌适配） ============
+/* ============ 横向树共用样式（vue3-tree-org 颜色令牌适配） ============
+ * 隐患类型与台账标签两个页面共用 .org-tree-horizontal（至多 3 层），页面只加自己的层级 class。
  * 该组件通过 CSS 伪元素画连接线，并把节点卡片、展开按钮的色值写死在其自带样式里
  * （#ddd / #ccc / #fff / #2d8cf0 等）。这里只覆盖「颜色类」声明，让它们跟随明暗两档令牌；
  * 布局与定位仍由组件自带样式负责，不要在这里改 width/height/position。
  * 深色档无需另写规则：下面引用的变量在 [data-theme='dark'] 里已有对应值。
  * ========================================================================= */
-/* 组件要求传入单个根节点对象，页面用一层无标签虚拟根承载多个大类。
- * 该虚拟根标签为空（组件给它加 is-empty），这里隐藏它的节点框与连线，只呈现「大类 → 小类」两级；
- * 它的子节点容器 .tree-org-node__children 不受影响，大类仍在同一水平带从左侧开始。 */
-.hazard-type-tree .tree-org-node > .tree-org-node__content.is-empty {
+/* 组件要求传入单个根节点对象，页面用一层无标签虚拟根承载多棵子树。
+ * 该虚拟根标签为空（组件给它加 is-empty），这里隐藏它的节点框与连线，只呈现真正的层级；
+ * 它的子节点容器 .tree-org-node__children 不受影响，子树仍在同一水平带从左侧开始。 */
+.org-tree-horizontal .tree-org-node > .tree-org-node__content.is-empty {
   display: none;
 }
-.hazard-type-tree .tree-org-node:has(> .tree-org-node__content.is-empty)::before,
-.hazard-type-tree .tree-org-node:has(> .tree-org-node__content.is-empty)::after {
+.org-tree-horizontal .tree-org-node:has(> .tree-org-node__content.is-empty)::before,
+.org-tree-horizontal .tree-org-node:has(> .tree-org-node__content.is-empty)::after {
   display: none;
 }
 /* 组件自带布局是为「可拖拽 + 可缩放的组织图」设计的：外框写死白底与 100% 高、
  * 内容层绝对定位、内层 zoom 容器 height:100% 且 overflow:hidden——放进卡片会出现
  * 高度塌陷（zoom 高 0 而内容 275px）与深色档白底。这里把这几条还原成普通文档流布局，
  * 只保留它画节点与连线的能力；拖拽/缩放/工具条已在页面上关闭。 */
-.hazard-type-tree .zm-tree-org {
+.org-tree-horizontal .zm-tree-org {
   height: auto;
   padding: 0;
   background: transparent;
 }
 /* 需要压过组件自带的 `.zm-tree-org .zm-draggable{position:absolute}` 与
  * `.zm-tree-org .zoom-container{height:100%;overflow:hidden}`，所以这里同样用两层选择器。 */
-.hazard-type-tree .zm-tree-org .zm-draggable {
+.org-tree-horizontal .zm-tree-org .zm-draggable {
   position: static;
 }
-.hazard-type-tree .zm-tree-org .zoom-container {
+.org-tree-horizontal .zm-tree-org .zoom-container {
   height: auto;
   overflow: visible;
   text-align: left;
 }
-.hazard-type-tree .tree-org-node__inner {
+.org-tree-horizontal .tree-org-node__inner {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-card);
   color: var(--color-text);
 }
-.hazard-type-tree .tree-org-node__label {
+.org-tree-horizontal .tree-org-node__label {
   color: var(--color-text-strong);
 }
 /* 连接线：纵向主干 + 横向分支，统一用中性边框色 */
-.hazard-type-tree .tree-org-node::after,
-.hazard-type-tree .tree-org-node::before,
-.hazard-type-tree .tree-org-node__children::before,
-.hazard-type-tree .tree-org-node.collapsed .tree-org-node__content::after,
-.hazard-type-tree .tree-org-node:only-child::before,
-.hazard-type-tree .horizontal .tree-org-node:not(:last-child)::after {
+.org-tree-horizontal .tree-org-node::after,
+.org-tree-horizontal .tree-org-node::before,
+.org-tree-horizontal .tree-org-node__children::before,
+.org-tree-horizontal .tree-org-node.collapsed .tree-org-node__content::after,
+.org-tree-horizontal .tree-org-node:only-child::before,
+.org-tree-horizontal .horizontal .tree-org-node:not(:last-child)::after {
   border-color: var(--color-border);
 }
-.hazard-type-tree .tree-org-node:not(:first-child)::before,
-.hazard-type-tree .tree-org-node:not(:last-child)::after {
+.org-tree-horizontal .tree-org-node:not(:first-child)::before,
+.org-tree-horizontal .tree-org-node:not(:last-child)::after {
   border-color: var(--color-border);
 }
 /* 折叠/展开按钮 */
-.hazard-type-tree .tree-org-node__expand {
+.org-tree-horizontal .tree-org-node__expand {
   background-color: var(--color-surface);
   border-color: var(--color-border);
   color: var(--color-text);
 }
-.hazard-type-tree .tree-org-node__expand .tree-org-node__expand-btn::before,
-.hazard-type-tree .tree-org-node__expand .tree-org-node__expand-btn::after {
+.org-tree-horizontal .tree-org-node__expand .tree-org-node__expand-btn::before,
+.org-tree-horizontal .tree-org-node__expand .tree-org-node__expand-btn::after {
   border-color: var(--color-text-muted);
 }
-/* 选中的小类（ClickNode 选中态） */
-.hazard-type-tree .tree-org-node.is-selected .tree-org-node__inner,
-.hazard-type-tree .tree-org-node__content.is-selected .tree-org-node__inner {
+/* 选中的节点（ClickNode 选中态） */
+.org-tree-horizontal .tree-org-node.is-selected .tree-org-node__inner,
+.org-tree-horizontal .tree-org-node__content.is-selected .tree-org-node__inner {
   border-color: var(--color-primary);
   background-color: var(--color-primary-soft);
 }
