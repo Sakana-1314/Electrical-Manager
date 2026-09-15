@@ -45,8 +45,15 @@ from app.schemas import (
     MiniProgramUserUpdate,
     MiniProgramWechatLoginRequest,
     Page,
+    ProjectRead,
 )
-from app.services import file_service, hazard_service, import_job_service, mini_program_service
+from app.services import (
+    file_service,
+    hazard_service,
+    import_job_service,
+    mini_program_service,
+    project_service,
+)
 
 management_router = APIRouter(prefix="/mini-program-users", tags=["小程序用户管理"])
 mini_router = APIRouter(prefix="/mini-program", tags=["小程序"])
@@ -150,6 +157,23 @@ async def mini_program_wechat_login(
 )
 async def mini_program_me(user: CurrentMiniProgramUser) -> MiniProgramUserRead:
     return MiniProgramUserRead.model_validate(user)
+
+
+@mini_router.get(
+    "/projects",
+    response_model=list[ProjectRead],
+    summary="项目列表",
+)
+async def mini_program_projects(
+    session: DbSession, user: CurrentMiniProgramUser
+) -> list[ProjectRead]:
+    """小程序端项目列表（首页「个人信息」弹窗里切换当前项目用）。
+
+    业务接口不带头 `X-Project-Id` 时默认用默认项目 P05，因此旧版客户端不受影响。
+    """
+    return [
+        ProjectRead.model_validate(item) for item in await project_service.list_projects(session)
+    ]
 
 
 @mini_router.post(

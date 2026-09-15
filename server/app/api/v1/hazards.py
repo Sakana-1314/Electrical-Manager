@@ -9,10 +9,16 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import PageNo, PageSize
-from app.core.permissions import CurrentUser, DbSession, HazardWriter, IfMatchVersion
+from app.core.permissions import (
+    CurrentUser,
+    DbSession,
+    HazardWriter,
+    IfMatchVersion,
+    require_current_project,
+)
 from app.domain.enums import HazardLevel, HazardStatus
 from app.schemas import (
     HazardCreate,
@@ -30,7 +36,10 @@ from app.schemas import (
 )
 from app.services import hazard_service as service
 
-router = APIRouter(tags=["隐患管理"])
+router = APIRouter(
+    tags=["隐患管理"],
+    dependencies=[Depends(require_current_project)],
+)
 
 
 # ===== 隐患台账 =====

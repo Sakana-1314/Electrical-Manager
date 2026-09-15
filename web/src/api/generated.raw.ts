@@ -857,6 +857,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mini-program/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 项目列表
+         * @description 小程序端项目列表（首页「个人信息」弹窗里切换当前项目用）。
+         *
+         *     业务接口不带头 `X-Project-Id` 时默认用默认项目 P05，因此旧版客户端不受影响。
+         */
+        get: operations["mini_program_projects_api_v1_mini_program_projects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mini-program/profile": {
         parameters: {
             query?: never;
@@ -2221,6 +2243,42 @@ export interface paths {
         head?: never;
         /** 更新台账 */
         patch: operations["update_ledger_item_api_v1_ledger_items__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 项目列表 */
+        get: operations["list_projects_api_v1_projects_get"];
+        put?: never;
+        /** 新增项目 */
+        post: operations["add_project_api_v1_projects_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除项目 */
+        delete: operations["remove_project_api_v1_projects__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** 编辑项目 */
+        patch: operations["edit_project_api_v1_projects__item_id__patch"];
         trace?: never;
     };
 }
@@ -8898,6 +8956,103 @@ export interface components {
             total: number;
         };
         /**
+         * ProjectCreate
+         * @example {
+         *       "code": "P07",
+         *       "name": "P07 项目",
+         *       "enabled": true,
+         *       "is_default": false,
+         *       "remark": "三期项目"
+         *     }
+         */
+        ProjectCreate: {
+            /**
+             * Code
+             * @description 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
+             */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Remark */
+            remark?: string | null;
+        };
+        /**
+         * ProjectRead
+         * @description 项目：业务数据的隔离维度，切换当前项目后只能看到该项目的数据。
+         * @example {
+         *       "id": 1,
+         *       "code": "P05",
+         *       "name": "P05 项目",
+         *       "enabled": true,
+         *       "is_default": true,
+         *       "remark": "华星现有项目",
+         *       "created_at": "2026-01-05T09:00:00+08:00",
+         *       "updated_at": "2026-01-05T09:00:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        ProjectRead: {
+            /** Id */
+            id: number;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Is Default */
+            is_default: boolean;
+            /** Remark */
+            remark?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ProjectUpdate
+         * @example {
+         *       "code": "P06",
+         *       "name": "P06 项目（二期）",
+         *       "enabled": true,
+         *       "is_default": false,
+         *       "remark": "二期项目",
+         *       "version": 2
+         *     }
+         */
+        ProjectUpdate: {
+            /** Code */
+            code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Is Default */
+            is_default?: boolean | null;
+            /** Remark */
+            remark?: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
          * PurchaseFilterOptions
          * @example {
          *       "actual_demand_persons": [
@@ -12439,7 +12594,9 @@ export interface operations {
                 page_size?: number;
                 keyword?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13062,7 +13219,9 @@ export interface operations {
     create_material_api_v1_stock_materials_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -13211,7 +13370,9 @@ export interface operations {
     material_detail_api_v1_stock_materials__material_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -13359,6 +13520,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -13465,7 +13627,9 @@ export interface operations {
     update_material_api_v1_stock_materials__material_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -13619,7 +13783,9 @@ export interface operations {
                 env: components["schemas"]["MiniProgramCodeEnv"];
                 appid: string;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_uuid: string;
             };
@@ -13726,7 +13892,9 @@ export interface operations {
     material_mini_program_code_redirect_api_v1_stock_materials__material_id__mini_program_code_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -13831,7 +13999,9 @@ export interface operations {
     save_policy_api_v1_stock_materials__material_id__replenishment_policy_put: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -13982,7 +14152,9 @@ export interface operations {
     replenishment_defaults_api_v1_inventory_replenishment_defaults_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -14100,7 +14272,9 @@ export interface operations {
                 max_qty?: number | string | null;
                 low_stock?: boolean;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -14494,7 +14668,9 @@ export interface operations {
                 page_size?: number;
                 keyword?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -14884,7 +15060,9 @@ export interface operations {
     balance_detail_api_v1_inventory_balances__material_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -15005,7 +15183,9 @@ export interface operations {
     inbound_api_v1_inventory_inbounds_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15179,7 +15359,9 @@ export interface operations {
     outbound_api_v1_inventory_outbounds_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -15362,7 +15544,9 @@ export interface operations {
                 start_at?: string | null;
                 end_at?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16031,7 +16215,9 @@ export interface operations {
     operation_detail_api_v1_inventory_operations__operation_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 operation_id: number;
             };
@@ -16203,7 +16389,9 @@ export interface operations {
     edit_operation_api_v1_inventory_operations__operation_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 operation_id: number;
             };
@@ -16379,7 +16567,9 @@ export interface operations {
     reverse_operation_api_v1_inventory_operations__operation_id__reverse_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 operation_id: number;
             };
@@ -16555,7 +16745,9 @@ export interface operations {
     replenish_api_v1_inventory_low_stock__material_id__create_replenishment_draft_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -16672,7 +16864,9 @@ export interface operations {
     summary_api_v1_dashboard_summary_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -16792,7 +16986,9 @@ export interface operations {
                 model_spec?: string | null;
                 material_code?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17109,7 +17305,9 @@ export interface operations {
     last_import_api_v1_material_code_library_last_import_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17221,7 +17419,9 @@ export interface operations {
             query: {
                 material_code: string;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17332,7 +17532,9 @@ export interface operations {
     import_material_codes_api_v1_material_code_library_import_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -17457,7 +17659,9 @@ export interface operations {
     get_import_job_api_v1_material_code_library_import_jobs__job_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 job_id: number;
             };
@@ -18052,7 +18256,9 @@ export interface operations {
                 date_from?: string | null;
                 date_to?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18322,7 +18528,9 @@ export interface operations {
     filter_options_api_v1_huaxing_inventory_filter_options_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18441,7 +18649,9 @@ export interface operations {
     last_import_api_v1_huaxing_inventory_last_import_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18551,7 +18761,9 @@ export interface operations {
     import_huaxing_inventory_api_v1_huaxing_inventory_import_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18676,7 +18888,9 @@ export interface operations {
     get_import_job_api_v1_huaxing_inventory_import_jobs__job_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 job_id: number;
             };
@@ -18804,7 +19018,9 @@ export interface operations {
                 name?: string | null;
                 model_spec?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -18982,7 +19198,9 @@ export interface operations {
     last_import_api_v1_secondary_warehouse_last_import_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -19092,7 +19310,9 @@ export interface operations {
     import_lite_inventory_api_v1_secondary_warehouse_import_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -19217,7 +19437,9 @@ export interface operations {
     get_import_job_api_v1_secondary_warehouse_import_jobs__job_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 job_id: number;
             };
@@ -20079,6 +20301,126 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramUserRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_projects_api_v1_mini_program_projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 1,
+                     *         "code": "P05",
+                     *         "name": "P05 项目",
+                     *         "enabled": true,
+                     *         "is_default": true,
+                     *         "remark": "华星现有项目",
+                     *         "created_at": "2026-01-05T09:00:00+08:00",
+                     *         "updated_at": "2026-01-05T09:00:00+08:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ProjectRead"][];
                 };
             };
             /** @description 业务校验失败 */
@@ -24233,7 +24575,9 @@ export interface operations {
                 sort_by?: ("plan_no" | "plan_date" | "material_code" | "category" | "urgency" | "demand_department" | "name" | "model_spec" | "planned_qty" | "unit_name" | "actual_demand_person" | "purchase_responsible" | "subitem_no" | "usage" | "images") | null;
                 sort_order?: "asc" | "desc";
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -24763,7 +25107,9 @@ export interface operations {
     create_material_api_v1_purchase_materials_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -24902,7 +25248,9 @@ export interface operations {
             query?: {
                 moved?: boolean | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25036,7 +25384,9 @@ export interface operations {
     export_material_results_api_v1_purchase_materials_export_results_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25169,7 +25519,9 @@ export interface operations {
             query?: {
                 keyword?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25274,7 +25626,9 @@ export interface operations {
     export_purchase_application_api_v1_purchase_materials_export_purchase_application_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25383,7 +25737,9 @@ export interface operations {
     export_purchase_approval_api_v1_purchase_materials_export_purchase_approval_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25492,7 +25848,9 @@ export interface operations {
     batch_move_to_record_api_v1_purchase_materials_batch_move_to_record_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25641,7 +25999,9 @@ export interface operations {
     batch_update_materials_api_v1_purchase_materials_batch_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -25780,7 +26140,9 @@ export interface operations {
     material_detail_api_v1_purchase_materials__material_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -25916,6 +26278,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -26022,7 +26385,9 @@ export interface operations {
     update_material_api_v1_purchase_materials__material_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -26161,7 +26526,9 @@ export interface operations {
     link_stock_material_api_v1_purchase_materials__material_id__link_stock_material_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -26300,7 +26667,9 @@ export interface operations {
     move_to_record_api_v1_purchase_materials__material_id__move_to_record_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 material_id: number;
             };
@@ -26465,7 +26834,9 @@ export interface operations {
                 sort_by?: string | null;
                 sort_order?: "asc" | "desc";
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -26667,7 +27038,9 @@ export interface operations {
     create_template_api_v1_purchase_plan_templates_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -26800,7 +27173,9 @@ export interface operations {
     filter_options_api_v1_purchase_plan_templates_filter_options_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -26923,7 +27298,9 @@ export interface operations {
     template_detail_api_v1_purchase_plan_templates__template_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 template_id: number;
             };
@@ -27055,6 +27432,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -27161,7 +27539,9 @@ export interface operations {
     update_template_api_v1_purchase_plan_templates__template_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 template_id: number;
             };
@@ -27296,7 +27676,9 @@ export interface operations {
     generate_purchase_plan_api_v1_purchase_plan_templates__template_id__generate_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 template_id: number;
             };
@@ -27438,7 +27820,9 @@ export interface operations {
                 /** @description 只返回申购单号（purchase_order_no）>= 该值的记录（含该值） */
                 min_purchase_order_no?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -27556,7 +27940,9 @@ export interface operations {
     sync_trace_api_v1_purchase_record_sync_trace__trace_no__post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 trace_no: string;
             };
@@ -27680,7 +28066,9 @@ export interface operations {
                 /** @description 只返回申购单号（purchase_order_no）>= 该值的记录（含该值） */
                 min_purchase_order_no?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -27800,7 +28188,9 @@ export interface operations {
     sync_order_apply_api_v1_purchase_record_sync_orders__purchase_order_no__apply_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 purchase_order_no: string;
             };
@@ -27949,7 +28339,9 @@ export interface operations {
                 sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
                 sort_order?: "asc" | "desc";
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -28243,7 +28635,9 @@ export interface operations {
     purchase_record_filter_options_api_v1_purchase_records_filter_options_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -28381,7 +28775,9 @@ export interface operations {
     export_purchase_record_results_api_v1_purchase_records_export_results_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -28512,7 +28908,9 @@ export interface operations {
     batch_edit_purchase_records_api_v1_purchase_records_batch_patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -28661,7 +29059,9 @@ export interface operations {
     purchase_record_api_v1_purchase_records__line_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 line_id: number;
             };
@@ -28806,7 +29206,9 @@ export interface operations {
     edit_purchase_record_api_v1_purchase_records__line_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 line_id: number;
             };
@@ -28956,6 +29358,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -31646,7 +32049,9 @@ export interface operations {
                 date_from?: string | null;
                 date_to?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -31964,7 +32369,9 @@ export interface operations {
     create_hazard_api_v1_hazards_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -32118,7 +32525,9 @@ export interface operations {
     hazard_filter_options_api_v1_hazards_filter_options_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -32233,7 +32642,9 @@ export interface operations {
     hazard_stats_api_v1_hazards_stats_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -32346,7 +32757,9 @@ export interface operations {
     get_hazard_api_v1_hazards__hazard_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 hazard_id: number;
             };
@@ -32499,6 +32912,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -32605,7 +33019,9 @@ export interface operations {
     update_hazard_api_v1_hazards__hazard_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 hazard_id: number;
             };
@@ -32764,7 +33180,9 @@ export interface operations {
                 keyword?: string | null;
                 enabled?: boolean | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -32883,7 +33301,9 @@ export interface operations {
     create_hazard_unit_api_v1_hazard_units_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -33005,6 +33425,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -33111,7 +33532,9 @@ export interface operations {
     update_hazard_unit_api_v1_hazard_units__unit_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 unit_id: number;
             };
@@ -33234,7 +33657,9 @@ export interface operations {
     list_hazard_types_api_v1_hazard_types_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -33351,7 +33776,9 @@ export interface operations {
     create_hazard_type_api_v1_hazard_types_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -33471,6 +33898,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -33577,7 +34005,9 @@ export interface operations {
     update_hazard_type_api_v1_hazard_types__type_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 type_id: number;
             };
@@ -33702,7 +34132,9 @@ export interface operations {
                 /** @description orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签 */
                 scope?: ("orphan" | "tree") | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -33832,7 +34264,9 @@ export interface operations {
     create_ledger_tag_api_v1_ledger_tags_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -33965,6 +34399,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -34071,7 +34506,9 @@ export interface operations {
     update_ledger_tag_api_v1_ledger_tags__tag_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 tag_id: number;
             };
@@ -34211,7 +34648,9 @@ export interface operations {
                 /** @description 英文逗号分隔的标签 id，命中任一（含其子孙）即返回 */
                 tag_ids?: string | null;
             };
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -34460,7 +34899,9 @@ export interface operations {
     create_ledger_item_api_v1_ledger_items_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -34601,7 +35042,9 @@ export interface operations {
     get_ledger_item_api_v1_ledger_items__item_id__get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 item_id: number;
             };
@@ -34741,6 +35184,7 @@ export interface operations {
         parameters: {
             query?: never;
             header?: {
+                "X-Project-Id"?: number | null;
                 "if-match"?: string | null;
             };
             path: {
@@ -34847,7 +35291,9 @@ export interface operations {
     update_ledger_item_api_v1_ledger_items__item_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
             path: {
                 item_id: number;
             };
@@ -34898,6 +35344,479 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["LedgerItemRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_projects_api_v1_projects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 1,
+                     *         "code": "P05",
+                     *         "name": "P05 项目",
+                     *         "enabled": true,
+                     *         "is_default": true,
+                     *         "remark": "华星现有项目",
+                     *         "created_at": "2026-01-05T09:00:00+08:00",
+                     *         "updated_at": "2026-01-05T09:00:00+08:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["ProjectRead"][];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    add_project_api_v1_projects_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "code": "P05",
+                     *       "name": "P05 项目",
+                     *       "enabled": true,
+                     *       "is_default": true,
+                     *       "remark": "华星现有项目",
+                     *       "created_at": "2026-01-05T09:00:00+08:00",
+                     *       "updated_at": "2026-01-05T09:00:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    remove_project_api_v1_projects__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    edit_project_api_v1_projects__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "code": "P05",
+                     *       "name": "P05 项目",
+                     *       "enabled": true,
+                     *       "is_default": true,
+                     *       "remark": "华星现有项目",
+                     *       "created_at": "2026-01-05T09:00:00+08:00",
+                     *       "updated_at": "2026-01-05T09:00:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ProjectRead"];
                 };
             };
             /** @description 业务校验失败 */

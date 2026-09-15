@@ -2,10 +2,16 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import OrSearch, OrSearch128, OrSearch255, PageNo, PageSize, SortOrder
-from app.core.permissions import CurrentUser, DbSession, IfMatchVersion, PurchaseWriter
+from app.core.permissions import (
+    CurrentUser,
+    DbSession,
+    IfMatchVersion,
+    PurchaseWriter,
+    require_current_project,
+)
 from app.schemas import (
     Page,
     PurchaseMaterialRead,
@@ -17,7 +23,11 @@ from app.schemas import (
 from app.services import material_service
 from app.services import purchase_plan_template_service as service
 
-router = APIRouter(prefix="/purchase-plan-templates", tags=["周期性计划"])
+router = APIRouter(
+    prefix="/purchase-plan-templates",
+    tags=["周期性计划"],
+    dependencies=[Depends(require_current_project)],
+)
 
 
 @router.get(

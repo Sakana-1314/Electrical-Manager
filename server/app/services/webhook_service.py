@@ -21,12 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import SessionLocal
 from app.core.errors import AppError, version_conflict
+from app.core.project_scope import current_project_id_or_none
 from app.domain.enums import (
     WebhookDeliveryStatus,
     WebhookEventType,
     WebhookPlatform,
 )
-from app.models import WebhookChannel, WebhookDelivery
+from app.models import Project, WebhookChannel, WebhookDelivery
 from app.schemas import WebhookChannelRead, WebhookChannelUpdate, WebhookTestRequest
 from app.services.common import fernet, utc_aware, utcnow
 
@@ -162,6 +163,26 @@ async def update_channel(
     return channel
 
 
+async def _project_payload_fields(session: AsyncSession) -> dict[str, Any]:
+    """事件载荷里的项目标识：事件属于哪个项目，接收方据此区分来源。
+
+    请求上下文里的项目优先；注册等无项目上下文的入口退回默认项目（与小程序一致）。
+    """
+    project_id = current_project_id_or_none()
+    if project_id is not None:
+        code = await session.scalar(select(Project.code).where(Project.id == project_id))
+        if code:
+            return {"project_id": project_id, "project_code": code}
+    row = await session.scalar(
+        select(Project.id, Project.code)
+        .where(Project.is_default.is_(True), Project.enabled.is_(True))
+        .limit(1)
+    )
+    if row is None:
+        return {}
+    return {"project_id": row.id, "project_code": row.code}
+
+
 async def enqueue_event(
     session: AsyncSession,
     event_type: WebhookEventType,
@@ -172,6 +193,7 @@ async def enqueue_event(
             await session.scalars(select(WebhookChannel).where(WebhookChannel.enabled.is_(True)))
         ).all()
     )
+    data = {**data, **await _project_payload_fields(session)}
     event_id = str(uuid4())
     occurred_at = utcnow().isoformat(timespec="seconds") + "Z"
     for channel in channels:
@@ -251,6 +273,10 @@ def _message_text(payload: dict[str, Any]) -> tuple[str, str]:
             f"账号状态：{'已启用' if data.get('enabled') else '待审核'}",
             f"绑定时间：{data.get('bound_at', '-')}",
         ]
+    project_code = str(data.get("project_code") or "").strip()
+    if project_code and event_type != "webhook.test":
+        # 多项目后同一条通知必须能看出属于哪个项目（渠道是全局的，各项目共用）。
+        details.insert(0, f"项目：{project_code}")
     return title, "\n".join(details)
 
 

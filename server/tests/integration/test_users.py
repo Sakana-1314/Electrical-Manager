@@ -5,14 +5,13 @@ from uuid import UUID
 import pytest
 from httpx import AsyncClient
 
-from app.core.database import SessionLocal
 from app.models import User
-from tests.conftest import auth_headers, create_stock
+from tests.conftest import auth_headers, create_stock, project_session
 
 
 async def _clear_api_token_enc(user_id: int) -> None:
     """模拟升级前的旧数据：只保留哈希、清空 Fernet 密文。"""
-    async with SessionLocal() as session:
+    async with project_session() as session:
         item = await session.get(User, user_id)
         assert item is not None
         item.api_token_enc = ""
@@ -214,7 +213,7 @@ async def test_legacy_hash_only_token_backfilled_and_echoed_after_use(client: As
     assert authed.json()["username"] == "legacy-user"
 
     # 认证路径已把明文加密回写，此后无需重新生成即可回显。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         item = await session.get(User, user["id"])
         assert item is not None and item.api_token_enc != ""
     after = await client.get("/api/v1/users?page_size=200", headers=admin)

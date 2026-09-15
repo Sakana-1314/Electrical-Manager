@@ -2,11 +2,17 @@ from typing import Annotated
 from urllib.parse import urlencode
 from uuid import UUID
 
-from fastapi import APIRouter, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from app.api.deps import PageNo, PageSize, RequireFullSecondaryWarehouse
-from app.core.permissions import CurrentUser, DbSession, IfMatchVersion, WarehouseWriter
+from app.core.permissions import (
+    CurrentUser,
+    DbSession,
+    IfMatchVersion,
+    WarehouseWriter,
+    require_current_project,
+)
 from app.domain.enums import MiniProgramCodeEnv
 from app.schemas import (
     Page,
@@ -22,7 +28,11 @@ from app.services import (
     replenishment_service,
 )
 
-router = APIRouter(prefix="/stock-materials", tags=["二级库物资"])
+router = APIRouter(
+    prefix="/stock-materials",
+    tags=["二级库物资"],
+    dependencies=[Depends(require_current_project)],
+)
 
 
 async def _stock_read(session: DbSession, material_id: int) -> StockMaterialRead:

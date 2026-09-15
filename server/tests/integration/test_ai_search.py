@@ -8,10 +8,9 @@ from httpx import AsyncClient
 from pytest import MonkeyPatch
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
 from app.models import BusinessEventLog, SystemSetting
 from app.services import ai_search_service
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 from tests.integration.test_procurement import create_purchase_plan, move_to_record
 
 
@@ -140,7 +139,7 @@ async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypte
     assert status.status_code == 200
     assert status.json() == {"available": True}
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         event = await session.scalar(
             select(BusinessEventLog).where(
                 BusinessEventLog.action == "AI_SEARCH_CONFIG_UPDATED"
@@ -286,7 +285,7 @@ async def test_setting_migrates_from_event_log_to_system_setting_table(
     """旧部署配置存于 business_event_log；system_setting 空时回退读取，更新时迁移到新表。"""
     admin = await auth_headers(client, "admin")
     # 模拟旧部署：只写事件日志，不写 system_setting。
-    async with SessionLocal() as session:
+    async with project_session() as session:
         session.add(
             BusinessEventLog(
                 business_type="SYSTEM_SETTING",
@@ -338,7 +337,7 @@ async def test_setting_migrates_from_event_log_to_system_setting_table(
     assert saved.json()["endpoint"] == "https://new.test/v1"
     assert saved.json()["version"] == legacy_version + 1
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         row = await session.get(SystemSetting, "ai_search_config")
         assert row is not None
         assert row.setting_value["endpoint"] == "https://new.test/v1"

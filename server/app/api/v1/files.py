@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, UploadFile, status
 from fastapi.responses import FileResponse
 
-from app.api.deps import PageNo, PageSize
+from app.api.deps import PageNo, PageSize, system_scope_dependency
 from app.core.errors import not_found
 from app.core.permissions import DbSession, SuperAdmin, require_roles
 from app.domain.enums import Role
@@ -20,7 +20,13 @@ from app.schemas import (
 )
 from app.services import file_service
 
-router = APIRouter(prefix="/files/images", tags=["图片"])
+# 附件一律在跨项目（system）上下文里处理：`file_object` 是全局附件池（按 sha256 全局去重），
+# 引用计数与清理统计必须覆盖全部项目，否则会把别的项目仍在引用的文件判成可清理。
+router = APIRouter(
+    prefix="/files/images",
+    tags=["图片"],
+    dependencies=[Depends(system_scope_dependency)],
+)
 CACHE_CONTROL = "public, max-age=86400, s-maxage=2592000"
 FileWriter = Annotated[
     User,

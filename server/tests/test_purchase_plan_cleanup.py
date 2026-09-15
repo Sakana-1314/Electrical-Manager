@@ -6,10 +6,9 @@ import pytest
 from httpx import AsyncClient
 
 from app.core.constants import SHANGHAI
-from app.core.database import SessionLocal
 from app.models import PurchaseMaterial, PurchaseRequestLine
 from app.services import purchase_plan_cleanup_service
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 from tests.integration.test_procurement import create_purchase_plan, move_to_record
 
 
@@ -22,7 +21,7 @@ async def test_cleanup_removes_moved_plans_and_keeps_record(client: AsyncClient)
     deleted = await purchase_plan_cleanup_service.cleanup_moved_plans_once()
     assert deleted == 1
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         assert await session.get(PurchaseMaterial, int(plan["id"])) is None
         line = await session.get(PurchaseRequestLine, int(record["line_id"]))
         assert line is not None
@@ -54,14 +53,14 @@ async def test_cleanup_skips_unmigrated_snapshot(client: AsyncClient) -> None:
     plan = await create_purchase_plan(client, headers, "未迁移计划", code="DQ-NOMIG-1")
     record = await move_to_record(client, headers, int(plan["id"]))
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         line = await session.get(PurchaseRequestLine, int(record["line_id"]))
         assert line is not None
         line.plan_no_snapshot = ""  # 模拟旧库未回填（NULL 或空值）
         await session.commit()
 
     assert await purchase_plan_cleanup_service.cleanup_moved_plans_once() == 0
-    async with SessionLocal() as session:
+    async with project_session() as session:
         assert await session.get(PurchaseMaterial, int(plan["id"])) is not None
 
 

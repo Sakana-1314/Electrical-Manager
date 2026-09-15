@@ -37,9 +37,10 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, project_session, system_session
 from app.core.errors import AppError
 from app.core.identifiers import uuid7_string
+from app.core.project_scope import project_scope, system_scope
 from app.domain.enums import ExcelExportJobStatus, Role
 from app.models import ExcelExportJob, User
 from app.schemas import ExcelExportJobRead
@@ -121,9 +122,12 @@ async def get_export_file_by_uuid(
     文件缺失时记录诊断日志（uuid、任务行是否存在及状态），便于线上排查。
     """
     path = exports_dir() / f"{file_uuid}.xlsx"
-    job = await session.scalar(
-        select(ExcelExportJob).where(ExcelExportJob.file_path == str(path))
-    )
+    # 匿名下载没有项目上下文：按文件路径反查任务行必须在 system_scope 下（跨项目），
+    # 任务行只用于取友好下载名，不涉及数据可见性。
+    with system_scope():
+        job = await session.scalar(
+            select(ExcelExportJob).where(ExcelExportJob.file_path == str(path))
+        )
     if not path.is_file():
         logger.warning(
             "export file missing on download file_uuid=%s job_exists=%s job_status=%s",
@@ -141,8 +145,11 @@ async def get_export_file_by_uuid(
 
 
 async def mark_stale_exports_failed() -> int:
-    """启动时清理：重启前遗留的 PENDING/RUNNING 任务标记失败并删除临时文件。"""
-    async with SessionLocal() as session:
+    """启动时清理：重启前遗留的 PENDING/RUNNING 任务标记失败并删除临时文件。
+
+    系统级维护：跨项目扫描，需显式 `system_scope()`。
+    """
+    async with system_session() as session:
         stale_paths = [
             path
             for path in (
@@ -180,7 +187,7 @@ async def cleanup_finished_exports(*, retention_days: int = EXPORT_RETENTION_DAY
     顺带清除 exports 目录下残留的 .tmp 孤儿文件（原子写盘在改名前进程崩溃所致）。
     """
     cutoff = utcnow() - timedelta(days=retention_days)
-    async with SessionLocal() as session:
+    async with system_session() as session:
         expired = list(
             (
                 await session.scalars(
@@ -238,11 +245,17 @@ async def run_cleanup_worker(stop_event: asyncio.Event) -> None:
 
 
 async def _run_job(job_id: int, processor: ExportProcessor) -> None:
-    """后台执行：置 RUNNING → 运行处理器 → 写结果/错误 → 失败时清理目标文件。"""
-    async with SessionLocal() as session:
+    """后台执行：置 RUNNING → 运行处理器 → 写结果/错误 → 失败时清理目标文件。
+
+    后台任务没有请求上下文：先按 job id 在 `system_scope()` 下取出任务所属项目，
+    再用 `project_scope(job.project_id)` 跑处理器与写回任务行 —— 处理器查库时只会
+    看到该项目的业务数据。
+    """
+    async with system_session() as session:
         job = await session.get(ExcelExportJob, job_id)
         if job is None:
             return
+        project_id = job.project_id
         job.status = ExcelExportJobStatus.RUNNING
         job.started_at = utcnow()
         file_path = Path(job.file_path) if job.file_path else new_export_target()
@@ -254,7 +267,8 @@ async def _run_job(job_id: int, processor: ExportProcessor) -> None:
     error_code: str | None = None
     error_message: str | None = None
     try:
-        result = await processor(file_path)
+        with project_scope(project_id):
+            result = await processor(file_path)
         if not isinstance(result, dict) or not result.get("download_filename"):
             raise AppError("INTERNAL_EXPORT_ERROR", "导出任务未返回有效结果")
         download_filename = str(result["download_filename"])[:255]
@@ -267,7 +281,7 @@ async def _run_job(job_id: int, processor: ExportProcessor) -> None:
         error_message = "导出任务发生未知错误"
         logger.exception("export job crashed job_id=%s", job_id)
     finally:
-        async with SessionLocal() as session:
+        async with project_session(project_id) as session:
             job = await session.get(ExcelExportJob, job_id)
             if job is not None:
                 job.status = (

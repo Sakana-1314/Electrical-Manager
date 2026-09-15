@@ -18,6 +18,7 @@ from app.core.permissions import (
     DbSession,
     IfMatchVersion,
     PurchaseWriter,
+    require_current_project,
     require_roles,
 )
 from app.domain.enums import PurchasePlanStatus, Role
@@ -49,7 +50,11 @@ from app.services import (
 )
 from app.services.common import validate_version
 
-router = APIRouter(prefix="/purchase-materials", tags=["申购计划"])
+router = APIRouter(
+    prefix="/purchase-materials",
+    tags=["申购计划"],
+    dependencies=[Depends(require_current_project)],
+)
 PlanSearchField = Literal[
     "plan_no",
     "plan_date",

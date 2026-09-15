@@ -18,6 +18,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from app.core.database import SessionLocal
 from app.core.permissions import find_user_by_api_token
+from app.models import Project
 
 MAX_BINARY_RESPONSE_BYTES = 25 * 1024 * 1024
 EXCLUDED_PATHS = {
@@ -50,6 +51,8 @@ class McpFileInput(BaseModel):
 _application: FastAPI | None = None
 _token_context: ContextVar[str | None] = ContextVar("mcp_api_token", default=None)
 _identity_context: ContextVar[McpIdentity | None] = ContextVar("mcp_identity", default=None)
+# 当前 MCP 请求的项目：调用方可用 `X-Project-Id` 头指定，缺省落到默认项目（P05）。
+_project_context: ContextVar[int | None] = ContextVar("mcp_project_id", default=None)
 
 mcp = MCPServer(
     "spare-parts-management",
@@ -78,6 +81,16 @@ def _require_token() -> str:
     if token is None:
         raise RuntimeError("MCP 请求未通过接口令牌认证")
     return token
+
+
+def _project_header() -> dict[str, str]:
+    """转发给内部业务接口的项目头。
+
+    业务接口都要求项目上下文（`X-Project-Id`），MCP 客户端可以在请求头里指定；
+    没指定时由认证中间件解析出默认项目（P05），因此 AI 调用开箱即用。
+    """
+    project_id = _project_context.get()
+    return {"X-Project-Id": str(project_id)} if project_id else {}
 
 
 def _operation_catalog() -> dict[str, dict[str, Any]]:
@@ -146,6 +159,21 @@ async def system_whoami() -> dict[str, Any]:
     if identity is None:
         raise RuntimeError("MCP 请求未通过接口令牌认证")
     return asdict(identity)
+
+
+@mcp.tool(
+    title="查看可用项目",
+    annotations=ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=False,
+    ),
+)
+async def projects_list() -> dict[str, Any]:
+    """列出全部项目（多项目数据隔离：业务接口只操作当前项目的数据）。"""
+    response = await _call_internal("GET", "/api/v1/projects")
+    return response
 
 
 @mcp.tool(
@@ -257,11 +285,29 @@ async def operation_call(
     if operation is None:
         raise ValueError(f"未知或不允许的 operation_id: {operation_id}")
     path = _build_path(operation["path"], path_params or {})
+    return await _call_internal(
+        operation["method"],
+        path,
+        params=query or {},
+        body=body,
+        file=file,
+    )
+
+
+async def _call_internal(
+    method: str,
+    path: str,
+    *,
+    params: dict[str, Any] | None = None,
+    body: dict[str, Any] | list[Any] | None = None,
+    file: McpFileInput | None = None,
+) -> dict[str, Any]:
+    """按令牌 + 当前项目调用应用自身的 HTTP 接口（进程内 ASGI 转发）。"""
     request_kwargs: dict[str, Any] = {
-        "method": operation["method"],
+        "method": method,
         "url": path,
-        "params": query or {},
-        "headers": {"X-API-Token": _require_token()},
+        "params": params or {},
+        "headers": {"X-API-Token": _require_token(), **_project_header()},
     }
     if file is not None:
         if body is not None:
@@ -293,6 +339,27 @@ async def operation_call(
     return _binary_result(response)
 
 
+async def _resolve_project_id(session: Any, headers: dict[bytes, bytes]) -> int | None:
+    """MCP 请求的项目：`X-Project-Id` 头优先（校验存在且启用），否则用默认项目。
+
+    MCP 调用没有网页端的项目切换器，缺省落到默认项目 P05，保证 AI Agent 开箱可用。
+    """
+    from app.services import project_service
+
+    raw = (headers.get(b"x-project-id", b"") or b"").decode("latin-1").strip()
+    if raw:
+        try:
+            requested = int(raw)
+        except ValueError:
+            requested = 0
+        if requested > 0:
+            project = await session.get(Project, requested)
+            if project is not None and project.enabled:
+                return project.id
+    project = await project_service.default_project(session)
+    return project.id if project is not None else None
+
+
 async def _send_auth_error(send: Send, message: str) -> None:
     body = (f'{{"code":"INVALID_TOKEN","message":"{message}"}}').encode()
     await send(
@@ -316,10 +383,10 @@ class McpTokenAuthMiddleware:
         if scope["type"] != "http":
             await self.application(scope, receive, send)
             return
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
         query = parse_qs(scope.get("query_string", b"").decode("utf-8"))
         token = query.get("token", [None])[0]
         if not token:
-            headers = {key.lower(): value for key, value in scope.get("headers", [])}
             token = headers.get(b"x-api-token", b"").decode("latin-1") or None
             authorization = headers.get(b"authorization", b"").decode("latin-1")
             scheme, _, credential = authorization.partition(" ")
@@ -333,6 +400,7 @@ class McpTokenAuthMiddleware:
             user = await find_user_by_api_token(session, token)
             # 持久化懒迁移回写的令牌密文（见 permissions.find_user_by_api_token）
             await session.commit()
+            project_id = await _resolve_project_id(session, headers)
         if user is None or not user.enabled:
             await _send_auth_error(send, "MCP 接口令牌无效或用户已停用")
             return
@@ -345,9 +413,11 @@ class McpTokenAuthMiddleware:
         )
         token_marker = _token_context.set(token)
         identity_marker = _identity_context.set(identity)
+        project_marker = _project_context.set(project_id)
         try:
             await self.application(scope, receive, send)
         finally:
+            _project_context.reset(project_marker)
             _identity_context.reset(identity_marker)
             _token_context.reset(token_marker)
 

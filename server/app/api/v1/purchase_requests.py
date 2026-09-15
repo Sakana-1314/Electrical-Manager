@@ -6,7 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import (
     OrSearch,
@@ -20,7 +20,13 @@ from app.api.deps import (
 from app.core.constants import EXPORT_ROW_LIMIT
 from app.core.database import SessionLocal
 from app.core.errors import AppError
-from app.core.permissions import CurrentUser, DbSession, IfMatchVersion, PurchaseWriter
+from app.core.permissions import (
+    CurrentUser,
+    DbSession,
+    IfMatchVersion,
+    PurchaseWriter,
+    require_current_project,
+)
 from app.schemas import (
     BatchUpdatePurchaseRecordsRequest,
     ExcelExportJobRead,
@@ -41,7 +47,10 @@ from app.services import (
 )
 from app.services import purchase_request_service as service
 
-router = APIRouter(tags=["申购记录"])
+router = APIRouter(
+    tags=["申购记录"],
+    dependencies=[Depends(require_current_project)],
+)
 RecordSearchField = Literal[
     "plan_no",
     "plan_date",

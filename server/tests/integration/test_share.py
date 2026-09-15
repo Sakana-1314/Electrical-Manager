@@ -6,12 +6,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
 from app.domain.enums import ShareType
 from app.models import ShareLink
 from app.services import share_link_service
 from app.services.common import utcnow
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
 from tests.integration.test_procurement import (
     create_purchase_plan,
     move_to_record,
@@ -106,7 +105,7 @@ async def test_permanent_share_has_no_expiry(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_expired_share_rejected(client: AsyncClient) -> None:
-    async with SessionLocal() as session:
+    async with project_session() as session:
         share = ShareLink(
             share_type=ShareType.PURCHASE_PLAN,
             item_ids=[1],
@@ -182,7 +181,7 @@ async def test_revoke_share_by_owner_and_super_admin(client: AsyncClient) -> Non
 
 @pytest.mark.asyncio
 async def test_cleanup_expired_deletes_only_expired_rows(client: AsyncClient) -> None:
-    async with SessionLocal() as session:
+    async with project_session() as session:
         session.add_all(
             [
                 ShareLink(
@@ -207,7 +206,7 @@ async def test_cleanup_expired_deletes_only_expired_rows(client: AsyncClient) ->
     purged = await share_link_service.cleanup_expired()
     assert purged == 1
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         remaining = list((await session.scalars(select(ShareLink))).all())
     assert len(remaining) == 2
 

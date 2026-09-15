@@ -16,7 +16,7 @@ import logging
 from datetime import datetime
 
 from app.core.constants import SHANGHAI
-from app.core.database import SessionLocal
+from app.core.database import system_session
 from app.schemas import AttachmentCleanupRead
 from app.services import file_service
 from app.services.common import seconds_until_local_hour
@@ -32,8 +32,11 @@ def _seconds_until_two_am(now: datetime) -> float:
 
 
 async def cleanup_deleted_attachments_once() -> AttachmentCleanupRead:
-    """扫描一批待删除附件并完成物理清除，返回本次清理结果。幂等：无候选立即返回空结果。"""
-    async with SessionLocal() as session:
+    """扫描一批待删除附件并完成物理清除，返回本次清理结果。幂等：无候选立即返回空结果。
+
+    系统级维护：引用复查必须覆盖全部项目，需显式 `system_scope()`。
+    """
+    async with system_session() as session:
         return await file_service.purge_deleted_attachments(session)
 
 

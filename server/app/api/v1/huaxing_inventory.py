@@ -5,12 +5,12 @@ from datetime import date
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from fastapi import Path as FPath
 
 from app.api.deps import PageNo, PageSize
 from app.core.errors import AppError
-from app.core.permissions import CurrentUser, DbSession, WarehouseWriter
+from app.core.permissions import CurrentUser, DbSession, WarehouseWriter, require_current_project
 from app.schemas import (
     ExcelImportJobRead,
     HuaXingFilterOptions,
@@ -21,7 +21,11 @@ from app.schemas import (
 from app.services import huaxing_inventory_service, import_job_service
 from app.services.import_file_reader import SUPPORTED_IMPORT_SUFFIXES
 
-router = APIRouter(prefix="/huaxing-inventory", tags=["华星库存"])
+router = APIRouter(
+    prefix="/huaxing-inventory",
+    tags=["华星库存"],
+    dependencies=[Depends(require_current_project)],
+)
 
 JOB_TYPE = "HUAXING_INVENTORY"
 

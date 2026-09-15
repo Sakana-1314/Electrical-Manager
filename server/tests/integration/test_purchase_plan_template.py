@@ -9,9 +9,8 @@ from PIL import Image
 from sqlalchemy import select
 
 from app.core.constants import SHANGHAI
-from app.core.database import SessionLocal
 from app.models import PurchaseMaterial, PurchasePlanTemplate
-from tests.conftest import auth_headers, create_stock
+from tests.conftest import auth_headers, create_stock, project_session
 
 BASE = "/api/v1/purchase-plan-templates"
 
@@ -207,7 +206,7 @@ async def test_generate_copies_full_plan_and_keeps_template(client: AsyncClient)
     assert detail.json()["version"] == template["version"]
     assert [image["id"] for image in detail.json()["images"]] == [file_id]
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         template_row = await session.get(PurchasePlanTemplate, template_id)
         assert template_row is not None
         material_row = await session.get(PurchaseMaterial, int(material["id"]))
@@ -228,7 +227,7 @@ async def test_generate_twice_creates_distinct_plans(client: AsyncClient) -> Non
     assert first.json()["id"] != second.json()["id"]
     assert first.json()["plan_no"] != second.json()["plan_no"]
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         rows = list(
             (
                 await session.scalars(

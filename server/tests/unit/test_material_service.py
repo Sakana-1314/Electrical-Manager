@@ -5,10 +5,10 @@ from datetime import date
 import pytest
 from sqlalchemy import select
 
-from app.core.database import SessionLocal
 from app.models import PurchaseMaterial
 from app.schemas import PurchaseMaterialCreate
 from app.services import material_service
+from tests.conftest import project_session
 
 
 @pytest.mark.asyncio
@@ -18,7 +18,7 @@ async def test_create_purchase_material_retries_plan_no_on_collision() -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-    async with SessionLocal() as session:
+    async with project_session() as session:
         first = await material_service.create_purchase_material(
             session,
             PurchaseMaterialCreate(

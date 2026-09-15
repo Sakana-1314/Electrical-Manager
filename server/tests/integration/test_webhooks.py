@@ -7,12 +7,11 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
-from app.core.database import SessionLocal
 from app.core.security import create_mini_program_registration_token
 from app.domain.enums import WebhookDeliveryStatus, WebhookPlatform
 from app.models import WebhookChannel, WebhookDelivery
 from app.services import webhook_service
-from tests.conftest import auth_headers, create_stock
+from tests.conftest import auth_headers, create_stock, project_session
 
 
 async def configure_channel(
@@ -213,7 +212,7 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
     )
     assert loaded_by_platform["DINGTALK"]["secret"] == "dingtalk-secret"
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         stored = list((await session.scalars(select(WebhookChannel))).all())
         assert len(stored) == 2
         assert all("https://" not in item.webhook_url_encrypted for item in stored)
@@ -280,7 +279,7 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
     assert profile.status_code == replayed_profile.status_code == 200
     assert profile.json()["user"]["id"] == replayed_profile.json()["user"]["id"]
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         deliveries = list(
             (await session.scalars(select(WebhookDelivery).order_by(WebhookDelivery.id))).all()
         )
@@ -328,7 +327,7 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
     assert dingtalk_query["timestamp"]
     assert dingtalk_query["sign"]
 
-    async with SessionLocal() as session:
+    async with project_session() as session:
         succeeded = await session.scalar(
             select(func.count())
             .select_from(WebhookDelivery)
