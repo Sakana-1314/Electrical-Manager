@@ -32,10 +32,10 @@ Electrical-Manager/
 ├── docs/   openapi.yaml（契约唯一来源）、env/、references/database/init.sql（结构唯一来源）、websites/（VitePress）
 ├── server/ Dockerfile（python:3.12-slim）、pyproject.toml、scripts/（导出 OpenAPI 等）、data/（uploads/imports/exports、logs/）、tests/（unit/、integration/）
 │   └── app/  main.py（FastAPI、lifespan worker、MCP 挂载）、mcp_server.py
-│       ├── api/deps.py（分页/排序/精简模式守卫）、api/v1/（19 个路由模块）
+│       ├── api/deps.py（分页/排序/精简模式守卫）、api/v1/（21 个路由模块）
 │       ├── core/（config、database、security、permissions、errors、middleware、logging、constants…）
 │       ├── domain/enums.py、models/__init__.py、schemas/__init__.py、templates/（Excel 布局 JSON）
-│       └── repositories/（5 个查询仓储）、services/（27 个业务服务）
+│       └── repositories/（7 个查询仓储）、services/（26 个服务与公共模块）
 ├── web/    Dockerfile（node:22-alpine → nginx:1.27-alpine）、nginx.conf、vite.config.ts、vitest.config.ts、src/（api、router、stores、views、components、composables…）
 └── miniprogram/  app.json（18 个页面）、pages/、components/、utils/、scripts/（check.js / upload.js）
 ```
@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 31 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 36 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -116,6 +116,8 @@ web/src/
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
+| `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（名称 / 型号 / 标签 / 数量 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
+| `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
@@ -138,9 +140,9 @@ web/src/
 | 项 | 实现 | 位置 |
 | --- | --- | --- |
 | 是否已登录 | `isAuthenticated` = `token && user` 同时存在 | `stores/auth.ts` |
-| 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 5 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
+| 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 6 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`LEDGER_ADMIN` `ledger:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
 | 无权限时 | 静默重定向到工作台；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
-| keep-alive | `meta.keepAlive` 只在 3 个列表路由声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
+| keep-alive | `meta.keepAlive` 只在 5 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
 `web/src/stores/` 下只有 3 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
 
@@ -209,6 +211,7 @@ web/src/
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
+| `ledger.ts` | `/ledger-items*`、`/ledger-tags*` | 台账记录 CRUD 与分层标签维护（含孤立 / 树标签筛选、标签多选） |
 | `files.ts` | `/files/images*` | 图片上传与删除 |
 | `version.ts` | `/version` | 版本信息（关于页） |
 `web/src/utils/download.ts` 的 `exportDownloadUrl(fileUuid)` 直接拼导出文件下载地址（该端点不鉴权）。
@@ -216,7 +219,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 15 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 20 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -235,12 +238,17 @@ web/src/
 | `ReverseOperationDialog.vue` | 出入库流水冲减弹窗（按行填写冲减数量，`reversed` 回传操作 id） | props：`show: boolean`、`operation: StockOperation \| null`；emits：`update:show`、`reversed: [id: number]` |
 | `ShareLinkDialog.vue` | 分享链接生成弹窗（三步：确认 → 选择失效时间 → 生成并复制链接） | props：`show: boolean`、`shareType: ShareType`、`itemIds?: number[]`、`title: string`；emit：`update:show` |
 | `SortableHeader.vue` | 表头排序下拉（默认/升序/降序），高亮当前排序状态 | props：`label: string`、`sortByKey: string`、`sortBy: string \| null`、`sortOrder: 'asc' \| 'desc' \| null`；emit：`select` |
+| `HazardFormModal.vue` | 隐患登记 / 编辑弹窗（新增与编辑共用，删除入口在页脚左下角，责任人由责任单位只读联动） | props：`show: boolean`、`hazardId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
+| `HazardLevelTag.vue` | 隐患等级标签（一般隐患 / 重大隐患），色值取自 `hazardLevelTypes` | props：`level: HazardLevel` |
+| `HazardStatusTag.vue` | 整改状态标签（待整改 / 整改受阻 / 已整改），色值取自 `hazardStatusTypes` | props：`status: HazardStatus` |
+| `LedgerItemFormModal.vue` | 台账记录新增 / 编辑弹窗（标签多选树 + 图片上传，删除入口在页脚） | props：`show: boolean`、`itemId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
+| `LedgerTagFormModal.vue` | 标签新增 / 编辑弹窗（上级标签选择、备注、图片；新增子标签时预填上级） | props：`show: boolean`、`tag?: LedgerTag \| null`、`parentId?: number \| null`、`tags: LedgerTag[]`；emits：`update:show`、`saved` |
 ### Composable 清单
 `web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
-| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 13 个列表页（仓库 5、申购 5、设置 3） |
+| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 18 个列表页（仓库 5、申购 5、设置 4、隐患 3、台账 1） |
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
@@ -265,13 +273,14 @@ web/src/
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |
+| `ledger.ts` | 台账标签纯逻辑：`parseTagIds` / `formatTagIds`（`tag_ids` 逗号串与数组互转）、`isOrphanTag`（孤立标签判定）、`tagPath`（完整层级路径）、`buildLedgerTagTree`（扁平标签 → 横向树，返回全新对象）、`tagSelectOptions` / `tagParentOptions`（标签选择器与上级选择器选项）、`tagColumnDisplay`（标签列展示切片）、`ledgerQuery` / `ledgerFiltersFromQuery`（筛选与 URL 同步） |
 #### `web/src/constants/`、`types/`、`config/`
 | 文件 | 职责 |
 | --- | --- |
 | `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = '/logo.png'`；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
 | `constants/shareColumns.ts` | 分享页可展示列定义（键名与后端 Literal 严格一致）：`SHARE_PLAN_COLUMNS`、`SHARE_RECORD_COLUMNS`、`shareColumnOptions()`、`SHARE_DEFAULT_HIDDEN_KEYS = ['status']`、`defaultShareColumnKeys()`，供 `ShareView` 渲染与 `ShareLinksView` 勾选共用 |
 | `constants/table.ts` | `tableColumnWidths`（unit/quantity/date/datetime/status/person/code/identifier/name/material/model/text/action）、`preventTableColumnCompression`、`getTableScrollX` |
-| `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
+| `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
 | `types/export.ts` / `config/env.ts` | `ExportOption = DropdownOption & { label: string; key: string }`；VITE_* 解析（见 API 客户端一节的 baseURL 说明） |
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
@@ -358,7 +367,7 @@ FastAPI + SQLAlchemy 2.x async 单进程应用（MySQL 8.0 / asyncmy），源码
 | 模型契约层 | `server/app/schemas/__init__.py`、`server/app/domain/enums.py` | pydantic 请求/读模型、`Page[T]`、`ApiError`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等） |
 | 核心层 | `server/app/core/*.py` + `main.py`、`mcp_server.py` | 配置、引擎/会话、认证与权限、错误码与异常处理器、中间件、日志、常量、UUIDv7 生成、微信凭据 |
 ## 后端目录结构
-`server/app/` 共 72 个 Python 文件：
+`server/app/` 共 79 个 Python 文件：
 
 ```text
 server/app/
@@ -366,23 +375,24 @@ server/app/
 ├── mcp_server.py       # MCP 服务与 4 个工具、McpTokenAuthMiddleware
 ├── api/deps.py         # PageNo/PageSize/SortOrder/OrSearch/RequireFullSecondaryWarehouse
 ├── api/v1/__init__.py  # 汇总 router，统一声明错误响应模型
-├── api/v1/             # 19 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、huaxing_inventory、
-│                       #   inventory、material_code_library、memos、mini_program、purchase_materials、
-│                       #   purchase_plan_templates、purchase_record_sync、purchase_requests、secondary_warehouse、
-│                       #   share、stock_materials、system_settings、version
+├── api/v1/             # 21 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、hazards、
+│                       #   huaxing_inventory、inventory、ledger、material_code_library、memos、mini_program、
+│                       #   purchase_materials、purchase_plan_templates、purchase_record_sync、purchase_requests、
+│                       #   secondary_warehouse、share、stock_materials、system_settings、version
 ├── core/               # config（Settings，env 前缀 APP_）、constants、database（Base/engine/SessionLocal/get_db）、
 │                       #   db_timing、errors、exception_handlers、identifiers（uuid7_string）、logging、middleware、
 │                       #   permissions（认证/角色/接口令牌/If-Match）、security（JWT/argon2/Fernet）、wechat
 ├── domain/enums.py
 ├── models/__init__.py
-├── repositories/       # dashboard_repository、inventory_repository、material_repository、
-│                       #   purchase_plan_template_repository、purchase_request_repository（5 个）
+├── repositories/       # 7 个：dashboard_repository、hazard_repository、inventory_repository、
+│                       #   ledger_repository、material_repository、purchase_plan_template_repository、
+│                       #   purchase_request_repository
 ├── schemas/__init__.py
-└── services/           # 22 个：ai_search、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、dashboard、
-                        #   dictionary、excel_export_job、excel_export、file、huaxing_inventory、import_file_reader、
-                        #   import_job、inventory、lite_inventory、material_code_library、material、memo、
-                        #   mini_program、purchase_plan_cleanup、purchase_plan_template、purchase_record_sync、
-                        #   purchase_request、replenishment、share_link、webhook
+└── services/           # 26 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
+                        #   dashboard、dictionary、excel_export_job、excel_export、file、hazard、huaxing_inventory、
+                        #   import_file_reader、import_job、inventory、ledger、lite_inventory、material_code_library、
+                        #   material、memo、mini_program、purchase_plan_cleanup、purchase_plan_template、
+                        #   purchase_record_sync、purchase_request、replenishment、share_link、webhook
 ```
 
 
@@ -390,12 +400,13 @@ server/app/
 #### 角色与依赖注入器（`server/app/core/permissions.py`、`server/app/domain/enums.py`）
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `READ_ONLY` | 五值 `StrEnum`，存 `user.role` |
+| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `LEDGER_ADMIN` / `READ_ONLY` | 六值 `StrEnum`，存 `user.role` |
 | `require_roles(*roles)` | 工厂函数 | 角色不在集合内抛 `FORBIDDEN`（403） |
 | `CurrentUser` | `depends(get_current_user)` | 管理端用户（Bearer JWT 或 `X-API-Token`） |
 | `WarehouseWriter` | `require_roles(SUPER_ADMIN, WAREHOUSE_ADMIN)` | 库存写操作 |
 | `PurchaseWriter` | `require_roles(SUPER_ADMIN, PURCHASE_ADMIN)` | 申购写操作 |
 | `HazardWriter` | `require_roles(SUPER_ADMIN, HAZARD_ADMIN)` | 隐患管理写操作（台账与两张字典表） |
+| `LedgerWriter` | `require_roles(SUPER_ADMIN, LEDGER_ADMIN)` | 台账管理写操作（台账记录与标签） |
 | `SuperAdmin` | `require_roles(SUPER_ADMIN)` | 系统配置、用户、文件治理 |
 | `CurrentMiniProgramUser` | `depends(get_current_mini_program_user)` | 小程序用户；未审核（`enabled=False`）抛 `ACCOUNT_DISABLED`（403） |
 | `MiniProgramRegistrationOpenId` | `depends(get_mini_program_registration_openid)` | 返回 `(app_id, openid)`，供注册/绑定用 |
@@ -410,7 +421,7 @@ server/app/
 | `api/v1/ai_search.py` | `SuperAdmin`、`CurrentUser` | 5 |
 | `api/v1/system_settings.py` | `SuperAdmin` | 5 |
 | `api/v1/dictionaries.py` | `SuperAdmin` | 5 |
-| `api/v1/files.py` | `SuperAdmin`、`FileWriter`（含 `HAZARD_ADMIN`） | 5 |
+| `api/v1/files.py` | `SuperAdmin`、`FileWriter`（含 `HAZARD_ADMIN`、`LEDGER_ADMIN`） | 5 |
 | `api/v1/inventory.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse` | 12 |
 | `api/v1/stock_materials.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse`、`IfMatchVersion` | 8 |
 | `api/v1/secondary_warehouse.py` | `CurrentUser`、`WarehouseWriter` | 4 |
@@ -422,6 +433,7 @@ server/app/
 | `api/v1/purchase_requests.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 7 |
 | `api/v1/purchase_record_sync.py` | `PurchaseWriter` | 4 |
 | `api/v1/hazards.py` | `CurrentUser`、`HazardWriter`、`IfMatchVersion` | 13 |
+| `api/v1/ledger.py` | `CurrentUser`、`LedgerWriter`、`IfMatchVersion` | 9 |
 | `api/v1/share.py` | `CurrentUser` | 5 |
 | `api/v1/excel_export_jobs.py` | `CurrentUser` | 2 |
 | `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 32（管理端 4 + 小程序 28） |
@@ -452,11 +464,12 @@ server/app/
 
 | 角色 | 权限点 | 能力 |
 | --- | --- | --- |
-| `SUPER_ADMIN` 超级管理员 | `warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`read` | 全部能力：二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、查询已归档计划（`status=ARCHIVED`）、管理端用户/接口令牌/小程序用户合并、高级设置（AI 搜索、精简模式、小程序功能模式、Webhook）、图片孤儿文件排查清理、隐患台账与隐患类型/责任单位维护、创建/撤回分享链接、创建导出任务 |
+| `SUPER_ADMIN` 超级管理员 | `warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`read` | 全部能力：二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、查询已归档计划（`status=ARCHIVED`）、管理端用户/接口令牌/小程序用户合并、高级设置（AI 搜索、精简模式、小程序功能模式、Webhook）、图片孤儿文件排查清理、隐患台账与隐患类型/责任单位维护、台账记录与标签维护、创建/撤回分享链接、创建导出任务 |
 | `WAREHOUSE_ADMIN` 仓库管理员 | `warehouse:write`、`read` | 二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、创建/撤回分享链接、创建导出任务；其余只读 |
 | `PURCHASE_ADMIN` 申购管理员 | `purchase:write`、`read` | 申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、创建/撤回分享链接、创建导出任务；其余只读 |
 | `HAZARD_ADMIN` 隐患管理员 | `hazard:write`、`read` | 隐患台账增删改、隐患类型与责任单位维护、隐患图片上传；其余只读 |
-| `READ_ONLY` 只读角色 | `read` | 工作台、备忘录、华星总库存、库存/流水查询、隐患台账查询、创建/撤回自己的分享链接、创建导出任务 |
+| `LEDGER_ADMIN` 台账管理员 | `ledger:write`、`read` | 台账记录增删改、标签树维护（至多 3 层）与标签图片上传；其余只读 |
+| `READ_ONLY` 只读角色 | `read` | 工作台、备忘录、华星总库存、库存/流水查询、隐患台账查询、台账总览查询、创建/撤回自己的分享链接、创建导出任务 |
 
 #### 越权结果
 

@@ -23,7 +23,7 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
+| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `LEDGER_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |

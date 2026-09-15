@@ -58,6 +58,7 @@ flowchart LR
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
 | 隐患登记幂等键 | `hazard.client_request_id` | 小程序登记隐患时生成一次、重试复用：重复提交返回同一条隐患而不是新增；网页端登记留空，因此「非空」也表示该条来自小程序 |
 | 整改状态 / 隐患等级 | `HazardStatus` / `HazardLevel` | 状态三态：待整改 / 整改受阻 / 已整改；等级两档：一般隐患 / 重大隐患。逾期 = `due_date` 早于今天且状态非已整改（今天到期不算逾期） |
+| 台账标签 | `ledger_tag` / `ledger.tag_ids` | 标签是自引用邻接表（`parent_id`），至多 3 层，同一层级下名称唯一；台账记录的标签以英文逗号分隔的标签 id 存在 `ledger.tag_ids`（空串 = 未挂标签），读接口按 id 回填名称与完整层级路径。孤立标签 = 既无父节点又无子节点，树标签 = 有父或有子；按标签筛选时命中选中标签及其全部子孙标签 |
 
 </TabsContent>
 
@@ -88,12 +89,12 @@ flowchart LR
 ```mermaid
 flowchart TD
     M["AuditMixin：创建时间 / 更新时间 / 乐观锁版本"]
-    M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、微信身份绑定、Webhook 渠道、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录"]
+    M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、微信身份绑定、Webhook 渠道、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录、台账记录与标签"]
     M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
     M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、华星总库存、精简库存"]
     M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，只有更新时间"]
-    M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>四张图片关联表"]
+    M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>八张图片关联表"]
     M --> G["只有 id 与业务时间<br/>业务事件日志"]
 ```
 
@@ -105,7 +106,7 @@ flowchart TD
     R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
     R --> U["没有 updated_by 列"]
     R --> S["没有软删除列：删除一律物理删除"]
-    R --> D["ON DELETE CASCADE：库存余额、补库策略、四张图片关联表随主表一并删除"]
+    R --> D["ON DELETE CASCADE：库存余额、补库策略、八张图片关联表随主表一并删除"]
 ```
 
 </TabsContent>
@@ -151,6 +152,10 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `hazard` | `Hazard` | 隐患台账主表（检查信息 + 责任人快照 + 整改状态） | 隐患管理 |
 | `hazard_before_image` | `HazardBeforeImage` | 隐患「整改前」图片关联 | 隐患管理 |
 | `hazard_after_image` | `HazardAfterImage` | 隐患「整改后」图片关联 | 隐患管理 |
+| `ledger_tag` | `LedgerTag` | 台账标签节点（自引用邻接表，至多 3 层） | 台账管理 |
+| `ledger_tag_image` | `LedgerTagImage` | 台账标签图片关联 | 台账管理 |
+| `ledger` | `Ledger` | 台账记录（名称 / 型号 / 数量 / 备注 / 标签） | 台账管理 |
+| `ledger_image` | `LedgerImage` | 台账记录图片关联 | 台账管理 |
 
 `MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
 
@@ -239,6 +244,19 @@ erDiagram
 
 隐患的两张图片关联表与二级库/申购模块同一写法，因此附件管理的「被引用次数」把它们一并计入。
 
+### 台账管理
+
+```mermaid
+erDiagram
+    ledger_tag ||--o{ ledger_tag : "上级标签（自引用，至多 3 层）"
+    ledger_tag ||--o{ ledger_tag_image : "标签图片"
+    ledger ||--o{ ledger_image : "台账图片"
+    file_object ||--o{ ledger_tag_image : "图片对象"
+    file_object ||--o{ ledger_image : "图片对象"
+```
+
+台账记录与标签**没有关联表**：一条记录的标签是 `ledger.tag_ids` 里的逗号分隔标签 id（读接口另外回填名称与完整路径），因此 ER 图里两者之间没有连线，标签的引用计数也由服务端按字符串匹配统计。`ledger_tag.parent_id` 的外键是 RESTRICT，删除父节点必须先删子节点；两张图片关联表沿用同一写法，附件管理的「被引用次数」同样把它们计入。
+
 
 </TabsContent>
 
@@ -254,7 +272,7 @@ erDiagram
 | `user` | `api_token_hash` | VARCHAR(64) | 否 | 无 | 接口令牌 SHA-256，唯一，用于认证查找 |
 | `user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
 | `user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
-| `user` | `role` | ENUM('SUPER_ADMIN','WAREHOUSE_ADMIN','PURCHASE_ADMIN','READ_ONLY') | 否 | 无 | 角色，接口同名字符串 |
+| `user` | `role` | ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN') | 否 | 无 | 角色，接口同名字符串 |
 | `user` | `enabled` | TINYINT(1) | 否 | 1 | 账号是否启用 |
 | `user` | *索引 / 外键* | — | — | — | 索引 `pk_user(id)`；唯一 `uq_user_username(username)`、`uq_user_api_token_hash(api_token_hash)`；外键：无 |
 | `mini_program_user` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
@@ -578,6 +596,35 @@ erDiagram
 | `hazard_after_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序 |
 | `hazard_after_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_after_image(hazard_id, file_id)`；外键同整改前表 |
 
+### 字段明细：台账管理表
+
+| 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `ledger_tag` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `ledger_tag` | `parent_id` | BIGINT UNSIGNED | 是 | NULL | 上级标签；NULL 表示根节点（该节点层级 1，全树至多 3 层） |
+| `ledger_tag` | `name` | VARCHAR(128) | 否 | 无 | 标签名称（同一层级下唯一，由服务端校验） |
+| `ledger_tag` | `remark` | VARCHAR(500) | 是 | NULL | 备注（节点悬停浮层展示） |
+| `ledger_tag` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `ledger_tag` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `ledger_tag` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_tag(id)`；`ix_ledger_tag_parent_id(parent_id)`；外键 `parent_id → ledger_tag.id`（无 `ON DELETE` 子句，即 RESTRICT，删父节点前必须先删子节点） |
+| `ledger_tag_image` | `tag_id` | BIGINT UNSIGNED | 否 | 无 | 标签（与 `file_id` 组合主键） |
+| `ledger_tag_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
+| `ledger_tag_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每个标签最多 9 张） |
+| `ledger_tag_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_tag_image(tag_id, file_id)`；外键 `tag_id → ledger_tag.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `ledger` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `ledger` | `name` | VARCHAR(128) | 否 | 无 | 名称 |
+| `ledger` | `model_spec` | VARCHAR(255) | 否 | 无 | 型号 |
+| `ledger` | `quantity` | INT UNSIGNED | 否 | `0` | 数量（整数件数，按台 / 套 / 件统计） |
+| `ledger` | `remark` | VARCHAR(1000) | 是 | NULL | 备注 |
+| `ledger` | `tag_ids` | VARCHAR(500) | 否 | `''` | 标签 id，英文逗号分隔（如 `'3,12,15'`），空串 = 未挂标签；写入时由服务端校验 id 存在并去重、升序规范化，单条记录最多 20 个标签 |
+| `ledger` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `ledger` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `ledger` | *索引 / 外键* | — | — | — | 主键 `pk_ledger(id)`；标签只在 `tag_ids` 里以字符串表达，没有关联表与外键，读接口按 id 回填标签名称与完整路径 |
+| `ledger_image` | `ledger_id` | BIGINT UNSIGNED | 否 | 无 | 台账记录（与 `file_id` 组合主键） |
+| `ledger_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
+| `ledger_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每条记录最多 9 张） |
+| `ledger_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_image(ledger_id, file_id)`；外键 `ledger_id → ledger.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+
 ### 字段明细：备忘表
 
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
@@ -688,7 +735,7 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 末尾有两段 `INSERT`：先插入 `hazard_type` 隐患类型字典，再插入 `user` 表 5 个初始账号。
+`init.sql` 末尾有两段 `INSERT`：先插入 `hazard_type` 隐患类型字典，再插入 `user` 表 6 个初始账号。
 
 #### 隐患类型字典
 
@@ -707,7 +754,7 @@ flowchart LR
 
 #### 初始账号
 
-`user` 表插入 5 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
+`user` 表插入 6 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
@@ -715,9 +762,10 @@ flowchart LR
 | `warehouse` | 仓库管理员 | `WAREHOUSE_ADMIN` | 1 | `SHA2(@warehouse_api_token, 256)` |
 | `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `SHA2(@purchase_api_token, 256)` |
 | `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `SHA2(@hazard_api_token, 256)` |
+| `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `SHA2(@ledger_api_token, 256)` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
 
-五个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `hazard_type` 与 `user` 两表外，其余 31 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+六个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `hazard_type` 与 `user` 两表外，其余 35 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 
