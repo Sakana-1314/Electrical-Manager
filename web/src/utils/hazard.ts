@@ -25,6 +25,7 @@ export interface HazardFilters {
   level: HazardLevel | null
   hazard_type_id: number | null
   hazard_unit_id: number | null
+  rectify_person: string | null
   area: string
   keyword: string
   dateRange: [number, number] | null
@@ -37,6 +38,7 @@ export function initialHazardFilters(): HazardFilters {
     level: null,
     hazard_type_id: null,
     hazard_unit_id: null,
+    rectify_person: null,
     area: '',
     keyword: '',
     dateRange: null,
@@ -59,6 +61,7 @@ export function hazardQuery(filters: HazardFilters): Record<string, string | num
     level: filters.level ?? undefined,
     hazard_type_id: filters.hazard_type_id ?? undefined,
     hazard_unit_id: filters.hazard_unit_id ?? undefined,
+    rectify_person: filters.rectify_person ?? undefined,
     area: filters.area.trim() || undefined,
     keyword: filters.keyword.trim() || undefined,
     date_from: from === undefined ? undefined : toShanghaiDate(from),

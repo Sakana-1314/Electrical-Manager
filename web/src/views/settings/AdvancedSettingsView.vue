@@ -36,6 +36,12 @@ const readOnlyModeOptions: Array<{ label: string; value: MiniProgramFeatureMode 
   { label: '禁用', value: 'disabled' },
   { label: '仅查询', value: 'query_only' },
 ]
+// 隐患管理三档都开放：可读写 = 小程序里能登记隐患、更新整改状态并上传整改图片。
+const hazardsModeOptions: Array<{ label: string; value: MiniProgramFeatureMode }> = [
+  { label: '禁用', value: 'disabled' },
+  { label: '仅查询', value: 'query_only' },
+  { label: '可读写', value: 'read_write' },
+]
 const secondaryWarehouseModeOptions: Array<{ label: string; value: SecondaryWarehouseMode }> = [
   { label: '完整模式', value: 'full' },
   { label: '精简模式', value: 'lite' },
@@ -63,6 +69,7 @@ const form = reactive({
   purchase_plans_mode: 'query_only' as MiniProgramFeatureMode,
   purchase_records_mode: 'query_only' as MiniProgramFeatureMode,
   material_codes_mode: 'query_only' as MiniProgramFeatureMode,
+  hazards_mode: 'read_write' as MiniProgramFeatureMode,
   secondary_warehouse_mode: 'full' as SecondaryWarehouseMode,
   version: 0,
 })
@@ -165,6 +172,7 @@ async function save() {
       purchase_plans_mode: form.purchase_plans_mode,
       purchase_records_mode: form.purchase_records_mode,
       material_codes_mode: form.material_codes_mode,
+      hazards_mode: form.hazards_mode,
       secondary_warehouse_mode: form.secondary_warehouse_mode,
       version: form.version,
     })
@@ -354,6 +362,9 @@ onMounted(load)
             </n-form-item>
             <n-form-item label="物料编码">
               <n-select v-model:value="form.material_codes_mode" :options="readOnlyModeOptions" />
+            </n-form-item>
+            <n-form-item label="隐患管理">
+              <n-select v-model:value="form.hazards_mode" :options="hazardsModeOptions" />
             </n-form-item>
           </n-form>
         </div>

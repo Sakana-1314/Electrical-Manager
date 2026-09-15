@@ -1,6 +1,7 @@
 import { apiClient } from './client'
 import type {
   Hazard,
+  HazardFilterOptions,
   HazardLevel,
   HazardStats,
   HazardStatus,
@@ -24,6 +25,7 @@ export interface HazardListQuery extends PagedQueryParams {
   hazard_unit_id?: number
   area?: string
   keyword?: string
+  rectify_person?: string
   date_from?: string
   date_to?: string
 }
@@ -47,6 +49,8 @@ export const hazardApi = {
   deleteHazard: (id: number, version: number) =>
     apiClient.delete(`/hazards/${id}`, { headers: { 'If-Match': String(version) } }),
   stats: () => apiClient.get<HazardStats>('/hazards/stats').then((r) => r.data),
+  filterOptions: () =>
+    apiClient.get<HazardFilterOptions>('/hazards/filter-options').then((r) => r.data),
 
   units: (params?: HazardUnitListQuery) =>
     apiClient.get<HazardUnit[]>('/hazard-units', { params }).then((r) => r.data),

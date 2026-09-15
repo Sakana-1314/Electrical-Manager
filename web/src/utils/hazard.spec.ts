@@ -39,6 +39,11 @@ describe('隐患筛选条件 → 查询参数', () => {
     expect(query.hazard_unit_id).toBe(2)
   })
 
+  it('整改员工按精确值筛选，未选时不传', () => {
+    expect(hazardQuery(filters()).rectify_person).toBeUndefined()
+    expect(hazardQuery(filters({ rectify_person: '孙浩宇' })).rectify_person).toBe('孙浩宇')
+  })
+
   it('日期区间按东八区转成 YYYY-MM-DD', () => {
     // 2026-09-01 00:00 (+08:00) 与 2026-09-30 00:00 (+08:00)
     const start = Date.parse('2026-09-01T00:00:00+08:00')
