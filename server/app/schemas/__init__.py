@@ -297,6 +297,7 @@ class AiSearchSettingsRead(ReadModel):
     purchase_plans_mode: MiniProgramFeatureMode
     purchase_records_mode: MiniProgramFeatureMode
     material_codes_mode: MiniProgramFeatureMode
+    hazards_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
     updated_at: datetime | None = None
     version: int
@@ -317,6 +318,7 @@ class AiSearchSettingsUpdate(RequestModel):
     purchase_plans_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     purchase_records_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     material_codes_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
+    hazards_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.READ_WRITE
     secondary_warehouse_mode: SecondaryWarehouseMode = SecondaryWarehouseMode.FULL
     version: int = Field(ge=0)
 
@@ -407,6 +409,7 @@ class MiniProgramFeaturesRead(BaseModel):
     purchase_plans_mode: MiniProgramFeatureMode
     purchase_records_mode: MiniProgramFeatureMode
     material_codes_mode: MiniProgramFeatureMode
+    hazards_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
 
 
@@ -1937,6 +1940,43 @@ class HazardStatsRead(ReadModel):
     blocked: int
     done: int
     overdue: int
+
+
+class HazardFilterOptionsRead(ReadModel):
+    """隐患列表筛选项：整改员工是自由文本，选项由库中已有值去重得出。"""
+
+    rectify_persons: list[str]
+
+
+class HazardFormOptionsRead(ReadModel):
+    """小程序登记隐患用的字典：启用的责任单位 + 全部隐患类型。"""
+
+    units: list[HazardUnitRead]
+    types: list[HazardTypeRead]
+
+
+class MiniProgramHazardCreate(HazardCreate):
+    """小程序登记隐患：在网页端请求体上增加幂等键，弱网重试不会重复登记。"""
+
+    client_request_id: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)
+    ]
+
+
+class MiniProgramHazardUpdate(RequestModel):
+    """小程序跟进隐患：只开放整改闭环需要的字段（状态、整改员工、复查、整改后图片、备注）。"""
+
+    status: HazardStatus | None = None
+    rectify_person: HazardPerson | None = None
+    recheck_person: HazardPerson | None = None
+    remark: Annotated[str, StringConstraints(max_length=2000)] | None = None
+    after_image_ids: list[FileId] | None = Field(default=None, max_length=HAZARD_IMAGE_LIMIT)
+    version: int
+
+    @field_validator("after_image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
 
 
 __all__ = [name for name in globals() if not name.startswith("_")]

@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "隐患管理",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "t-dropdown-item": "tdesign-miniprogram/dropdown-item/dropdown-item",
+    "t-dropdown-menu": "tdesign-miniprogram/dropdown-menu/dropdown-menu",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-fab": "tdesign-miniprogram/fab/fab",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-search": "tdesign-miniprogram/search/search",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

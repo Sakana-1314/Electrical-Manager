@@ -11,6 +11,7 @@ const DEFAULT_MODES = {
   purchase_plans_mode: MODE_QUERY_ONLY,
   purchase_records_mode: MODE_QUERY_ONLY,
   material_codes_mode: MODE_QUERY_ONLY,
+  hazards_mode: MODE_READ_WRITE,
   secondary_warehouse_mode: SECONDARY_WAREHOUSE_FULL,
 };
 
@@ -32,6 +33,11 @@ function canOutbound() {
   return !isLiteMode() && getModes().inventory_mode === MODE_READ_WRITE;
 }
 
+// 隐患管理：只有「可读写」档才能登记隐患与更新整改状态。
+function canWriteHazards() {
+  return getModes().hazards_mode === MODE_READ_WRITE;
+}
+
 module.exports = {
   MODE_DISABLED,
   MODE_QUERY_ONLY,
@@ -43,4 +49,5 @@ module.exports = {
   isFeatureDisabled,
   isLiteMode,
   canOutbound,
+  canWriteHazards,
 };

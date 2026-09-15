@@ -853,6 +853,9 @@ class Hazard(AuditMixin, Base):
         server_default=HazardLevel.GENERAL.value,
     )
     remark: Mapped[str | None] = mapped_column(Text)
+    # 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）：手机端弱网重试时避免重复登记；
+    # 网页端登记留空。它也用来区分「小程序登记」与「后台登记」的来源。
+    client_request_id: Mapped[str | None] = mapped_column(String(64), unique=True)
 
     unit: Mapped[HazardUnit] = relationship(lazy="selectin")
     hazard_type: Mapped[HazardType] = relationship(lazy="selectin")

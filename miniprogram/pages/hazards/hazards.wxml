@@ -1,0 +1,95 @@
+<view class="page-shell hazards-page {{themeClass}}">
+  <view class="list-header"><view class="page-title">{{i18n.hazardsTitle}}</view></view>
+
+  <view class="list-tools">
+    <t-search
+      value="{{keyword}}"
+      placeholder="{{i18n.hazardSearchPlaceholder}}"
+      shape="round"
+      confirm-type="search"
+      bind:change="onSearchChange"
+    />
+    <t-dropdown-menu class="filter-menu">
+      <t-dropdown-item
+        label="{{i18n.allHazardStatuses}}"
+        value="{{status}}"
+        options="{{statusOptions}}"
+        bind:change="onStatusChange"
+      />
+      <t-dropdown-item
+        label="{{i18n.allRectifyPersons}}"
+        value="{{rectifyPerson}}"
+        options="{{rectifyPersonOptions}}"
+        bind:change="onRectifyPersonChange"
+      />
+    </t-dropdown-menu>
+  </view>
+
+  <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
+
+  <view wx:if="{{loading && !items.length}}" class="state-panel">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazards}}" />
+  </view>
+
+  <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
+    <t-empty
+      icon="file"
+      description="{{keyword || status || rectifyPerson ? i18n.hazardsEmptyFiltered : i18n.hazardsEmpty}}"
+    />
+  </view>
+
+  <view wx:else class="hazard-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="hazard-card"
+      hover-class="hazard-card-active"
+      data-id="{{item.id}}"
+      bind:tap="goDetail"
+    >
+      <view class="card-topline">
+        <view class="card-date">{{item.date_label}}</view>
+        <view class="topline-right">
+          <t-tag wx:if="{{item.overdue}}" theme="danger" variant="light" size="small">{{i18n.hazardOverdue}}</t-tag>
+          <t-tag theme="{{item.status_theme}}" variant="light" size="small">{{item.status}}</t-tag>
+        </view>
+      </view>
+      <view class="card-heading">
+        <view class="hazard-description">{{item.description}}</view>
+      </view>
+      <view class="hazard-meta-line">
+        <t-tag theme="{{item.level_theme}}" variant="outline" size="small">{{item.level}}</t-tag>
+        <view class="hazard-type">{{item.type_label}}</view>
+      </view>
+      <view class="card-divider"></view>
+      <view class="hazard-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.hazardAreaLabel}}</view>
+          <view class="meta-value">{{item.inspection_area}}</view>
+        </view>
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.hazardRectifyPersonLabel}}</view>
+          <view class="meta-value">{{item.rectify_person_label}}</view>
+        </view>
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.hazardDueLabel}}</view>
+          <view class="meta-value">{{item.due_label}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loadingMore}}" class="load-more">
+    <t-loading theme="circular" size="36rpx" text="{{i18n.loadMore}}" />
+  </view>
+  <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
+
+  <t-fab
+    wx:if="{{canWrite && items.length}}"
+    icon="add"
+    text="{{i18n.hazardCreateAction}}"
+    bind:click="goCreate"
+  />
+
+  <t-toast id="hazards-toast" />
+</view>

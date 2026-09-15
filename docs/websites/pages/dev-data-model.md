@@ -56,6 +56,7 @@ flowchart LR
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
 | 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id |
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
+| 隐患登记幂等键 | `hazard.client_request_id` | 小程序登记隐患时生成一次、重试复用：重复提交返回同一条隐患而不是新增；网页端登记留空，因此「非空」也表示该条来自小程序 |
 | 整改状态 / 隐患等级 | `HazardStatus` / `HazardLevel` | 状态三态：待整改 / 整改受阻 / 已整改；等级两档：一般隐患 / 重大隐患。逾期 = `due_date` 早于今天且状态非已整改（今天到期不算逾期） |
 
 </TabsContent>
@@ -564,9 +565,10 @@ erDiagram
 | `hazard` | `hazard_type_id` | BIGINT UNSIGNED | 否 | 无 | 隐患类型（「大类+小类」组合行） |
 | `hazard` | `level` | ENUM('GENERAL','MAJOR') | 否 | `'GENERAL'` | 隐患等级：一般隐患 / 重大隐患 |
 | `hazard` | `remark` | TEXT | 是 | 无 | 备注 |
+| `hazard` | `client_request_id` | VARCHAR(64) | 是 | 无 | 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）；网页端登记为空，非空即表示小程序登记 |
 | `hazard` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `hazard` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
+| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；唯一 `uq_hazard_client_request_id(client_request_id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
 | `hazard_before_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
 | `hazard_before_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `hazard_before_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序） |

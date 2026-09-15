@@ -527,10 +527,12 @@ CREATE TABLE IF NOT EXISTS `hazard` (
   `hazard_type_id` BIGINT UNSIGNED NOT NULL,
   `level` ENUM('GENERAL', 'MAJOR') NOT NULL DEFAULT 'GENERAL',
   `remark` TEXT,
+  `client_request_id` VARCHAR(64),
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `version` INT UNSIGNED NOT NULL DEFAULT 1,
   CONSTRAINT `pk_hazard` PRIMARY KEY (`id`),
+  CONSTRAINT `uq_hazard_client_request_id` UNIQUE (`client_request_id`),
   CONSTRAINT `fk_hazard_hazard_unit_id_hazard_unit`
     FOREIGN KEY (`hazard_unit_id`) REFERENCES `hazard_unit` (`id`),
   CONSTRAINT `fk_hazard_hazard_type_id_hazard_type`

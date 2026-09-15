@@ -16,6 +16,7 @@ from app.core.permissions import CurrentUser, DbSession, HazardWriter, IfMatchVe
 from app.domain.enums import HazardLevel, HazardStatus
 from app.schemas import (
     HazardCreate,
+    HazardFilterOptionsRead,
     HazardRead,
     HazardStatsRead,
     HazardTypeCreate,
@@ -51,6 +52,7 @@ async def list_hazards(
     hazard_unit_id: Annotated[int | None, Query(ge=1)] = None,
     area: Annotated[str | None, Query(max_length=128)] = None,
     keyword: Annotated[str | None, Query(max_length=255)] = None,
+    rectify_person: Annotated[str | None, Query(max_length=64)] = None,
     date_from: Annotated[date | None, Query()] = None,
     date_to: Annotated[date | None, Query()] = None,
 ) -> Page[HazardRead]:
@@ -62,12 +64,22 @@ async def list_hazards(
         hazard_unit_id=hazard_unit_id,
         area=area,
         keyword=keyword,
+        rectify_person=rectify_person,
         date_from=date_from,
         date_to=date_to,
         page=page,
         page_size=page_size,
     )
     return Page(items=items, page=page, page_size=page_size, total=total)
+
+
+@router.get(
+    "/hazards/filter-options",
+    response_model=HazardFilterOptionsRead,
+    summary="隐患列表筛选项",
+)
+async def hazard_filter_options(session: DbSession, user: CurrentUser) -> HazardFilterOptionsRead:
+    return await service.hazard_filter_options(session)
 
 
 @router.get(

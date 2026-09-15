@@ -19,7 +19,8 @@ flowchart TD
   { id: 't1', title: '库存与补库' },
   { id: 't2', title: '申购、任务与文件' },
   { id: 't3', title: '协作与外部集成' },
-  { id: 't4', title: '其它链路索引' }
+  { id: 't4', title: '其它链路索引' },
+  { id: 't5', title: '隐患闭环' }
 ]">
 
 <TabsContent id="t0">
@@ -439,6 +440,39 @@ flowchart LR
 
 </TabsContent>
 
+<TabsContent id="t5">
+
+### 隐患登记与整改闭环
+
+```mermaid
+sequenceDiagram
+    participant M as 小程序 / 网页端
+    participant S as 服务端
+    participant DB as MySQL
+    M->>S: 登记隐患（小程序带 client_request_id）
+    S->>DB: 查幂等键；命中则直接返回原隐患
+    S->>DB: 按责任单位取责任人快照；要求完成时间缺省 = 检查日期 + 7 天
+    S->>DB: 写 hazard + 整改前图片关联
+    M->>S: 跟进整改（status / 整改员工 / 备注 / 整改后图片，带 version）
+    S->>S: 校验 version（不符 → VERSION_CONFLICT，提示刷新）
+    S->>DB: 更新 hazard、整表替换整改后图片关联
+    M->>S: 隐患列表（关键字匹配区域与描述，可按状态/整改员工筛选）
+    S-->>M: 分页结果 + 工作台统计（待整改/整改受阻/已整改/逾期）
+```
+
+要点：
+
+| 项 | 说明 |
+| --- | --- |
+| 责任人快照 | 登记时从责任单位带出写入 `hazard.person`；之后单位换人不回写历史隐患，只有换单位才重新快照 |
+| 幂等 | 小程序登记用 `client_request_id` 唯一索引防重复；网页端登记不传该键 |
+| 乐观锁 | 隐患更新带 `version`，两端共用同一套校验；删除走 `If-Match` 头 |
+| 逾期口径 | `due_date` 早于今天且状态不是「已整改」；今天到期不算逾期，工作台卡片与列表标记同一口径 |
+| 字典引用保护 | 责任单位、隐患类型被隐患引用时不可删除（409），未被引用则物理删除，名称与组合可复用 |
+| 图片 | 整改前/后各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |
+
+</TabsContent>
+
 <TabsContent id="t4">
 
 ### 其它链路索引
@@ -450,6 +484,7 @@ flowchart LR
 | 小程序扫码与出库 | 扫物资码、库存查询、扫码出库 | `stock_material`、`stock_balance`、`stock_operation(_line)` |
 | 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
 | 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
+| 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
 | 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
 | 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
 

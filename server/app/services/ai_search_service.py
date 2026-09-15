@@ -63,6 +63,7 @@ class AiSearchConfig:
     purchase_plans_mode: MiniProgramFeatureMode
     purchase_records_mode: MiniProgramFeatureMode
     material_codes_mode: MiniProgramFeatureMode
+    hazards_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
     updated_at: datetime | None
     version: int
@@ -106,6 +107,7 @@ def _payload(config: AiSearchConfig) -> dict[str, object]:
         "purchase_plans_mode": config.purchase_plans_mode,
         "purchase_records_mode": config.purchase_records_mode,
         "material_codes_mode": config.material_codes_mode,
+        "hazards_mode": config.hazards_mode,
         "secondary_warehouse_mode": config.secondary_warehouse_mode,
     }
 
@@ -192,6 +194,9 @@ def _config_from_data(
         material_codes_mode=_feature_mode(
             data.get("material_codes_mode"), MiniProgramFeatureMode.QUERY_ONLY
         ),
+        hazards_mode=_feature_mode(
+            data.get("hazards_mode"), MiniProgramFeatureMode.READ_WRITE
+        ),
         secondary_warehouse_mode=_secondary_warehouse_mode(
             data.get("secondary_warehouse_mode")
         ),
@@ -242,6 +247,7 @@ def setting_read(setting: AiSearchConfig | None) -> AiSearchSettingsRead:
             purchase_plans_mode=MiniProgramFeatureMode.QUERY_ONLY,
             purchase_records_mode=MiniProgramFeatureMode.QUERY_ONLY,
             material_codes_mode=MiniProgramFeatureMode.QUERY_ONLY,
+            hazards_mode=MiniProgramFeatureMode.READ_WRITE,
             secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
             updated_at=None,
             version=0,
@@ -264,6 +270,7 @@ def setting_read(setting: AiSearchConfig | None) -> AiSearchSettingsRead:
         purchase_plans_mode=setting.purchase_plans_mode,
         purchase_records_mode=setting.purchase_records_mode,
         material_codes_mode=setting.material_codes_mode,
+        hazards_mode=setting.hazards_mode,
         secondary_warehouse_mode=setting.secondary_warehouse_mode,
         updated_at=setting.updated_at,
         version=setting.version,
@@ -309,6 +316,7 @@ async def update_setting(
         "purchase_plans_mode": data.purchase_plans_mode,
         "purchase_records_mode": data.purchase_records_mode,
         "material_codes_mode": data.material_codes_mode,
+        "hazards_mode": data.hazards_mode,
         "secondary_warehouse_mode": data.secondary_warehouse_mode,
     }
     await log_event(
@@ -352,6 +360,7 @@ async def update_setting(
         purchase_plans_mode=data.purchase_plans_mode,
         purchase_records_mode=data.purchase_records_mode,
         material_codes_mode=data.material_codes_mode,
+        hazards_mode=data.hazards_mode,
         secondary_warehouse_mode=data.secondary_warehouse_mode,
         updated_at=utc_aware(now),
         version=new_version,
@@ -395,6 +404,7 @@ async def get_mini_program_features(session: AsyncSession) -> MiniProgramFeature
             purchase_plans_mode=MiniProgramFeatureMode.QUERY_ONLY,
             purchase_records_mode=MiniProgramFeatureMode.QUERY_ONLY,
             material_codes_mode=MiniProgramFeatureMode.QUERY_ONLY,
+            hazards_mode=MiniProgramFeatureMode.READ_WRITE,
             secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
         )
     return MiniProgramFeaturesRead(
@@ -403,6 +413,7 @@ async def get_mini_program_features(session: AsyncSession) -> MiniProgramFeature
         purchase_plans_mode=setting.purchase_plans_mode,
         purchase_records_mode=setting.purchase_records_mode,
         material_codes_mode=setting.material_codes_mode,
+        hazards_mode=setting.hazards_mode,
         secondary_warehouse_mode=setting.secondary_warehouse_mode,
     )
 
@@ -757,6 +768,7 @@ async def test_search_value(data: AiSearchTestRequest, value: str) -> str | None
         purchase_plans_mode=MiniProgramFeatureMode.QUERY_ONLY,
         purchase_records_mode=MiniProgramFeatureMode.QUERY_ONLY,
         material_codes_mode=MiniProgramFeatureMode.QUERY_ONLY,
+        hazards_mode=MiniProgramFeatureMode.READ_WRITE,
         secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
         updated_at=None,
         version=0,

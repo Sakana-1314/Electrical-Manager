@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "隐患详情",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-radio-group": "tdesign-miniprogram/radio-group/radio-group",
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "t-textarea": "tdesign-miniprogram/textarea/textarea",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

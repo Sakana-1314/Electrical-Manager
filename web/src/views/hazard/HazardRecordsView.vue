@@ -42,6 +42,7 @@ const auth = useAuthStore()
 const canWrite = computed(() => auth.can('hazard:write'))
 
 const units = ref<HazardUnit[]>([])
+const rectifyPersons = ref<string[]>([])
 const types = ref<HazardType[]>([])
 const showModal = ref(false)
 const editingId = ref<number | null>(null)
@@ -82,6 +83,7 @@ const {
         level: hazardLevels.includes(level as HazardLevel) ? (level as HazardLevel) : null,
         hazard_type_id: Number.isFinite(typeId) && typeId > 0 ? typeId : null,
         hazard_unit_id: Number.isFinite(unitId) && unitId > 0 ? unitId : null,
+        rectify_person: String(route.query.rectify_person || '') || null,
         area: String(route.query.area || ''),
         keyword: String(route.query.keyword || ''),
         dateRange: null,
@@ -107,6 +109,11 @@ const typeOptions = computed(() => {
   return [...groups].map(([major, children]) => ({ type: 'group', label: major, children }))
 })
 
+/** 整改员工是自由文本：选项来自库中已有值去重，可搜索可清除。 */
+const rectifyPersonOptions = computed<SelectOption[]>(() =>
+  rectifyPersons.value.map((person) => ({ label: person, value: person })),
+)
+
 const todayText = computed(() => toShanghaiDate(Date.now()))
 
 /** 已启用的筛选条件数量（页头徽标）。 */
@@ -117,6 +124,7 @@ const activeFilterCount = computed(
       filters.level,
       filters.hazard_type_id,
       filters.hazard_unit_id,
+      filters.rectify_person,
       filters.area.trim() || null,
       filters.keyword.trim() || null,
       filters.dateRange,
@@ -271,9 +279,14 @@ function rowProps(row: Hazard) {
 
 onMounted(async () => {
   try {
-    const [unitList, typeList] = await Promise.all([hazardApi.units(), hazardApi.types()])
+    const [unitList, typeList, options] = await Promise.all([
+      hazardApi.units(),
+      hazardApi.types(),
+      hazardApi.filterOptions(),
+    ])
     units.value = unitList
     types.value = typeList
+    rectifyPersons.value = options.rectify_persons
   } catch {
     // 下拉数据加载失败不阻塞列表（筛选仍可用关键字与状态）
   }
@@ -337,6 +350,16 @@ onMounted(async () => {
           <n-select
             v-model:value="filters.hazard_unit_id"
             :options="unitOptions"
+            placeholder="不限"
+            clearable
+            filterable
+          />
+        </label>
+        <label class="filter-field">
+          <span>整改员工</span>
+          <n-select
+            v-model:value="filters.rectify_person"
+            :options="rectifyPersonOptions"
             placeholder="不限"
             clearable
             filterable

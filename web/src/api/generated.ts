@@ -100,6 +100,7 @@ export type HazardTypeUpdate = components['schemas']['HazardTypeUpdate']
 export type HazardUnit = components['schemas']['HazardUnitRead']
 export type HazardUnitWrite = components['schemas']['HazardUnitCreate']
 export type HazardUnitUpdate = components['schemas']['HazardUnitUpdate']
+export type HazardFilterOptions = components['schemas']['HazardFilterOptionsRead']
 
 /* ===== 前端自建视图模型 / 泛型 / Literal（openapi 无对应 schema，手写保留） ===== */
 
@@ -158,6 +159,7 @@ export interface AiSearchSettingsWrite {
   purchase_plans_mode: MiniProgramFeatureMode
   purchase_records_mode: MiniProgramFeatureMode
   material_codes_mode: MiniProgramFeatureMode
+  hazards_mode: MiniProgramFeatureMode
   secondary_warehouse_mode: SecondaryWarehouseMode
   version: number
 }

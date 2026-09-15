@@ -1,0 +1,188 @@
+<view class="page-shell hazard-create-page {{themeClass}}">
+  <view wx:if="{{loading}}" class="section-card loading-card">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazards}}" />
+  </view>
+
+  <block wx:else>
+    <view class="section-card form-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.hazardCreateTitle}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <t-cell-group>
+        <t-input
+          label="{{i18n.hazardAreaLabel}}"
+          value="{{form.inspectionArea}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="128"
+          data-field="inspectionArea"
+          bind:change="onFieldChange"
+        />
+      </t-cell-group>
+      <view class="field-row">
+        <view class="field-label">{{i18n.hazardDateLabel}}</view>
+        <picker
+          class="field-picker"
+          mode="date"
+          value="{{form.inspectionDate}}"
+          bind:change="onInspectionDateChange"
+        >
+          <view class="field-value">
+            <view class="field-text">{{form.inspectionDate}}</view>
+            <t-icon name="chevron-right" size="32rpx" />
+          </view>
+        </picker>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.hazardUnitLabel}}</view>
+        <view class="field-picker" bind:tap="openUnitPicker">
+          <view class="field-value">
+            <view class="field-text {{form.hazardUnitLabel ? '' : 'field-placeholder'}}">
+              {{form.hazardUnitLabel || i18n.selectHazardUnitPlaceholder}}
+            </view>
+            <t-icon name="chevron-right" size="32rpx" />
+          </view>
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.hazardPersonLabel}}</view>
+        <view class="field-value readonly-value">
+          <view class="field-text {{form.hazardPerson ? '' : 'field-placeholder'}}">
+            {{form.hazardPerson || i18n.notSet}}
+          </view>
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.hazardTypeLabel}}</view>
+        <view class="field-picker" bind:tap="openTypePicker">
+          <view class="field-value">
+            <view class="field-text {{form.hazardTypeLabel ? '' : 'field-placeholder'}}">
+              {{form.hazardTypeLabel || i18n.selectHazardTypePlaceholder}}
+            </view>
+            <t-icon name="chevron-right" size="32rpx" />
+          </view>
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.hazardDueLabel}}</view>
+        <picker
+          class="field-picker"
+          mode="date"
+          value="{{form.dueDate}}"
+          bind:change="onDueDateChange"
+        >
+          <view class="field-value">
+            <view class="field-text">{{form.dueDate}}</view>
+            <t-icon name="chevron-right" size="32rpx" />
+          </view>
+        </picker>
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardDescriptionLabel}}</view>
+        <t-textarea
+          value="{{form.description}}"
+          placeholder="{{i18n.hazardDescriptionPlaceholder}}"
+          maxlength="2000"
+          autosize
+          data-field="description"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardSuggestionLabel}}</view>
+        <t-textarea
+          value="{{form.suggestion}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="2000"
+          autosize
+          data-field="suggestion"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardLevelLabel}}</view>
+        <t-radio-group
+          value="{{form.level}}"
+          options="{{levelOptions}}"
+          bind:change="onLevelChange"
+        />
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardRectifyPersonLabel}}</view>
+        <t-input
+          value="{{form.rectifyPerson}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="64"
+          data-field="rectifyPerson"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardRemarkLabel}}</view>
+        <t-textarea
+          value="{{form.remark}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="2000"
+          autosize
+          data-field="remark"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="field-block">
+        <view class="field-label">{{i18n.hazardBeforeImagesLabel}}</view>
+        <view class="image-grid">
+          <view
+            wx:for="{{form.beforeImages}}"
+            wx:key="id"
+            class="image-item"
+            data-index="{{index}}"
+            bind:tap="previewImage"
+          >
+            <image class="hazard-image" src="{{item.preview_url}}" mode="aspectFill" lazy-load webp />
+            <view class="image-remove" data-index="{{index}}" catch:tap="removeBeforeImage">
+              <t-icon name="close" size="26rpx" />
+            </view>
+          </view>
+          <view
+            wx:if="{{form.beforeImages.length < 9}}"
+            class="image-item add-image"
+            bind:tap="addBeforeImages"
+          >
+            <t-icon name="add" size="44rpx" />
+            <view class="add-image-text">{{i18n.hazardAddImage}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <t-button
+      class="submit-action"
+      theme="primary"
+      size="large"
+      block
+      loading="{{submitting}}"
+      disabled="{{submitting}}"
+      bind:tap="submit"
+    >{{i18n.hazardSubmit}}</t-button>
+  </block>
+
+  <t-popup visible="{{unitPickerVisible}}" placement="bottom" bind:visible-change="closeUnitPicker">
+    <view class="picker-panel">
+      <view class="picker-title">{{i18n.selectHazardUnitPlaceholder}}</view>
+      <view class="picker-options">
+        <t-radio-group options="{{unitOptions}}" bind:change="onUnitSelect" />
+      </view>
+    </view>
+  </t-popup>
+
+  <t-popup visible="{{typePickerVisible}}" placement="bottom" bind:visible-change="closeTypePicker">
+    <view class="picker-panel">
+      <view class="picker-title">{{i18n.selectHazardTypePlaceholder}}</view>
+      <view class="picker-options">
+        <t-radio-group options="{{typeOptions}}" bind:change="onTypeSelect" />
+      </view>
+    </view>
+  </t-popup>
+
+  <t-toast id="hazard-create-toast" />
+</view>

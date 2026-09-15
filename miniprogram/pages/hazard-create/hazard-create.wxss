@@ -1,0 +1,137 @@
+.hazard-create-page {
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.loading-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360rpx;
+}
+
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 0;
+  border-bottom: 2rpx solid var(--app-divider);
+}
+
+.field-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.field-label {
+  flex: none;
+  width: 180rpx;
+  color: var(--app-text-secondary);
+  font-size: 26rpx;
+}
+
+.field-value {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8rpx;
+  min-width: 0;
+  color: var(--app-text);
+  font-size: 26rpx;
+}
+
+.field-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-placeholder {
+  color: var(--app-text-placeholder);
+}
+
+.readonly-value {
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.field-block {
+  margin-top: 24rpx;
+}
+
+.field-block .field-label {
+  width: auto;
+  margin-bottom: 12rpx;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.image-item {
+  position: relative;
+  height: 192rpx;
+  border-radius: 18rpx;
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.hazard-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image-remove {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--app-scrim);
+  color: var(--app-on-brand);
+}
+
+.add-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  border: 2rpx dashed var(--app-border-strong);
+  color: var(--app-text-muted);
+}
+
+.add-image-text {
+  font-size: 22rpx;
+}
+
+.submit-action {
+  margin-top: 32rpx;
+}
+
+.picker-panel {
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  background: var(--app-surface);
+  border-radius: 28rpx 28rpx 0 0;
+}
+
+.picker-title {
+  margin-bottom: 16rpx;
+  color: var(--app-text-strong);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.picker-options {
+  max-height: 60vh;
+  overflow-y: auto;
+}
