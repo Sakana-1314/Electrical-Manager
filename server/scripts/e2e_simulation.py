@@ -2,9 +2,10 @@
 
 由 GitHub Actions（e2e-simulation.yml）在真实 MySQL + 后端实例上运行：
 通过 HTTP 模拟六种角色用户的核心操作（仓库 / 申购 / 隐患 / 台账 / 只读 / 超管），
-验证主流程可用。任一步骤失败即以非零码退出。
+验证主流程可用，并验证「业务数据按项目隔离」这条主线。任一步骤失败即以非零码退出。
 
-用法：
+项目上下文：业务接口都要求 `X-Project-Id`，脚本先用超管读项目列表、取默认项目
+（init.sql 种子的 P05），之后所有角色请求都带上它。用法：
     E2E_BASE_URL=http://127.0.0.1:8000 python scripts/e2e_simulation.py
 """
 
@@ -21,7 +22,8 @@ BASE_URL = os.environ.get("E2E_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
 PASSWORD = "123456"
 
 
-def _auth(client: httpx.Client, username: str) -> dict[str, str]:
+def _auth(client: httpx.Client, username: str, project_id: int | None = None) -> dict[str, str]:
+    """登录并返回请求头；给了 project_id 就带上 X-Project-Id（业务接口都需要）。"""
     response = client.post(
         "/api/v1/auth/login", json={"username": username, "password": PASSWORD}
     )
@@ -29,7 +31,10 @@ def _auth(client: httpx.Client, username: str) -> dict[str, str]:
     token = response.json().get("access_token")
     if not token:
         raise RuntimeError(f"登录 {username} 未返回 access_token")
-    return {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"}
+    if project_id is not None:
+        headers["X-Project-Id"] = str(project_id)
+    return headers
 
 
 def _post(
@@ -70,14 +75,34 @@ def main() -> int:
         assert health.status_code == 200 and health.json()["database"] == "ok", "健康检查失败"
         print("✅ 健康检查")
 
-        # 2. 六种角色登录
-        warehouse = _auth(client, "warehouse")
-        purchase = _auth(client, "purchase")
-        hazard = _auth(client, "hazard")
-        ledger = _auth(client, "ledger")
-        readonly = _auth(client, "readonly")
+        # 2. 默认项目（P05）与六种角色登录
         admin = _auth(client, "admin")
-        print("✅ 六种角色登录")
+        listed_projects = client.get("/api/v1/projects", headers=admin)
+        assert listed_projects.status_code == 200, listed_projects.text
+        default_projects = [item for item in listed_projects.json() if item["is_default"]]
+        assert default_projects, f"项目列表里没有默认项目: {listed_projects.text}"
+        project_id = int(default_projects[0]["id"])
+
+        warehouse = _auth(client, "warehouse", project_id)
+        purchase = _auth(client, "purchase", project_id)
+        hazard = _auth(client, "hazard", project_id)
+        ledger = _auth(client, "ledger", project_id)
+        readonly = _auth(client, "readonly", project_id)
+        admin = _auth(client, "admin", project_id)
+        print(f"✅ 默认项目 {default_projects[0]['code']}（#{project_id}）与六种角色登录")
+
+        # 2.1 业务接口缺项目上下文必须被拦下（fail-closed，不允许静默看全库）
+        no_project = client.get(
+            "/api/v1/stock-materials", headers={"Authorization": readonly["Authorization"]}
+        )
+        assert no_project.status_code == 400, no_project.text
+        assert no_project.json()["code"] == "PROJECT_REQUIRED", no_project.text
+        disabled_or_unknown = client.get(
+            "/api/v1/stock-materials", headers={**readonly, "X-Project-Id": "999999"}
+        )
+        assert disabled_or_unknown.status_code == 400, disabled_or_unknown.text
+        assert disabled_or_unknown.json()["code"] == "PROJECT_NOT_FOUND", disabled_or_unknown.text
+        print("✅ 缺项目上下文 / 未知项目被拒绝")
 
         # 3. 只读用户越权创建物资应 403
         denied = client.post(
@@ -335,6 +360,36 @@ def main() -> int:
             )
             assert response.status_code == 204, response.text
         print("✅ 台账模拟数据清理")
+
+        # 20. 跨项目隔离：新建项目后看不到本项目的数据，同 ID 资源在别的项目里「不存在」
+        new_project = client.post(
+            "/api/v1/projects",
+            headers=admin,
+            json={"code": f"P{run[:4].upper()}", "name": f"E2E 临时项目 {run}"},
+        )
+        assert new_project.status_code == 201, new_project.text
+        other_project = int(new_project.json()["id"])
+        other = {**admin, "X-Project-Id": str(other_project)}
+
+        other_materials = client.get(
+            "/api/v1/inventory/balances", headers=other, params={"page": 1, "page_size": 20}
+        )
+        assert other_materials.status_code == 200, other_materials.text
+        assert other_materials.json()["total"] == 0, other_materials.text
+        cross_read = client.get(f"/api/v1/inventory/balances/{material_id}", headers=other)
+        assert cross_read.status_code == 400, cross_read.text
+        assert cross_read.json()["code"] == "NOT_FOUND", cross_read.text
+        print(
+            f"✅ 项目隔离：临时项目（#{other_project}）读不到本项目（#{project_id}）的数据"
+            f"（余额 total=0，跨项目读详情 400 NOT_FOUND）"
+        )
+
+        removed_project = client.delete(
+            f"/api/v1/projects/{other_project}",
+            headers={**admin, "If-Match": str(new_project.json()["version"])},
+        )
+        assert removed_project.status_code == 204, removed_project.text
+        print("✅ 临时项目清理")
 
     print(f"🎉 模拟用户操作全部通过（run={run}）")
     return 0
