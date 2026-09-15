@@ -25,7 +25,7 @@ import {
 import { ledgerApi } from '@/api/ledger'
 import type { FileObject, LedgerItem, LedgerItemWrite, LedgerTag } from '@/api/generated'
 import ImageUploader from '@/components/ImageUploader.vue'
-import { formatTagIds, parseTagIds, tagSelectOptions } from '@/utils/ledger'
+import { tagSelectOptions } from '@/utils/ledger'
 
 const props = withDefaults(defineProps<{ show: boolean; itemId?: number | null }>(), {
   itemId: null,
@@ -116,7 +116,7 @@ function payload(): LedgerItemWrite {
     quantity: form.quantity ?? 0,
     remark: form.remark.trim() || null,
     // 标签 id 去重升序：与后端存储口径一致，避免提交顺序影响回显
-    tag_ids: parseTagIds(formatTagIds(form.tagIds)),
+    tag_ids: [...new Set(form.tagIds)].sort((a, b) => a - b),
     image_ids: images.value.map((file) => file.id),
   }
 }

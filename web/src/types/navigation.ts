@@ -1,12 +1,7 @@
 import type { Role } from '@/api/generated'
 
 export type Permission =
-  | 'warehouse:write'
-  | 'purchase:write'
-  | 'settings:write'
-  | 'hazard:write'
-  | 'ledger:write'
-  | 'read'
+  'warehouse:write' | 'purchase:write' | 'settings:write' | 'hazard:write' | 'ledger:write' | 'read'
 
 export const rolePermissions: Record<Role, Permission[]> = {
   SUPER_ADMIN: [

@@ -1,7 +1,8 @@
 """端到端模拟用户操作脚本。
 
 由 GitHub Actions（e2e-simulation.yml）在真实 MySQL + 后端实例上运行：
-通过 HTTP 模拟四种角色用户的核心操作，验证主流程可用。任一步骤失败即以非零码退出。
+通过 HTTP 模拟六种角色用户的核心操作（仓库 / 申购 / 隐患 / 台账 / 只读 / 超管），
+验证主流程可用。任一步骤失败即以非零码退出。
 
 用法：
     E2E_BASE_URL=http://127.0.0.1:8000 python scripts/e2e_simulation.py

@@ -17,6 +17,8 @@ declare module 'vue' {
     HazardStatusTag: typeof import('./src/components/HazardStatusTag.vue')['default']
     ImageThumbnails: typeof import('./src/components/ImageThumbnails.vue')['default']
     ImageUploader: typeof import('./src/components/ImageUploader.vue')['default']
+    LedgerItemFormModal: typeof import('./src/components/LedgerItemFormModal.vue')['default']
+    LedgerTagFormModal: typeof import('./src/components/LedgerTagFormModal.vue')['default']
     LoadingMask: typeof import('./src/components/LoadingMask.vue')['default']
     MaterialCodeSelector: typeof import('./src/components/MaterialCodeSelector.vue')['default']
     MaterialSelector: typeof import('./src/components/MaterialSelector.vue')['default']
