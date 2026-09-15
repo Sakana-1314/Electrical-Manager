@@ -54,7 +54,7 @@ flowchart LR
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
 | MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
-| 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层 |
+| 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
 | 隐患登记幂等键 | `hazard.client_request_id` | 小程序登记隐患时生成一次、重试复用：重复提交返回同一条隐患而不是新增；网页端登记留空，因此「非空」也表示该条来自小程序 |
 | 整改状态 / 隐患等级 | `HazardStatus` / `HazardLevel` | 状态三态：待整改 / 整改受阻 / 已整改；等级两档：一般隐患 / 重大隐患。逾期 = `due_date` 早于今天且状态非已整改（今天到期不算逾期） |
@@ -688,7 +688,26 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 末尾只有一段 `INSERT`，插入 `user` 表 5 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
+`init.sql` 末尾有两段 `INSERT`：先插入 `hazard_type` 隐患类型字典，再插入 `user` 表 5 个初始账号。
+
+#### 隐患类型字典
+
+`hazard_type` 预置 **157 条「大类 + 小类」组合、共 16 个大类**（源自车间原有隐患系统的类型清单），使新库导入后隐患登记页的「隐患类型」下拉即可用，无需先人工录入。语句按 `(major, minor)` 唯一键幂等，重复导入不会产生重复行：
+
+| 大类 | 条数 | 大类 | 条数 |
+| --- | --- | --- | --- |
+| 高风险作业安全 | 17 | 人的不安全行为 | 17 |
+| 电气安全 | 16 | 生产设备设施安全 | 11 |
+| 建设施工安全 | 11 | 其他管理缺陷 | 11 |
+| 环保 | 11 | 消防安全 | 10 |
+| 交通安全 | 8 | 作业环境因素 | 8 |
+| 危险化学品安全 | 8 | 安全警示和安全标识 | 8 |
+| 特种设备安全 | 7 | 文明施工 | 5 |
+| 现场5S | 5 | 个人防护用品 | 4 |
+
+#### 初始账号
+
+`user` 表插入 5 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
@@ -698,7 +717,7 @@ flowchart LR
 | `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `SHA2(@hazard_api_token, 256)` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
 
-五个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。其余 32 张表当前不含种子数据（含隐患类型与责任单位两张字典表），由运行期接口或导入任务写入。
+五个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `hazard_type` 与 `user` 两表外，其余 31 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 
