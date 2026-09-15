@@ -524,9 +524,44 @@ server/app/
 | --- | --- |
 | `RealIPMiddleware` | 把 `scope["client"]` 改写为可信边缘代理给出的真实 IP，取值优先级 `EO-Connecting-IP` → `X-Real-IP` → `X-Forwarded-For` 的第一段；候选值需能被 `ipaddress.ip_address()` 解析，全部无效则不改写 |
 | `RefererCORSMiddleware` | **Referer 优先**（兼容不发 `Origin` 的内嵌 WebView/微信），无效或缺失回退 `Origin`；`Referer: null` 原样返回 `null`。白名单为空表示不限制；否则需 `origin` 精确命中、或 `*`、或 `allowed` 以 `.` 开头时按 host 后缀匹配（`.example.com` 匹配 `app.example.com`）；未命中不回显 CORS 头。预检（`OPTIONS` + `Access-Control-Request-Method`）直接 200，方法白名单 `DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT`，回显请求的 `Access-Control-Request-Headers`，`Access-Control-Request-Private-Network: true` 时回私有网络头；正常响应补 `Vary: Origin, Referer` |
-注册顺序（`main.py`，后注册的中间件更外层）：`RefererCORSMiddleware` → `request_context` → `RealIPMiddleware`；即最外层 `RealIPMiddleware`，最内层 CORS，`request_context` 位于 RealIP 内层以便读到改写后的真实 IP。
+注册顺序（`main.py`，后注册的中间件更外层）：`RefererCORSMiddleware` → `project_context` → `request_context` → `RealIPMiddleware`；即最外层 `RealIPMiddleware`，最内层 CORS，`request_context` 位于 RealIP 内层以便读到改写后的真实 IP，`project_context` 在 `request_context` 内层、业务处理之前把 `X-Project-Id` 落进项目上下文。
 
 
+
+### 项目隔离（`server/app/core/project_scope.py`）
+
+业务数据按项目隔离，但**不是**多租户：没有用户-项目授权表，任何登录用户都能访问全部项目，只是同一请求只能处于一个项目。隔离在 ORM 层统一实现，service 里不再逐个写过滤条件。
+
+| 机制 | 实现 |
+| --- | --- |
+| 读过滤 | `Session` 的 `do_orm_execute` 事件：语句里出现项目域表时，用 `with_loader_criteria` 给这些实体注入 `project_id = 当前项目`；SQLAlchemy 会把它带到所有出现该实体的位置（子查询、别名、`select(func.count())` 聚合、`Session.get()` 的按主键加载、ORM 的 `UPDATE` / `DELETE`） |
+| 写守卫 | `Session` 的 `before_flush` 事件：新建的项目域对象自动补 `project_id`；与当前项目不一致的写入/删除直接抛 `PROJECT_MISMATCH`(409) |
+| 语句识别 | 用 `sqlalchemy.sql.util.find_tables()` 判断语句是否涉及项目域表（约 5–20µs）；纯全局语句（`user`、`project`、`system_setting` 等）不参与过滤，因此登录、项目列表不需要项目上下文 |
+| fail-closed | 涉及项目域表却没有项目上下文时抛 400 `PROJECT_REQUIRED`，绝不静默放行成「看到全部项目」；确实跨项目的系统级入口必须显式 `system_scope()` |
+| 缓存安全 | `with_loader_criteria` 的项目 id 以**闭包变量**传入（lambda SQL 不允许在 lambda 内调用函数）；SQLAlchemy 把闭包值计入缓存键，项目切换会重新编译，不会串用别的项目的条件 |
+
+```mermaid
+flowchart LR
+    H["请求头 X-Project-Id"] --> M["project_context 中间件：落进 ContextVar"]
+    M --> D["业务路由依赖 require_current_project：校验项目存在且启用"]
+    D --> ORM["do_orm_execute：注入 project_id 条件"]
+    D --> F["before_flush：补项目 / 拦跨项目写入"]
+    ORM --> DB[("MySQL")]
+    F --> DB
+```
+
+项目域表清单在 `server/app/models/__init__.py` 的 `PROJECT_SCOPED_MODELS`（28 张），列/索引/外键由 `ProjectScoped` 混入统一下发；新增业务表必须同时继承 `ProjectScoped` 并登记进该元组，否则不会被隔离（`AGENTS.md` 已写成约定）。
+
+上下文来源：
+
+| 入口 | 项目从哪来 |
+| --- | --- |
+| 网页端业务接口 | `X-Project-Id`（前端 `web/src/api/client.ts` 统一注入；右上角切换项目后整页刷新） |
+| 小程序 | 同上；不带时落默认项目 P05（`get_current_mini_program_user` 内统一解析，端点无需各自声明） |
+| MCP | 请求头优先，缺省用默认项目；`operation_call` 转发时带上项目头 |
+| 匿名分享页 | 先在全项目上下文里按 token 取 `share_link`，再切到该分享所属项目读数据 |
+| 导入 / 导出任务 | 任务行记录 `project_id`，后台任务用 `project_scope(job.project_id)` 恢复上下文 |
+| 清理任务、附件引用统计、匿名导出下载 | 显式 `system_scope()` / `system_session()`（这些入口本就不属于单个项目） |
 
 ### 数据库会话与事务
 | 项 | 真实配置（`server/app/core/database.py`） |
@@ -708,7 +743,7 @@ server/app/
 | 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、图片上传与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 界面外观（明 / 暗）
 
@@ -722,6 +757,18 @@ server/app/
 | 显式档覆盖系统 | 导航栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 按解析结果纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统 |
 
 不使用 `@media (prefers-color-scheme)` 切换主题（媒体查询只跟随系统，与显式档并存会互相覆盖），也不引入 `tdesign-miniprogram` 自带的 `common/style/theme/*` 媒体查询主题；页面样式只引用令牌，颜色字面量只允许出现在 `app.wxss` 的令牌定义里，以上均由 `node scripts/check.js` 校验。
+
+### 当前项目（多项目数据隔离）
+
+业务数据按项目隔离，小程序同样一次只处理一个项目的数据：默认使用默认项目（P05），可在首页「个人信息」弹窗里切换（`utils/project.js` + `pages/home/home.*`，切换后 `wx.reLaunch` 回首页，避免其它页面残留上一个项目的数据）。
+
+| 项 | 实现 |
+| --- | --- |
+| 列表来源 | `GET /mini-program/projects`（小程序令牌鉴权，返回全部项目含停用项，前端只展示启用项） |
+| 存储 | storage 键 `currentProjectId`，不落库；本机切换不影响网页端 |
+| 请求头 | `utils/request.js` 在请求与图片上传时都带上 `X-Project-Id`（每次尝试重新读取，重登/重试后仍生效） |
+| 默认兜底 | 不带项目头时服务端用默认项目 P05，因此未升级的旧客户端照常可用 |
+| 失效恢复 | 服务端返回 `PROJECT_DISABLED` / `PROJECT_NOT_FOUND` 时，小程序清掉已存项目、重新解析默认项目并重试一次 |
 
 ### 登录与建档
 

@@ -1,6 +1,6 @@
 # 数据模型
 
-MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **33 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **38 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -14,6 +14,7 @@ flowchart LR
 <Tabs :tabs="[
   { id: 'terms', title: '术语表' },
   { id: 'conventions', title: '公共约定' },
+  { id: 'project', title: '项目与数据隔离' },
   { id: 'relations', title: '表清单与域关系' },
   { id: 'basics', title: '基础与平台表' },
   { id: 'imports', title: '导入、分享与快照表' },
@@ -107,6 +108,83 @@ flowchart TD
     R --> U["没有 updated_by 列"]
     R --> S["没有软删除列：删除一律物理删除"]
     R --> D["ON DELETE CASCADE：库存余额、补库策略、八张图片关联表随主表一并删除"]
+```
+
+</TabsContent>
+
+<TabsContent id="project">
+
+### 项目：业务数据的隔离维度
+
+所有业务数据都挂在「项目」下：同一用户可访问全部项目，但同一时刻只处理一个项目的数据（网页端在右上角用户菜单里切换，小程序在首页「个人信息」弹窗里切换）。项目表本身是全局表，项目域表都带 `project_id`。
+
+```mermaid
+erDiagram
+    project ||--o{ hazard : "隔离"
+    project ||--o{ ledger : "隔离"
+    project ||--o{ stock_material : "隔离"
+    project ||--o{ purchase_material : "隔离"
+    project ||--o{ huaxing_inventory : "隔离"
+    project ||--o{ share_link : "归属项目"
+```
+
+| 列 | 类型 | 说明 |
+| --- | --- | --- |
+| `code` | `VARCHAR(32)` | 项目编码（唯一，统一大写，如 `P05`、`P06`） |
+| `name` | `VARCHAR(128)` | 项目名称 |
+| `enabled` | `TINYINT(1)` | 停用后不能再被选为当前项目，数据仍保留 |
+| `is_default` | `TINYINT(1)` | 唯一默认项目：小程序 / MCP 未指定项目时兜底（P05） |
+| `remark` | `VARCHAR(500)` | 备注 |
+
+默认项目不能停用、不能删除，也不能直接取消默认（把别的项目设为默认即可）；项目下已有业务数据时不能删除，只能停用。
+
+### 项目域表（28 张）
+
+`excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`。
+
+每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。
+
+### 全局表（10 张，不隔离）
+
+`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
+
+| 表 | 不隔离的原因 |
+| --- | --- |
+| `project` | 项目自身就是隔离维度 |
+| `user`、`mini_program_user`、`mini_program_identity` | 用户与身份绑定属用户管理 |
+| `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、AI 搜索配置、Webhook 渠道与订阅） |
+| `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_code` 供接收方区分） |
+| `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
+| `file_object` | 全局附件池：按 `sha256` 全局去重、引用计数跨项目统计 |
+| `memo` | 个人备忘录按创建人隔离，不随项目切换 |
+
+### 项目域唯一键
+
+跨项目允许出现相同的业务键，因此这些唯一约束都带上 `project_id`：
+
+| 表 | 唯一键 |
+| --- | --- |
+| `stock_material` | `uq_stock_material_project_identity_hash` (`project_id`, `identity_hash`) |
+| `material_code_library` | `uq_material_code_library_project_material_code` (`project_id`, `material_code`) |
+| `purchase_material` | `uq_purchase_material_project_plan_no` (`project_id`, `plan_no`) |
+| `stock_operation` | `uq_stock_operation_project_operation_no` (`project_id`, `operation_no`) |
+| `stock_operation` | `uq_stock_operation_project_client_request_id` (`project_id`, `client_request_id`) |
+| `hazard` | `uq_hazard_project_client_request_id` (`project_id`, `client_request_id`) |
+| `hazard_unit` | `uq_hazard_unit_project_name` (`project_id`, `name`) |
+| `hazard_type` | `uq_hazard_type_project_major` (`project_id`, `major`, `minor`) |
+
+`plan_no` 必须按项目唯一：计划号规则是「本项目当天最大号 + 1」，跨项目共用唯一键会撞号。
+
+### 项目上下文从哪来
+
+```mermaid
+flowchart TD
+    H["请求头 X-Project-Id"] --> W["网页端业务接口：缺失即 400 PROJECT_REQUIRED"]
+    M["小程序：缺失时落默认项目 P05"] --> D["默认项目 is_default"]
+    MCP["MCP：请求头优先，缺省用默认项目"] --> D
+    ANON["匿名分享页：按 share_link.project_id"] --> R["读取时切到该分享所属项目"]
+    JOB["导入 / 导出后台任务：按任务行的 project_id"] --> R
+    SYS["清理任务 / 附件引用统计 / 匿名导出下载"] --> ALL["显式声明全项目上下文"]
 ```
 
 </TabsContent>
@@ -735,11 +813,11 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 末尾有两段 `INSERT`：先插入 `hazard_type` 隐患类型字典，再插入 `user` 表 6 个初始账号。
+`init.sql` 有三段 `INSERT`：先插入项目表里的默认项目 P05，再插入 `hazard_type` 隐患类型字典（带上 `project_id`），最后插入 `user` 表 6 个初始账号。
 
 #### 隐患类型字典
 
-`hazard_type` 预置 **157 条「大类 + 小类」组合、共 16 个大类**（源自车间原有隐患系统的类型清单），使新库导入后隐患登记页的「隐患类型」下拉即可用，无需先人工录入。语句按 `(major, minor)` 唯一键幂等，重复导入不会产生重复行：
+`hazard_type` 预置 **157 条「大类 + 小类」组合、共 16 个大类**（源自车间原有隐患系统的类型清单），使新库导入后隐患登记页的「隐患类型」下拉即可用，无需先人工录入。语句按 `(project_id, major, minor)` 唯一键幂等，重复导入不会产生重复行；种子行挂在默认项目 P05（`@p05_project_id`）下。
 
 | 大类 | 条数 | 大类 | 条数 |
 | --- | --- | --- | --- |
@@ -765,7 +843,7 @@ flowchart LR
 | `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `SHA2(@ledger_api_token, 256)` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
 
-六个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `hazard_type` 与 `user` 两表外，其余 35 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+六个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 35 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 
