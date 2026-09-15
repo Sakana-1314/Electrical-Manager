@@ -43,6 +43,14 @@
       </view>
     </view>
 
+    <view class="action-card" hover-class="action-card-active" bind:tap="openHazards">
+      <view class="action-icon"><t-icon name="error-circle" size="48rpx" /></view>
+      <view class="action-content">
+        <view class="action-title">{{i18n.hazardsTitle}}</view>
+        <view class="action-description">{{i18n.hazardsDescription}}</view>
+      </view>
+    </view>
+
     <view class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
       <view class="action-icon"><t-icon name="tag" size="48rpx" /></view>
       <view class="action-content">

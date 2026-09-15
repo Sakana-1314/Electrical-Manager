@@ -74,6 +74,11 @@ Page(withTheme({
     wx.navigateTo({ url: '/pages/huaxing-inventory/huaxing-inventory' });
   },
 
+  openHazards() {
+    if (!this.ensureFeatureEnabled('hazards_mode')) return;
+    wx.navigateTo({ url: '/pages/hazards/hazards' });
+  },
+
   openPurchasePlans() {
     if (!this.ensureFeatureEnabled('purchase_plans_mode')) return;
     wx.navigateTo({ url: '/pages/purchase-plans/purchase-plans' });

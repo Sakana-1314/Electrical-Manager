@@ -1,0 +1,167 @@
+<view class="page-shell hazard-detail-page {{themeClass}}">
+  <view wx:if="{{loading}}" class="section-card loading-card">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazardDetail}}" />
+  </view>
+
+  <block wx:elif="{{hazard}}">
+    <view class="section-card summary-card">
+      <view class="summary-topline">
+        <view class="summary-date">{{hazard.date_label}}</view>
+        <view class="summary-tags">
+          <t-tag wx:if="{{hazard.overdue}}" theme="danger" variant="light" size="small">{{i18n.hazardOverdue}}</t-tag>
+          <t-tag theme="{{hazard.status_theme}}" variant="light" size="small">{{hazard.status}}</t-tag>
+        </view>
+      </view>
+      <view class="summary-description">{{hazard.description}}</view>
+      <view class="summary-meta">
+        <t-tag theme="{{hazard.level_theme}}" variant="outline" size="small">{{hazard.level}}</t-tag>
+        <view class="summary-type">{{hazard.type_label}}</view>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.hazardInfo}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <view class="detail-list">
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardAreaLabel}}</view>
+          <view class="detail-value">{{hazard.inspection_area}}</view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardPersonLabel}}</view>
+          <view class="detail-value">{{hazard.person_label}}</view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardRectifyPersonLabel}}</view>
+          <view class="detail-value">{{hazard.rectify_person_label}}</view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardDueLabel}}</view>
+          <view class="detail-value">{{hazard.due_label}}</view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardSuggestionLabel}}</view>
+          <view class="detail-value">{{hazard.suggestion_label}}</view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.hazardRemarkLabel}}</view>
+          <view class="detail-value">{{hazard.remark_label}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.hazardBeforeImagesLabel}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <view wx:if="{{hazard.before_images.length}}" class="image-grid">
+        <view
+          wx:for="{{hazard.before_images}}"
+          wx:key="id"
+          class="image-item"
+          data-group="before"
+          data-index="{{index}}"
+          bind:tap="previewImage"
+        >
+          <image class="hazard-image" src="{{item.preview_url}}" mode="aspectFill" lazy-load webp />
+        </view>
+      </view>
+      <view wx:else class="no-image">{{i18n.noImages}}</view>
+    </view>
+
+    <view wx:if="{{canWrite}}" class="section-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.hazardFollowUp}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <view class="follow-up-field">
+        <view class="field-label">{{i18n.hazardStatusLabel}}</view>
+        <t-radio-group
+          value="{{form.status}}"
+          options="{{statusOptions}}"
+          bind:change="onStatusChange"
+        />
+      </view>
+      <view class="follow-up-field">
+        <view class="field-label">{{i18n.hazardRectifyPersonLabel}}</view>
+        <t-input
+          value="{{form.rectifyPerson}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="64"
+          data-field="rectifyPerson"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="follow-up-field">
+        <view class="field-label">{{i18n.hazardRemarkLabel}}</view>
+        <t-textarea
+          value="{{form.remark}}"
+          placeholder="{{i18n.hazardOptionalPlaceholder}}"
+          maxlength="2000"
+          autosize
+          data-field="remark"
+          bind:change="onFieldChange"
+        />
+      </view>
+      <view class="follow-up-field">
+        <view class="field-label">{{i18n.hazardAfterImagesLabel}}</view>
+        <view class="image-grid">
+          <view
+            wx:for="{{form.afterImages}}"
+            wx:key="id"
+            class="image-item"
+            data-group="after"
+            data-index="{{index}}"
+            bind:tap="previewImage"
+          >
+            <image class="hazard-image" src="{{item.preview_url}}" mode="aspectFill" lazy-load webp />
+            <view class="image-remove" data-index="{{index}}" catch:tap="removeAfterImage">
+              <t-icon name="close" size="26rpx" />
+            </view>
+          </view>
+          <view
+            wx:if="{{form.afterImages.length < 9}}"
+            class="image-item add-image"
+            bind:tap="addAfterImages"
+          >
+            <t-icon name="add" size="44rpx" />
+            <view class="add-image-text">{{i18n.hazardAddImage}}</view>
+          </view>
+        </view>
+      </view>
+      <t-button
+        class="follow-up-action"
+        theme="primary"
+        size="large"
+        block
+        loading="{{saving}}"
+        disabled="{{saving}}"
+        bind:tap="saveFollowUp"
+      >{{i18n.hazardFollowUpAction}}</t-button>
+    </view>
+
+    <view wx:if="{{!canWrite && hazard.after_images.length}}" class="section-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.hazardAfterImagesLabel}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <view class="image-grid">
+        <view
+          wx:for="{{hazard.after_images}}"
+          wx:key="id"
+          class="image-item"
+          data-group="after"
+          data-index="{{index}}"
+          bind:tap="previewImage"
+        >
+          <image class="hazard-image" src="{{item.preview_url}}" mode="aspectFill" lazy-load webp />
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <t-toast id="hazard-detail-toast" />
+</view>

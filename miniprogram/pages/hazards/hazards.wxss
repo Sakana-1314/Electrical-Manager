@@ -1,0 +1,142 @@
+.hazards-page {
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.list-header {
+  margin-bottom: 16rpx;
+}
+
+.list-header .page-title {
+  font-size: 44rpx;
+}
+
+.list-tools {
+  margin-bottom: 8rpx;
+}
+
+.filter-menu {
+  margin-top: 16rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  --td-dropdown-menu-height: 88rpx;
+  --td-dropdown-menu-bg-color: var(--app-surface);
+  --td-dropdown-menu-border-width: 0;
+  --td-dropdown-menu-color: var(--app-text);
+  --td-dropdown-menu-active-color: var(--app-brand);
+}
+
+.result-count {
+  margin: 12rpx 0 4rpx;
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+}
+
+.hazard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.hazard-card {
+  padding: 28rpx 28rpx 24rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 28rpx;
+  background: var(--app-surface);
+  box-shadow: 0 12rpx 36rpx var(--app-shadow-color);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.hazard-card-active {
+  transform: scale(0.988);
+  box-shadow: 0 6rpx 18rpx var(--app-shadow-color);
+}
+
+.card-topline {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.card-date {
+  color: var(--app-text-secondary);
+  font-size: 24rpx;
+}
+
+.topline-right {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: auto;
+}
+
+.card-heading {
+  margin-top: 14rpx;
+}
+
+.hazard-description {
+  color: var(--app-text-strong);
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.hazard-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.hazard-type {
+  color: var(--app-text-muted);
+  font-size: 24rpx;
+}
+
+.card-divider {
+  height: 2rpx;
+  margin: 20rpx 0 18rpx;
+  background: var(--app-divider);
+}
+
+.hazard-meta {
+  display: flex;
+  gap: 16rpx;
+}
+
+.meta-item {
+  min-width: 0;
+  flex: 1;
+}
+
+.meta-label {
+  color: var(--app-text-subtle);
+  font-size: 21rpx;
+}
+
+.meta-value {
+  margin-top: 6rpx;
+  color: var(--app-text);
+  font-size: 25rpx;
+  font-weight: 550;
+  word-break: break-all;
+}
+
+.state-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 420rpx;
+}
+
+.empty-panel {
+  padding-top: 40rpx;
+}
+
+.load-more,
+.load-finished {
+  padding: 28rpx 0 8rpx;
+  color: var(--app-text-placeholder);
+  font-size: 22rpx;
+  text-align: center;
+}

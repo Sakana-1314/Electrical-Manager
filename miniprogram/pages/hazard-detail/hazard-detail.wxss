@@ -1,0 +1,146 @@
+.hazard-detail-page {
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.loading-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360rpx;
+}
+
+.summary-card {
+  background: var(--app-brand-strong-gradient);
+}
+
+.summary-topline {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.summary-date {
+  color: var(--app-on-brand-soft);
+  font-size: 24rpx;
+}
+
+.summary-tags {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: auto;
+}
+
+.summary-description {
+  margin-top: 14rpx;
+  color: var(--app-on-brand);
+  font-size: 34rpx;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.summary-type {
+  color: var(--app-on-brand-soft);
+  font-size: 24rpx;
+}
+
+.detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.detail-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.detail-label {
+  flex: none;
+  width: 160rpx;
+  color: var(--app-text-subtle);
+  font-size: 24rpx;
+}
+
+.detail-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-text);
+  font-size: 26rpx;
+  word-break: break-all;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.image-item {
+  position: relative;
+  height: 192rpx;
+  border-radius: 18rpx;
+  background: var(--app-bg);
+  overflow: hidden;
+}
+
+.hazard-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image-remove {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--app-scrim);
+  color: var(--app-on-brand);
+}
+
+.add-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
+  border: 2rpx dashed var(--app-border-strong);
+  color: var(--app-text-muted);
+}
+
+.add-image-text {
+  font-size: 22rpx;
+}
+
+.no-image {
+  color: var(--app-text-muted);
+  font-size: 24rpx;
+}
+
+.follow-up-field {
+  margin-bottom: 24rpx;
+}
+
+.field-label {
+  margin-bottom: 12rpx;
+  color: var(--app-text-secondary);
+  font-size: 25rpx;
+}
+
+.follow-up-action {
+  margin-top: 8rpx;
+}
