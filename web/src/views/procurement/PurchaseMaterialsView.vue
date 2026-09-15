@@ -1096,7 +1096,7 @@ onBeforeUnmount(() => {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
           <n-input
@@ -1115,49 +1115,47 @@ onBeforeUnmount(() => {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>提报员工</span>
-            <n-select
-              v-model:value="filters.actual_demand_person"
-              :options="actualDemandPersonOptions"
-              placeholder="选择或搜索提报员工"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>子项号</span>
-            <n-select
-              v-model:value="filters.subitem_no"
-              :options="subitemOptions"
-              placeholder="选择或搜索子项号"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>类别</span>
-            <n-select
-              v-model:value="filters.category"
-              :options="categoryOptions"
-              placeholder="选择类别"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>申购状态</span>
-            <n-select
-              v-model:value="filters.status"
-              class="status-filter-select"
-              :options="statusFilterOptions"
-              multiple
-              clearable
-              placeholder="选择一个或多个状态"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>提报员工</span>
+          <n-select
+            v-model:value="filters.actual_demand_person"
+            :options="actualDemandPersonOptions"
+            placeholder="选择或搜索提报员工"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>子项号</span>
+          <n-select
+            v-model:value="filters.subitem_no"
+            :options="subitemOptions"
+            placeholder="选择或搜索子项号"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>类别</span>
+          <n-select
+            v-model:value="filters.category"
+            :options="categoryOptions"
+            placeholder="选择类别"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>申购状态</span>
+          <n-select
+            v-model:value="filters.status"
+            class="status-filter-select"
+            :options="statusFilterOptions"
+            multiple
+            clearable
+            placeholder="选择一个或多个状态"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">

@@ -185,4 +185,17 @@ describe('HuaXingStockView', () => {
 
     expect(tableColumnKeys()).toEqual(['name', 'quantity'])
   })
+
+  it('折叠开关切换筛选网格的 is-collapsed（可见数量由全局样式按断点决定）', async () => {
+    await mountView()
+
+    const grid = () => wrapper?.element.querySelector('.filter-grid')
+    expect(grid()?.classList.contains('is-collapsed')).toBe(true)
+
+    await clickButton('更多筛选')
+    expect(grid()?.classList.contains('is-collapsed')).toBe(false)
+
+    await clickButton('收起筛选')
+    expect(grid()?.classList.contains('is-collapsed')).toBe(true)
+  })
 })

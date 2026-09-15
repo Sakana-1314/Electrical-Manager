@@ -179,7 +179,7 @@ function onFileChange(event: Event) {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
           <n-input
@@ -198,17 +198,15 @@ function onFileChange(event: Event) {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>物料编码</span>
-            <n-input
-              v-model:value="filters.materialCode"
-              clearable
-              placeholder="输入物料编码"
-              @keyup.enter="query"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>物料编码</span>
+          <n-input
+            v-model:value="filters.materialCode"
+            clearable
+            placeholder="输入物料编码"
+            @keyup.enter="query"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">

@@ -2,10 +2,11 @@
 import { NButton } from 'naive-ui'
 
 /**
- * 筛选区折叠开关（桌面端与移动端同一套行为）。
- * - 筛选区默认只展示第一排常用条件，其余扩展字段（`.filter-extras-fields`）收起；
- *   点击在「更多筛选 / 收起筛选」间切换。
- * - 页面没有任何扩展字段时不要渲染本按钮（没有可展开的内容）。
+ * 筛选区折叠开关（桌面端与移动端同一套机制，可见数量由全局样式按断点决定）。
+ * - 折叠态只展示前 N 个筛选项（桌面端 6 个、手机端 2 个，见 `styles.css` 的
+ *   `.filter-grid.is-collapsed` 规则），点击在「更多筛选 / 收起筛选」间切换。
+ * - 页面只负责把 `is-collapsed`（即 `!filterExpanded`）绑到 `.filter-grid` 上。
+ * - 筛选项不超过该断点上限时页面仍可渲染本按钮，全局样式会自动隐藏它。
  */
 defineProps<{ expanded: boolean }>()
 const emit = defineEmits<{ 'update:expanded': [value: boolean] }>()

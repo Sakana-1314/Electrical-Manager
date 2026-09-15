@@ -560,7 +560,7 @@ onBeforeUnmount(() => {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
           <n-input
@@ -579,38 +579,36 @@ onBeforeUnmount(() => {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>提报员工</span>
-            <n-select
-              v-model:value="filters.actual_demand_person"
-              :options="actualDemandPersonOptions"
-              placeholder="选择或搜索提报员工"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>实际需求人</span>
-            <n-select
-              v-model:value="filters.purchase_responsible"
-              :options="purchaseResponsibleOptions"
-              placeholder="选择或搜索实际需求人"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>类别</span>
-            <n-select
-              v-model:value="filters.category"
-              :options="categoryOptions"
-              placeholder="选择类别"
-              filterable
-              clearable
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>提报员工</span>
+          <n-select
+            v-model:value="filters.actual_demand_person"
+            :options="actualDemandPersonOptions"
+            placeholder="选择或搜索提报员工"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>实际需求人</span>
+          <n-select
+            v-model:value="filters.purchase_responsible"
+            :options="purchaseResponsibleOptions"
+            placeholder="选择或搜索实际需求人"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>类别</span>
+          <n-select
+            v-model:value="filters.category"
+            :options="categoryOptions"
+            placeholder="选择类别"
+            filterable
+            clearable
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">
