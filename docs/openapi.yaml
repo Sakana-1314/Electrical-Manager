@@ -21045,7 +21045,7 @@ components:
             type: integer
             minimum: 1.0
           type: array
-          maxItems: 64
+          maxItems: 20
           title: Tag Ids
         image_ids:
           items:
@@ -21185,7 +21185,7 @@ components:
               type: integer
               minimum: 1.0
             type: array
-            maxItems: 64
+            maxItems: 20
           - type: 'null'
           title: Tag Ids
         image_ids:

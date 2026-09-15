@@ -1982,8 +1982,9 @@ class MiniProgramHazardUpdate(RequestModel):
 # ===== 台账管理（台账总览 / 标签管理） =====
 # 标签节点与台账记录各自最多 9 张图片，与全站 ImageUploader 默认上限一致。
 LEDGER_IMAGE_LIMIT = 9
-# 一条台账记录最多挂 64 个标签：`ledger.tag_ids` 是 VARCHAR(500)，正常业务远达不到这个量。
-LEDGER_TAG_LIMIT = 64
+# 一条台账记录最多挂 20 个标签：`ledger.tag_ids` 是 VARCHAR(500)，id 是 BIGINT（至多 19 位），
+# 取 20 时最坏情况 20 × 20 = 400 字符，必定放得下——不需要再为「超长」单独加一条错误码。
+LEDGER_TAG_LIMIT = 20
 LedgerName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
 LedgerModelSpec = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)
