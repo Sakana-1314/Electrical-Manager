@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         备件管理系统 - 华友何佳状态同步
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      1.1.1
+// @version      1.2.0
 // @description  查询华友何佳“物资状态查询”，自动补全业务员、状态、合同和发运信息。
 // @match        https://materials-manager.qcloud.19890605.xyz/*
 // @updateURL    https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-hejia-sync.user.js
@@ -28,6 +28,8 @@
     hejiaUsername: "hync",
     hejiaPassword: "",
     apiToken: "",
+    // 当前项目 id（0 = 未选择）：后端按项目隔离数据，业务接口都要带 X-Project-Id。
+    projectId: 0,
     intervalMinutes: 10,
     batchSize: 50,
     autoEnabled: false,
@@ -153,16 +155,132 @@
     }
   }
   async function apiRequest(options) {
-    const result = await json({
-      ...options,
+    let result;
+    try {
+      result = await json({
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Token": config.apiToken,
+          // 业务接口一律带当前项目（项目隔离）；未选择项目时不带，由后端返回 PROJECT_REQUIRED。
+          ...(Number(config.projectId) > 0
+            ? { "X-Project-Id": String(config.projectId) }
+            : {}),
+          ...(options.headers || {}),
+        },
+      });
+    } catch (error) {
+      throw projectError(error?.message) || error;
+    }
+    if (result?.code && result?.message) {
+      throw projectError(result.code) || new Error(result.message);
+    }
+    return result;
+  }
+
+  // 项目相关问题（后端多项目隔离）：请求失败时只给一条中文提示并终止本次同步，
+  // 不把原始「HTTP 400：{"code":"PROJECT_REQUIRED",…}」报文抛给用户。
+  const PROJECT_ERROR_CODES = [
+    "PROJECT_REQUIRED",
+    "PROJECT_NOT_FOUND",
+    "PROJECT_DISABLED",
+  ];
+  const PROJECT_ERROR_TEXT =
+    "项目未选择或已失效：请在悬浮窗的“连接与同步设置”里重新选择项目后重试";
+  function projectError(message) {
+    const code = PROJECT_ERROR_CODES.find((item) =>
+      String(message ?? "").includes(item),
+    );
+    return code
+      ? Object.assign(new Error(PROJECT_ERROR_TEXT), { project: code })
+      : null;
+  }
+
+  // —— 项目（多项目隔离）——
+  // 项目列表接口本身不带 X-Project-Id；业务接口通过 apiRequest 统一带上。
+  let projects = [];
+  function enabledProjects() {
+    return projects.filter((item) => item?.enabled === true);
+  }
+  // 下拉项只显示项目名称（编码不外显，避免「P05 P05 项目」这种重复）；状态栏用编码定位当前项目。
+  function projectOptionLabel(project) {
+    return clean(project?.name) || clean(project?.code) || `#${project?.id ?? ""}`;
+  }
+  function projectLabel(project) {
+    return project ? `项目：${clean(project?.code) || clean(project?.name)}` : "项目：未选择";
+  }
+  function activeProject() {
+    return projects.find((item) => Number(item.id) === Number(config.projectId)) || null;
+  }
+  async function fetchProjects() {
+    if (!config.apiToken) return projects;
+    const payload = await json({
+      method: "GET",
+      url: `${MATERIALS_API}/projects`,
       headers: {
         "Content-Type": "application/json",
         "X-API-Token": config.apiToken,
-        ...(options.headers || {}),
       },
     });
-    if (result?.code && result?.message) throw new Error(result.message);
-    return result;
+    if (!Array.isArray(payload)) throw new Error("项目列表接口返回的不是数组");
+    projects = payload.filter((item) => item && Number.isFinite(Number(item.id)));
+    return projects;
+  }
+  // 解析本次同步使用的项目：已保存的项目仍启用则沿用；否则回退到系统默认项目，
+  // 再退到第一个启用项目，并把结果写回本地存储（与网页端右上角项目切换器一致）。
+  async function resolveProject() {
+    if (!config.apiToken) return null;
+    if (!projects.length) await fetchProjects();
+    const enabled = enabledProjects();
+    const picked =
+      enabled.find((item) => Number(item.id) === Number(config.projectId)) ||
+      enabled.find((item) => item.is_default === true) ||
+      enabled[0] ||
+      null;
+    if (!picked) throw new Error("没有已启用的项目，请在管理端启用项目后重试");
+    if (Number(config.projectId) !== Number(picked.id)) {
+      saveConfig({ projectId: Number(picked.id) });
+    }
+    return picked;
+  }
+  function renderProjectOptions() {
+    if (!ui?.project) return;
+    const enabled = enabledProjects();
+    const options = enabled.map((project) => {
+      const option = document.createElement("option");
+      option.value = String(project.id);
+      option.textContent = projectOptionLabel(project);
+      return option;
+    });
+    if (!options.length) {
+      const option = document.createElement("option");
+      option.value = "0";
+      option.textContent = projects.length
+        ? "（无已启用项目）"
+        : config.apiToken
+          ? "（项目未加载）"
+          : "（请先填写接口令牌）";
+      options.push(option);
+    }
+    const values = options.map((option) => option.value);
+    ui.project.replaceChildren(...options);
+    ui.project.value = values.includes(String(config.projectId))
+      ? String(config.projectId)
+      : values[0];
+    ui.project.disabled = !enabled.length;
+  }
+  // 面板打开 / 保存设置后重新拉取项目列表并刷新下拉框；失败只提示，不影响其余功能。
+  async function refreshProjects() {
+    if (config.apiToken) {
+      try {
+        await fetchProjects();
+        await resolveProject();
+      } catch (error) {
+        log(`项目列表获取失败：${error.message}`, "warn");
+      }
+    }
+    renderProjectOptions();
+    renderStats();
   }
   async function targets() {
     const limit = int(config.batchSize, 50, 1, 200);
@@ -418,7 +536,7 @@
   }
   function renderStats() {
     if (ui)
-      ui.stats.textContent = `扫描 ${stats.scanned} · 命中 ${stats.found} · 更新 ${stats.updated} · 跳过 ${stats.skipped} · 失败 ${stats.failed}`;
+      ui.stats.textContent = `${projectLabel(activeProject())} · 扫描 ${stats.scanned} · 命中 ${stats.found} · 更新 ${stats.updated} · 跳过 ${stats.skipped} · 失败 ${stats.failed}`;
   }
   function status(text, kind = "idle") {
     if (!ui) return;
@@ -447,6 +565,8 @@
     status("连接中", "running");
     try {
       credentials();
+      const project = await resolveProject();
+      if (project) log(`项目：${clean(project.code)}`);
       log(`${trigger === "auto" ? "自动" : "手动"}同步开始`);
       const rows = await targets();
       stats.scanned = rows.length;
@@ -460,6 +580,8 @@
       log(`何佳登录成功：${user?.userName || config.hejiaUsername}`);
       const source = await dataset();
       log(`已加载“${source.headerText || MENU_NAME}”查询配置`);
+      // 项目失效（未选择 / 已停用 / 不存在）时终止本次同步，不逐条重复报错。
+      let aborted = false;
       for (let index = 0; index < rows.length; index += 1) {
         const traceNo = clean(rows[index].trace_no);
         status(`${index + 1}/${rows.length} ${traceNo}`, "running");
@@ -510,23 +632,42 @@
           }
         } catch (error) {
           stats.failed += 1;
+          if (error?.project) {
+            aborted = true;
+            status("同步中止", "error");
+            log(`${traceNo}：${error.message}`, "error");
+            log("项目已失效，已终止本次同步", "error");
+            break;
+          }
           log(`${traceNo}：${error.message}`, "error");
         }
         renderStats();
       }
-      status(
-        stats.failed ? "完成（有失败）" : "同步完成",
-        stats.failed ? "warn" : "success",
-      );
-      log(
-        `同步完成：扫描 ${stats.scanned}，命中 ${stats.found}，更新 ${stats.updated}，失败 ${stats.failed}`,
-        stats.failed ? "warn" : "success",
-      );
+      if (aborted) {
+        log(`同步已中止：失败 ${stats.failed}`, "error");
+      } else {
+        status(
+          stats.failed ? "完成（有失败）" : "同步完成",
+          stats.failed ? "warn" : "success",
+        );
+        log(
+          `同步完成：扫描 ${stats.scanned}，命中 ${stats.found}，更新 ${stats.updated}，失败 ${stats.failed}`,
+          stats.failed ? "warn" : "success",
+        );
+      }
     } catch (error) {
       stats.failed += 1;
       renderStats();
-      status("同步失败", "error");
-      log(error.message, "error");
+      if (error?.project) {
+        // 项目失效：只提示一次，清掉本地选择并重新解析项目。
+        status("同步中止", "error");
+        log(error.message, "error");
+        saveConfig({ projectId: 0 });
+        await refreshProjects();
+      } else {
+        status("同步失败", "error");
+        log(error.message, "error");
+      }
     } finally {
       running = false;
       if (ui) {
@@ -551,6 +692,7 @@
       hejiaUsername: ui.hejiaUsername.value.trim(),
       hejiaPassword: ui.hejiaPassword.value,
       apiToken: ui.apiToken.value.trim(),
+      projectId: int(ui.project.value, config.projectId, 0, 2147483647),
       intervalMinutes: int(ui.interval.value, 10, 1, 1440),
       batchSize: int(ui.batch.value, 50, 1, 200),
       dryRun: ui.dryRun.checked,
@@ -606,9 +748,9 @@
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
 <style>
-:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:14px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:linear-gradient(135deg,#0f766e,#2563eb);cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:999px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:8px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save{height:34px;border-radius:9px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#2563eb}.save{border:1px solid #cbd5e1;color:#334155;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#2563eb}.stats{margin:10px 0;padding:8px 10px;border-radius:9px;color:#475569;background:#f1f5f9;font-size:12px}details{border:1px solid #e2e8f0;border-radius:10px}summary{padding:9px 10px;font-size:12px;font-weight:650;cursor:pointer}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 10px 10px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=password],input[type=number]{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:7px;padding:0 8px}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.notice{grid-column:1/-1;color:#92400e;font-size:11px;line-height:1.5}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:9px;padding:8px;color:#cbd5e1;background:#0f172a;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}
+:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:14px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:linear-gradient(135deg,#0f766e,#2563eb);cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:999px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:8px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save{height:34px;border-radius:9px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#2563eb}.save{border:1px solid #cbd5e1;color:#334155;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#2563eb}.stats{margin:10px 0;padding:8px 10px;border-radius:9px;color:#475569;background:#f1f5f9;font-size:12px}details{border:1px solid #e2e8f0;border-radius:10px}summary{padding:9px 10px;font-size:12px;font-weight:650;cursor:pointer}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 10px 10px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=password],input[type=number],select{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:7px;padding:0 8px}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.notice{grid-column:1/-1;color:#92400e;font-size:11px;line-height:1.5}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:9px;padding:8px;color:#cbd5e1;background:#0f172a;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}
 </style>
-<section class="panel"><header class="head"><div class="title">华友何佳同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label></div><div class="stats">扫描 0 · 命中 0 · 更新 0 · 跳过 0 · 失败 0</div><details><summary>连接与同步设置</summary><div class="settings"><label>何佳账号<input class="hejia-user" type="text"></label><label>何佳密码<input class="hejia-pass" type="password"></label><label>接口令牌<input class="api-token" type="password" placeholder="管理端 API Token"></label><label>自动间隔（分钟）<input class="interval" type="number" min="1" max="1440"></label><label>单次数量<input class="batch" type="number" min="1" max="200"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式（只查询不写库）</label><div class="notice">密码保存在油猴脚本私有存储中。自动模式默认关闭，仅处理存在待补齐字段且追溯号不为空的记录。</div><button class="save full">保存设置</button></div></details><div class="logs"></div></div></section>`;
+<section class="panel"><header class="head"><div class="title">华友何佳同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label></div><div class="stats">项目：未选择 · 扫描 0 · 命中 0 · 更新 0 · 跳过 0 · 失败 0</div><details><summary>连接与同步设置</summary><div class="settings"><label>何佳账号<input class="hejia-user" type="text"></label><label>何佳密码<input class="hejia-pass" type="password"></label><label>接口令牌<input class="api-token" type="password" placeholder="管理端 API Token"></label><label class="full">项目<select class="project"></select></label><label>自动间隔（分钟）<input class="interval" type="number" min="1" max="1440"></label><label>单次数量<input class="batch" type="number" min="1" max="200"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式（只查询不写库）</label><div class="notice">密码保存在油猴脚本私有存储中。自动模式默认关闭，仅处理存在待补齐字段且追溯号不为空的记录。</div><button class="save full">保存设置</button></div></details><div class="logs"></div></div></section>`;
     document.documentElement.append(host);
     ui = {
       status: shadow.querySelector(".status"),
@@ -620,6 +762,7 @@
       hejiaUsername: shadow.querySelector(".hejia-user"),
       hejiaPassword: shadow.querySelector(".hejia-pass"),
       apiToken: shadow.querySelector(".api-token"),
+      project: shadow.querySelector(".project"),
       interval: shadow.querySelector(".interval"),
       batch: shadow.querySelector(".batch"),
       dryRun: shadow.querySelector(".dry-run"),
@@ -628,12 +771,22 @@
     fillForm();
     minimize(Boolean(config.minimized));
     drag(shadow.querySelector(".head"));
+    // 打开“连接与同步设置”面板时刷新项目下拉框（令牌可能刚改过）
+    shadow.querySelector("details").addEventListener("toggle", (event) => {
+      if (event.target.open) refreshProjects();
+    });
     ui.minimize.addEventListener("click", () => minimize());
     ui.run.addEventListener("click", () => run());
+    ui.project.addEventListener("change", () => {
+      saveConfig({ projectId: Number(ui.project.value) || 0 });
+      renderStats();
+      log(`已选择${projectLabel(activeProject())}`);
+    });
     ui.save.addEventListener("click", () => {
       saveConfig(formConfig());
       fillForm();
       log("设置已保存", "success");
+      refreshProjects();
       if (config.autoEnabled) schedule(1500);
       else {
         clearTimeout(timer);
@@ -652,6 +805,7 @@
       }
     });
     renderStats();
+    refreshProjects();
     if (config.autoEnabled) schedule(3000);
   }
 

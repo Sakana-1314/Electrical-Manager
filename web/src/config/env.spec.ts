@@ -53,11 +53,20 @@ describe('构建环境配置', () => {
   })
 
   it('生成带令牌的绝对 MCP 地址', () => {
-    expect(resolveMcpUrl('/api/v1', 'token-value', 'https://app.example.com')).toBe(
+    expect(resolveMcpUrl('/api/v1', 'token-value', null, 'https://app.example.com')).toBe(
       'https://app.example.com/api/v1/mcp/?token=token-value',
     )
     expect(
-      resolveMcpUrl('https://api.example.com/api/v1', 'a+b/c', 'https://app.example.com'),
+      resolveMcpUrl('https://api.example.com/api/v1', 'a+b/c', null, 'https://app.example.com'),
     ).toBe('https://api.example.com/api/v1/mcp/?token=a%2Bb%2Fc')
+  })
+
+  it('MCP 地址带上当前项目 id，未选择项目时不带', () => {
+    expect(resolveMcpUrl('/api/v1', 'token-value', 6, 'https://app.example.com')).toBe(
+      'https://app.example.com/api/v1/mcp/?token=token-value&project_id=6',
+    )
+    expect(resolveMcpUrl('/api/v1', 'token-value', null, 'https://app.example.com')).not.toContain(
+      'project_id',
+    )
   })
 })

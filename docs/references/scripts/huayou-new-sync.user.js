@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.3.1
+// @version      3.4.0
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-new-sync.user.js
@@ -59,6 +59,8 @@
     platformUsername: "huaxing_jianxiu",
     platformPassword: "",
     apiToken: "",
+    // 当前项目 id（0 = 未选择）：后端按项目隔离数据，业务接口都要带 X-Project-Id。
+    projectId: 0,
     intervalMinutes: 10,
     batchSize: 30,
     minPurchaseOrderNo: "P05SG0300",
@@ -126,6 +128,23 @@
   // 结构性错误：报表模板/接口契约与脚本不符，属于系统性问题，出现即应终止本次同步。
   const structuralError = (message) =>
     Object.assign(new Error(`【结构异常】${message}`), { structural: true });
+  // 项目相关问题（后端多项目隔离）：请求失败时只给一条中文提示并终止本次同步，
+  // 不把原始「HTTP 400：{"code":"PROJECT_REQUIRED",…}」报文抛给用户。
+  const PROJECT_ERROR_CODES = [
+    "PROJECT_REQUIRED",
+    "PROJECT_NOT_FOUND",
+    "PROJECT_DISABLED",
+  ];
+  const PROJECT_ERROR_TEXT =
+    "项目未选择或已失效：请在悬浮窗的“连接与同步设置”里重新选择项目后重试";
+  const projectError = (message) => {
+    const code = PROJECT_ERROR_CODES.find((item) =>
+      String(message ?? "").includes(item),
+    );
+    return code
+      ? Object.assign(new Error(PROJECT_ERROR_TEXT), { project: code })
+      : null;
+  };
 
   // —— 本地更新记录（IndexedDB）：每个申购单记录最近成功同步时间，冷却期内不再请求平台 ——
   const IDB_NAME = `${PREFIX}order_sync`;
@@ -582,16 +601,108 @@
   let stats = { scanned: 0, found: 0, updated: 0, skipped: 0, failed: 0 };
 
   const apiRequest = async (options) => {
-    const result = await json({
-      ...options,
+    let result;
+    try {
+      result = await json({
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Token": config.apiToken,
+          // 业务接口一律带当前项目（项目隔离）；未选择项目时不带，由后端返回 PROJECT_REQUIRED。
+          ...(Number(config.projectId) > 0
+            ? { "X-Project-Id": String(config.projectId) }
+            : {}),
+          ...(options.headers || {}),
+        },
+      });
+    } catch (error) {
+      throw projectError(error?.message) || error;
+    }
+    if (result?.code && result?.message) {
+      throw projectError(result.code) || new Error(result.message);
+    }
+    return result;
+  };
+  // —— 项目（多项目隔离）——
+  // 项目列表接口本身不带 X-Project-Id；业务接口通过 apiRequest 统一带上。
+  let projects = [];
+  const enabledProjects = () => projects.filter((item) => item?.enabled === true);
+  // 下拉项只显示项目名称（编码不外显，避免「P05 P05 项目」这种重复）；状态栏用编码定位当前项目。
+  const projectOptionLabel = (project) =>
+    clean(project?.name) || clean(project?.code) || `#${project?.id ?? ""}`;
+  const projectLabel = (project) =>
+    project ? `项目：${clean(project?.code) || clean(project?.name)}` : "项目：未选择";
+  const activeProject = () =>
+    projects.find((item) => Number(item.id) === Number(config.projectId)) || null;
+  const fetchProjects = async () => {
+    if (!config.apiToken) return projects;
+    const payload = await json({
+      method: "GET",
+      url: `${MATERIALS_API}/projects`,
       headers: {
         "Content-Type": "application/json",
         "X-API-Token": config.apiToken,
-        ...(options.headers || {}),
       },
     });
-    if (result?.code && result?.message) throw new Error(result.message);
-    return result;
+    if (!Array.isArray(payload)) throw new Error("项目列表接口返回的不是数组");
+    projects = payload.filter((item) => item && Number.isFinite(Number(item.id)));
+    return projects;
+  };
+  // 解析本次同步使用的项目：已保存的项目仍启用则沿用；否则回退到系统默认项目，
+  // 再退到第一个启用项目，并把结果写回本地存储（与网页端右上角项目切换器一致）。
+  const resolveProject = async () => {
+    if (!config.apiToken) return null;
+    if (!projects.length) await fetchProjects();
+    const enabled = enabledProjects();
+    const picked =
+      enabled.find((item) => Number(item.id) === Number(config.projectId)) ||
+      enabled.find((item) => item.is_default === true) ||
+      enabled[0] ||
+      null;
+    if (!picked) throw new Error("没有已启用的项目，请在管理端启用项目后重试");
+    if (Number(config.projectId) !== Number(picked.id)) {
+      saveField("projectId", Number(picked.id));
+    }
+    return picked;
+  };
+  const renderProjectOptions = () => {
+    if (!ui?.project) return;
+    const enabled = enabledProjects();
+    const options = enabled.map((project) => {
+      const option = document.createElement("option");
+      option.value = String(project.id);
+      option.textContent = projectOptionLabel(project);
+      return option;
+    });
+    if (!options.length) {
+      const option = document.createElement("option");
+      option.value = "0";
+      option.textContent = projects.length
+        ? "（无已启用项目）"
+        : config.apiToken
+          ? "（项目未加载）"
+          : "（请先填写接口令牌）";
+      options.push(option);
+    }
+    const values = options.map((option) => option.value);
+    ui.project.replaceChildren(...options);
+    ui.project.value = values.includes(String(config.projectId))
+      ? String(config.projectId)
+      : values[0];
+    ui.project.disabled = !enabled.length;
+  };
+  // 面板打开 / 保存设置后重新拉取项目列表并刷新下拉框；失败只提示，不影响其余功能。
+  const refreshProjects = async () => {
+    if (config.apiToken) {
+      try {
+        await fetchProjects();
+        await resolveProject();
+      } catch (error) {
+        log(`项目列表获取失败：${error.message}`, "warn");
+      }
+    }
+    renderProjectOptions();
+    renderStats();
   };
   const requireShape = (payload, label) => {
     if (!payload || typeof payload !== "object")
@@ -656,7 +767,7 @@
       }
       return payload;
     } catch (error) {
-      if (attempt < 2 && !error?.structural) {
+      if (attempt < 2 && !error?.structural && !error?.project) {
         log(`申购单 ${orderNo}：回写请求失败（${error.message}），短暂等待后重试一次`, "warn");
         await sleep(1500);
         return applyOrder(orderNo, items, attempt + 1);
@@ -788,7 +899,7 @@
   };
   const renderStats = () => {
     if (ui) {
-      ui.stats.textContent = `申购单 ${stats.scanned} · 追溯号命中 ${stats.found} · 更新 ${stats.updated} · 跳过 ${stats.skipped} · 失败 ${stats.failed}`;
+      ui.stats.textContent = `${projectLabel(activeProject())} · 申购单 ${stats.scanned} · 追溯号命中 ${stats.found} · 更新 ${stats.updated} · 跳过 ${stats.skipped} · 失败 ${stats.failed}`;
     }
   };
   const status = (text, kind = "idle") => {
@@ -841,6 +952,8 @@
     status("连接中", "running");
     try {
       credentials();
+      const project = await resolveProject();
+      if (project) log(`项目：${clean(project.code)}`);
       log(`${trigger === "auto" ? "自动" : "手动"}同步开始（按申购单号整单同步）`);
       const orders = await orderTargets();
       // 只处理申购单号以 P 开头的申购单（如 P05SG0398），其余一律跳过，不发起平台查询。
@@ -1002,6 +1115,13 @@
           }
         } catch (error) {
           stats.failed += 1;
+          if (error?.project) {
+            aborted = true;
+            status("同步中止", "error");
+            log(`申购单 ${orderNo}：${error.message}`, "error");
+            log("项目已失效，已终止本次同步", "error");
+            break;
+          }
           if (error?.structural) {
             aborted = true;
             status("同步中止", "error");
@@ -1035,8 +1155,16 @@
     } catch (error) {
       stats.failed += 1;
       renderStats();
-      status("同步失败", "error");
-      log(error.message, "error");
+      if (error?.project) {
+        // 项目失效（未选择 / 已停用 / 不存在）：只提示一次，清掉本地选择并重新解析项目。
+        status("同步中止", "error");
+        log(error.message, "error");
+        saveField("projectId", 0);
+        await refreshProjects();
+      } else {
+        status("同步失败", "error");
+        log(error.message, "error");
+      }
     } finally {
       running = false;
       ui.run.disabled = false;
@@ -1077,6 +1205,7 @@
     platformUsername: ui.platformUsername.value.trim(),
     platformPassword: ui.platformPassword.value,
     apiToken: ui.apiToken.value.trim(),
+    projectId: int(ui.project.value, config.projectId, 0, 2147483647),
     intervalMinutes: int(ui.interval.value, 10, 1, 1440),
     batchSize: int(ui.batch.value, 30, 1, 200),
     minPurchaseOrderNo: ui.minPurchaseOrderNo.value.trim(),
@@ -1118,6 +1247,11 @@
     ui.dryRun.addEventListener("change", () =>
       saveConfig({ dryRun: ui.dryRun.checked }),
     );
+    ui.project.addEventListener("change", () => {
+      saveField("projectId", Number(ui.project.value) || 0);
+      renderStats();
+      log(`已选择${projectLabel(activeProject())}`);
+    });
     ui.auto.addEventListener("change", () => {
       saveConfig({ autoEnabled: ui.auto.checked });
       if (config.autoEnabled) {
@@ -1172,9 +1306,9 @@
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
 <style>
-:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#176b5b;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:4px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:4px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save{height:34px;border-radius:4px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#176b5b}.save{border:1px solid #cbd5e1;color:#334155;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#176b5b}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#475569;background:#f1f5f9;font-size:12px}details{border:1px solid #e2e8f0;border-radius:4px}summary{padding:9px 10px;font-size:12px;font-weight:650;cursor:pointer}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 10px 10px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=number]{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#cbd5e1;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}
+:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#176b5b;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:4px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:4px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save{height:34px;border-radius:4px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#176b5b}.save{border:1px solid #cbd5e1;color:#334155;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#176b5b}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#475569;background:#f1f5f9;font-size:12px}details{border:1px solid #e2e8f0;border-radius:4px}summary{padding:9px 10px;font-size:12px;font-weight:650;cursor:pointer}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 10px 10px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=number],select{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#cbd5e1;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}
 </style>
-<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label></div><div class="stats">申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><details><summary>连接与同步设置</summary><div class="settings"><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>接口令牌<input class="api-token" type="text" autocomplete="off" placeholder="管理端 API Token"></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label>申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label><button class="save full">保存设置</button></div></details><div class="logs"></div></div></section>`;
+<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label></div><div class="stats">项目：未选择 · 申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><details><summary>连接与同步设置</summary><div class="settings"><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>接口令牌<input class="api-token" type="text" autocomplete="off" placeholder="管理端 API Token"></label><label class="full">项目<select class="project"></select></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label>申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label><button class="save full">保存设置</button></div></details><div class="logs"></div></div></section>`;
     document.documentElement.append(host);
     ui = {
       status: shadow.querySelector(".status"),
@@ -1186,6 +1320,7 @@
       platformUsername: shadow.querySelector(".platform-user"),
       platformPassword: shadow.querySelector(".platform-pass"),
       apiToken: shadow.querySelector(".api-token"),
+      project: shadow.querySelector(".project"),
       interval: shadow.querySelector(".interval"),
       batch: shadow.querySelector(".batch"),
       minPurchaseOrderNo: shadow.querySelector(".min-po-no"),
@@ -1196,12 +1331,17 @@
     bindAutosave();
     minimize(Boolean(config.minimized));
     drag(shadow.querySelector(".head"));
+    // 打开“连接与同步设置”面板时刷新项目下拉框（令牌可能刚改过）
+    shadow.querySelector("details").addEventListener("toggle", (event) => {
+      if (event.target.open) refreshProjects();
+    });
     ui.minimize.addEventListener("click", () => minimize());
     ui.run.addEventListener("click", () => run());
     ui.save.addEventListener("click", () => {
       saveConfig(formConfig());
       fillForm();
       log("设置已保存", "success");
+      refreshProjects();
       if (config.autoEnabled) schedule(1500);
       else {
         clearTimeout(timer);
@@ -1209,6 +1349,7 @@
       }
     });
     renderStats();
+    refreshProjects();
     if (config.autoEnabled) schedule(3000);
   };
 

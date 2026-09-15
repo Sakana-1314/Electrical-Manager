@@ -154,11 +154,23 @@ def _referenced_schemas(value: Any, schemas: dict[str, Any]) -> dict[str, Any]:
     ),
 )
 async def system_whoami() -> dict[str, Any]:
-    """返回当前 MCP 令牌对应的管理端用户及角色。"""
+    """返回当前 MCP 令牌对应的管理端用户、角色，以及本次调用所属的项目。
+
+    多项目隔离下业务数据只在「当前项目」内可见，这里显式回显项目，便于 Agent 自检。
+    """
     identity = _identity_context.get()
     if identity is None:
         raise RuntimeError("MCP 请求未通过接口令牌认证")
-    return asdict(identity)
+    payload: dict[str, Any] = dict(asdict(identity))
+    project_id = _project_context.get()
+    payload["project_id"] = project_id
+    if project_id is not None:
+        async with SessionLocal() as session:
+            project = await session.get(Project, project_id)
+            if project is not None:
+                payload["project_code"] = project.code
+                payload["project_name"] = project.name
+    return payload
 
 
 @mcp.tool(
@@ -339,23 +351,36 @@ async def _call_internal(
     return _binary_result(response)
 
 
-async def _resolve_project_id(session: Any, headers: dict[bytes, bytes]) -> int | None:
-    """MCP 请求的项目：`X-Project-Id` 头优先（校验存在且启用），否则用默认项目。
+async def _resolve_project_id(
+    session: Any,
+    headers: dict[bytes, bytes],
+    query_project: str | None = None,
+) -> int | None:
+    """MCP 请求的项目：`X-Project-Id` 头 → MCP 链接上的 `?project_id=` → 默认项目。
 
-    MCP 调用没有网页端的项目切换器，缺省落到默认项目 P05，保证 AI Agent 开箱可用。
+    优先级按「显式请求头覆盖链接默认值」排列（与其它接口的项目约定一致）。
+    合法但已停用/不存在的 id 不回退，直接忽略并按下一档继续解析，避免把数据写到别处；
+    三档都拿不到时返回 None（工具调用仍会因缺项目上下文而明确报错）。
+    MCP 没有网页端的项目切换器，所以最后兜底到默认项目 P05，保证 AI Agent 开箱可用。
     """
     from app.services import project_service
 
-    raw = (headers.get(b"x-project-id", b"") or b"").decode("latin-1").strip()
-    if raw:
+    candidates = [
+        (headers.get(b"x-project-id", b"") or b"").decode("latin-1").strip(),
+        (query_project or "").strip(),
+    ]
+    for raw in candidates:
+        if not raw:
+            continue
         try:
             requested = int(raw)
         except ValueError:
-            requested = 0
-        if requested > 0:
-            project = await session.get(Project, requested)
-            if project is not None and project.enabled:
-                return project.id
+            continue
+        if requested <= 0:
+            continue
+        project = await session.get(Project, requested)
+        if project is not None and project.enabled:
+            return project.id
     project = await project_service.default_project(session)
     return project.id if project is not None else None
 
@@ -400,7 +425,9 @@ class McpTokenAuthMiddleware:
             user = await find_user_by_api_token(session, token)
             # 持久化懒迁移回写的令牌密文（见 permissions.find_user_by_api_token）
             await session.commit()
-            project_id = await _resolve_project_id(session, headers)
+            project_id = await _resolve_project_id(
+                session, headers, query.get("project_id", [None])[0]
+            )
         if user is None or not user.enabled:
             await _send_auth_error(send, "MCP 接口令牌无效或用户已停用")
             return

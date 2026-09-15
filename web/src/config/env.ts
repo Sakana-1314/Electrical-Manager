@@ -41,10 +41,15 @@ export function resolveImageBaseUrl(value: string | undefined, resolvedApiBaseUr
 export function resolveMcpUrl(
   resolvedApiBaseUrl: string,
   token: string,
+  projectId?: number | null,
   origin: string = window.location.origin,
 ): string {
   const url = new URL(joinUrl(resolvedApiBaseUrl, 'mcp/'), origin)
   url.searchParams.set('token', token)
+  // 多项目隔离：链接里带上当前项目，Agent 就按这个项目读写（不带则用系统默认项目）
+  if (Number.isInteger(projectId) && Number(projectId) > 0) {
+    url.searchParams.set('project_id', String(projectId))
+  }
   return url.toString()
 }
 
