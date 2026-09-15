@@ -1452,6 +1452,37 @@ def _build_schema_examples() -> dict[str, Any]:
             "version": _HAZARD_READ_ROWS[1]["version"],
         },
         "HazardStatsRead": _HAZARD_STATS,
+        "HazardFilterOptionsRead": {"rectify_persons": _HAZARD_RECTIFY_PERSONS},
+        "HazardFormOptionsRead": {
+            "units": _HAZARD_UNIT_ROWS,
+            "types": _HAZARD_TYPE_ROWS,
+        },
+        "MiniProgramHazardCreate": {
+            "client_request_id": "mp-1757750000000-3f7c1a92",
+            "inspection_area": "202-熔炼车间",
+            "inspection_date": _LATEST_DATE,
+            "inspector": "陈志远",
+            "description": "现场巡检发现行车电源箱内接线端子松动，运行时打火",
+            "suggestion": "停电紧固端子并测量接触电阻",
+            "hazard_unit_id": 1,
+            "due_date": "2026-09-20",
+            "recheck_person": "陈志远",
+            "rectify_person": "孙浩宇",
+            "status": "待整改",
+            "hazard_type_id": 2,
+            "level": "一般隐患",
+            "remark": None,
+            "before_image_ids": [_file_id(17)],
+            "after_image_ids": [],
+        },
+        "MiniProgramHazardUpdate": {
+            "status": "已整改",
+            "rectify_person": "周立新",
+            "recheck_person": "李建军",
+            "remark": "已更换破损段电缆并留存绝缘测试记录",
+            "after_image_ids": [_file_id(12)],
+            "version": _HAZARD_READ_ROWS[0]["version"],
+        },
         "Page_HazardRead_": _page(_HAZARD_READ_ROWS),
         "AiSearchSettingsRead": {
             "endpoint": _AI_ENDPOINT,
@@ -1469,6 +1500,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_plans_mode": "query_only",
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
+            "hazards_mode": "read_write",
             "secondary_warehouse_mode": "full",
             "updated_at": _LATEST_STAMP,
             "version": 3,
@@ -1488,6 +1520,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_plans_mode": "query_only",
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
+            "hazards_mode": "read_write",
             "secondary_warehouse_mode": "full",
             "version": 3,
         },
@@ -1503,6 +1536,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_plans_mode": "query_only",
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
+            "hazards_mode": "read_write",
             "secondary_warehouse_mode": "full",
         },
         "WebhookChannelRead": {
@@ -2605,6 +2639,10 @@ def _hazard_stats() -> dict[str, int]:
 
 
 _HAZARD_STATS = _hazard_stats()
+# 整改员工筛选选项由台账里出现过的人名去重排序得出。
+_HAZARD_RECTIFY_PERSONS = sorted(
+    {row["rectify_person"] for row in _HAZARD_READ_ROWS if row["rectify_person"]}
+)
 
 
 _SCHEMA_EXAMPLES: dict[str, Any] = _build_schema_examples()

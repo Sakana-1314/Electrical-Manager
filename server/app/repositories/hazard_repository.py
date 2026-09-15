@@ -26,8 +26,24 @@ class HazardFilter:
     hazard_unit_id: int | None = None
     area: str | None = None
     keyword: str | None = None
+    rectify_person: str | None = None
     date_from: date | None = None
     date_to: date | None = None
+    # 小程序搜索框只匹配「检查区域 + 隐患描述」；网页端关键字匹配更多字段。
+    keyword_area_description_only: bool = False
+
+
+# 网页端关键字匹配的字段：描述、建议、备注、区域、检查人员、责任人。
+_KEYWORD_COLUMNS = (
+    Hazard.description,
+    Hazard.suggestion,
+    Hazard.remark,
+    Hazard.inspection_area,
+    Hazard.inspector,
+    Hazard.person,
+)
+# 小程序搜索框匹配的字段：区域与隐患描述。
+_AREA_DESCRIPTION_COLUMNS = (Hazard.inspection_area, Hazard.description)
 
 
 def _apply_filter(query: Select[tuple[Hazard]], filters: HazardFilter) -> Select[tuple[Hazard]]:
@@ -41,17 +57,17 @@ def _apply_filter(query: Select[tuple[Hazard]], filters: HazardFilter) -> Select
         query = query.where(Hazard.hazard_unit_id == filters.hazard_unit_id)
     if filters.area:
         query = query.where(Hazard.inspection_area.contains(filters.area, autoescape=True))
+    if filters.rectify_person:
+        query = query.where(func.trim(Hazard.rectify_person) == filters.rectify_person)
     if filters.keyword:
+        columns = (
+            _AREA_DESCRIPTION_COLUMNS
+            if filters.keyword_area_description_only
+            else _KEYWORD_COLUMNS
+        )
         keyword = filters.keyword
         query = query.where(
-            or_(
-                Hazard.description.contains(keyword, autoescape=True),
-                Hazard.suggestion.contains(keyword, autoescape=True),
-                Hazard.remark.contains(keyword, autoescape=True),
-                Hazard.inspection_area.contains(keyword, autoescape=True),
-                Hazard.inspector.contains(keyword, autoescape=True),
-                Hazard.person.contains(keyword, autoescape=True),
-            )
+            or_(*(column.contains(keyword, autoescape=True) for column in columns))
         )
     if filters.date_from is not None:
         query = query.where(Hazard.inspection_date >= filters.date_from)
@@ -82,6 +98,29 @@ async def list_hazards(
 
 async def get_hazard(session: AsyncSession, hazard_id: int) -> Hazard | None:
     return await session.get(Hazard, hazard_id)
+
+
+async def find_by_client_request_id(
+    session: AsyncSession, client_request_id: str
+) -> Hazard | None:
+    """按小程序幂等键查既有隐患：命中即视为重复提交，直接返回原记录。"""
+    hazard: Hazard | None = await session.scalar(
+        select(Hazard).where(Hazard.client_request_id == client_request_id)
+    )
+    return hazard
+
+
+async def rectify_person_options(session: AsyncSession) -> list[str]:
+    """整改员工去重选项（忽略空白值），供两端筛选下拉使用。"""
+    rows = (
+        await session.scalars(
+            select(func.trim(Hazard.rectify_person))
+            .where(Hazard.rectify_person.is_not(None), func.trim(Hazard.rectify_person) != "")
+            .group_by(func.trim(Hazard.rectify_person))
+            .order_by(func.trim(Hazard.rectify_person))
+        )
+    ).all()
+    return [value for value in rows if value]
 
 
 async def count_by_status(session: AsyncSession) -> dict[HazardStatus, int]:

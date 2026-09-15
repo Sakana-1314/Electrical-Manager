@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Header, Query, status
+from fastapi import APIRouter, Header, Query, UploadFile, status
 
 from app.api.deps import OrSearch128, PageNo, PageSize
 from app.core.permissions import (
@@ -15,9 +15,15 @@ from app.core.security import (
     create_mini_program_access_token,
     create_mini_program_registration_token,
 )
-from app.domain.enums import MiniProgramStockStatus
+from app.domain.enums import HazardStatus, MiniProgramStockStatus
 from app.schemas import (
+    FileObjectRead,
+    HazardFilterOptionsRead,
+    HazardFormOptionsRead,
+    HazardRead,
     LastImportRead,
+    MiniProgramHazardCreate,
+    MiniProgramHazardUpdate,
     MiniProgramHuaXingInventoryRead,
     MiniProgramInventoryItemRead,
     MiniProgramLiteInventoryItemRead,
@@ -40,7 +46,7 @@ from app.schemas import (
     MiniProgramWechatLoginRequest,
     Page,
 )
-from app.services import import_job_service, mini_program_service
+from app.services import file_service, hazard_service, import_job_service, mini_program_service
 
 management_router = APIRouter(prefix="/mini-program-users", tags=["小程序用户管理"])
 mini_router = APIRouter(prefix="/mini-program", tags=["小程序"])
@@ -495,3 +501,120 @@ async def mini_program_outbound_by_no(
 ) -> MiniProgramOutboundRead:
     """按流水号查询小程序出库明细（分享结果页恢复数据用）。"""
     return await mini_program_service.get_outbound_by_no(session, operation_no, user)
+
+
+# ===== 隐患管理 =====
+# 路由顺序：先注册静态子路径（filter-options / form-options / images），
+# 再注册 /hazards/{hazard_id}，否则子路径会被当成 hazard_id 解析。
+
+
+@mini_router.get(
+    "/hazards",
+    response_model=Page[HazardRead],
+    summary="隐患列表",
+)
+async def mini_program_hazards(
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+    page: PageNo = 1,
+    page_size: PageSize = 20,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+    status_filter: Annotated[HazardStatus | None, Query(alias="status")] = None,
+    rectify_person: Annotated[str | None, Query(max_length=64)] = None,
+) -> Page[HazardRead]:
+    """隐患列表：关键字只匹配「检查区域 + 隐患描述」，可按整改状态与整改员工筛选。"""
+    items, total = await hazard_service.list_hazards(
+        session,
+        status=status_filter,
+        level=None,
+        hazard_type_id=None,
+        hazard_unit_id=None,
+        area=None,
+        keyword=keyword,
+        rectify_person=rectify_person,
+        page=page,
+        page_size=page_size,
+        keyword_area_description_only=True,
+    )
+    return Page(items=items, page=page, page_size=page_size, total=total)
+
+
+@mini_router.get(
+    "/hazards/filter-options",
+    response_model=HazardFilterOptionsRead,
+    summary="隐患筛选项",
+)
+async def mini_program_hazard_filter_options(
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> HazardFilterOptionsRead:
+    return await hazard_service.hazard_filter_options(session)
+
+
+@mini_router.get(
+    "/hazards/form-options",
+    response_model=HazardFormOptionsRead,
+    summary="隐患登记选项",
+)
+async def mini_program_hazard_form_options(
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> HazardFormOptionsRead:
+    return await hazard_service.hazard_form_options(session)
+
+
+@mini_router.post(
+    "/hazards/images",
+    response_model=FileObjectRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="上传隐患图片",
+)
+async def mini_program_upload_hazard_image(
+    file: UploadFile,
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> FileObjectRead:
+    """小程序上传整改前/后图片：与网页端共用同一套图片存储与去重规则。"""
+    return await file_service.save_image(session, file)
+
+
+@mini_router.post(
+    "/hazards",
+    response_model=HazardRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="登记隐患",
+)
+async def mini_program_create_hazard(
+    data: MiniProgramHazardCreate,
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> HazardRead:
+    return await hazard_service.mini_program_create_hazard(session, data, user)
+
+
+@mini_router.get(
+    "/hazards/{hazard_id}",
+    response_model=HazardRead,
+    summary="隐患详情",
+)
+async def mini_program_hazard_detail(
+    hazard_id: int,
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> HazardRead:
+    return hazard_service.hazard_read(await hazard_service.get_hazard(session, hazard_id))
+
+
+@mini_router.patch(
+    "/hazards/{hazard_id}",
+    response_model=HazardRead,
+    summary="跟进隐患",
+)
+async def mini_program_update_hazard(
+    hazard_id: int,
+    data: MiniProgramHazardUpdate,
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> HazardRead:
+    """更新整改状态、整改员工、复检人员、整改后图片与备注。"""
+    return await hazard_service.mini_program_update_hazard(session, hazard_id, data)

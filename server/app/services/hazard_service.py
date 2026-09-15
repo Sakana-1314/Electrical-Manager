@@ -25,17 +25,24 @@ from app.models import (
     HazardBeforeImage,
     HazardType,
     HazardUnit,
+    MiniProgramUser,
 )
 from app.repositories import hazard_repository
 from app.schemas import (
     HazardCreate,
+    HazardFilterOptionsRead,
+    HazardFormOptionsRead,
     HazardRead,
     HazardStatsRead,
     HazardTypeCreate,
+    HazardTypeRead,
     HazardTypeUpdate,
     HazardUnitCreate,
+    HazardUnitRead,
     HazardUnitUpdate,
     HazardUpdate,
+    MiniProgramHazardCreate,
+    MiniProgramHazardUpdate,
 )
 from app.services.common import file_read, utc_aware, validate_version
 
@@ -124,10 +131,12 @@ async def list_hazards(
     hazard_unit_id: int | None,
     area: str | None,
     keyword: str | None,
-    date_from: date | None,
-    date_to: date | None,
-    page: int,
-    page_size: int,
+    rectify_person: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    page: int = 1,
+    page_size: int = 20,
+    keyword_area_description_only: bool = False,
 ) -> tuple[list[HazardRead], int]:
     filters = hazard_repository.HazardFilter(
         status=status,
@@ -136,8 +145,10 @@ async def list_hazards(
         hazard_unit_id=hazard_unit_id,
         area=_trim(area),
         keyword=_trim(keyword),
+        rectify_person=_trim(rectify_person),
         date_from=date_from,
         date_to=date_to,
+        keyword_area_description_only=keyword_area_description_only,
     )
     items, total = await hazard_repository.list_hazards(session, filters, page, page_size)
     return [hazard_read(item) for item in items], total
@@ -150,7 +161,22 @@ async def get_hazard(session: AsyncSession, hazard_id: int) -> Hazard:
     return item
 
 
-async def create_hazard(session: AsyncSession, data: HazardCreate) -> HazardRead:
+async def create_hazard(
+    session: AsyncSession,
+    data: HazardCreate,
+    *,
+    client_request_id: str | None = None,
+    default_inspector: str = DEFAULT_INSPECTOR,
+) -> HazardRead:
+    """登记隐患。
+
+    `client_request_id` 非空时先查幂等键：小程序弱网重试命中既有记录直接返回，
+    不会重复登记；`default_inspector` 供小程序把检查人员缺省成当前用户姓名。
+    """
+    if client_request_id is not None:
+        existing = await hazard_repository.find_by_client_request_id(session, client_request_id)
+        if existing is not None:
+            return hazard_read(existing)
     unit = await hazard_repository.get_unit(session, data.hazard_unit_id)
     if unit is None:
         raise not_found("责任单位")
@@ -164,7 +190,7 @@ async def create_hazard(session: AsyncSession, data: HazardCreate) -> HazardRead
         raise not_found("隐患类型")
 
     inspection_date = data.inspection_date or business_today()
-    inspector = _trim(data.inspector) or DEFAULT_INSPECTOR
+    inspector = _trim(data.inspector) or default_inspector
     before_files = await _files(session, data.before_image_ids)
     after_files = await _files(session, data.after_image_ids)
     item = Hazard(
@@ -182,6 +208,7 @@ async def create_hazard(session: AsyncSession, data: HazardCreate) -> HazardRead
         hazard_type_id=hazard_type.id,
         level=data.level,
         remark=data.remark,
+        client_request_id=client_request_id,
     )
     # 关联集合在 flush 之前赋值：此时对象还是 pending，集合已初始化，不会触发延迟加载。
     _link_images(item, before_files, before=True)
@@ -400,3 +427,53 @@ async def delete_type(session: AsyncSession, type_id: int, expected_version: int
         )
     await session.delete(hazard_type)
     await session.commit()
+
+
+# ===== 小程序端 =====
+
+
+async def hazard_filter_options(session: AsyncSession) -> HazardFilterOptionsRead:
+    """隐患列表筛选项：库中已有的整改员工去重（两端筛选下拉共用）。"""
+    return HazardFilterOptionsRead(
+        rectify_persons=await hazard_repository.rectify_person_options(session)
+    )
+
+
+async def hazard_form_options(session: AsyncSession) -> HazardFormOptionsRead:
+    """小程序登记隐患用的下拉数据：只列启用中的责任单位。"""
+    units = [unit for unit in await hazard_repository.list_units(session) if unit.enabled]
+    types = await hazard_repository.list_types(session)
+    return HazardFormOptionsRead(
+        units=[HazardUnitRead.model_validate(unit) for unit in units],
+        types=[HazardTypeRead.model_validate(item) for item in types],
+    )
+
+
+async def mini_program_create_hazard(
+    session: AsyncSession, data: MiniProgramHazardCreate, user: MiniProgramUser
+) -> HazardRead:
+    """小程序登记隐患：检查人员缺省为当前小程序用户姓名，幂等键防重复登记。"""
+    return await create_hazard(
+        session,
+        data,
+        client_request_id=data.client_request_id,
+        default_inspector=user.display_name,
+    )
+
+
+async def mini_program_update_hazard(
+    session: AsyncSession, hazard_id: int, data: MiniProgramHazardUpdate
+) -> HazardRead:
+    """小程序跟进隐患：只更新整改闭环相关字段，复用网页端同一套校验与乐观锁。"""
+    return await update_hazard(
+        session,
+        hazard_id,
+        HazardUpdate(
+            status=data.status,
+            rectify_person=data.rectify_person,
+            recheck_person=data.recheck_person,
+            remark=data.remark,
+            after_image_ids=data.after_image_ids,
+            version=data.version,
+        ),
+    )
