@@ -336,7 +336,6 @@ onMounted(load)
               <n-select
                 v-model:value="form.secondary_warehouse_mode"
                 :options="secondaryWarehouseModeOptions"
-                style="width: 220px"
               />
             </n-form-item>
           </n-form>

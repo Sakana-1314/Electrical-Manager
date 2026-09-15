@@ -246,6 +246,15 @@ function confirmDelete(): void {
 </template>
 
 <style scoped>
+/* 筛选区标题：与其它列表页同一套页面级样式（全局 styles.css 不提供这条）。 */
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
 .modal-footer {
   display: flex;
   align-items: center;
