@@ -170,12 +170,13 @@ function onUserMenuSelect(key: string) {
 
 <template>
   <n-layout :has-sider="!isMobile" class="app-shell">
+    <!-- 侧栏几何：展开 200px / 折叠 64px；菜单字号 13px 在 theme.ts 的 Menu 覆盖里（见 UI 设计规范「侧栏导航」） -->
     <n-layout-sider
       v-if="!isMobile"
       bordered
       collapse-mode="width"
       :collapsed-width="64"
-      :width="220"
+      :width="200"
       :collapsed="collapsed"
       show-trigger
       @collapse="collapsed = true"
