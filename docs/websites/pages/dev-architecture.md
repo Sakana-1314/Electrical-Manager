@@ -155,7 +155,7 @@ web/src/
 
 ### API 客户端与契约生成
 #### `web/src/api/client.ts`
-- 实例：`axios.create({ baseURL: apiBaseUrl, timeout: 15_000, paramsSerializer: { indexes: null } })`（数组参数序列化为重复 key，不带 `[]`）。
+- 实例：`axios.create({ baseURL: apiBaseUrl, timeout: 30_000, paramsSerializer: { indexes: null } })`（数组参数序列化为重复 key，不带 `[]`）。
 | 导出 | 来源 | 缺省行为 |
 | --- | --- | --- |
 | `apiBaseUrl` | `VITE_API_BASE_URL` | 回退 `/api/v1`；只填域名（纯 origin）时自动补 `/api/v1` |
@@ -164,17 +164,30 @@ web/src/
 | `resolveMcpUrl(apiBaseUrl, token)` | — | 拼出 `mcp/?token=` 地址 |
 
 位置：`web/src/config/env.ts`。
-- 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；每个请求生成 `config.headers['X-Request-ID'] = crypto.randomUUID()`。
+- 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。
 - 版本头：客户端**不统一注入**，由业务模块按需传 `If-Match`（值均为 `String(version)`）：
   `procurement.deleteMaterial`、`procurement.restoreRecordToPlan`、`purchasePlanTemplates.deleteTemplate`、
   `inventory.deleteMaterial`、`dictionaries.deleteMiniProgramUser`。
 - `X-API-Token`：**前端当前未实现**（代码中无该请求头，接口令牌仅在「管理端用户」页展示/复制与 MCP 链接里使用）。
 - 401 处理：仅当 `status === 401 && data.code === 'INVALID_TOKEN' && 未重试过 && localStorage 有 refresh_token`
-  时，调用 `renewAccessToken()`（`POST /auth/refresh`，`timeout: 15_000`）并重放原请求；并发请求共用模块级
+  时，调用 `renewAccessToken()`（`POST /auth/refresh`，`timeout: 30_000`）并重放原请求；并发请求共用模块级
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
-- 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。
+- 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。已归一化的 `AppError` 会被后续拦截器直接透传，不会因重放被再次包装。
 - 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑）。
-- 超时覆盖：默认 15s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
+- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
+#### 弱网自动重试（`web/src/api/retry.ts`）
+
+瞬时失败（断网、超时、连接被重置、网关抖动）自动重放，用户不必手点重试；策略与小程序同一套参数：
+
+| 维度 | 规则 |
+| --- | --- |
+| 可重放 | 缺省只有 `GET` / `HEAD` / `OPTIONS`；写请求需业务显式声明幂等（`{ retry: true }`，如带 `client_request_id` 的 `inventory.inbound` / `inventory.outbound` / `inventory.reverseOperation`）；`{ retry: false }` 关闭重试（启动路径上的两个 3000ms 探针） |
+| 触发条件 | 无 `response`（连接层失败）或状态码 ∈ `408 / 429 / 500 / 502 / 503 / 504`；`axios.isCancel` 与已 `abort` 的请求不重试 |
+| 次数与节奏 | 最多 3 次尝试；失败后退避 600ms → 1800ms（上限 6s），叠加 30% 以内抖动，避免并发请求同时复活 |
+| 最坏耗时 | 单次 30s × 3 + 退避 ≈ 92s |
+| 重放方式 | 复用同一份 config 重发：`X-Request-ID` 不变、`Authorization` 重新读取（等待期间 token 可能刚刷新） |
+| 拦截器顺序 | 重试拦截器注册在 401 刷新与错误归一化**之前**：只有它拿得到原始 `AxiosError`（状态码、取消标记） |
+
 #### 契约生成
 | 文件 | 说明 |
 | --- | --- |
@@ -682,7 +695,7 @@ server/app/
 | 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、图片上传与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、图片上传与静默重登）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 界面外观（明 / 暗）
 
@@ -767,7 +780,20 @@ flowchart TD
 - 图片上传（`/mini-program/hazards/images`）与网页端共用同一套存储与去重规则，附件管理按两张关联表统计引用次数。
 - 隐患类型与责任单位只在小程序里选择，维护仍在网页端。
 
-### 鉴权失效的静默重登（`utils/request.js`）
+### 弱网自动重试与鉴权失效的静默重登（`utils/request.js`）
+
+请求统一走 `utils/request.js`：单次 `timeout` 30s，瞬时失败自动重放，策略与网页端 `web/src/api/retry.ts` 同一套参数。
+
+| 维度 | 规则 |
+| --- | --- |
+| 可重放 | 缺省只有 `GET` / `HEAD` / `OPTIONS`；写请求需业务显式声明幂等（`retry: true`，出库与隐患登记都带 `client_request_id`、服务端按键去重）；`retry: false` 关闭重试 |
+| 触发条件 | `fail` 回调（断网、超时、连接被重置）或状态码 ∈ `408 / 429 / 500 / 502 / 503 / 504` |
+| 次数与节奏 | 最多 3 次尝试；失败后退避 600ms → 1800ms（上限 6s），叠加 30% 以内抖动 |
+| 最坏耗时 | 单次 30s × 3 + 退避 ≈ 92s（原先是一次 60s 的默认超时，中途断连只能整单重来） |
+| 重放方式 | 复用同一份 `options`（`data` 里的 `client_request_id` 不变），每次重新读取 token，重登后自动带上新凭证 |
+| 图片上传 | `uploadImage`（`wx.uploadFile`）单次 120s 且不自动重放：包体大、慢，重发会重复建附件 |
+
+鉴权失效单独走一次静默重登，不占用弱网重试额度（两者计数分开：`_attempt` 与 `_retried`）：
 
 ```mermaid
 flowchart TD
@@ -782,6 +808,8 @@ flowchart TD
     G -- "账号停用 / 注册关闭" --> I["清空本地凭证<br/>跳「停用」页 / 「注册已关闭」页"]
     G -- "成功" --> J["用新凭证重放原请求"]
 ```
+
+登录（`auth: false`）、绑定注册（显式 `token`）与写请求不参与自动重放：前者的一次性 `code` / `registration_token` 不能复用，后者的副作用由服务端幂等键决定。重试额度用尽后仍按原样抛错，页面提示与改造前一致。
 
 ### 功能模式与运行模式（`utils/features.js`）
 
