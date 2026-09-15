@@ -104,9 +104,10 @@ Page(withTheme({
     await ensureProject();
     const currentProject = getCurrentProject();
     this.setData({
+      // 标签统一取 utils/project.js 里的 label（只显示名称，不外显编码），避免两处拼法不一致
       projectOptions: getEnabledProjects().map((project) => ({
         id: project.id,
-        label: `${project.code} ${project.name}`,
+        label: project.label,
       })),
       currentProjectId: currentProject ? currentProject.id : 0,
       currentProjectLabel: currentProject ? currentProject.label : t('projectNotSelected'),
