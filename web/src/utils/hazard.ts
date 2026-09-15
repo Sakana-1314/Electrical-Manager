@@ -1,4 +1,4 @@
-import type { HazardLevel, HazardStatus } from '@/api/generated'
+import type { HazardLevel, HazardStatus, HazardType } from '@/api/generated'
 
 /** 隐患状态的中文标签（与后端枚举值同名，这里集中一处便于复用与断言）。 */
 export const hazardStatuses: HazardStatus[] = ['待整改', '整改受阻', '已整改']
@@ -78,4 +78,53 @@ export function isHazardOverdue(dueDate: string, status: HazardStatus, today: st
     return false
   }
   return dueDate < today
+}
+
+/** 隐患类型横向树的叶子节点：对应 `hazard_type` 的一行（一个大类 + 一个小类组合）。 */
+export interface HazardTypeLeaf {
+  /** 树节点唯一键，形如 `type:12`（`id` 是 vue3-tree-org 的默认 key 字段名） */
+  id: string
+  /** 展示文案（小类） */
+  label: string
+  /** 该行原始数据，编辑/删除时用 */
+  type: HazardType
+}
+
+/** 隐患类型横向树的分组节点：一个大类及其下的小类。 */
+export interface HazardTypeBranch {
+  /** 树节点唯一键，形如 `major:电气设备` */
+  id: string
+  /** 展示文案（大类） */
+  label: string
+  /** 该大类下的小类数量（节点上展示计数） */
+  count: number
+  /** 默认展开：树组件按该字段决定是否展开子节点 */
+  expand: boolean
+  children: HazardTypeLeaf[]
+}
+
+/**
+ * 把扁平的「大类 + 小类」组合行按大类分组成两级树。
+ *
+ * 存储层没有父子层级（`hazard_type` 一行一个组合），层级关系只在前端由 `major` 推导：
+ * - 保持入参顺序（后端已按 `major, minor, id` 排序），因此同一大类的小类顺序稳定；
+ * - 返回全新对象，不与入参共享引用——树组件会往节点上写 `$` 前缀字段，不能污染列表数据；
+ * - 节点字段用 `id` / `label` / `expand` / `children`，与 vue3-tree-org 的默认 key 约定一致；
+ * - 大类默认展开（`expand: true`），进入页面即可看到全部小类。
+ */
+export function buildHazardTypeTree(types: HazardType[]): HazardTypeBranch[] {
+  const branches = new Map<string, HazardTypeBranch>()
+  for (const type of types) {
+    const branch = branches.get(type.major) ?? {
+      id: `major:${type.major}`,
+      label: type.major,
+      count: 0,
+      expand: true,
+      children: [],
+    }
+    branch.children.push({ id: `type:${type.id}`, label: type.minor, type })
+    branch.count = branch.children.length
+    branches.set(type.major, branch)
+  }
+  return [...branches.values()]
 }

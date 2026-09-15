@@ -52,7 +52,7 @@ Electrical-Manager/
 ## 技术栈与命令
 | 类别 | 依赖 | 版本（`web/package.json`） |
 | --- | --- | --- |
-| 框架与运行时 | `vue`、`vue-router`、`pinia`、`naive-ui`、`axios`、`@vueuse/core`、`@vicons/ionicons5` | `^3.5.17`、`^4.5.1`、`^3.0.3`、`^2.42.0`、`^1.10.0`、`^13.5.0`、`^0.13.0` |
+| 框架与运行时 | `vue`、`vue-router`、`pinia`、`naive-ui`、`axios`、`@vueuse/core`、`@vicons/ionicons5`、`vue3-tree-org` | `^3.5.17`、`^4.5.1`、`^3.0.3`、`^2.42.0`、`^1.10.0`、`^13.5.0`、`^0.13.0`、`^4.2.2` |
 | 构建与类型 | `vite`、`@vitejs/plugin-vue`、`unplugin-vue-components`、`typescript`、`vue-tsc` | `^7.0.4`、`^6.0.0`、`^28.8.0`、`~5.8.3`、`^3.0.3` |
 | 测试与契约 | `vitest`、`jsdom`、`@vue/test-utils`、`openapi-typescript` | `^3.2.4`、`^26.1.0`、`^2.4.6`、`^7.8.0` |
 
@@ -114,7 +114,7 @@ web/src/
 | `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出 |
 | `/procurement/records/:id` | `purchase-record-detail` | `views/procurement/PurchaseRequestDetailView.vue` | 需登录 | 记录详情与编辑（含图片） |
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
-| `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：大类+小类组合 CRUD、按大类筛选 |
+| `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
