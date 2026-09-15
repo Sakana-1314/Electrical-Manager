@@ -166,6 +166,8 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
     },
     Menu: {
       borderRadius: '10px',
+      // 左侧导航（侧栏 + 移动端抽屉）比正文小 1px，让导航更紧凑；图标尺寸由菜单 iconSize 决定，不随字号变
+      fontSize: '13px',
       itemColorHover: palette.menuItemColorHover,
       itemColorActive: palette.menuItemColorActive,
       itemColorActiveHover: palette.menuItemColorActiveHover,
