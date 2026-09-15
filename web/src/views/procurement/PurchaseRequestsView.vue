@@ -1132,7 +1132,7 @@ onMounted(() => {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
           <n-input
@@ -1151,76 +1151,74 @@ onMounted(() => {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>追溯号</span>
-            <n-input
-              v-model:value="filters.trace_no"
-              placeholder="输入追溯号"
-              clearable
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field">
-            <span>申购单号</span>
-            <n-input
-              v-model:value="filters.purchase_order_no"
-              placeholder="输入申购单号"
-              clearable
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field">
-            <span>提报员工</span>
-            <n-select
-              v-model:value="filters.actual_demand_person"
-              :options="actualDemandPersonOptions"
-              placeholder="选择或搜索提报员工"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>实际需求人</span>
-            <n-select
-              v-model:value="filters.purchase_responsible"
-              :options="purchaseResponsibleOptions"
-              placeholder="选择或搜索实际需求人"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>业务员</span>
-            <n-select
-              v-model:value="filters.salesperson"
-              :options="salespersonOptions"
-              placeholder="选择或搜索业务员"
-              filterable
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>申购状态</span>
-            <n-select
-              v-model:value="filters.status"
-              :options="statusOptions"
-              clearable
-              filterable
-              placeholder="选择或搜索状态"
-            />
-          </label>
-          <label class="filter-field">
-            <span>子项号</span>
-            <n-select
-              v-model:value="filters.subitem_no"
-              :options="subitemOptions"
-              clearable
-              filterable
-              placeholder="选择或搜索子项号"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>追溯号</span>
+          <n-input
+            v-model:value="filters.trace_no"
+            placeholder="输入追溯号"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>申购单号</span>
+          <n-input
+            v-model:value="filters.purchase_order_no"
+            placeholder="输入申购单号"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>提报员工</span>
+          <n-select
+            v-model:value="filters.actual_demand_person"
+            :options="actualDemandPersonOptions"
+            placeholder="选择或搜索提报员工"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>实际需求人</span>
+          <n-select
+            v-model:value="filters.purchase_responsible"
+            :options="purchaseResponsibleOptions"
+            placeholder="选择或搜索实际需求人"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>业务员</span>
+          <n-select
+            v-model:value="filters.salesperson"
+            :options="salespersonOptions"
+            placeholder="选择或搜索业务员"
+            filterable
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>申购状态</span>
+          <n-select
+            v-model:value="filters.status"
+            :options="statusOptions"
+            clearable
+            filterable
+            placeholder="选择或搜索状态"
+          />
+        </label>
+        <label class="filter-field">
+          <span>子项号</span>
+          <n-select
+            v-model:value="filters.subitem_no"
+            :options="subitemOptions"
+            clearable
+            filterable
+            placeholder="选择或搜索子项号"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">

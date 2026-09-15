@@ -157,7 +157,7 @@ function rowProps(row: StockOperation) {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称或型号规格</span>
           <n-input
@@ -167,38 +167,36 @@ function rowProps(row: StockOperation) {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>流水号</span>
-            <n-input
-              v-model:value="filters.operation_no"
-              clearable
-              placeholder="输入流水号"
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field">
-            <span>操作类型</span>
-            <n-select
-              v-model:value="filters.operation_type"
-              clearable
-              :options="[
-                { label: '入库', value: 'INBOUND' },
-                { label: '出库', value: 'OUTBOUND' },
-              ]"
-              placeholder="选择操作类型"
-            />
-          </label>
-          <label class="filter-field">
-            <span>发生时间</span>
-            <n-date-picker
-              v-model:value="filters.dateRange"
-              type="datetimerange"
-              clearable
-              class="full-width"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>流水号</span>
+          <n-input
+            v-model:value="filters.operation_no"
+            clearable
+            placeholder="输入流水号"
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>操作类型</span>
+          <n-select
+            v-model:value="filters.operation_type"
+            clearable
+            :options="[
+              { label: '入库', value: 'INBOUND' },
+              { label: '出库', value: 'OUTBOUND' },
+            ]"
+            placeholder="选择操作类型"
+          />
+        </label>
+        <label class="filter-field">
+          <span>发生时间</span>
+          <n-date-picker
+            v-model:value="filters.dateRange"
+            type="datetimerange"
+            clearable
+            class="full-width"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">

@@ -316,7 +316,7 @@ onMounted(async () => {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>整改状态</span>
           <n-select
@@ -336,64 +336,62 @@ onMounted(async () => {
             filterable
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>隐患等级</span>
-            <n-select
-              v-model:value="filters.level"
-              :options="levelOptions"
-              placeholder="不限"
-              clearable
-            />
-          </label>
-          <label class="filter-field">
-            <span>责任单位</span>
-            <n-select
-              v-model:value="filters.hazard_unit_id"
-              :options="unitOptions"
-              placeholder="不限"
-              clearable
-              filterable
-            />
-          </label>
-          <label class="filter-field">
-            <span>整改员工</span>
-            <n-select
-              v-model:value="filters.rectify_person"
-              :options="rectifyPersonOptions"
-              placeholder="不限"
-              clearable
-              filterable
-            />
-          </label>
-          <label class="filter-field">
-            <span>检查区域</span>
-            <n-input
-              v-model:value="filters.area"
-              placeholder="如：201-冶炼主厂房"
-              clearable
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field">
-            <span>描述 / 人员 / 单位关键字</span>
-            <n-input
-              v-model:value="filters.keyword"
-              placeholder="模糊搜索"
-              clearable
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field filter-field-wide">
-            <span>检查日期范围</span>
-            <n-date-picker
-              v-model:value="filters.dateRange"
-              type="daterange"
-              clearable
-              class="full-width"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>隐患等级</span>
+          <n-select
+            v-model:value="filters.level"
+            :options="levelOptions"
+            placeholder="不限"
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>责任单位</span>
+          <n-select
+            v-model:value="filters.hazard_unit_id"
+            :options="unitOptions"
+            placeholder="不限"
+            clearable
+            filterable
+          />
+        </label>
+        <label class="filter-field">
+          <span>整改员工</span>
+          <n-select
+            v-model:value="filters.rectify_person"
+            :options="rectifyPersonOptions"
+            placeholder="不限"
+            clearable
+            filterable
+          />
+        </label>
+        <label class="filter-field">
+          <span>检查区域</span>
+          <n-input
+            v-model:value="filters.area"
+            placeholder="如：201-冶炼主厂房"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>描述 / 人员 / 单位关键字</span>
+          <n-input
+            v-model:value="filters.keyword"
+            placeholder="模糊搜索"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field filter-field-wide">
+          <span>检查日期范围</span>
+          <n-date-picker
+            v-model:value="filters.dateRange"
+            type="daterange"
+            clearable
+            class="full-width"
+          />
+        </label>
       </div>
       <div class="filter-actions">
         <ColumnVisibilityPicker

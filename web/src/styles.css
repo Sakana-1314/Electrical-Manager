@@ -374,18 +374,19 @@ a {
   align-items: center;
   gap: 8px;
 }
-/* 筛选折叠开关：桌面端与移动端一致——筛选区只默认展示第一排常用条件，
-   其余（`.filter-extras-fields`）通过本开关展开；没有扩展字段的页面不渲染本按钮。 */
+/* 筛选折叠开关：折叠态下的可见数量由本区块的规则统一决定（见下方 `.filter-grid.is-collapsed`），
+   页面只负责给 `.filter-grid` 绑 `is-collapsed`。没有可展开的筛选项时按钮自动不显示。 */
 .filter-collapse-btn {
   display: inline-flex;
 }
-/* 扩展筛选字段：展开时按 `display: contents` 内联参与外层筛选网格的自动填充（不额外换行），
-   收起时整组隐藏——桌面端与移动端同一套行为。 */
-.filter-extras-fields {
+/* 筛选折叠：收起时按 DOM 顺序保留前 N 个筛选项——桌面端 6 个（约一排），手机端 2 个（列宽只够一个）。
+   约定：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），计数即子元素序号。
+   筛选项不超过该断点上限时没有可展开的内容，页面虽然渲染了折叠开关，这里也会统一把它隐藏。 */
+.filter-grid.is-collapsed > :nth-child(n + 7) {
   display: none;
 }
-.filter-extras-fields.filter-extras-open {
-  display: contents;
+.filter-card:not(:has(.filter-grid > :nth-child(7))) .filter-collapse-btn {
+  display: none;
 }
 .filter-extras-actions {
   display: block;
@@ -475,8 +476,14 @@ a {
   .filter-actions > button {
     width: 100%;
   }
-  /* 折叠开关与扩展字段的收起/展开规则与桌面端共用（见上方 .filter-collapse-btn /
-     .filter-extras-fields），移动端只需处理按钮组与分页的窄屏排版 */
+  /* 手机端折叠后只保留前 2 个筛选项（列宽只够一个，两个条件已占满一屏），
+     其余收起规则与桌面端同一套：页面只给 `.filter-grid` 绑 `is-collapsed`。 */
+  .filter-grid.is-collapsed > :nth-child(n + 3) {
+    display: none;
+  }
+  .filter-card:not(:has(.filter-grid > :nth-child(3))) .filter-collapse-btn {
+    display: none;
+  }
   /* 分页器过宽时允许横向滑动，避免挤压溢出 */
   .pagination-bar {
     justify-content: flex-start;

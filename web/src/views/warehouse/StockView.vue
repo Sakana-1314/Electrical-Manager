@@ -241,7 +241,7 @@ async function confirmReplenishment() {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>名称、别名或型号规格</span>
           <n-input
@@ -251,28 +251,26 @@ async function confirmReplenishment() {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>库存下限</span>
-            <n-input v-model:value="filters.min_qty" clearable placeholder="输入库存下限" />
-          </label>
-          <label class="filter-field">
-            <span>库存上限</span>
-            <n-input v-model:value="filters.max_qty" clearable placeholder="输入库存上限" />
-          </label>
-          <label class="filter-field">
-            <span>预警状态</span>
-            <n-select
-              v-model:value="filters.low_stock"
-              clearable
-              :options="[
-                { label: '仅低库存', value: true },
-                { label: '全部库存', value: false },
-              ]"
-              placeholder="选择预警状态"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>库存下限</span>
+          <n-input v-model:value="filters.min_qty" clearable placeholder="输入库存下限" />
+        </label>
+        <label class="filter-field">
+          <span>库存上限</span>
+          <n-input v-model:value="filters.max_qty" clearable placeholder="输入库存上限" />
+        </label>
+        <label class="filter-field">
+          <span>预警状态</span>
+          <n-select
+            v-model:value="filters.low_stock"
+            clearable
+            :options="[
+              { label: '仅低库存', value: true },
+              { label: '全部库存', value: false },
+            ]"
+            placeholder="选择预警状态"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">

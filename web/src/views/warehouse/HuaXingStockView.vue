@@ -312,7 +312,7 @@ function onFileChange(event: Event) {
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>
-      <div class="filter-grid">
+      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>货品名称</span>
           <n-input
@@ -331,48 +331,46 @@ function onFileChange(event: Event) {
             @keyup.enter="query"
           />
         </label>
-        <div class="filter-extras-fields" :class="{ 'filter-extras-open': filterExpanded }">
-          <label class="filter-field">
-            <span>货品编码</span>
-            <n-input
-              v-model:value="filters.materialCode"
-              clearable
-              placeholder="输入货品编码"
-              @keyup.enter="query"
-            />
-          </label>
-          <label class="filter-field">
-            <span>申购部门</span>
-            <n-select
-              v-model:value="filters.purchaseDepartment"
-              :options="departmentOptions"
-              multiple
-              filterable
-              clearable
-              placeholder="选择申购部门（可多选）"
-            />
-          </label>
-          <label class="filter-field">
-            <span>申购人</span>
-            <n-select
-              v-model:value="filters.purchaser"
-              :options="purchaserOptions"
-              multiple
-              filterable
-              clearable
-              placeholder="选择申购人（可多选）"
-            />
-          </label>
-          <label class="filter-field filter-field-wide">
-            <span>首次入库日期</span>
-            <n-date-picker
-              v-model:value="filters.inboundDateRange"
-              type="daterange"
-              clearable
-              class="full-width"
-            />
-          </label>
-        </div>
+        <label class="filter-field">
+          <span>货品编码</span>
+          <n-input
+            v-model:value="filters.materialCode"
+            clearable
+            placeholder="输入货品编码"
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>申购部门</span>
+          <n-select
+            v-model:value="filters.purchaseDepartment"
+            :options="departmentOptions"
+            multiple
+            filterable
+            clearable
+            placeholder="选择申购部门（可多选）"
+          />
+        </label>
+        <label class="filter-field">
+          <span>申购人</span>
+          <n-select
+            v-model:value="filters.purchaser"
+            :options="purchaserOptions"
+            multiple
+            filterable
+            clearable
+            placeholder="选择申购人（可多选）"
+          />
+        </label>
+        <label class="filter-field filter-field-wide">
+          <span>首次入库日期</span>
+          <n-date-picker
+            v-model:value="filters.inboundDateRange"
+            type="daterange"
+            clearable
+            class="full-width"
+          />
+        </label>
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">
