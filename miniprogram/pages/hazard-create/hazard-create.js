@@ -221,6 +221,8 @@ Page(withTheme({
       await request({
         url: '/mini-program/hazards',
         method: 'POST',
+        // 带 client_request_id，服务端按键去重：弱网下可自动重发，不会重复登记。
+        retry: true,
         data: {
           client_request_id: this.clientRequestId,
           inspection_area: form.inspectionArea.trim() || null,

@@ -178,6 +178,8 @@ Page(withTheme({
       const result = await request({
         url: '/mini-program/outbound',
         method: 'POST',
+        // 带 client_request_id，服务端按键去重：弱网下可自动重发，不会重复出库。
+        retry: true,
         data: {
           client_request_id:
             this.data.clientRequestId || createClientRequestId(),

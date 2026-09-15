@@ -68,10 +68,15 @@ export const inventoryApi = {
     apiClient.get<Page<InventoryBalance>>('/inventory/low-stock', { params }).then((r) => r.data),
   replenishmentDefaults: () =>
     apiClient.get<ReplenishmentDefaults>('/inventory/replenishment-defaults').then((r) => r.data),
+  // 出入库/冲销都携带 client_request_id（服务端按键去重），业务上幂等：允许弱网自动重试。
   inbound: (payload: OperationWrite) =>
-    apiClient.post<StockOperation>('/inventory/inbounds', payload).then((r) => r.data),
+    apiClient
+      .post<StockOperation>('/inventory/inbounds', payload, { retry: true })
+      .then((r) => r.data),
   outbound: (payload: OperationWrite) =>
-    apiClient.post<StockOperation>('/inventory/outbounds', payload).then((r) => r.data),
+    apiClient
+      .post<StockOperation>('/inventory/outbounds', payload, { retry: true })
+      .then((r) => r.data),
   operations: (params?: StockOperationListQuery) =>
     apiClient.get<Page<StockOperation>>('/inventory/operations', { params }).then((r) => r.data),
   operation: (id: number) =>
@@ -87,7 +92,7 @@ export const inventoryApi = {
     },
   ) =>
     apiClient
-      .post<StockOperation>(`/inventory/operations/${id}/reverse`, payload)
+      .post<StockOperation>(`/inventory/operations/${id}/reverse`, payload, { retry: true })
       .then((r) => r.data),
   replenish: (id: number, payload: ReplenishmentDraftWrite) =>
     apiClient
