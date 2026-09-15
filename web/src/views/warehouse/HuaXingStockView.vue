@@ -13,7 +13,8 @@ import {
 import { useImportConfirm } from '@/composables/useImportConfirm'
 import { useImportJob } from '@/composables/useImportJob'
 import { usePagedTable } from '@/composables/usePagedTable'
-import { formatShanghaiTime } from '@/utils/time'
+import { formatShanghaiTime, toShanghaiDate } from '@/utils/time'
+import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
 import FilterExpandButton from '@/components/FilterExpandButton.vue'
 import LoadingMask from '@/components/LoadingMask.vue'
 
@@ -28,6 +29,8 @@ type HuaXingFilters = {
   modelSpec: string
   purchaseDepartment: string[]
   purchaser: string[]
+  /** 首次入库日期区间：[起始时间戳, 结束时间戳]，未选为 null */
+  inboundDateRange: [number, number] | null
 }
 const {
   items,
@@ -48,6 +51,11 @@ const {
       model_spec: f.modelSpec.trim() || undefined,
       purchase_department: f.purchaseDepartment.length ? f.purchaseDepartment.join('|') : undefined,
       purchaser: f.purchaser.length ? f.purchaser.join('|') : undefined,
+      // 日期选择器给的是时间戳，按上海时区折算成 YYYY-MM-DD 再交给后端做闭区间比较；
+      // 区间只选了一端时（值为 [时间戳, null]）只传已选那一端。
+      date_from:
+        f.inboundDateRange?.[0] == null ? undefined : toShanghaiDate(f.inboundDateRange[0]),
+      date_to: f.inboundDateRange?.[1] == null ? undefined : toShanghaiDate(f.inboundDateRange[1]),
       page: pager.page,
       page_size: pager.page_size,
     }),
@@ -57,6 +65,7 @@ const {
     modelSpec: '',
     purchaseDepartment: [],
     purchaser: [],
+    inboundDateRange: null,
   }),
   onError: (error) => message.error(error instanceof Error ? error.message : '加载华星总库存失败'),
   pageSizeOptions: [20, 50, 100, 200],
@@ -99,56 +108,132 @@ const activeFilterCount = computed(
       filters.modelSpec.trim(),
       ...filters.purchaseDepartment,
       ...filters.purchaser,
+      filters.inboundDateRange ? '首次入库日期' : '',
     ].filter(Boolean).length,
 )
 
-const columns: DataTableColumns<HuaXingInventory> = preventTableColumnCompression([
+type HuaXingColumnKey =
+  | 'first_inbound_date'
+  | 'warehouse'
+  | 'material_code'
+  | 'name'
+  | 'model_spec'
+  | 'quantity'
+  | 'unit_name'
+  | 'purchaser'
+  | 'purchase_department'
+  | 'subitem_no_name'
+
+/** 可展示列：列顺序即字段选择的顺序，`key` 同时用于 localStorage 持久化。 */
+const availableColumns: {
+  key: HuaXingColumnKey
+  label: string
+  column: DataTableColumns<HuaXingInventory>[number]
+}[] = [
   {
-    title: '首次入库日期',
     key: 'first_inbound_date',
-    width: tableColumnWidths.date,
-    render: (row) => row.first_inbound_date || '—',
+    label: '首次入库日期',
+    column: {
+      title: '首次入库日期',
+      key: 'first_inbound_date',
+      width: tableColumnWidths.date,
+      render: (row) => row.first_inbound_date || '—',
+    },
   },
-  { title: '仓库', key: 'warehouse', width: tableColumnWidths.person },
   {
-    title: '货品编码',
+    key: 'warehouse',
+    label: '仓库',
+    column: { title: '仓库', key: 'warehouse', width: tableColumnWidths.person },
+  },
+  {
     key: 'material_code',
-    width: tableColumnWidths.code,
-    render: (row) => h('strong', row.material_code ?? '—'),
+    label: '货品编码',
+    column: {
+      title: '货品编码',
+      key: 'material_code',
+      width: tableColumnWidths.code,
+      render: (row) => h('strong', row.material_code ?? '—'),
+    },
   },
   {
-    title: '货品名称',
     key: 'name',
-    width: tableColumnWidths.name,
-    ellipsis: { tooltip: true },
-    render: (row) => row.name || '—',
+    label: '货品名称',
+    column: {
+      title: '货品名称',
+      key: 'name',
+      width: tableColumnWidths.name,
+      ellipsis: { tooltip: true },
+      render: (row) => row.name || '—',
+    },
   },
   {
-    title: '型号',
     key: 'model_spec',
-    width: tableColumnWidths.model,
-    ellipsis: { tooltip: true },
-    render: (row) => row.model_spec || '—',
+    label: '型号',
+    column: {
+      title: '型号',
+      key: 'model_spec',
+      width: tableColumnWidths.model,
+      ellipsis: { tooltip: true },
+      render: (row) => row.model_spec || '—',
+    },
   },
-  { title: '数量', key: 'quantity', width: tableColumnWidths.quantity, align: 'right' },
-  { title: '单位', key: 'unit_name', width: tableColumnWidths.unit },
-  { title: '申购人', key: 'purchaser', width: tableColumnWidths.person },
   {
-    title: '申购部门',
+    key: 'quantity',
+    label: '数量',
+    column: {
+      title: '数量',
+      key: 'quantity',
+      width: tableColumnWidths.quantity,
+      align: 'right',
+    },
+  },
+  {
+    key: 'unit_name',
+    label: '单位',
+    column: { title: '单位', key: 'unit_name', width: tableColumnWidths.unit },
+  },
+  {
+    key: 'purchaser',
+    label: '申购人',
+    column: { title: '申购人', key: 'purchaser', width: tableColumnWidths.person },
+  },
+  {
     key: 'purchase_department',
-    width: tableColumnWidths.text,
-    ellipsis: { tooltip: true },
-    render: (row) => row.purchase_department || '—',
+    label: '申购部门',
+    column: {
+      title: '申购部门',
+      key: 'purchase_department',
+      width: tableColumnWidths.text,
+      ellipsis: { tooltip: true },
+      render: (row) => row.purchase_department || '—',
+    },
   },
   {
-    title: '子项号名称',
     key: 'subitem_no_name',
-    width: tableColumnWidths.material,
-    ellipsis: { tooltip: true },
-    render: (row) => row.subitem_no_name || '—',
+    label: '子项号名称',
+    column: {
+      title: '子项号名称',
+      key: 'subitem_no_name',
+      width: tableColumnWidths.material,
+      ellipsis: { tooltip: true },
+      render: (row) => row.subitem_no_name || '—',
+    },
   },
-])
-const tableScrollX = getTableScrollX(columns)
+]
+const visibleColumnKeys = ref<HuaXingColumnKey[]>(availableColumns.map((item) => item.key))
+const fieldOptions = availableColumns.map((item) => ({ label: item.label, value: item.key }))
+const columns = computed<DataTableColumns<HuaXingInventory>>(() =>
+  preventTableColumnCompression(
+    availableColumns
+      .filter((item) => visibleColumnKeys.value.includes(item.key))
+      .map((item) => item.column),
+  ),
+)
+const tableScrollX = computed(() => getTableScrollX(columns.value))
+
+function setVisibleColumnKeys(value: string[]) {
+  visibleColumnKeys.value = value as HuaXingColumnKey[]
+}
 
 function openFilePicker() {
   fileInput.value?.click()
@@ -173,6 +258,7 @@ async function importFile(file: File) {
   filters.modelSpec = ''
   filters.purchaseDepartment = []
   filters.purchaser = []
+  filters.inboundDateRange = null
   page.value = 1
   await query()
 }
@@ -277,6 +363,15 @@ function onFileChange(event: Event) {
               placeholder="选择申购人（可多选）"
             />
           </label>
+          <label class="filter-field filter-field-wide">
+            <span>首次入库日期</span>
+            <n-date-picker
+              v-model:value="filters.inboundDateRange"
+              type="daterange"
+              clearable
+              class="full-width"
+            />
+          </label>
         </div>
       </div>
       <div class="filter-extras-actions">
@@ -285,6 +380,12 @@ function onFileChange(event: Event) {
             >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
           >
           <div class="filter-action-buttons">
+            <ColumnVisibilityPicker
+              :value="visibleColumnKeys"
+              :options="fieldOptions"
+              storage-key="warehouse.hua-xing-stock.visible-columns.v1"
+              @update:value="setVisibleColumnKeys"
+            />
             <n-button @click="resetFilters">重置</n-button>
             <n-button type="primary" :loading="loading" @click="query">查询</n-button>
           </div>
@@ -343,6 +444,8 @@ function onFileChange(event: Event) {
 .filter-action-buttons {
   display: flex;
   flex: none;
+  /* 字段选择与查询/重置同组，窄屏放不下时换行，避免挤出卡片 */
+  flex-wrap: wrap;
   gap: 10px;
 }
 

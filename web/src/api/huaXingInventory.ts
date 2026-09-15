@@ -8,13 +8,15 @@ import type {
   PagedQueryParams,
 } from './generated'
 
-/** 华星库存列表查询（申购部门/申购人为多选，| 分隔后精确匹配） */
+/** 华星库存列表查询（申购部门/申购人为多选，| 分隔后精确匹配；date_from/date_to 为首次入库日期闭区间） */
 export interface HuaXingInventoryListQuery extends PagedQueryParams {
   material_code?: string
   name?: string
   model_spec?: string
   purchase_department?: string
   purchaser?: string
+  date_from?: string
+  date_to?: string
 }
 
 export const huaXingInventoryApi = {

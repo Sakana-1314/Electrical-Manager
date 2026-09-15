@@ -467,11 +467,6 @@ onMounted(async () => {
   min-width: 88px;
 }
 
-/* 日期区间控件比单列宽，跨两列展示，避免两个日期输入挤在一格里 */
-.filter-field-wide {
-  grid-column: span 2;
-}
-
 @media (max-width: 900px) {
   .filter-actions {
     align-items: stretch;
@@ -480,10 +475,6 @@ onMounted(async () => {
 
   .filter-action-buttons {
     justify-content: flex-end;
-  }
-
-  .filter-field-wide {
-    grid-column: auto;
   }
 }
 </style>
