@@ -81,6 +81,21 @@
 | 原生外观 | `app.json` 的 `darkmode` + `themeLocation` 让窗口与导航栏跟随系统；显式档由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正 |
 | 新增样式 | 页面与组件样式只引用 `--app-*` 令牌，不写颜色字面量，也不用 `@media (prefers-color-scheme)` 切换主题；新增令牌时明暗两档必须同名同义（`npm run check` 在 `miniprogram/` 下校验） |
 
+## 小程序页面约定
+
+小程序与网页端共用同一套令牌、三档语义与文案（`utils/i18n.js` 的 `zh-CN` / `id-ID` 键集合必须一致），
+交互控件按移动端实现：列表页统一「搜索 + 筛选下拉 + 结果计数 + 状态面板」，登记与详情页统一「卡片分组 + 底部主按钮」。
+
+| 项 | 要求 |
+| --- | --- |
+| 列表页骨架 | 根节点 `class="page-shell … {{themeClass}}"`；自上而下依次为页标题、`t-search`、（有筛选时）`t-dropdown-menu`、结果计数、列表卡片、状态面板 |
+| 搜索 | `t-search`（`shape="round"`、`confirm-type="search"`），只搜该页约定字段：隐患管理只匹配检查区域与隐患描述 |
+| 筛选下拉 | `t-dropdown-menu` + `t-dropdown-item`，选项通过 `options` 传入、当前值走 `value`；**首项固定为「全部××」（`value: ''`）**。网页端「下拉不放『全部』选项、清空即不限」的规则不适用于小程序：这里没有清空态，必须显式给出不限项 |
+| 主操作 | 列表页的登记/新增入口用 `t-fab` 悬浮圆钮，只在有写权限时渲染（见 `utils/features.js`） |
+| 状态面板 | 加载中用 `t-loading`，无数据用 `t-empty`；「本来为空」与「筛选后为空」用不同文案，避免误导 |
+| 反馈 | 轻提示用 `Toast({ context: this, selector: '#页面-toast' })`，需要提示的页面在 WXML 里放一个对应 id 的 `t-toast`（纯静态提示页如「停用」「注册已关闭」除外） |
+| 只读档位 | `query_only` / `disabled` 档位下不渲染写入口（FAB、上传、提交按钮），页面仍能完整展示数据 |
+
 
 ## 页面结构
 

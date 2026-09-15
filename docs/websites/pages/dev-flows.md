@@ -440,6 +440,25 @@ flowchart LR
 
 </TabsContent>
 
+<TabsContent id="t4">
+
+### 其它链路索引
+
+| 链路 | 触发 | 主要表 |
+| --- | --- | --- |
+| 二级库物资建档与安全库存 | 物资表单保存、安全库存设置 | `stock_material`、`stock_material_image`、`stock_balance`、`stock_replenishment_policy` |
+| 周期性计划一键生成 | 模板一键生成 | `purchase_plan_template`（读） → `purchase_material`（写，计划日期取生成当天） |
+| 小程序扫码与出库 | 扫物资码、库存查询、扫码出库 | `stock_material`、`stock_balance`、`stock_operation(_line)` |
+| 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
+| 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
+| 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
+| 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
+| 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
+
+字段级细节见[数据模型](/dev-data-model)，状态迁移与错误码见[状态机](/dev-state-machines)，分层与配置见[架构设计](/dev-architecture)。
+
+</TabsContent>
+
 <TabsContent id="t5">
 
 ### 隐患登记与整改闭环
@@ -470,25 +489,6 @@ sequenceDiagram
 | 逾期口径 | `due_date` 早于今天且状态不是「已整改」；今天到期不算逾期，工作台卡片与列表标记同一口径 |
 | 字典引用保护 | 责任单位、隐患类型被隐患引用时不可删除（409），未被引用则物理删除，名称与组合可复用 |
 | 图片 | 整改前/后各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |
-
-</TabsContent>
-
-<TabsContent id="t4">
-
-### 其它链路索引
-
-| 链路 | 触发 | 主要表 |
-| --- | --- | --- |
-| 二级库物资建档与安全库存 | 物资表单保存、安全库存设置 | `stock_material`、`stock_material_image`、`stock_balance`、`stock_replenishment_policy` |
-| 周期性计划一键生成 | 模板一键生成 | `purchase_plan_template`（读） → `purchase_material`（写，计划日期取生成当天） |
-| 小程序扫码与出库 | 扫物资码、库存查询、扫码出库 | `stock_material`、`stock_balance`、`stock_operation(_line)` |
-| 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
-| 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
-| 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
-| 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
-| 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
-
-字段级细节见[数据模型](/dev-data-model)，状态迁移与错误码见[状态机](/dev-state-machines)，分层与配置见[架构设计](/dev-architecture)。
 
 </TabsContent>
 

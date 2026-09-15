@@ -50,7 +50,7 @@ flowchart LR
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
 | 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
-| 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏）/ `query_only`（只读）/ `read_write`（可出库） |
+| 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏入口）/ `query_only`（只读）/ `read_write`（可写：库存可出库、隐患可登记与跟进）；只作用于小程序前端，后端数据接口不按它鉴权 |
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
 | MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
@@ -553,7 +553,7 @@ erDiagram
 | `hazard` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `hazard` | `inspection_area` | VARCHAR(128) | 否 | `'华星现场'` | 检查区域 |
 | `hazard` | `inspection_date` | DATE | 否 | 无 | 检查日期 |
-| `hazard` | `inspector` | VARCHAR(64) | 否 | `'电气自查'` | 检查人员 |
+| `hazard` | `inspector` | VARCHAR(64) | 否 | `'电气自查'` | 检查人员：网页端登记缺省为「电气自查」，小程序登记缺省为当前小程序用户姓名 |
 | `hazard` | `description` | TEXT | 否 | 无 | 隐患描述 |
 | `hazard` | `suggestion` | TEXT | 是 | 无 | 建议整改方案 |
 | `hazard` | `hazard_unit_id` | BIGINT UNSIGNED | 否 | 无 | 责任单位 |
