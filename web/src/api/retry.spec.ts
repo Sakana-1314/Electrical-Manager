@@ -7,6 +7,7 @@ import {
 } from 'axios'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AppError, apiClient } from './client'
+import { systemSettingsApi } from './systemSettings'
 import { MAX_ATTEMPTS, REQUEST_TIMEOUT_MS, isReplayable, retryDelayMs, shouldRetry } from './retry'
 
 function configOf(overrides: Partial<InternalAxiosRequestConfig>): InternalAxiosRequestConfig {
@@ -199,16 +200,12 @@ describe('apiClient 的弱网重试', () => {
     expect(attempts[1].data).toBe(JSON.stringify(body))
   })
 
-  it('retry: false 的请求即使可读也不重放', async () => {
-    vi.useFakeTimers()
+  it('启动路径上的配置探针不重放：弱网下必须快速失败，让首屏先渲染出来', async () => {
     const attempts = stubAdapter(Number.POSITIVE_INFINITY, (config) => networkFailure(config))
 
-    const failure = apiClient
-      .get('/system-settings/mini-program-features', { retry: false })
-      .catch((error: unknown) => error)
-    await vi.advanceTimersByTimeAsync(20_000)
+    const failure = systemSettingsApi.miniProgramFeatures().catch((error: unknown) => error)
 
-    expect(attempts).toHaveLength(1)
     expect((await failure) as AppError).toMatchObject({ code: 'NETWORK_ERROR' })
+    expect(attempts).toHaveLength(1)
   })
 })

@@ -174,14 +174,14 @@ web/src/
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
 - 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。已归一化的 `AppError` 会被后续拦截器直接透传，不会因重放被再次包装。
 - 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑）。
-- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
+- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
 #### 弱网自动重试（`web/src/api/retry.ts`）
 
 瞬时失败（断网、超时、连接被重置、网关抖动）自动重放，用户不必手点重试；策略与小程序同一套参数：
 
 | 维度 | 规则 |
 | --- | --- |
-| 可重放 | 缺省只有 `GET` / `HEAD` / `OPTIONS`；写请求需业务显式声明幂等（`{ retry: true }`，如带 `client_request_id` 的 `inventory.inbound` / `inventory.outbound` / `inventory.reverseOperation`）；`{ retry: false }` 关闭重试 |
+| 可重放 | 缺省只有 `GET` / `HEAD` / `OPTIONS`；写请求需业务显式声明幂等（`{ retry: true }`，如带 `client_request_id` 的 `inventory.inbound` / `inventory.outbound` / `inventory.reverseOperation`）；`{ retry: false }` 关闭重试（启动路径上的两个 3000ms 探针） |
 | 触发条件 | 无 `response`（连接层失败）或状态码 ∈ `408 / 429 / 500 / 502 / 503 / 504`；`axios.isCancel` 与已 `abort` 的请求不重试 |
 | 次数与节奏 | 最多 3 次尝试；失败后退避 600ms → 1800ms（上限 6s），叠加 30% 以内抖动，避免并发请求同时复活 |
 | 最坏耗时 | 单次 30s × 3 + 退避 ≈ 92s |
