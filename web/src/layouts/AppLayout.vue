@@ -131,9 +131,10 @@ function logout() {
   void router.push({ name: 'login' })
 }
 
-/* ============ 顶栏用户下拉：当前项目 + 外观（自动 / 浅色 / 深色） ============
- * 「当前项目」二级菜单列出所有启用项目，切换后布局会整页刷新（页面大量使用 keep-alive，
- * 不刷新会继续显示上一个项目的数据）；菜单结构在 projectMenu.ts（有单测）。
+/* ============ 顶栏用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色） ============
+ * 「项目」二级菜单列出所有启用项目（父项显示当前项目编码，子项只显示名称），切换后布局
+ * 会整页刷新（页面大量使用 keep-alive，不刷新会继续显示上一个项目的数据）；
+ * 菜单结构在 projectMenu.ts（有单测）。
  * 「外观」一级同样是二级菜单：鼠标悬浮向左展开三个档位（顶栏在最右上角，
  * Naive UI 子菜单空间不足时自动向左翻转）。父项图标反映当前实际明暗，
  * 当前档位显示对勾；顶栏不再放独立的明暗切换图标，外观只从菜单里切换。
@@ -215,13 +216,7 @@ function onUserMenuSelect(key: string) {
           </div>
         </div>
         <div class="topbar-actions">
-          <!-- 当前项目：一眼看清数据属于哪个项目，切换走用户菜单的项目二级菜单 -->
-          <span
-            v-if="project.currentProject"
-            class="project-chip"
-            :title="`当前项目：${project.currentProject.name}`"
-            >{{ project.currentProject.code }}</span
-          >
+          <!-- 顶栏不放当前项目标记：项目只在用户菜单里显示与切换，避免顶栏噪音 -->
           <!-- 外观只从用户菜单的「外观」二级菜单切换，顶栏不再放独立的明暗切换图标 -->
           <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
             <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
@@ -328,18 +323,6 @@ function onUserMenuSelect(key: string) {
   flex: none;
   align-items: center;
   gap: 8px;
-}
-/* 当前项目标记：与右侧的 .user-role 同一套小字弱化样式，窄屏也不占额外高度 */
-.project-chip {
-  flex: none;
-  padding: 3px 8px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 8px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.25;
-  white-space: nowrap;
 }
 /* 顶栏弱图标按钮（移动端导航开关） */
 .menu-toggle {

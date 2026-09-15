@@ -64,13 +64,13 @@ function isEnabledProject(project) {
   return !!project && Number(project.id) > 0 && project.enabled === true;
 }
 
-/** 项目对象裁剪成展示与缓存需要的字段（`label` 即弹窗显示的「code 名称」）。 */
+/** 项目对象裁剪成展示与缓存需要的字段（`label` 即弹窗显示的文字：只用名称，不外显编码）。 */
 function projectSummary(project) {
   return {
     id: project.id,
     code: project.code,
     name: project.name,
-    label: `${project.code} ${project.name}`,
+    label: project.name || project.code,
   };
 }
 
@@ -108,7 +108,10 @@ function loadProjects(force) {
   if (!force && projectsPromise) return projectsPromise;
   projectsPromise = getProjects()
     .then((projects) => {
-      projectList = Array.isArray(projects) ? projects.filter(isEnabledProject) : [];
+      // 过滤掉停用项并裁剪成展示用的 summary，页面直接取 label 显示（只显示名称）
+      projectList = Array.isArray(projects)
+        ? projects.filter(isEnabledProject).map(projectSummary)
+        : [];
       return projectList;
     })
     .catch((error) => {

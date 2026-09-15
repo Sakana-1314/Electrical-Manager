@@ -12,6 +12,7 @@ import {
   buildProjectMenuSubmenu,
   isProjectMenuKey,
   projectIdFromMenuKey,
+  projectOptionLabel,
 } from './projectMenu'
 
 const renderIcon = vi.fn<IconRender>(() => () => h('span'))
@@ -33,19 +34,21 @@ function project(overrides: Partial<Project> = {}): Project {
 
 const projects = [project(), project({ id: 2, code: 'P06', name: 'P06 项目', is_default: false })]
 
-describe('projectMenu（用户菜单的当前项目二级菜单）', () => {
-  it('「当前项目」是二级菜单父项，子项为各项目（key = project:<id>）', () => {
+describe('projectMenu（用户菜单的项目二级菜单）', () => {
+  it('父项显示当前项目编码，子项只显示名称（不外显编码，避免重复）', () => {
     renderIcon.mockClear()
     const menu = buildProjectMenuSubmenu(projects, 1, renderIcon)
     expect(menu).toHaveLength(1)
     const parent = menu[0]
-    expect(parent.label).toBe(`${PROJECT_MENU_LABEL_PREFIX}P05`)
+    expect(PROJECT_MENU_LABEL_PREFIX).toBe('项目：')
+    expect(parent.label).toBe('项目：P05')
     expect(parent.key).toBe(PROJECT_MENU_KEY)
     // 二级菜单：父项自身不是分组标题，靠 children 触发展开
     expect(parent.type).toBeUndefined()
     const children = parent.children as MenuOption[]
     expect(children.map((child) => child.key)).toEqual(['project:1', 'project:2'])
-    expect(children.map((child) => child.label)).toEqual(['P05 P05 项目', 'P06 P06 项目'])
+    // 子项只写名称：名称本身已含编码时不会出现「P05 P05 项目」
+    expect(children.map((child) => child.label)).toEqual(['P05 项目', 'P06 项目'])
     // 每个子项都带图标（当前项目是对勾，其余是文件夹，缩进一致）
     expect(children.every((child) => typeof child.icon === 'function')).toBe(true)
     // 父项图标 + 两个子项图标
@@ -78,6 +81,13 @@ describe('projectMenu（用户菜单的当前项目二级菜单）', () => {
       label: PROJECT_NONE_LABEL,
       disabled: true,
     })
+  })
+
+  it('子项标签不外显编码：名称里没有编码时也照原样显示', () => {
+    expect(projectOptionLabel({ code: 'P06', name: '华星镍业二期' })).toBe('华星镍业二期')
+    expect(projectOptionLabel({ code: 'P05', name: 'P05 项目' })).toBe('P05 项目')
+    // 名称意外为空时退回编码，菜单项不会变成空白
+    expect(projectOptionLabel({ code: 'P07', name: '  ' })).toBe('P07')
   })
 
   it('key → 项目判定只认 project:<id> 形式的子项（父项与占位项不算项目）', () => {

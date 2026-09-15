@@ -10,12 +10,14 @@ import type { IconRender } from './appearanceMenu'
  * 不需要挂载布局组件；图标渲染沿用 appearanceMenu 的约定（包装成 NIcon）。
  * 约定：父项只负责展开子菜单（key 不是项目），子项 key 是 `project:<id>`，
  * 选中项前面显示对勾，其余项目显示统一的文件夹图标（保持子项缩进一致）。
+ * 编码不外显：子项只显示项目名称（父项已经给出当前项目编码），避免出现
+ * 「P05 P05 项目」这种把编码拼在名称前的重复。
  * 项目列表为空时给一个禁用的占位子项，菜单仍可展开而不会空空一片。
  */
 export const PROJECT_MENU_KEY = 'project-menu'
 
 /** 父项标题前缀；当前项目不存在时补「未选择」。 */
-export const PROJECT_MENU_LABEL_PREFIX = '当前项目：'
+export const PROJECT_MENU_LABEL_PREFIX = '项目：'
 
 /** 子项 key 前缀：`project:<id>`。 */
 export const PROJECT_ITEM_KEY_PREFIX = 'project:'
@@ -36,6 +38,12 @@ export function projectIdFromMenuKey(key: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null
 }
 
+/** 子项标签：只显示项目名称；名称意外为空时退回编码，保证菜单项永远有字。 */
+export function projectOptionLabel(project: Pick<Project, 'code' | 'name'>): string {
+  const name = project.name?.trim()
+  return name ? name : project.code
+}
+
 /**
  * 构造用户菜单里的「当前项目」二级菜单：父项显示当前项目编码，子项是传入的项目列表
  * （调用方只传启用项目）。当前项目前面显示对勾，切换后布局会整页刷新。
@@ -54,7 +62,7 @@ export function buildProjectMenuSubmenu(
       children: projects.length
         ? projects.map((project) => ({
             key: `${PROJECT_ITEM_KEY_PREFIX}${project.id}`,
-            label: `${project.code} ${project.name}`,
+            label: projectOptionLabel(project),
             icon: renderIcon(project.id === currentId ? CheckmarkOutline : FolderOpenOutline),
           }))
         : [{ key: PROJECT_NONE_KEY, label: PROJECT_NONE_LABEL, disabled: true }],
