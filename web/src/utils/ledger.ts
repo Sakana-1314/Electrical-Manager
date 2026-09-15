@@ -65,23 +65,22 @@ export function ledgerFiltersFromQuery(query: Record<string, unknown>): LedgerIt
   }
 }
 
-/** 孤立标签：既没有父节点，也没有子节点。 */
+/** 孤立标签：既没有父节点，也没有子节点（接口的 parent_id 可选，undefined 与 null 同义）。 */
 export function isOrphanTag(tag: LedgerTag): boolean {
-  return tag.parent_id === null && tag.child_count === 0
+  return (tag.parent_id ?? null) === null && tag.child_count === 0
 }
 
 /** 标签的完整层级路径，如「配电柜 / 低压柜 / 抽屉柜」。 */
 export function tagPath(tags: LedgerTag[], tag: LedgerTag): string {
   const byId = new Map(tags.map((item) => [item.id, item]))
-  const names = [tag.name]
-  const seen = new Set([tag.id])
-  let current = tag
-  while (current.parent_id !== null) {
-    const parent = byId.get(current.parent_id)
-    if (!parent || seen.has(parent.id)) break
-    seen.add(parent.id)
-    names.push(parent.name)
-    current = parent
+  const names: string[] = []
+  const seen = new Set<number>()
+  let current: LedgerTag | undefined = tag
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id)
+    names.push(current.name)
+    const parentId: number | null = current.parent_id ?? null
+    current = parentId === null ? undefined : byId.get(parentId)
   }
   return names.reverse().join(' / ')
 }
@@ -114,7 +113,7 @@ export function buildLedgerTagTree(tags: LedgerTag[], scope?: LedgerTagScope): L
   }
   const roots: LedgerTagNode[] = []
   for (const node of nodes.values()) {
-    const parentId = node.tag.parent_id
+    const parentId = node.tag.parent_id ?? null
     const parent = parentId === null ? undefined : nodes.get(parentId)
     if (parent) parent.children.push(node)
     else roots.push(node)
@@ -127,6 +126,7 @@ export interface LedgerTagSelectOption {
   key: number
   label: string
   path: string
+  disabled?: boolean
   children?: LedgerTagSelectOption[]
 }
 
@@ -141,7 +141,8 @@ export function tagSelectOptions(tags: LedgerTag[]): LedgerTagSelectOption[] {
   for (const tag of ordered) {
     const node = nodes.get(tag.id)
     if (!node) continue
-    const parent = tag.parent_id === null ? undefined : nodes.get(tag.parent_id)
+    const parentId = tag.parent_id ?? null
+    const parent = parentId === null ? undefined : nodes.get(parentId)
     if (parent) parent.children = [...(parent.children ?? []), node]
     else roots.push(node)
   }
@@ -154,4 +155,18 @@ export function tagColumnDisplay(
   max = 3,
 ): { visible: LedgerTagRef[]; extra: number } {
   return { visible: refs.slice(0, max), extra: Math.max(0, refs.length - max) }
+}
+
+/** 「上级标签」选择器的选项：已到第 3 层的节点不能再挂子标签，置灰不可选。 */
+export function tagParentOptions(tags: LedgerTag[]): LedgerTagSelectOption[] {
+  const blocked = new Set(
+    tags.filter((tag) => tag.level >= LEDGER_TAG_MAX_LEVEL).map((tag) => tag.id),
+  )
+  const decorate = (options: LedgerTagSelectOption[]): LedgerTagSelectOption[] =>
+    options.map((option) => ({
+      ...option,
+      ...(blocked.has(option.key) ? { disabled: true } : {}),
+      ...(option.children ? { children: decorate(option.children) } : {}),
+    }))
+  return decorate(tagSelectOptions(tags))
 }

@@ -9,6 +9,7 @@ import {
   ledgerQuery,
   parseTagIds,
   tagColumnDisplay,
+  tagParentOptions,
   tagPath,
   tagSelectOptions,
 } from './ledger'
@@ -109,5 +110,15 @@ describe('标签选择器与列表展示', () => {
     const refs = [1, 2, 3, 4, 5].map((id) => ({ id, name: `t${id}`, path: `p${id}` }))
     expect(tagColumnDisplay(refs)).toEqual({ visible: refs.slice(0, 3), extra: 2 })
     expect(tagColumnDisplay(refs.slice(0, 2))).toEqual({ visible: refs.slice(0, 2), extra: 0 })
+  })
+  it('上级标签选项把第 3 层节点置灰（不能再挂子标签）', () => {
+    const deep = [...tags, { ...tag(7, '抽屉单元', 3), level: 3 }]
+    const options = tagParentOptions(deep)
+    const level2 = options[0]?.children ?? []
+    const level3 = level2[0]?.children ?? []
+    expect(level3.map((option) => option.key)).toEqual([3])
+    expect(level2[1]?.disabled).toBeUndefined()
+    expect(level3[0]?.disabled).toBeUndefined()
+    expect(level3[0]?.children?.[0]).toMatchObject({ key: 7, disabled: true })
   })
 })

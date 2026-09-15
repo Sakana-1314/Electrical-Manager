@@ -177,6 +177,18 @@ const router = createRouter({
           meta: { title: '责任单位', parent: '隐患管理' },
         },
         {
+          path: 'ledger/items',
+          name: 'ledger-items',
+          component: () => import('@/views/ledger/LedgerItemsView.vue'),
+          meta: { title: '台账总览', parent: '台账管理', keepAlive: true },
+        },
+        {
+          path: 'ledger/tags',
+          name: 'ledger-tags',
+          component: () => import('@/views/ledger/LedgerTagsView.vue'),
+          meta: { title: '标签管理', parent: '台账管理' },
+        },
+        {
           path: 'settings/advanced',
           name: 'advanced-settings',
           component: () => import('@/views/settings/AdvancedSettingsView.vue'),
