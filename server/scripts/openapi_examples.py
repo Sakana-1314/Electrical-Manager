@@ -1484,6 +1484,40 @@ def _build_schema_examples() -> dict[str, Any]:
             "version": _HAZARD_READ_ROWS[0]["version"],
         },
         "Page_HazardRead_": _page(_HAZARD_READ_ROWS),
+        # —— 台账管理（台账总览 / 分层标签）——
+        "LedgerTagRead": _LEDGER_TAG_ROWS[1],
+        "LedgerTagCreate": {
+            "parent_id": 1,
+            "name": "电容器柜",
+            "remark": "无功补偿柜，按柜号归档",
+            "image_ids": [_file_id(403)],
+        },
+        "LedgerTagUpdate": {
+            "name": "电容器柜（低压）",
+            "remark": "无功补偿柜，2026 年 9 月新增 2 台",
+            "image_ids": [_file_id(403)],
+            "version": 1,
+        },
+        "LedgerTagRefRead": _LEDGER_ITEM_ROWS[1]["tags"][0],
+        "LedgerItemRead": _LEDGER_ITEM_ROWS[0],
+        "LedgerItemCreate": {
+            "name": "窑尾排风机电机",
+            "model_spec": "YKK-400-8 220kW",
+            "quantity": 2,
+            "remark": "窑尾收尘系统配套",
+            "tag_ids": [5, 6],
+            "image_ids": [_file_id(405)],
+        },
+        "LedgerItemUpdate": {
+            "name": "窑尾排风机电机",
+            "model_spec": "YKK-400-8 220kW",
+            "quantity": 3,
+            "remark": "窑尾收尘系统配套，含 1 台备用",
+            "tag_ids": [5, 6],
+            "image_ids": [_file_id(405)],
+            "version": 1,
+        },
+        "Page_LedgerItemRead_": _page(_LEDGER_ITEM_ROWS),
         "AiSearchSettingsRead": {
             "endpoint": _AI_ENDPOINT,
             "api_key": _AI_API_KEY,
@@ -2644,6 +2678,147 @@ _HAZARD_RECTIFY_PERSONS = sorted(
     {row["rectify_person"] for row in _HAZARD_READ_ROWS if row["rectify_person"]}
 )
 
+# ===========================================================================
+# 二·二、台账管理（电气台账总览 + 分层标签）
+# ===========================================================================
+# 标签是自引用邻接表，示例里给出三级结构 + 两个孤立标签（既无父也无子）。
+_LEDGER_TAGS: list[dict[str, Any]] = [
+    {"id": 1, "parent_id": None, "name": "配电柜", "remark": "车间低压与高压配电柜"},
+    {
+        "id": 2,
+        "parent_id": 1,
+        "name": "低压柜",
+        "remark": "AC 400V 系统，MNS / GGD 柜型",
+        "image_seeds": [403],
+    },
+    {"id": 3, "parent_id": 2, "name": "抽屉柜", "remark": "MNS 抽屉单元，按回路统计"},
+    {"id": 4, "parent_id": 1, "name": "高压柜", "remark": "AC 6kV 系统，KYN28A 柜型"},
+    {"id": 5, "parent_id": None, "name": "电动机", "remark": "现场高低压电动机"},
+    {"id": 6, "parent_id": 5, "name": "异步电动机", "remark": "Y / YKK / YVFE3 系列"},
+    {"id": 7, "parent_id": None, "name": "变频器", "remark": "ABB / 汇川，按容量归档"},
+    {"id": 8, "parent_id": None, "name": "现场仪表", "remark": "待归类：温度、压力、流量仪表"},
+    {"id": 9, "parent_id": None, "name": "临时标签", "remark": "盘点期间临时使用，确认后可删除"},
+]
+_LEDGER_TAG_IMAGE_NAMES: dict[int, str] = {
+    403: "低压柜现场照片.jpg",
+    404: "抽屉柜铭牌.jpg",
+    405: "异步电动机铭牌.jpg",
+}
+_LEDGER_ITEMS: list[dict[str, Any]] = [
+    {
+        "name": "1# 回转窑主电机",
+        "model_spec": "YKK-450-6 355kW",
+        "quantity": 1,
+        "remark": "窑尾主传动，2026 年 5 月更换轴承",
+        "tag_ids": [6],
+        "image_seeds": [405],
+    },
+    {
+        "name": "低压抽屉柜",
+        "model_spec": "MNS-400 8E/2",
+        "quantity": 6,
+        "remark": "201 冶炼主厂房配电室",
+        "tag_ids": [2, 3],
+        "image_seeds": [403, 404],
+    },
+    {
+        "name": "高压开关柜",
+        "model_spec": "KYN28A-12 05",
+        "quantity": 3,
+        "remark": "6kV 高压室",
+        "tag_ids": [4],
+    },
+    {
+        "name": "窑尾高温风机变频器",
+        "model_spec": "ACS880-07-0320A-3",
+        "quantity": 1,
+        "remark": "与主电机联锁，参数已备份",
+        "tag_ids": [7, 6],
+    },
+    {
+        "name": "现场压力变送器",
+        "model_spec": "EJA530E-JCS4N",
+        "quantity": 12,
+        "remark": "暂未归类到具体装置",
+        "tag_ids": [],
+    },
+]
+
+
+def _ledger_tag_rows() -> list[dict[str, Any]]:
+    """标签读模型：按祖先链算出 level（1..3）与直接子节点数。"""
+    by_id = {item["id"]: item for item in _LEDGER_TAGS}
+    child_counts: dict[int, int] = {}
+    for item in _LEDGER_TAGS:
+        if item["parent_id"] is not None:
+            child_counts[item["parent_id"]] = child_counts.get(item["parent_id"], 0) + 1
+    rows = []
+    for item in _LEDGER_TAGS:
+        level = 1
+        current = item
+        while current["parent_id"] is not None:
+            current = by_id[current["parent_id"]]
+            level += 1
+        rows.append(
+            {
+                "id": item["id"],
+                "parent_id": item["parent_id"],
+                "name": item["name"],
+                "remark": item["remark"],
+                "level": level,
+                "child_count": child_counts.get(item["id"], 0),
+                "images": [
+                    _file_row(seed, _LEDGER_TAG_IMAGE_NAMES[seed], 402_800)
+                    for seed in item.get("image_seeds", [])
+                ],
+                "created_at": "2026-08-28T09:10:00+08:00",
+                "updated_at": "2026-09-10T15:40:00+08:00",
+                "version": 1,
+            }
+        )
+    return rows
+
+
+def _ledger_tag_path(tag_id: int) -> str:
+    by_id = {item["id"]: item for item in _LEDGER_TAGS}
+    names: list[str] = []
+    current: dict[str, Any] | None = by_id[tag_id]
+    while current is not None:
+        names.append(current["name"])
+        parent_id = current["parent_id"]
+        current = by_id[parent_id] if parent_id is not None else None
+    return " / ".join(reversed(names))
+
+
+def _ledger_item_rows() -> list[dict[str, Any]]:
+    rows = []
+    for index, item in enumerate(_LEDGER_ITEMS, start=1):
+        rows.append(
+            {
+                "id": index,
+                "name": item["name"],
+                "model_spec": item["model_spec"],
+                "quantity": item["quantity"],
+                "remark": item["remark"],
+                "tag_ids": sorted(item["tag_ids"]),
+                "tags": [
+                    {"id": tag_id, "name": _LEDGER_TAGS[tag_id - 1]["name"], "path": _ledger_tag_path(tag_id)}
+                    for tag_id in sorted(item["tag_ids"])
+                ],
+                "images": [
+                    _file_row(seed, _LEDGER_TAG_IMAGE_NAMES[seed], 512_400)
+                    for seed in item.get("image_seeds", [])
+                ],
+                "created_at": "2026-09-02T10:20:00+08:00",
+                "updated_at": "2026-09-11T14:05:00+08:00",
+                "version": 1,
+            }
+        )
+    return rows
+
+
+_LEDGER_TAG_ROWS = _ledger_tag_rows()
+_LEDGER_ITEM_ROWS = _ledger_item_rows()
 
 _SCHEMA_EXAMPLES: dict[str, Any] = _build_schema_examples()
 

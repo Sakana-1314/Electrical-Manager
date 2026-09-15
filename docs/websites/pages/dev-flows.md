@@ -20,7 +20,8 @@ flowchart TD
   { id: 't2', title: '申购、任务与文件' },
   { id: 't3', title: '协作与外部集成' },
   { id: 't4', title: '其它链路索引' },
-  { id: 't5', title: '隐患闭环' }
+  { id: 't5', title: '隐患闭环' },
+  { id: 't6', title: '台账维护' }
 ]">
 
 <TabsContent id="t0">
@@ -454,6 +455,7 @@ flowchart LR
 | 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
 | 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
 | 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
+| 台账登记与标签维护 | 标签管理页维护标签树、台账总览页新增/编辑台账记录 | `ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image` |
 | 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
 | 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
 
@@ -491,6 +493,42 @@ sequenceDiagram
 | 逾期口径 | `due_date` 早于今天且状态不是「已整改」；今天到期不算逾期，工作台卡片与列表标记同一口径 |
 | 字典引用保护 | 责任单位、隐患类型被隐患引用时不可删除（409），未被引用则物理删除，名称与组合可复用 |
 | 图片 | 整改前/后各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |
+
+</TabsContent>
+
+<TabsContent id="t6">
+
+### 台账登记与标签维护
+
+```mermaid
+sequenceDiagram
+    participant W as 网页端
+    participant S as 服务端
+    participant DB as MySQL
+    W->>S: 新增 / 编辑标签（名称、备注、图片；PATCH 带 version）
+    S->>S: 校验上级标签存在且层级 < 3、同一层级下名称唯一
+    S->>DB: 写 ledger_tag，并整表替换 ledger_tag_image 关联
+    W->>S: 删除标签（If-Match）
+    S->>S: 有子标签、或自身与子孙被台账记录引用 → 拒绝（409）
+    W->>S: 保存台账记录（name / model_spec / quantity / remark / tag_ids / image_ids）
+    S->>S: 校验 tag_ids 全部存在（缺失 → INVALID_TAG_ID），去重后升序
+    S->>DB: 写 ledger（tag_ids 存成 '3,12,15' 逗号串）并整表替换 ledger_image 关联
+    W->>S: 台账列表（keyword / tag_ids / 分页）
+    S->>S: 选中标签展开为「自身 + 全部子孙」，再按逗号串逐 id 匹配
+    S-->>W: 分页结果，标签回填名称与完整层级路径
+```
+
+要点：
+
+| 项 | 说明 |
+| --- | --- |
+| 标签层级 | 至多 3 层：在已到第 3 层的节点下新增子标签直接拒绝（`LEDGER_TAG_MAX_LEVEL`）；层级由祖先链实时算出，不落库，编辑也不允许改上级 |
+| 同级名称唯一 | 同一 `parent_id` 下名称唯一（`DUPLICATE_LEDGER_TAG`）；根节点的 `parent_id` 为 NULL，MySQL 唯一索引对 NULL 不去重，因此这条由服务端校验 |
+| 删除保护 | 有子标签 → `LEDGER_TAG_HAS_CHILDREN`；自身或子孙被台账记录引用 → `LEDGER_TAG_IN_USE`（都按子树展开检查），均返回 409，未被引用则物理删除 |
+| 标签存储 | 台账记录的标签是 `ledger.tag_ids` 里的逗号分隔 id（写入时去重、升序规范化），没有关联表；写接口校验存在性，读接口回填标签名称与完整层级路径 |
+| 标签筛选 | 列表按 `tag_ids` 筛选时展开为「选中标签 + 全部子孙」；选中的 id 一个都不存在时返回空结果，不当作「不限」（手改 URL 不会误返回全量） |
+| 图片 | 标签图片与台账图片各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |
+| 并发 | 标签与台账记录的 PATCH 都带 `version`、DELETE 走 `If-Match`，冲突返回 `VERSION_CONFLICT` 提示刷新后重试 |
 
 </TabsContent>
 

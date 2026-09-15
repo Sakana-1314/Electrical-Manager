@@ -101,6 +101,13 @@ export type HazardUnit = components['schemas']['HazardUnitRead']
 export type HazardUnitWrite = components['schemas']['HazardUnitCreate']
 export type HazardUnitUpdate = components['schemas']['HazardUnitUpdate']
 export type HazardFilterOptions = components['schemas']['HazardFilterOptionsRead']
+export type LedgerItem = components['schemas']['LedgerItemRead']
+export type LedgerItemWrite = components['schemas']['LedgerItemCreate']
+export type LedgerItemUpdate = components['schemas']['LedgerItemUpdate']
+export type LedgerTag = components['schemas']['LedgerTagRead']
+export type LedgerTagWrite = components['schemas']['LedgerTagCreate']
+export type LedgerTagUpdate = components['schemas']['LedgerTagUpdate']
+export type LedgerTagRef = components['schemas']['LedgerTagRefRead']
 
 /* ===== 前端自建视图模型 / 泛型 / Literal（openapi 无对应 schema，手写保留） ===== */
 

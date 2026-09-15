@@ -8,6 +8,7 @@ import {
   CubeOutline,
   DocumentTextOutline,
   GridOutline,
+  LibraryOutline,
   LogOutOutline,
   MenuOutline,
   SettingsOutline,
@@ -90,6 +91,13 @@ const menuOptions = computed<MenuOption[]>(() => {
       link('隐患类型', 'hazard-types'),
       link('责任单位', 'hazard-units'),
     ],
+  })
+  // 台账管理：同样读取开放，菜单不做权限过滤；第一个子 tab 是台账总览。
+  items.push({
+    label: '台账管理',
+    key: 'ledger-group',
+    icon: renderIcon(LibraryOutline),
+    children: [link('台账总览', 'ledger-items'), link('标签管理', 'ledger-tags')],
   })
   if (auth.can('settings:write'))
     items.push({

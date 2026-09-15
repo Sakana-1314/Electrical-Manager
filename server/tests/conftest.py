@@ -61,6 +61,13 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
                     enabled=True,
                 ),
                 User(
+                    username="ledger",
+                    password_hash=hash_password("123456"),
+                    display_name="台账管理员",
+                    role=Role.LEDGER_ADMIN,
+                    enabled=True,
+                ),
+                User(
                     username="readonly",
                     password_hash=hash_password("123456"),
                     display_name="只读用户",

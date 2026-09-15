@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `api_token_hash` VARCHAR(64) NOT NULL,
   `api_token_enc` VARCHAR(512) NOT NULL DEFAULT '',
   `display_name` VARCHAR(128) NOT NULL,
-  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY') NOT NULL,
+  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN') NOT NULL,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -566,6 +566,60 @@ CREATE TABLE IF NOT EXISTS `hazard_after_image` (
     FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 台账管理：标签节点（自引用邻接表，至多 3 层）+ 标签图片关联 + 台账记录 + 台账图片关联。
+-- 台账记录的标签以英文逗号分隔的标签 id 存在 `ledger.tag_ids`（如 '3,12,15'，空串代表未挂标签），
+-- 由服务端规范化写入（去重、升序、无空格）。层级上限、同级名称唯一、被引用/有子节点不可删除
+-- 都写在服务端：外键只保证父节点存在，MySQL 唯一索引对 NULL 不去重，覆盖不到根节点。
+
+CREATE TABLE IF NOT EXISTS `ledger_tag` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` BIGINT UNSIGNED NULL,
+  `name` VARCHAR(128) NOT NULL,
+  `remark` VARCHAR(500),
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_ledger_tag` PRIMARY KEY (`id`),
+  CONSTRAINT `fk_ledger_tag_parent_id_ledger_tag`
+    FOREIGN KEY (`parent_id`) REFERENCES `ledger_tag` (`id`),
+  INDEX `ix_ledger_tag_parent_id` (`parent_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `ledger_tag_image` (
+  `tag_id` BIGINT UNSIGNED NOT NULL,
+  `file_id` VARCHAR(36) NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT `pk_ledger_tag_image` PRIMARY KEY (`tag_id`, `file_id`),
+  CONSTRAINT `fk_ledger_tag_image_tag_id_ledger_tag`
+    FOREIGN KEY (`tag_id`) REFERENCES `ledger_tag` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ledger_tag_image_file_id_file_object`
+    FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `ledger` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(128) NOT NULL,
+  `model_spec` VARCHAR(255) NOT NULL,
+  `quantity` INT UNSIGNED NOT NULL DEFAULT 0,
+  `remark` VARCHAR(1000),
+  `tag_ids` VARCHAR(500) NOT NULL DEFAULT '',
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_ledger` PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `ledger_image` (
+  `ledger_id` BIGINT UNSIGNED NOT NULL,
+  `file_id` VARCHAR(36) NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT `pk_ledger_image` PRIMARY KEY (`ledger_id`, `file_id`),
+  CONSTRAINT `fk_ledger_image_ledger_id_ledger`
+    FOREIGN KEY (`ledger_id`) REFERENCES `ledger` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ledger_image_file_id_file_object`
+    FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- 隐患类型字典（大类 + 小类两级；源自旧隐患系统，共 157 条 / 16 个大类）。
 -- 重复导入不改变已有行，仅按 (major, minor) 唯一键跳过。
 INSERT INTO `hazard_type` (`major`, `minor`)
@@ -752,12 +806,18 @@ SET @hazard_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES
   SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
   '-', HEX(RANDOM_BYTES(6))));
 
+SET @ledger_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES(2)),
+  '-4', SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3), '-',
+  SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
+  '-', HEX(RANDOM_BYTES(6))));
+
 INSERT INTO `user` (`username`, `password_hash`, `api_token_hash`, `display_name`, `role`, `enabled`)
 VALUES
   ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@admin_api_token, 256), '系统管理员', 'SUPER_ADMIN', 1),
   ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@warehouse_api_token, 256), '仓库管理员', 'WAREHOUSE_ADMIN', 1),
   ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@purchase_api_token, 256), '申购管理员', 'PURCHASE_ADMIN', 1),
   ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@hazard_api_token, 256), '隐患管理员', 'HAZARD_ADMIN', 1),
+  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@ledger_api_token, 256), '台账管理员', 'LEDGER_ADMIN', 1),
   ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@readonly_api_token, 256), '只读用户', 'READ_ONLY', 1)
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),

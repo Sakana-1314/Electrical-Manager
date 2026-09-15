@@ -1979,4 +1979,135 @@ class MiniProgramHazardUpdate(RequestModel):
         return None if value is None else _ensure_unique_image_ids(value)
 
 
+# ===== 台账管理（台账总览 / 标签管理） =====
+# 标签节点与台账记录各自最多 9 张图片，与全站 ImageUploader 默认上限一致。
+LEDGER_IMAGE_LIMIT = 9
+# 一条台账记录最多挂 20 个标签：`ledger.tag_ids` 是 VARCHAR(500)，id 是 BIGINT（至多 19 位），
+# 取 20 时最坏情况 20 × 20 = 400 字符，必定放得下——不需要再为「超长」单独加一条错误码。
+LEDGER_TAG_LIMIT = 20
+LedgerName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+LedgerModelSpec = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)
+]
+LedgerRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
+LedgerTagRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+# 数量是整数件数（按台 / 套 / 件统计）。
+LedgerQuantity = Annotated[int, Field(ge=0)]
+LedgerTagId = Annotated[int, Field(ge=1)]
+LedgerImageIds = Annotated[list[FileId], Field(max_length=LEDGER_IMAGE_LIMIT)]
+LedgerTagIds = Annotated[list[LedgerTagId], Field(max_length=LEDGER_TAG_LIMIT)]
+
+
+class LedgerTagRead(ReadModel):
+    """台账标签节点：平铺返回（靠 `parent_id` 表达层级），前端据此拼横向树。
+
+    `level`（1..3，由祖先链算出）与 `child_count`（直接子节点数）供页面判断
+    「还能不能再挂子标签」与节点计数展示。
+    """
+
+    id: int
+    parent_id: int | None = None
+    name: str
+    remark: str | None = None
+    level: int
+    child_count: int
+    images: list[FileObjectRead]
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class LedgerTagCreate(RequestModel):
+    parent_id: int | None = None
+    name: LedgerName
+    remark: LedgerTagRemark | None = None
+    image_ids: LedgerImageIds = Field(default_factory=list)
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str]) -> list[str]:
+        return _ensure_unique_image_ids(value)
+
+
+class LedgerTagUpdate(RequestModel):
+    """编辑标签：只改名称 / 备注 / 图片，不支持改上级（层级上限因此静态可保）。"""
+
+    name: LedgerName | None = None
+    remark: LedgerTagRemark | None = None
+    image_ids: LedgerImageIds | None = None
+    version: int
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
+
+
+class LedgerTagRefRead(ReadModel):
+    """台账记录上的标签引用：id + 名称 + 完整层级路径（列表「标签」列直接展示 `path`）。"""
+
+    id: int
+    name: str
+    path: str
+
+
+class LedgerItemRead(ReadModel):
+    """台账记录：标签以 id 列表返回，并附名称与完整路径，列表页无需再解析。"""
+
+    id: int
+    name: str
+    model_spec: str
+    quantity: int
+    remark: str | None = None
+    tag_ids: list[int]
+    tags: list[LedgerTagRefRead]
+    images: list[FileObjectRead]
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class LedgerItemCreate(RequestModel):
+    name: LedgerName
+    model_spec: LedgerModelSpec
+    quantity: LedgerQuantity = 0
+    remark: LedgerRemark | None = None
+    tag_ids: LedgerTagIds = Field(default_factory=list)
+    image_ids: LedgerImageIds = Field(default_factory=list)
+
+    @field_validator("tag_ids")
+    @classmethod
+    def _unique_tags(cls, value: list[int]) -> list[int]:
+        if len(value) != len(set(value)):
+            raise ValueError("tag_ids contains duplicates")
+        return value
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str]) -> list[str]:
+        return _ensure_unique_image_ids(value)
+
+
+class LedgerItemUpdate(RequestModel):
+    name: LedgerName | None = None
+    model_spec: LedgerModelSpec | None = None
+    quantity: LedgerQuantity | None = None
+    remark: LedgerRemark | None = None
+    tag_ids: LedgerTagIds | None = None
+    image_ids: LedgerImageIds | None = None
+    version: int
+
+    @field_validator("tag_ids")
+    @classmethod
+    def _unique_tags(cls, value: list[int] | None) -> list[int] | None:
+        if value is not None and len(value) != len(set(value)):
+            raise ValueError("tag_ids contains duplicates")
+        return value
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
+
+
 __all__ = [name for name in globals() if not name.startswith("_")]

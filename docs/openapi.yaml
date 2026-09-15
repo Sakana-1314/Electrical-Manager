@@ -18162,6 +18162,990 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/ledger-tags:
+    get:
+      tags:
+      - 台账管理
+      summary: 标签列表
+      operationId: list_ledger_tags_api_v1_ledger_tags_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Keyword
+      - name: scope
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - orphan
+            - tree
+            type: string
+          - type: 'null'
+          description: orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签
+          title: Scope
+        description: orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LedgerTagRead'
+                title: Response List Ledger Tags Api V1 Ledger Tags Get
+              example:
+              - id: 2
+                parent_id: 1
+                name: 低压柜
+                remark: AC 400V 系统，MNS / GGD 柜型
+                level: 2
+                child_count: 1
+                images:
+                - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                  original_name: 低压柜现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 402800
+                  width: 1600
+                  height: 1200
+                created_at: '2026-08-28T09:10:00+08:00'
+                updated_at: '2026-09-10T15:40:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 台账管理
+      summary: 新增标签
+      operationId: create_ledger_tag_api_v1_ledger_tags_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerTagCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerTagRead'
+              example:
+                id: 2
+                parent_id: 1
+                name: 低压柜
+                remark: AC 400V 系统，MNS / GGD 柜型
+                level: 2
+                child_count: 1
+                images:
+                - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                  original_name: 低压柜现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 402800
+                  width: 1600
+                  height: 1200
+                created_at: '2026-08-28T09:10:00+08:00'
+                updated_at: '2026-09-10T15:40:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/ledger-tags/{tag_id}:
+    patch:
+      tags:
+      - 台账管理
+      summary: 更新标签
+      operationId: update_ledger_tag_api_v1_ledger_tags__tag_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: tag_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Tag Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerTagUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerTagRead'
+              example:
+                id: 2
+                parent_id: 1
+                name: 低压柜
+                remark: AC 400V 系统，MNS / GGD 柜型
+                level: 2
+                child_count: 1
+                images:
+                - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                  original_name: 低压柜现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 402800
+                  width: 1600
+                  height: 1200
+                created_at: '2026-08-28T09:10:00+08:00'
+                updated_at: '2026-09-10T15:40:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 台账管理
+      summary: 删除标签
+      operationId: delete_ledger_tag_api_v1_ledger_tags__tag_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: tag_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Tag Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/ledger-items:
+    get:
+      tags:
+      - 台账管理
+      summary: 台账列表
+      operationId: list_ledger_items_api_v1_ledger_items_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Keyword
+      - name: tag_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          description: 英文逗号分隔的标签 id，命中任一（含其子孙）即返回
+          title: Tag Ids
+        description: 英文逗号分隔的标签 id，命中任一（含其子孙）即返回
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_LedgerItemRead_'
+              example:
+                items:
+                - id: 1
+                  name: 1# 回转窑主电机
+                  model_spec: YKK-450-6 355kW
+                  quantity: 1
+                  remark: 窑尾主传动，2026 年 5 月更换轴承
+                  tag_ids:
+                  - 6
+                  tags:
+                  - id: 6
+                    name: 异步电动机
+                    path: 电动机 / 异步电动机
+                  images:
+                  - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                    original_name: 异步电动机铭牌.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  created_at: '2026-09-02T10:20:00+08:00'
+                  updated_at: '2026-09-11T14:05:00+08:00'
+                  version: 1
+                - id: 2
+                  name: 低压抽屉柜
+                  model_spec: MNS-400 8E/2
+                  quantity: 6
+                  remark: 201 冶炼主厂房配电室
+                  tag_ids:
+                  - 2
+                  - 3
+                  tags:
+                  - id: 2
+                    name: 低压柜
+                    path: 配电柜 / 低压柜
+                  - id: 3
+                    name: 抽屉柜
+                    path: 配电柜 / 低压柜 / 抽屉柜
+                  images:
+                  - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                    original_name: 低压柜现场照片.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  - id: 41e66654-8787-7196-848b-e38fd60443f4
+                    original_name: 抽屉柜铭牌.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 512400
+                    width: 1600
+                    height: 1200
+                  created_at: '2026-09-02T10:20:00+08:00'
+                  updated_at: '2026-09-11T14:05:00+08:00'
+                  version: 1
+                - id: 3
+                  name: 高压开关柜
+                  model_spec: KYN28A-12 05
+                  quantity: 3
+                  remark: 6kV 高压室
+                  tag_ids:
+                  - 4
+                  tags:
+                  - id: 4
+                    name: 高压柜
+                    path: 配电柜 / 高压柜
+                  images: []
+                  created_at: '2026-09-02T10:20:00+08:00'
+                  updated_at: '2026-09-11T14:05:00+08:00'
+                  version: 1
+                - id: 4
+                  name: 窑尾高温风机变频器
+                  model_spec: ACS880-07-0320A-3
+                  quantity: 1
+                  remark: 与主电机联锁，参数已备份
+                  tag_ids:
+                  - 6
+                  - 7
+                  tags:
+                  - id: 6
+                    name: 异步电动机
+                    path: 电动机 / 异步电动机
+                  - id: 7
+                    name: 变频器
+                    path: 变频器
+                  images: []
+                  created_at: '2026-09-02T10:20:00+08:00'
+                  updated_at: '2026-09-11T14:05:00+08:00'
+                  version: 1
+                - id: 5
+                  name: 现场压力变送器
+                  model_spec: EJA530E-JCS4N
+                  quantity: 12
+                  remark: 暂未归类到具体装置
+                  tag_ids: []
+                  tags: []
+                  images: []
+                  created_at: '2026-09-02T10:20:00+08:00'
+                  updated_at: '2026-09-11T14:05:00+08:00'
+                  version: 1
+                page: 1
+                page_size: 20
+                total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 台账管理
+      summary: 新增台账
+      operationId: create_ledger_item_api_v1_ledger_items_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerItemCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerItemRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机
+                model_spec: YKK-450-6 355kW
+                quantity: 1
+                remark: 窑尾主传动，2026 年 5 月更换轴承
+                tag_ids:
+                - 6
+                tags:
+                - id: 6
+                  name: 异步电动机
+                  path: 电动机 / 异步电动机
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 异步电动机铭牌.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:20:00+08:00'
+                updated_at: '2026-09-11T14:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/ledger-items/{item_id}:
+    get:
+      tags:
+      - 台账管理
+      summary: 台账详情
+      operationId: get_ledger_item_api_v1_ledger_items__item_id__get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerItemRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机
+                model_spec: YKK-450-6 355kW
+                quantity: 1
+                remark: 窑尾主传动，2026 年 5 月更换轴承
+                tag_ids:
+                - 6
+                tags:
+                - id: 6
+                  name: 异步电动机
+                  path: 电动机 / 异步电动机
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 异步电动机铭牌.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:20:00+08:00'
+                updated_at: '2026-09-11T14:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    patch:
+      tags:
+      - 台账管理
+      summary: 更新台账
+      operationId: update_ledger_item_api_v1_ledger_items__item_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LedgerItemUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LedgerItemRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机
+                model_spec: YKK-450-6 355kW
+                quantity: 1
+                remark: 窑尾主传动，2026 年 5 月更换轴承
+                tag_ids:
+                - 6
+                tags:
+                - id: 6
+                  name: 异步电动机
+                  path: 电动机 / 异步电动机
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 异步电动机铭牌.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:20:00+08:00'
+                updated_at: '2026-09-11T14:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 台账管理
+      summary: 删除台账
+      operationId: delete_ledger_item_api_v1_ledger_items__item_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
 components:
   schemas:
     AiSearchExpandRead:
@@ -20052,6 +21036,376 @@ components:
       title: LastImportRead
       examples:
       - last_import_at: '2026-09-12T18:20:00+08:00'
+    LedgerItemCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        model_spec:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Model Spec
+        quantity:
+          type: integer
+          minimum: 0.0
+          title: Quantity
+          default: 0
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Remark
+        tag_ids:
+          items:
+            type: integer
+            minimum: 1.0
+          type: array
+          maxItems: 20
+          title: Tag Ids
+        image_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          type: array
+          maxItems: 9
+          title: Image Ids
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - model_spec
+      title: LedgerItemCreate
+      examples:
+      - name: 窑尾排风机电机
+        model_spec: YKK-400-8 220kW
+        quantity: 2
+        remark: 窑尾收尘系统配套
+        tag_ids:
+        - 5
+        - 6
+        image_ids:
+        - 5b8acb50-4317-7306-8ef8-e2b59f03da58
+    LedgerItemRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        model_spec:
+          type: string
+          title: Model Spec
+        quantity:
+          type: integer
+          title: Quantity
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        tag_ids:
+          items:
+            type: integer
+          type: array
+          title: Tag Ids
+        tags:
+          items:
+            $ref: '#/components/schemas/LedgerTagRefRead'
+          type: array
+          title: Tags
+        images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: Images
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - name
+      - model_spec
+      - quantity
+      - tag_ids
+      - tags
+      - images
+      - created_at
+      - updated_at
+      - version
+      title: LedgerItemRead
+      description: 台账记录：标签以 id 列表返回，并附名称与完整路径，列表页无需再解析。
+      examples:
+      - id: 1
+        name: 1# 回转窑主电机
+        model_spec: YKK-450-6 355kW
+        quantity: 1
+        remark: 窑尾主传动，2026 年 5 月更换轴承
+        tag_ids:
+        - 6
+        tags:
+        - id: 6
+          name: 异步电动机
+          path: 电动机 / 异步电动机
+        images:
+        - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+          original_name: 异步电动机铭牌.jpg
+          mime_type: image/jpeg
+          size_bytes: 512400
+          width: 1600
+          height: 1200
+        created_at: '2026-09-02T10:20:00+08:00'
+        updated_at: '2026-09-11T14:05:00+08:00'
+        version: 1
+    LedgerItemUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+          title: Name
+        model_spec:
+          anyOf:
+          - type: string
+            maxLength: 255
+            minLength: 1
+          - type: 'null'
+          title: Model Spec
+        quantity:
+          anyOf:
+          - type: integer
+            minimum: 0.0
+          - type: 'null'
+          title: Quantity
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Remark
+        tag_ids:
+          anyOf:
+          - items:
+              type: integer
+              minimum: 1.0
+            type: array
+            maxItems: 20
+          - type: 'null'
+          title: Tag Ids
+        image_ids:
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: Image Ids
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: LedgerItemUpdate
+      examples:
+      - name: 窑尾排风机电机
+        model_spec: YKK-400-8 220kW
+        quantity: 3
+        remark: 窑尾收尘系统配套，含 1 台备用
+        tag_ids:
+        - 5
+        - 6
+        image_ids:
+        - 5b8acb50-4317-7306-8ef8-e2b59f03da58
+        version: 1
+    LedgerTagCreate:
+      properties:
+        parent_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Parent Id
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        image_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          type: array
+          maxItems: 9
+          title: Image Ids
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: LedgerTagCreate
+      examples:
+      - parent_id: 1
+        name: 电容器柜
+        remark: 无功补偿柜，按柜号归档
+        image_ids:
+        - 3abf840e-14ec-7623-8b1c-713899902cc4
+    LedgerTagRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        parent_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Parent Id
+        name:
+          type: string
+          title: Name
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        level:
+          type: integer
+          title: Level
+        child_count:
+          type: integer
+          title: Child Count
+        images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: Images
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - name
+      - level
+      - child_count
+      - images
+      - created_at
+      - updated_at
+      - version
+      title: LedgerTagRead
+      description: '台账标签节点：平铺返回（靠 `parent_id` 表达层级），前端据此拼横向树。
+
+
+        `level`（1..3，由祖先链算出）与 `child_count`（直接子节点数）供页面判断
+
+        「还能不能再挂子标签」与节点计数展示。'
+      examples:
+      - id: 2
+        parent_id: 1
+        name: 低压柜
+        remark: AC 400V 系统，MNS / GGD 柜型
+        level: 2
+        child_count: 1
+        images:
+        - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+          original_name: 低压柜现场照片.jpg
+          mime_type: image/jpeg
+          size_bytes: 402800
+          width: 1600
+          height: 1200
+        created_at: '2026-08-28T09:10:00+08:00'
+        updated_at: '2026-09-10T15:40:00+08:00'
+        version: 1
+    LedgerTagRefRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - id
+      - name
+      - path
+      title: LedgerTagRefRead
+      description: 台账记录上的标签引用：id + 名称 + 完整层级路径（列表「标签」列直接展示 `path`）。
+      examples:
+      - id: 2
+        name: 低压柜
+        path: 配电柜 / 低压柜
+    LedgerTagUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+          title: Name
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        image_ids:
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: Image Ids
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: LedgerTagUpdate
+      description: 编辑标签：只改名称 / 备注 / 图片，不支持改上级（层级上限因此静态可保）。
+      examples:
+      - name: 电容器柜（低压）
+        remark: 无功补偿柜，2026 年 9 月新增 2 台
+        image_ids:
+        - 3abf840e-14ec-7623-8b1c-713899902cc4
+        version: 1
     LinkStockMaterialRequest:
       properties:
         stock_material_id:
@@ -22657,6 +24011,131 @@ components:
         page: 1
         page_size: 50
         total: 23
+    Page_LedgerItemRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/LedgerItemRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[LedgerItemRead]
+      examples:
+      - items:
+        - id: 1
+          name: 1# 回转窑主电机
+          model_spec: YKK-450-6 355kW
+          quantity: 1
+          remark: 窑尾主传动，2026 年 5 月更换轴承
+          tag_ids:
+          - 6
+          tags:
+          - id: 6
+            name: 异步电动机
+            path: 电动机 / 异步电动机
+          images:
+          - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+            original_name: 异步电动机铭牌.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          created_at: '2026-09-02T10:20:00+08:00'
+          updated_at: '2026-09-11T14:05:00+08:00'
+          version: 1
+        - id: 2
+          name: 低压抽屉柜
+          model_spec: MNS-400 8E/2
+          quantity: 6
+          remark: 201 冶炼主厂房配电室
+          tag_ids:
+          - 2
+          - 3
+          tags:
+          - id: 2
+            name: 低压柜
+            path: 配电柜 / 低压柜
+          - id: 3
+            name: 抽屉柜
+            path: 配电柜 / 低压柜 / 抽屉柜
+          images:
+          - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+            original_name: 低压柜现场照片.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          - id: 41e66654-8787-7196-848b-e38fd60443f4
+            original_name: 抽屉柜铭牌.jpg
+            mime_type: image/jpeg
+            size_bytes: 512400
+            width: 1600
+            height: 1200
+          created_at: '2026-09-02T10:20:00+08:00'
+          updated_at: '2026-09-11T14:05:00+08:00'
+          version: 1
+        - id: 3
+          name: 高压开关柜
+          model_spec: KYN28A-12 05
+          quantity: 3
+          remark: 6kV 高压室
+          tag_ids:
+          - 4
+          tags:
+          - id: 4
+            name: 高压柜
+            path: 配电柜 / 高压柜
+          images: []
+          created_at: '2026-09-02T10:20:00+08:00'
+          updated_at: '2026-09-11T14:05:00+08:00'
+          version: 1
+        - id: 4
+          name: 窑尾高温风机变频器
+          model_spec: ACS880-07-0320A-3
+          quantity: 1
+          remark: 与主电机联锁，参数已备份
+          tag_ids:
+          - 6
+          - 7
+          tags:
+          - id: 6
+            name: 异步电动机
+            path: 电动机 / 异步电动机
+          - id: 7
+            name: 变频器
+            path: 变频器
+          images: []
+          created_at: '2026-09-02T10:20:00+08:00'
+          updated_at: '2026-09-11T14:05:00+08:00'
+          version: 1
+        - id: 5
+          name: 现场压力变送器
+          model_spec: EJA530E-JCS4N
+          quantity: 12
+          remark: 暂未归类到具体装置
+          tag_ids: []
+          tags: []
+          images: []
+          created_at: '2026-09-02T10:20:00+08:00'
+          updated_at: '2026-09-11T14:05:00+08:00'
+          version: 1
+        page: 1
+        page_size: 20
+        total: 5
     Page_LiteInventoryRead_:
       properties:
         items:
@@ -27423,6 +28902,7 @@ components:
       - PURCHASE_ADMIN
       - HAZARD_ADMIN
       - READ_ONLY
+      - LEDGER_ADMIN
       title: Role
     SecondaryWarehouseMode:
       type: string
