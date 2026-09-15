@@ -338,6 +338,8 @@ stateDiagram-v2
 `PATCH /api/v1/mini-program/hazards/{id}`，是同一套字段与校验，只是限定在整改闭环相关的字段。
 判「逾期」只看数据不看状态机：`due_date` 早于今天且状态不是「已整改」，因此
 待整改与整改受阻都可能逾期，今天到期不算逾期（与工作台卡片的统计口径一致）。
+小程序端写权限对所有已启用的小程序用户开放（只受账号停用 / 注册开关约束），
+不再按 `hazards_mode` 二次鉴权：该开关只决定小程序前端是否展示入口与写操作按钮。
 
 ### 责任单位与隐患类型字典
 
@@ -389,7 +391,10 @@ stateDiagram-v2
 | 配置项 | 默认值 | `disabled` | `query_only` | `read_write` |
 | --- | --- | --- | --- | --- |
 | `inventory_mode`（二级库库存） | `read_write` | 隐藏入口 | 只读 | 可扫码出库 |
+| `hazards_mode`（隐患管理） | `read_write` | 隐藏入口 | 只读 | 可登记隐患、更新整改状态与上传整改图片 |
 | `huaxing_inventory_mode`、`purchase_plans_mode`、`purchase_records_mode`、`material_codes_mode` | `query_only` | 隐藏入口 | 只读 | —（默认只读） |
+
+三档只作用于小程序前端：控制入口是否展示、写操作是否放行；后端数据接口不按开关鉴权，网页端不受影响。
 
 ### 二级库运行模式
 

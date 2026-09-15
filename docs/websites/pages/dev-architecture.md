@@ -37,7 +37,7 @@ Electrical-Manager/
 │       ├── domain/enums.py、models/__init__.py、schemas/__init__.py、templates/（Excel 布局 JSON）
 │       └── repositories/（5 个查询仓储）、services/（27 个业务服务）
 ├── web/    Dockerfile（node:22-alpine → nginx:1.27-alpine）、nginx.conf、vite.config.ts、vitest.config.ts、src/（api、router、stores、views、components、composables…）
-└── miniprogram/  app.json（15 个页面）、pages/、components/、utils/、scripts/（check.js / upload.js）
+└── miniprogram/  app.json（18 个页面）、pages/、components/、utils/、scripts/（check.js / upload.js）
 ```
 
 <Tabs :tabs="[
