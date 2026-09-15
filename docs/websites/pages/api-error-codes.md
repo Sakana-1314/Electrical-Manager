@@ -50,6 +50,9 @@
 | `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `hazard_service` |
 | `HAZARD_UNIT_IN_USE` | 409 | 责任单位已被隐患记录引用，无法删除 | `hazard_service` |
 | `HAZARD_TYPE_IN_USE` | 409 | 隐患类型已被隐患记录引用，只能修改，不能删除 | `hazard_service` |
+| `DUPLICATE_LEDGER_TAG` | 409 | 同一层级下已有同名标签 | `ledger_service` |
+| `LEDGER_TAG_HAS_CHILDREN` | 409 | 标签下还有子标签，不能删除 | `ledger_service` |
+| `LEDGER_TAG_IN_USE` | 409 | 标签（或其子标签）已被台账记录引用，不能删除 | `ledger_service` |
 
 ## 请求与业务校验
 
@@ -71,6 +74,8 @@
 | `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `webhook_service` |
 | `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `mini_program_service` |
 | `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `ai_search_service` |
+| `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层，不能再往下新增子标签 | `ledger_service` |
+| `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `ledger_service` |
 | `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `hazard_service` |
 
 ## 图片与文件

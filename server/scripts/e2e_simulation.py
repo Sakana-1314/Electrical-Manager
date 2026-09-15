@@ -69,13 +69,14 @@ def main() -> int:
         assert health.status_code == 200 and health.json()["database"] == "ok", "健康检查失败"
         print("✅ 健康检查")
 
-        # 2. 五种角色登录
+        # 2. 六种角色登录
         warehouse = _auth(client, "warehouse")
         purchase = _auth(client, "purchase")
         hazard = _auth(client, "hazard")
+        ledger = _auth(client, "ledger")
         readonly = _auth(client, "readonly")
         admin = _auth(client, "admin")
-        print("✅ 五种角色登录")
+        print("✅ 六种角色登录")
 
         # 3. 只读用户越权创建物资应 403
         denied = client.post(
@@ -251,6 +252,88 @@ def main() -> int:
         )
         assert deleted.status_code == 204, deleted.text
         print("✅ 隐患整改与删除")
+
+        # 17. 台账管理员建标签（配电柜 / 低压柜两级）并登记台账记录
+        root_tag = client.post(
+            "/api/v1/ledger-tags",
+            headers=ledger,
+            json={"name": f"E2E 配电柜 {run}"},
+        )
+        assert root_tag.status_code == 201, root_tag.text
+        child_tag = client.post(
+            "/api/v1/ledger-tags",
+            headers=ledger,
+            json={"name": "E2E 低压柜", "parent_id": root_tag.json()["id"]},
+        )
+        assert child_tag.status_code == 201, child_tag.text
+        assert child_tag.json()["level"] == 2, child_tag.text
+        # 三层已是最深层级：再挂子标签应被拒绝
+        too_deep = client.post(
+            "/api/v1/ledger-tags",
+            headers=ledger,
+            json={"name": "E2E 抽屉柜", "parent_id": child_tag.json()["id"]},
+        )
+        assert too_deep.status_code == 201, too_deep.text
+        over_deep = client.post(
+            "/api/v1/ledger-tags",
+            headers=ledger,
+            json={"name": "E2E 第四层", "parent_id": too_deep.json()["id"]},
+        )
+        assert over_deep.status_code == 400, over_deep.text
+        assert over_deep.json()["code"] == "LEDGER_TAG_MAX_LEVEL", over_deep.text
+        print("✅ 台账标签三级层级与超限拦截")
+
+        # 18. 登记台账记录：多标签以逗号分隔 id 落库，选父标签能筛到子标签的记录
+        item = client.post(
+            "/api/v1/ledger-items",
+            headers=ledger,
+            json={
+                "name": f"E2E 抽屉柜 {run}",
+                "model_spec": "MNS-400",
+                "quantity": 2,
+                "tag_ids": [child_tag.json()["id"], too_deep.json()["id"]],
+            },
+        )
+        assert item.status_code == 201, item.text
+        item_row = item.json()
+        assert item_row["tag_ids"] == sorted([child_tag.json()["id"], too_deep.json()["id"]])
+        listed = client.get(
+            "/api/v1/ledger-items",
+            headers=readonly,
+            params={"tag_ids": str(root_tag.json()["id"])},
+        )
+        assert listed.status_code == 200 and item_row["id"] in [
+            row["id"] for row in listed.json()["items"]
+        ], listed.text
+        print(f"✅ 登记台账 #{item_row['id']} 与父标签筛选")
+
+        # 19. 只读用户不能写台账；被台账引用的标签不能删除
+        denied_item = client.post(
+            "/api/v1/ledger-items",
+            headers=readonly,
+            json={"name": "E2E 越权", "model_spec": "X"},
+        )
+        assert denied_item.status_code == 403, denied_item.text
+        tag_in_use = client.delete(
+            f"/api/v1/ledger-tags/{too_deep.json()['id']}",
+            headers={**ledger, "If-Match": str(too_deep.json()["version"])},
+        )
+        assert tag_in_use.status_code == 409, tag_in_use.text
+        print("✅ 台账写权限拦截与标签引用保护")
+
+        # 清理本次模拟创建的数据（标签树自底向上删）
+        removed_item = client.delete(
+            f"/api/v1/ledger-items/{item_row['id']}",
+            headers={**ledger, "If-Match": str(item_row["version"])},
+        )
+        assert removed_item.status_code == 204, removed_item.text
+        for tag in (too_deep.json(), child_tag.json(), root_tag.json()):
+            response = client.delete(
+                f"/api/v1/ledger-tags/{tag['id']}",
+                headers={**ledger, "If-Match": str(tag["version"])},
+            )
+            assert response.status_code == 204, response.text
+        print("✅ 台账模拟数据清理")
 
     print(f"🎉 模拟用户操作全部通过（run={run}）")
     return 0

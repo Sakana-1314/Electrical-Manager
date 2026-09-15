@@ -7,6 +7,8 @@ class Role(StrEnum):
     PURCHASE_ADMIN = "PURCHASE_ADMIN"
     HAZARD_ADMIN = "HAZARD_ADMIN"
     READ_ONLY = "READ_ONLY"
+    # 台账管理员：新值一律追加在末尾，MySQL 枚举追加值可在线完成、不重排既有值序数。
+    LEDGER_ADMIN = "LEDGER_ADMIN"
 
 
 class HazardStatus(StrEnum):

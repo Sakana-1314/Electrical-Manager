@@ -30,6 +30,7 @@ FileWriter = Annotated[
             Role.WAREHOUSE_ADMIN,
             Role.PURCHASE_ADMIN,
             Role.HAZARD_ADMIN,
+            Role.LEDGER_ADMIN,
         )
     ),
 ]

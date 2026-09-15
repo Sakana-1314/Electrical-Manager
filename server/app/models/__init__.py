@@ -901,6 +901,92 @@ class HazardAfterImage(Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
+class LedgerTag(AuditMixin, Base):
+    """台账标签节点：自引用邻接表，至多 3 层（根节点 `parent_id IS NULL`）。
+
+    层级上限与「同级名称唯一」都由 service 校验：MySQL 唯一索引对 `parent_id IS NULL`
+    不去重，覆盖不到根节点，所以不建库级唯一索引，让这两条规则只有一处实现。
+    节点为物理删除，有子节点或已被台账记录引用时由 service 返回 409 拦截。
+    """
+
+    __tablename__ = "ledger_tag"
+    __table_args__ = (Index("ix_ledger_tag_parent_id", "parent_id"),)
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    parent_id: Mapped[int | None] = mapped_column(
+        BIGINT_ID, ForeignKey("ledger_tag.id"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    # 备注与图片供标签节点悬停浮层展示。
+    remark: Mapped[str | None] = mapped_column(String(500))
+
+    parent: Mapped[LedgerTag | None] = relationship(
+        back_populates="children", remote_side="LedgerTag.id", lazy="selectin"
+    )
+    children: Mapped[list[LedgerTag]] = relationship(
+        back_populates="parent", lazy="selectin", order_by="LedgerTag.id"
+    )
+    images: Mapped[list[LedgerTagImage]] = relationship(
+        back_populates="tag",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="LedgerTagImage.sort_order",
+    )
+
+
+class LedgerTagImage(Base):
+    """标签节点图片关联：一个节点最多 9 张，sort_order 保留上传顺序。"""
+
+    __tablename__ = "ledger_tag_image"
+
+    tag_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("ledger_tag.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("file_object.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(UTINYINT, nullable=False, default=0)
+    tag: Mapped[LedgerTag] = relationship(back_populates="images")
+    file: Mapped[FileObject] = relationship(lazy="selectin")
+
+
+class Ledger(AuditMixin, Base):
+    """台账记录：电气台账总览的一行（名称 / 型号 / 数量 / 备注 / 图片 + 标签）。
+
+    `tag_ids` 是英文逗号分隔的标签 id（如 `3,12,15`），由 service 统一规范化写入
+    （去重、升序、无空格；空串表示未挂标签）。按标签筛选时用「左右补逗号再精确命中」
+    表达集合成员关系，MySQL 与测试库 SQLite 能编译出同一条语义的 SQL，不依赖 FIND_IN_SET。
+    """
+
+    __tablename__ = "ledger"
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_spec: Mapped[str] = mapped_column(String(255), nullable=False)
+    # 数量是整数件数（按台/套/件统计，不做小数）。
+    quantity: Mapped[int] = mapped_column(UINT, nullable=False, default=0, server_default="0")
+    remark: Mapped[str | None] = mapped_column(String(1000))
+    tag_ids: Mapped[str] = mapped_column(String(500), nullable=False, default="", server_default="")
+    images: Mapped[list[LedgerImage]] = relationship(
+        back_populates="ledger",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="LedgerImage.sort_order",
+    )
+
+
+class LedgerImage(Base):
+    """台账记录图片关联：一张图一行，sort_order 保留上传顺序。"""
+
+    __tablename__ = "ledger_image"
+
+    ledger_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("ledger.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("file_object.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(UTINYINT, nullable=False, default=0)
+    ledger: Mapped[Ledger] = relationship(back_populates="images")
+    file: Mapped[FileObject] = relationship(lazy="selectin")
+
+
 __all__ = [
     "Base",
     "BusinessEventLog",
@@ -913,6 +999,10 @@ __all__ = [
     "HazardType",
     "HazardUnit",
     "HuaXingInventory",
+    "Ledger",
+    "LedgerImage",
+    "LedgerTag",
+    "LedgerTagImage",
     "LiteInventory",
     "Memo",
     "MiniProgramUser",

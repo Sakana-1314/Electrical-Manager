@@ -27,6 +27,8 @@ from app.models import (
     FileObject,
     HazardAfterImage,
     HazardBeforeImage,
+    LedgerImage,
+    LedgerTagImage,
     PurchaseMaterialImage,
     PurchasePlanTemplateImage,
     PurchaseRequestLineImage,
@@ -66,6 +68,8 @@ REFERENCE_MODELS: tuple[type[Any], ...] = (
     PurchaseRequestLineImage,
     HazardBeforeImage,
     HazardAfterImage,
+    LedgerImage,
+    LedgerTagImage,
 )
 
 
@@ -124,6 +128,8 @@ def _unreferenced() -> ColumnElement[bool]:
         & ~exists().where(PurchaseRequestLineImage.file_id == FileObject.id)
         & ~exists().where(HazardBeforeImage.file_id == FileObject.id)
         & ~exists().where(HazardAfterImage.file_id == FileObject.id)
+        & ~exists().where(LedgerImage.file_id == FileObject.id)
+        & ~exists().where(LedgerTagImage.file_id == FileObject.id)
     )
 
 

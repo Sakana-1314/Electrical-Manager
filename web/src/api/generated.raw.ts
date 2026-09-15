@@ -2150,6 +2150,79 @@ export interface paths {
         patch: operations["update_hazard_type_api_v1_hazard_types__type_id__patch"];
         trace?: never;
     };
+    "/api/v1/ledger-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 标签列表 */
+        get: operations["list_ledger_tags_api_v1_ledger_tags_get"];
+        put?: never;
+        /** 新增标签 */
+        post: operations["create_ledger_tag_api_v1_ledger_tags_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger-tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除标签 */
+        delete: operations["delete_ledger_tag_api_v1_ledger_tags__tag_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新标签 */
+        patch: operations["update_ledger_tag_api_v1_ledger_tags__tag_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/ledger-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 台账列表 */
+        get: operations["list_ledger_items_api_v1_ledger_items_get"];
+        put?: never;
+        /** 新增台账 */
+        post: operations["create_ledger_item_api_v1_ledger_items_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ledger-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 台账详情 */
+        get: operations["get_ledger_item_api_v1_ledger_items__item_id__get"];
+        put?: never;
+        post?: never;
+        /** 删除台账 */
+        delete: operations["delete_ledger_item_api_v1_ledger_items__item_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新台账 */
+        patch: operations["update_ledger_item_api_v1_ledger_items__item_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3438,6 +3511,252 @@ export interface components {
         LastImportRead: {
             /** Last Import At */
             last_import_at?: string | null;
+        };
+        /**
+         * LedgerItemCreate
+         * @example {
+         *       "name": "窑尾排风机电机",
+         *       "model_spec": "YKK-400-8 220kW",
+         *       "quantity": 2,
+         *       "remark": "窑尾收尘系统配套",
+         *       "tag_ids": [
+         *         5,
+         *         6
+         *       ],
+         *       "image_ids": [
+         *         "5b8acb50-4317-7306-8ef8-e2b59f03da58"
+         *       ]
+         *     }
+         */
+        LedgerItemCreate: {
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /**
+             * Quantity
+             * @default 0
+             */
+            quantity: number;
+            /** Remark */
+            remark?: string | null;
+            /** Tag Ids */
+            tag_ids?: number[];
+            /** Image Ids */
+            image_ids?: string[];
+        };
+        /**
+         * LedgerItemRead
+         * @description 台账记录：标签以 id 列表返回，并附名称与完整路径，列表页无需再解析。
+         * @example {
+         *       "id": 1,
+         *       "name": "1# 回转窑主电机",
+         *       "model_spec": "YKK-450-6 355kW",
+         *       "quantity": 1,
+         *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+         *       "tag_ids": [
+         *         6
+         *       ],
+         *       "tags": [
+         *         {
+         *           "id": 6,
+         *           "name": "异步电动机",
+         *           "path": "电动机 / 异步电动机"
+         *         }
+         *       ],
+         *       "images": [
+         *         {
+         *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *           "original_name": "异步电动机铭牌.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 512400,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "created_at": "2026-09-02T10:20:00+08:00",
+         *       "updated_at": "2026-09-11T14:05:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        LedgerItemRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Quantity */
+            quantity: number;
+            /** Remark */
+            remark?: string | null;
+            /** Tag Ids */
+            tag_ids: number[];
+            /** Tags */
+            tags: components["schemas"]["LedgerTagRefRead"][];
+            /** Images */
+            images: components["schemas"]["FileObjectRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * LedgerItemUpdate
+         * @example {
+         *       "name": "窑尾排风机电机",
+         *       "model_spec": "YKK-400-8 220kW",
+         *       "quantity": 3,
+         *       "remark": "窑尾收尘系统配套，含 1 台备用",
+         *       "tag_ids": [
+         *         5,
+         *         6
+         *       ],
+         *       "image_ids": [
+         *         "5b8acb50-4317-7306-8ef8-e2b59f03da58"
+         *       ],
+         *       "version": 1
+         *     }
+         */
+        LedgerItemUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Model Spec */
+            model_spec?: string | null;
+            /** Quantity */
+            quantity?: number | null;
+            /** Remark */
+            remark?: string | null;
+            /** Tag Ids */
+            tag_ids?: number[] | null;
+            /** Image Ids */
+            image_ids?: string[] | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * LedgerTagCreate
+         * @example {
+         *       "parent_id": 1,
+         *       "name": "电容器柜",
+         *       "remark": "无功补偿柜，按柜号归档",
+         *       "image_ids": [
+         *         "3abf840e-14ec-7623-8b1c-713899902cc4"
+         *       ]
+         *     }
+         */
+        LedgerTagCreate: {
+            /** Parent Id */
+            parent_id?: number | null;
+            /** Name */
+            name: string;
+            /** Remark */
+            remark?: string | null;
+            /** Image Ids */
+            image_ids?: string[];
+        };
+        /**
+         * LedgerTagRead
+         * @description 台账标签节点：平铺返回（靠 `parent_id` 表达层级），前端据此拼横向树。
+         *
+         *     `level`（1..3，由祖先链算出）与 `child_count`（直接子节点数）供页面判断
+         *     「还能不能再挂子标签」与节点计数展示。
+         * @example {
+         *       "id": 2,
+         *       "parent_id": 1,
+         *       "name": "低压柜",
+         *       "remark": "AC 400V 系统，MNS / GGD 柜型",
+         *       "level": 2,
+         *       "child_count": 1,
+         *       "images": [
+         *         {
+         *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+         *           "original_name": "低压柜现场照片.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 402800,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "created_at": "2026-08-28T09:10:00+08:00",
+         *       "updated_at": "2026-09-10T15:40:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        LedgerTagRead: {
+            /** Id */
+            id: number;
+            /** Parent Id */
+            parent_id?: number | null;
+            /** Name */
+            name: string;
+            /** Remark */
+            remark?: string | null;
+            /** Level */
+            level: number;
+            /** Child Count */
+            child_count: number;
+            /** Images */
+            images: components["schemas"]["FileObjectRead"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * LedgerTagRefRead
+         * @description 台账记录上的标签引用：id + 名称 + 完整层级路径（列表「标签」列直接展示 `path`）。
+         * @example {
+         *       "id": 2,
+         *       "name": "低压柜",
+         *       "path": "配电柜 / 低压柜"
+         *     }
+         */
+        LedgerTagRefRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
+        /**
+         * LedgerTagUpdate
+         * @description 编辑标签：只改名称 / 备注 / 图片，不支持改上级（层级上限因此静态可保）。
+         * @example {
+         *       "name": "电容器柜（低压）",
+         *       "remark": "无功补偿柜，2026 年 9 月新增 2 台",
+         *       "image_ids": [
+         *         "3abf840e-14ec-7623-8b1c-713899902cc4"
+         *       ],
+         *       "version": 1
+         *     }
+         */
+        LedgerTagUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Remark */
+            remark?: string | null;
+            /** Image Ids */
+            image_ids?: string[] | null;
+            /** Version */
+            version: number;
         };
         /**
          * LinkStockMaterialRequest
@@ -5500,6 +5819,161 @@ export interface components {
         Page_InventoryBalanceRead_: {
             /** Items */
             items: components["schemas"]["InventoryBalanceRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[LedgerItemRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "name": "1# 回转窑主电机",
+         *           "model_spec": "YKK-450-6 355kW",
+         *           "quantity": 1,
+         *           "remark": "窑尾主传动，2026 年 5 月更换轴承",
+         *           "tag_ids": [
+         *             6
+         *           ],
+         *           "tags": [
+         *             {
+         *               "id": 6,
+         *               "name": "异步电动机",
+         *               "path": "电动机 / 异步电动机"
+         *             }
+         *           ],
+         *           "images": [
+         *             {
+         *               "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *               "original_name": "异步电动机铭牌.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "created_at": "2026-09-02T10:20:00+08:00",
+         *           "updated_at": "2026-09-11T14:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 2,
+         *           "name": "低压抽屉柜",
+         *           "model_spec": "MNS-400 8E/2",
+         *           "quantity": 6,
+         *           "remark": "201 冶炼主厂房配电室",
+         *           "tag_ids": [
+         *             2,
+         *             3
+         *           ],
+         *           "tags": [
+         *             {
+         *               "id": 2,
+         *               "name": "低压柜",
+         *               "path": "配电柜 / 低压柜"
+         *             },
+         *             {
+         *               "id": 3,
+         *               "name": "抽屉柜",
+         *               "path": "配电柜 / 低压柜 / 抽屉柜"
+         *             }
+         *           ],
+         *           "images": [
+         *             {
+         *               "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+         *               "original_name": "低压柜现场照片.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             },
+         *             {
+         *               "id": "41e66654-8787-7196-848b-e38fd60443f4",
+         *               "original_name": "抽屉柜铭牌.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 512400,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "created_at": "2026-09-02T10:20:00+08:00",
+         *           "updated_at": "2026-09-11T14:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 3,
+         *           "name": "高压开关柜",
+         *           "model_spec": "KYN28A-12 05",
+         *           "quantity": 3,
+         *           "remark": "6kV 高压室",
+         *           "tag_ids": [
+         *             4
+         *           ],
+         *           "tags": [
+         *             {
+         *               "id": 4,
+         *               "name": "高压柜",
+         *               "path": "配电柜 / 高压柜"
+         *             }
+         *           ],
+         *           "images": [],
+         *           "created_at": "2026-09-02T10:20:00+08:00",
+         *           "updated_at": "2026-09-11T14:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 4,
+         *           "name": "窑尾高温风机变频器",
+         *           "model_spec": "ACS880-07-0320A-3",
+         *           "quantity": 1,
+         *           "remark": "与主电机联锁，参数已备份",
+         *           "tag_ids": [
+         *             6,
+         *             7
+         *           ],
+         *           "tags": [
+         *             {
+         *               "id": 6,
+         *               "name": "异步电动机",
+         *               "path": "电动机 / 异步电动机"
+         *             },
+         *             {
+         *               "id": 7,
+         *               "name": "变频器",
+         *               "path": "变频器"
+         *             }
+         *           ],
+         *           "images": [],
+         *           "created_at": "2026-09-02T10:20:00+08:00",
+         *           "updated_at": "2026-09-11T14:05:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 5,
+         *           "name": "现场压力变送器",
+         *           "model_spec": "EJA530E-JCS4N",
+         *           "quantity": 12,
+         *           "remark": "暂未归类到具体装置",
+         *           "tag_ids": [],
+         *           "tags": [],
+         *           "images": [],
+         *           "created_at": "2026-09-02T10:20:00+08:00",
+         *           "updated_at": "2026-09-11T14:05:00+08:00",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 5
+         *     }
+         */
+        Page_LedgerItemRead_: {
+            /** Items */
+            items: components["schemas"]["LedgerItemRead"][];
             /** Page */
             page: number;
             /** Page Size */
@@ -9642,7 +10116,7 @@ export interface components {
          * Role
          * @enum {string}
          */
-        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY";
+        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY" | "LEDGER_ADMIN";
         /**
          * SecondaryWarehouseMode
          * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
@@ -33130,6 +33604,1298 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["HazardTypeRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_ledger_tags_api_v1_ledger_tags_get: {
+        parameters: {
+            query?: {
+                keyword?: string | null;
+                /** @description orphan=只看孤立标签（无父无子）；tree=只看处在层级里的标签 */
+                scope?: ("orphan" | "tree") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 2,
+                     *         "parent_id": 1,
+                     *         "name": "低压柜",
+                     *         "remark": "AC 400V 系统，MNS / GGD 柜型",
+                     *         "level": 2,
+                     *         "child_count": 1,
+                     *         "images": [
+                     *           {
+                     *             "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *             "original_name": "低压柜现场照片.jpg",
+                     *             "mime_type": "image/jpeg",
+                     *             "size_bytes": 402800,
+                     *             "width": 1600,
+                     *             "height": 1200
+                     *           }
+                     *         ],
+                     *         "created_at": "2026-08-28T09:10:00+08:00",
+                     *         "updated_at": "2026-09-10T15:40:00+08:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["LedgerTagRead"][];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_ledger_tag_api_v1_ledger_tags_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerTagCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "parent_id": 1,
+                     *       "name": "低压柜",
+                     *       "remark": "AC 400V 系统，MNS / GGD 柜型",
+                     *       "level": 2,
+                     *       "child_count": 1,
+                     *       "images": [
+                     *         {
+                     *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *           "original_name": "低压柜现场照片.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 402800,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-08-28T09:10:00+08:00",
+                     *       "updated_at": "2026-09-10T15:40:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["LedgerTagRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_ledger_tag_api_v1_ledger_tags__tag_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_ledger_tag_api_v1_ledger_tags__tag_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerTagUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "parent_id": 1,
+                     *       "name": "低压柜",
+                     *       "remark": "AC 400V 系统，MNS / GGD 柜型",
+                     *       "level": 2,
+                     *       "child_count": 1,
+                     *       "images": [
+                     *         {
+                     *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *           "original_name": "低压柜现场照片.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 402800,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-08-28T09:10:00+08:00",
+                     *       "updated_at": "2026-09-10T15:40:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["LedgerTagRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_ledger_items_api_v1_ledger_items_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                keyword?: string | null;
+                /** @description 英文逗号分隔的标签 id，命中任一（含其子孙）即返回 */
+                tag_ids?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": 1,
+                     *           "name": "1# 回转窑主电机",
+                     *           "model_spec": "YKK-450-6 355kW",
+                     *           "quantity": 1,
+                     *           "remark": "窑尾主传动，2026 年 5 月更换轴承",
+                     *           "tag_ids": [
+                     *             6
+                     *           ],
+                     *           "tags": [
+                     *             {
+                     *               "id": 6,
+                     *               "name": "异步电动机",
+                     *               "path": "电动机 / 异步电动机"
+                     *             }
+                     *           ],
+                     *           "images": [
+                     *             {
+                     *               "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *               "original_name": "异步电动机铭牌.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "created_at": "2026-09-02T10:20:00+08:00",
+                     *           "updated_at": "2026-09-11T14:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 2,
+                     *           "name": "低压抽屉柜",
+                     *           "model_spec": "MNS-400 8E/2",
+                     *           "quantity": 6,
+                     *           "remark": "201 冶炼主厂房配电室",
+                     *           "tag_ids": [
+                     *             2,
+                     *             3
+                     *           ],
+                     *           "tags": [
+                     *             {
+                     *               "id": 2,
+                     *               "name": "低压柜",
+                     *               "path": "配电柜 / 低压柜"
+                     *             },
+                     *             {
+                     *               "id": 3,
+                     *               "name": "抽屉柜",
+                     *               "path": "配电柜 / 低压柜 / 抽屉柜"
+                     *             }
+                     *           ],
+                     *           "images": [
+                     *             {
+                     *               "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *               "original_name": "低压柜现场照片.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             },
+                     *             {
+                     *               "id": "41e66654-8787-7196-848b-e38fd60443f4",
+                     *               "original_name": "抽屉柜铭牌.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 512400,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "created_at": "2026-09-02T10:20:00+08:00",
+                     *           "updated_at": "2026-09-11T14:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 3,
+                     *           "name": "高压开关柜",
+                     *           "model_spec": "KYN28A-12 05",
+                     *           "quantity": 3,
+                     *           "remark": "6kV 高压室",
+                     *           "tag_ids": [
+                     *             4
+                     *           ],
+                     *           "tags": [
+                     *             {
+                     *               "id": 4,
+                     *               "name": "高压柜",
+                     *               "path": "配电柜 / 高压柜"
+                     *             }
+                     *           ],
+                     *           "images": [],
+                     *           "created_at": "2026-09-02T10:20:00+08:00",
+                     *           "updated_at": "2026-09-11T14:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 4,
+                     *           "name": "窑尾高温风机变频器",
+                     *           "model_spec": "ACS880-07-0320A-3",
+                     *           "quantity": 1,
+                     *           "remark": "与主电机联锁，参数已备份",
+                     *           "tag_ids": [
+                     *             6,
+                     *             7
+                     *           ],
+                     *           "tags": [
+                     *             {
+                     *               "id": 6,
+                     *               "name": "异步电动机",
+                     *               "path": "电动机 / 异步电动机"
+                     *             },
+                     *             {
+                     *               "id": 7,
+                     *               "name": "变频器",
+                     *               "path": "变频器"
+                     *             }
+                     *           ],
+                     *           "images": [],
+                     *           "created_at": "2026-09-02T10:20:00+08:00",
+                     *           "updated_at": "2026-09-11T14:05:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 5,
+                     *           "name": "现场压力变送器",
+                     *           "model_spec": "EJA530E-JCS4N",
+                     *           "quantity": 12,
+                     *           "remark": "暂未归类到具体装置",
+                     *           "tag_ids": [],
+                     *           "tags": [],
+                     *           "images": [],
+                     *           "created_at": "2026-09-02T10:20:00+08:00",
+                     *           "updated_at": "2026-09-11T14:05:00+08:00",
+                     *           "version": 1
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 5
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_LedgerItemRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_ledger_item_api_v1_ledger_items_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerItemCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机",
+                     *       "model_spec": "YKK-450-6 355kW",
+                     *       "quantity": 1,
+                     *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+                     *       "tag_ids": [
+                     *         6
+                     *       ],
+                     *       "tags": [
+                     *         {
+                     *           "id": 6,
+                     *           "name": "异步电动机",
+                     *           "path": "电动机 / 异步电动机"
+                     *         }
+                     *       ],
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "异步电动机铭牌.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:20:00+08:00",
+                     *       "updated_at": "2026-09-11T14:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["LedgerItemRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_ledger_item_api_v1_ledger_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机",
+                     *       "model_spec": "YKK-450-6 355kW",
+                     *       "quantity": 1,
+                     *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+                     *       "tag_ids": [
+                     *         6
+                     *       ],
+                     *       "tags": [
+                     *         {
+                     *           "id": 6,
+                     *           "name": "异步电动机",
+                     *           "path": "电动机 / 异步电动机"
+                     *         }
+                     *       ],
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "异步电动机铭牌.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:20:00+08:00",
+                     *       "updated_at": "2026-09-11T14:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["LedgerItemRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_ledger_item_api_v1_ledger_items__item_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "if-match"?: string | null;
+            };
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_ledger_item_api_v1_ledger_items__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LedgerItemUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机",
+                     *       "model_spec": "YKK-450-6 355kW",
+                     *       "quantity": 1,
+                     *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+                     *       "tag_ids": [
+                     *         6
+                     *       ],
+                     *       "tags": [
+                     *         {
+                     *           "id": 6,
+                     *           "name": "异步电动机",
+                     *           "path": "电动机 / 异步电动机"
+                     *         }
+                     *       ],
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "异步电动机铭牌.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:20:00+08:00",
+                     *       "updated_at": "2026-09-11T14:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["LedgerItemRead"];
                 };
             };
             /** @description 业务校验失败 */
