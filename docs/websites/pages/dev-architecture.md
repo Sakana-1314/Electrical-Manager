@@ -163,7 +163,7 @@ web/src/
 | `apiBaseUrl` | `VITE_API_BASE_URL` | 回退 `/api/v1`；只填域名（纯 origin）时自动补 `/api/v1` |
 | `imageBaseUrl` | `VITE_IMAGE_BASE_URL` | 缺省 = `apiBaseUrl/files/images` |
 | `buildTime` | 构建期注入的 `__BUILD_TIME__` | — |
-| `resolveMcpUrl(apiBaseUrl, token)` | — | 拼出 `mcp/?token=` 地址 |
+| `resolveMcpUrl(resolvedApiBaseUrl, token, projectId?, origin?)` | — | 拼出 `mcp/?project_id=&token=` 地址（`project_id` 在前，未选项目时不带该参数） |
 
 位置：`web/src/config/env.ts`。
 - 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。

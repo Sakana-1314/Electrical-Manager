@@ -61,9 +61,9 @@ describe('构建环境配置', () => {
     ).toBe('https://api.example.com/api/v1/mcp/?token=a%2Bb%2Fc')
   })
 
-  it('MCP 地址带上当前项目 id，未选择项目时不带', () => {
+  it('MCP 地址带上当前项目 id 且 project_id 排在 token 之前，未选择项目时不带', () => {
     expect(resolveMcpUrl('/api/v1', 'token-value', 6, 'https://app.example.com')).toBe(
-      'https://app.example.com/api/v1/mcp/?token=token-value&project_id=6',
+      'https://app.example.com/api/v1/mcp/?project_id=6&token=token-value',
     )
     expect(resolveMcpUrl('/api/v1', 'token-value', null, 'https://app.example.com')).not.toContain(
       'project_id',
