@@ -68,6 +68,16 @@ def _resolve_active_fields(fields: str | None) -> set[str] | None:
     return parsed
 
 
+def _resolve_order_no_cutoff(value: str | None, label: str) -> str | None:
+    """校验并归一化申购单号区间端点（下界 / 上界）；空值表示该侧不限。"""
+    if not value:
+        return None
+    cutoff = value.strip()
+    if len(cutoff) > 128:
+        raise AppError("VALIDATION_ERROR", f"{label}过长", status_code=422)
+    return cutoff
+
+
 async def list_sync_targets(
     session: AsyncSession,
     *,
@@ -75,19 +85,18 @@ async def list_sync_targets(
     cursor: int,
     fields: str | None = None,
     min_purchase_order_no: str | None = None,
+    max_purchase_order_no: str | None = None,
 ) -> PurchaseRecordSyncTargetsRead:
     active_fields = _resolve_active_fields(fields)
-    cutoff: str | None = None
-    if min_purchase_order_no:
-        cutoff = min_purchase_order_no.strip()
-        if len(cutoff) > 128:
-            raise AppError("VALIDATION_ERROR", "申购单号起始值过长", status_code=422)
+    cutoff = _resolve_order_no_cutoff(min_purchase_order_no, "申购单号起始值")
+    max_cutoff = _resolve_order_no_cutoff(max_purchase_order_no, "申购单号上限值")
     rows = await purchase_request_repository.list_sync_targets(
         session,
         limit=limit,
         cursor=cursor,
         fields=active_fields,
         min_purchase_order_no=cutoff,
+        max_purchase_order_no=max_cutoff,
     )
     has_more = len(rows) > limit
     items = [
@@ -105,20 +114,19 @@ async def list_sync_order_targets(
     cursor: int,
     fields: str | None = None,
     min_purchase_order_no: str | None = None,
+    max_purchase_order_no: str | None = None,
 ) -> PurchaseRecordSyncOrderTargetsRead:
     """按申购单号列出待同步整单目标（供整单一次平台查询、整单批量回写）。"""
     active_fields = _resolve_active_fields(fields)
-    cutoff: str | None = None
-    if min_purchase_order_no:
-        cutoff = min_purchase_order_no.strip()
-        if len(cutoff) > 128:
-            raise AppError("VALIDATION_ERROR", "申购单号起始值过长", status_code=422)
+    cutoff = _resolve_order_no_cutoff(min_purchase_order_no, "申购单号起始值")
+    max_cutoff = _resolve_order_no_cutoff(max_purchase_order_no, "申购单号上限值")
     rows = await purchase_request_repository.list_sync_order_targets(
         session,
         limit=limit,
         cursor=cursor,
         fields=active_fields,
         min_purchase_order_no=cutoff,
+        max_purchase_order_no=max_cutoff,
     )
     has_more = len(rows) > limit
     items = [

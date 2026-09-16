@@ -13677,6 +13677,17 @@ paths:
           description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
           title: Min Purchase Order No
         description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
+      - name: max_purchase_order_no
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 只返回申购单号（purchase_order_no）< 该值的记录（不含该值）
+          title: Max Purchase Order No
+        description: 只返回申购单号（purchase_order_no）< 该值的记录（不含该值）
       - name: X-Project-Id
         in: header
         required: false
@@ -13898,6 +13909,17 @@ paths:
           description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
           title: Min Purchase Order No
         description: 只返回申购单号（purchase_order_no）>= 该值的记录（含该值）
+      - name: max_purchase_order_no
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 只返回申购单号（purchase_order_no）< 该值的记录（不含该值）
+          title: Max Purchase Order No
+        description: 只返回申购单号（purchase_order_no）< 该值的记录（不含该值）
       - name: X-Project-Id
         in: header
         required: false
