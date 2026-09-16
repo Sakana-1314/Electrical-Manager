@@ -60,8 +60,9 @@
   // 何佳单次查询页大小：与站点自身一致（HAR 实测 pageSize=800）；超过一页时逐页拉全。
   const HEJIA_PAGE_SIZE = 800;
   const HEJIA_MAX_PAGES = 50;
-  // 何佳报表查询之间的最小间隔：避免连续整单查询给旧系统太大压力（登录不计入）。
-  const HEJIA_MIN_GAP_MS = 1000;
+  // 报表查询限频：任意两次整单查询之间至少间隔 10 秒，与新脚本（印尼数据平台限频）一致；
+  // 登录与报表配置（FlexUIServlet）请求不计入。同一单内部翻页视为同一次查询。
+  const HEJIA_MIN_GAP_MS = 10000;
   // 何佳请求（含登录）的瞬时错误重试次数：旧系统挂在 Cloudflare 后面，偶发 5xx / 524。
   const HEJIA_REQUEST_ATTEMPTS = 3;
   const PREFIX = "hejia_sync_";
@@ -798,12 +799,15 @@
     for (const [trace, group] of groups) results[trace] = resultFor(group, aliases);
     return results;
   };
-  // 何佳报表查询之间保持最小间隔（登录不计入）。
+  // 报表查询限频：任意两次整单查询之间至少间隔 HEJIA_MIN_GAP_MS（登录与配置请求不计入）。
   const hejiaPacer = (() => {
     let last = 0;
     return async () => {
       const wait = Math.max(0, HEJIA_MIN_GAP_MS - (Date.now() - last));
-      if (wait > 0) await sleep(wait);
+      if (wait > 0) {
+        status(`限频等待 ${Math.ceil(wait / 1000)} 秒`, "running");
+        await sleep(wait);
+      }
       last = Date.now();
     };
   })();
