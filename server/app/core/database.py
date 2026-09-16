@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import (
@@ -39,15 +40,35 @@ register_database_timing(engine)
 register_project_scope()
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 
+# 当前请求正在使用的会话：`get_db` 建立时登记，供 CommitBeforeResponseMiddleware 在
+# 响应发出前提交（见 core/middleware.py 的类文档）。后台任务不走 `get_db`，取到 None。
+_current_session: ContextVar[AsyncSession | None] = ContextVar("request_session", default=None)
+
+
+async def commit_current_session() -> None:
+    """提交当前请求的写事务（没有待提交事务时什么都不做）。
+
+    由 `CommitBeforeResponseMiddleware` 在响应头发出之前调用，保证「接口返回 2xx」
+    与「写库可见」在客户端看来是同一时刻。
+    """
+    session = _current_session.get()
+    if session is not None and session.in_transaction():
+        await session.commit()
+
 
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
+        token = _current_session.set(session)
         try:
             yield session
+            # 兜底：正常响应的事务已由 CommitBeforeResponseMiddleware 提前提交，
+            # 这里只负责「响应发出之后」才写库的部分（响应上挂的后台任务）。
             await session.commit()
         except Exception:
             await session.rollback()
             raise
+        finally:
+            _current_session.reset(token)
 
 
 @asynccontextmanager

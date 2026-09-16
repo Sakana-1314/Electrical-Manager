@@ -531,9 +531,10 @@ server/app/
 
 | 中间件 | 规则 |
 | --- | --- |
+| `CommitBeforeResponseMiddleware` | 在响应头（`http.response.start`）发出**之前**提交当前请求的事务，让「接口返回 2xx」与「写库可见」在客户端看来是同一时刻。必须是**最内层**中间件（因此也是第一个注册的）：只有与路由处理跑在同一个任务里，提交才不会与依赖收尾跨任务并发抢同一个会话，也必然早于响应字节发出 |
 | `RealIPMiddleware` | 把 `scope["client"]` 改写为可信边缘代理给出的真实 IP，取值优先级 `EO-Connecting-IP` → `X-Real-IP` → `X-Forwarded-For` 的第一段；候选值需能被 `ipaddress.ip_address()` 解析，全部无效则不改写 |
 | `RefererCORSMiddleware` | **Referer 优先**（兼容不发 `Origin` 的内嵌 WebView/微信），无效或缺失回退 `Origin`；`Referer: null` 原样返回 `null`。白名单为空表示不限制；否则需 `origin` 精确命中、或 `*`、或 `allowed` 以 `.` 开头时按 host 后缀匹配（`.example.com` 匹配 `app.example.com`）；未命中不回显 CORS 头。预检（`OPTIONS` + `Access-Control-Request-Method`）直接 200，方法白名单 `DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT`，回显请求的 `Access-Control-Request-Headers`，`Access-Control-Request-Private-Network: true` 时回私有网络头；正常响应补 `Vary: Origin, Referer` |
-注册顺序（`main.py`，后注册的中间件更外层）：`RefererCORSMiddleware` → `project_context` → `request_context` → `RealIPMiddleware`；即最外层 `RealIPMiddleware`，最内层 CORS，`request_context` 位于 RealIP 内层以便读到改写后的真实 IP，`project_context` 在 `request_context` 内层、业务处理之前把 `X-Project-Id` 落进项目上下文。
+注册顺序（`main.py`，后注册的中间件更外层）：`CommitBeforeResponseMiddleware` → `RefererCORSMiddleware` → `project_context` → `request_context` → `RealIPMiddleware`；即最外层 `RealIPMiddleware`，最内层 `CommitBeforeResponseMiddleware`，`request_context` 位于 RealIP 内层以便读到改写后的真实 IP，`project_context` 在 `request_context` 内层、业务处理之前把 `X-Project-Id` 落进项目上下文；`CommitBeforeResponseMiddleware` 必须在所有 `BaseHTTPMiddleware`（`request_context`、`project_context`）**之内**，`server/tests/test_middleware.py` 会校验这个顺序。
 
 
 
@@ -580,7 +581,8 @@ flowchart LR
 | 会话工厂 | `async_sessionmaker(engine, expire_on_commit=False, autoflush=False)` |
 | `Base` | `AsyncAttrs + DeclarativeBase`，`MetaData` 带命名约定（`ix_/uq_/ck_/fk_/pk_`） |
 | SQL 计时 | 创建引擎后立即 `register_database_timing(engine)` |
-`get_db` 依赖：`yield` 会话 → 正常路径 `await session.commit()` → 异常路径 `await session.rollback()` 并重新抛出。路由内的 service 调用默认由依赖收尾提交，需要「先落库再返回/再抛错」的 service 会自行提交：
+| 当前请求会话 | `get_db` 建立会话时登记到 `ContextVar`，`commit_current_session()` 用它提交（由 `CommitBeforeResponseMiddleware` 调用）；后台任务不走 `get_db`，取不到会话，`commit_current_session()` 直接返回 |
+`get_db` 依赖：`yield` 会话 → 正常路径 `await session.commit()` → 异常路径 `await session.rollback()` 并重新抛出。**请求事务的提交由 `CommitBeforeResponseMiddleware` 提前到响应头发出之前**（FastAPI 的 `yield` 依赖在响应发送之后才收尾，不提前提交的话客户端拿到 201 立刻回读会读到旧值）；`get_db` 收尾的 `commit()` 作为兜底，负责响应发出后才写库的部分（响应上挂的后台任务）。需要「先落库再返回/再抛错」的 service 会自行提交：
 
 | 自行提交的示例 | 说明 |
 | --- | --- |
