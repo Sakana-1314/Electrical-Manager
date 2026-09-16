@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 import type { Memo, MemoCreate, MemoUpdate } from './generated'
 
-/** 管理端个人备忘录：纯文本记录，一级 tab 快捷切换多条（按登录用户隔离）。 */
+/** 管理端个人备忘录：纯文本记录，左侧列表切换多条、右侧单编辑区（按登录用户隔离）。 */
 export const memoApi = {
   /** 当前用户的全部备忘录，最近更新的排前面。 */
   listMemos: () => apiClient.get<Memo[]>('/memos').then((r) => r.data),

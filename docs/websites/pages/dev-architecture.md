@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 36 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 41 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -93,10 +93,10 @@ web/src/
 
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
-| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：账号密码表单 + 演示提示，调 `auth.login`，支持 `?redirect=` 回跳 |
+| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：账号密码表单，调 `auth.login`，支持 `?redirect=` 回跳 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 顶栏用户菜单 |
-| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：汇总卡片（`inventoryApi.summary`）与低库存/近期流水概览 |
-| `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：多 tab、保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
+| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：汇总卡片（`inventoryApi.summary` + `hazardApi.stats`）与低库存提醒表格 |
+| `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
 | `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表/新增编辑、补库策略、小程序码 |
 | `/warehouse/materials/:id` | `stock-material-detail` | `views/warehouse/StockMaterialDetailView.vue` | 需登录 | 物资详情（图片、出入库记录、策略） |
 | `/warehouse/inbound` | `inbound` | `views/warehouse/OperationEditorView.vue`（`props: { operationType: 'INBOUND' }`） | `warehouse:write` | 入库登记（行编辑与校验） |
@@ -120,22 +120,25 @@ web/src/
 | `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
+| `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
 | `/settings/mini-program-users` | `mini-program-users` | `views/settings/MiniProgramUsersView.vue` | `settings:write` | 小程序用户查询/更新/删除/合并 |
+| `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `settings:write` | 附件管理：列出全部图片与引用次数、软删除单张、一键删除未引用附件 |
 | `/settings/about` | `about` | `views/settings/AboutView.vue` | `settings:write` | 版本信息与构建时间（`versionApi.get()`） |
 | `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `settings:write` | 分享链接列表/改列/改期/撤回 |
 | `/share/:token` | `share` | `views/public/ShareView.vue` | 无（公开 `meta.public`） | 匿名分享预览（按配置列渲染） |
 | `/:pathMatch(.*)*` | — | `views/NotFoundView.vue` | 无（公开 `meta.public`） | 404 页面 |
 
-路由守卫 `router.beforeEach`（同步函数，顺序即执行顺序）：
+路由守卫 `router.beforeEach`（`async` 函数，顺序即执行顺序）：
 
 | 序 | 规则 |
 | --- | --- |
-| 1 | 设置标题：`` document.title = `${to.meta.title || '系统'} - HXNI 电气无忧` `` |
+| 1 | 设置标题：`` document.title = `${to.meta.parent ? `${to.meta.parent} / ` : ''}${to.meta.title || '系统'} - HXNI 电气无忧` `` |
 | 2 | 非 `public` 且 `auth.isAuthenticated` 为 false → `{ name: 'login', query: { redirect: to.fullPath } }` |
-| 3 | 目标是 `login` 但已登录 → `{ name: 'dashboard' }` |
-| 4 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → `{ name: 'dashboard' }` |
-| 5 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`stock-material-detail`、`inbound`、`outbound`、`stock`、`operations`、`operation-detail`）→ `{ name: 'warehouse-lite' }` |
+| 3 | 非 `public` 时先 `await useProjectStore().ensureLoaded()`（拉取项目列表失败不拦导航） |
+| 4 | 目标是 `login` 但已登录 → `{ name: 'dashboard' }` |
+| 5 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → `{ name: 'dashboard' }` |
+| 6 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`stock-material-detail`、`inbound`、`outbound`、`stock`、`operations`、`operation-detail`）→ `{ name: 'warehouse-lite' }` |
 
 | 项 | 实现 | 位置 |
 | --- | --- | --- |
@@ -144,11 +147,12 @@ web/src/
 | 无权限时 | 静默重定向到工作台；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
 | keep-alive | `meta.keepAlive` 只在 5 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
-`web/src/stores/` 下只有 3 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
+`web/src/stores/` 下只有 4 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
 
 | store | state | getters | actions | 持久化 | 职责 |
 | --- | --- | --- | --- | --- | --- |
 | `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与角色权限判断 |
+| `stores/project.ts`（`useProjectStore`） | `projects: Project[]`、`currentProjectId: number \| null`（初值读本地 `current_project_id`）、`loaded: boolean` | `enabledProjects`、`currentProject` | `ensureLoaded()`（首次导航前拉 `projectApi.list()`，失败不抛出）、`select(id)`（写本地并 `location.reload()`）、`clear()`、`fetchProjects()` | `localStorage` key `current_project_id`；已存项目被停用/删除时回退默认项目 | 当前项目：由 `web/src/api/client.ts` 注入 `X-Project-Id`，顶栏菜单与 MCP 链接共用 |
 | `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'`，`loaded` 置 true 后不再重复请求） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式，供路由守卫与侧边菜单在首次导航前同步读取 |
 | `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
 `main.ts` 在 `app.mount('#app')` 之前 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
@@ -166,16 +170,17 @@ web/src/
 | `resolveMcpUrl(resolvedApiBaseUrl, token, projectId?, origin?)` | — | 拼出 `mcp/?project_id=&token=` 地址（`project_id` 在前，未选项目时不带该参数） |
 
 位置：`web/src/config/env.ts`。
-- 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。
-- 版本头：客户端**不统一注入**，由业务模块按需传 `If-Match`（值均为 `String(version)`）：
+- 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；有 `current_project_id` 时注入 `X-Project-Id`（项目隔离必需）；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。
+- 版本头：客户端**不统一注入**，由业务模块按需传 `If-Match`（值均为 `String(version)`），共 11 处：
   `procurement.deleteMaterial`、`procurement.restoreRecordToPlan`、`purchasePlanTemplates.deleteTemplate`、
-  `inventory.deleteMaterial`、`dictionaries.deleteMiniProgramUser`。
+  `inventory.deleteMaterial`、`dictionaries.deleteMiniProgramUser`、`projects.deleteProject`、
+  `hazards.deleteHazard`、`hazards.deleteUnit`、`hazards.deleteType`、`ledger.deleteItem`、`ledger.deleteTag`。
 - `X-API-Token`：**前端当前未实现**（代码中无该请求头，接口令牌仅在「管理端用户」页展示/复制与 MCP 链接里使用）。
 - 401 处理：仅当 `status === 401 && data.code === 'INVALID_TOKEN' && 未重试过 && localStorage 有 refresh_token`
   时，调用 `renewAccessToken()`（`POST /auth/refresh`，`timeout: 30_000`）并重放原请求；并发请求共用模块级
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
 - 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。已归一化的 `AppError` 会被后续拦截器直接透传，不会因重放被再次包装。
-- 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑）。
+- 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑；`web/src/utils/download.ts` 的 `filenameFromContentDisposition` / `downloadBlobWithDisposition` 已实现但当前无调用点，导出下载走 `exportDownloadUrl` 拼地址）。
 - 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
 #### 弱网自动重试（`web/src/api/retry.ts`）
 
@@ -206,13 +211,15 @@ web/src/
 | `huaXingInventory.ts` | `/huaxing-inventory*` | 华星总库存查询、筛选选项、Excel 导入任务与最近导入 |
 | `secondaryWarehouse.ts` | `/secondary-warehouse*` | 精简二级库列表、Excel 导入任务与最近导入 |
 | `dictionaries.ts` | `/users*`、`/mini-program-users*` | 管理端用户 CRUD 与接口令牌重置、小程序用户查询/更新/删除/合并 |
+| `projects.ts` | `/projects*` | 项目列表、新增、编辑（名称/启停）与删除 |
 | `systemSettings.ts` | `/system-settings/*` | 图片加速配置、小程序功能开关、Webhook 渠道读取/更新/测试 |
 | `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展、状态、配置读取/更新/测试 |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
 | `ledger.ts` | `/ledger-items*`、`/ledger-tags*` | 台账记录 CRUD 与分层标签维护（含孤立 / 树标签筛选、标签多选） |
-| `files.ts` | `/files/images*` | 图片上传与删除 |
+| `files.ts` | `/files/images*` | 图片上传与删除、附件列表、未引用附件软删除与撤销 |
+| `retry.ts` | —（axios 拦截器） | 弱网自动重试：可重放方法判定、退避与抖动（见下文「弱网自动重试」） |
 | `version.ts` | `/version` | 版本信息（关于页） |
 `web/src/utils/download.ts` 的 `exportDownloadUrl(fileUuid)` 直接拼导出文件下载地址（该端点不鉴权）。
 
@@ -236,19 +243,19 @@ web/src/
 | `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按名称/型号检索历史记录表格） | props：`show: boolean`、`initialName?`；emit：`update:show` |
 | `QuantityInput.vue` | 数量输入框：正则限制 1 位小数，用 `isDecimalString` / `compareDecimal` 校验并显示 error/success 状态 | props：`value: string`、`decimalPlaces?`（默认 1）、`max?`、`disabled?`、`placeholder?`；emit：`update:value` |
 | `ReverseOperationDialog.vue` | 出入库流水冲减弹窗（按行填写冲减数量，`reversed` 回传操作 id） | props：`show: boolean`、`operation: StockOperation \| null`；emits：`update:show`、`reversed: [id: number]` |
-| `ShareLinkDialog.vue` | 分享链接生成弹窗（三步：确认 → 选择失效时间 → 生成并复制链接） | props：`show: boolean`、`shareType: ShareType`、`itemIds?: number[]`、`title: string`；emit：`update:show` |
+| `ShareLinkDialog.vue` | 分享链接生成弹窗（确认信息与失效时间 → 再次确认 → 生成并复制链接） | props：`show: boolean`、`shareType: ShareType`、`itemIds?: number[]`、`title: string`；emit：`update:show` |
 | `SortableHeader.vue` | 表头排序下拉（默认/升序/降序），高亮当前排序状态 | props：`label: string`、`sortByKey: string`、`sortBy: string \| null`、`sortOrder: 'asc' \| 'desc' \| null`；emit：`select` |
 | `HazardFormModal.vue` | 隐患登记 / 编辑弹窗（新增与编辑共用，删除入口在页脚左下角，责任人由责任单位只读联动） | props：`show: boolean`、`hazardId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `HazardLevelTag.vue` | 隐患等级标签（一般隐患 / 重大隐患），色值取自 `hazardLevelTypes` | props：`level: HazardLevel` |
 | `HazardStatusTag.vue` | 整改状态标签（待整改 / 整改受阻 / 已整改），色值取自 `hazardStatusTypes` | props：`status: HazardStatus` |
 | `LedgerItemFormModal.vue` | 台账记录新增 / 编辑弹窗（标签多选树 + 图片上传，删除入口在页脚） | props：`show: boolean`、`itemId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
-| `LedgerTagFormModal.vue` | 标签新增 / 编辑弹窗（上级标签选择、备注、图片；新增子标签时预填上级） | props：`show: boolean`、`tag?: LedgerTag \| null`、`parentId?: number \| null`、`tags: LedgerTag[]`；emits：`update:show`、`saved` |
+| `LedgerTagFormModal.vue` | 标签新增 / 编辑弹窗（上级标签选择、备注、图片；新增子标签时预填上级） | props：`show: boolean`、`tag?: LedgerTag \| null`、`parentId?: number \| null`（组件自行加载全量标签）；emits：`update:show`、`saved` |
 ### Composable 清单
 `web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
-| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 18 个列表页（仓库 5、申购 5、设置 4、隐患 3、台账 1） |
+| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 19 个列表页（仓库 5、申购 5、设置 5、隐患 3、台账 1） |
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
@@ -271,13 +278,14 @@ web/src/
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
 | `settings.ts` | `inventoryModeOptionsFor(secondaryWarehouseMode)`：精简模式下不提供「可读写」选项 |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
-| `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染 |
+| `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |
+| `hazard.ts` | 隐患纯逻辑：`hazardStatuses` / `hazardLevels` / `hazardStatusTypes` / `hazardLevelTypes`（状态与等级选项、标签色）、`initialHazardFilters()` / `hazardQuery(filters)`（筛选默认值与 URL query 互转）、`isHazardOverdue(dueDate, status, today)`（逾期判定）、`buildHazardTypeTree(types)`（扁平「大类 + 小类」→ 两级横向树） |
 | `ledger.ts` | 台账标签纯逻辑：`parseTagIds` / `formatTagIds`（`tag_ids` 逗号串与数组互转）、`isOrphanTag`（孤立标签判定）、`tagPath`（完整层级路径）、`collectSubtreeIds`（节点自身 + 全部子孙，改上级时排除可选父节点）、`buildLedgerTagTree`（扁平标签 → 横向树，返回全新对象）、`tagSelectOptions` / `tagParentOptions`（标签选择器与上级选择器选项，后者支持按节点排除子树）、`tagColumnDisplay`（标签列展示切片）、`ledgerQuery` / `ledgerFiltersFromQuery`（筛选与 URL 同步） |
 #### `web/src/constants/`、`types/`、`config/`
 | 文件 | 职责 |
 | --- | --- |
-| `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = '/logo.png'`；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
+| `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = publicUrl('logo.png')`（按构建 base 拼前缀，子路径部署也正确）；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
 | `constants/shareColumns.ts` | 分享页可展示列定义（键名与后端 Literal 严格一致）：`SHARE_PLAN_COLUMNS`、`SHARE_RECORD_COLUMNS`、`shareColumnOptions()`、`SHARE_DEFAULT_HIDDEN_KEYS = ['status']`、`defaultShareColumnKeys()`，供 `ShareView` 渲染与 `ShareLinksView` 勾选共用 |
 | `constants/table.ts` | `tableColumnWidths`（unit/quantity/date/datetime/status/person/code/identifier/name/material/model/text/action）、`preventTableColumnCompression`、`getTableScrollX` |
 | `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
@@ -285,7 +293,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、系统管理），顶栏含用户信息与下拉（「外观」二级菜单：悬浮父项向左展开自动/浅色/深色三档，另有「退出登录」调 `auth.logout()` + 跳 `login`；顶栏不放独立的明暗切换图标）；`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、系统管理），顶栏含用户信息与下拉（「外观」二级菜单：悬浮父项向左展开自动/浅色/深色三档；随后「项目：<当前项目名>」二级菜单，由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新；分隔线之后是「退出登录」，调 `auth.logout()` + 跳 `login`；顶栏不放独立的明暗切换图标）；`layouts/projectMenu.ts` 另外导出 `PROJECT_MENU_KEY`、`PROJECT_NONE_KEY`（无可用项目时的占位项）等固定 key。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
 
 
 
@@ -331,6 +339,7 @@ Apifox 智能 Mock，按字段名自己编数据（见 [/api](/api)）。
 | `VITE_API_BASE_URL` | 接口基础地址，缺省 `/api/v1`；只填域名时自动补 `/api/v1` |
 | `VITE_IMAGE_BASE_URL` | 图片读取前缀，缺省为 `VITE_API_BASE_URL/files/images` |
 | `VITE_API_PROXY` | **仅供 `npm run dev` 的 Vite 代理目标**，生产构建不读取 |
+| `VITE_BASE_PATH` | 子路径部署前缀（如 `/Electrical-Manager/demo/`），写进 Vite `base`；缺省 `/` 与既有部署一致（演示构建见 `web/.env.demo`） |
 这些值在**构建阶段**被写入静态产物，部署后改环境变量无效，需重新构建（详见 [前后端分离部署](/guide#前后端分离部署)）。
 ### 部署
 | 项 | 内容 |
@@ -367,7 +376,7 @@ FastAPI + SQLAlchemy 2.x async 单进程应用（MySQL 8.0 / asyncmy），源码
 | 模型契约层 | `server/app/schemas/__init__.py`、`server/app/domain/enums.py` | pydantic 请求/读模型、`Page[T]`、`ApiError`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等） |
 | 核心层 | `server/app/core/*.py` + `main.py`、`mcp_server.py` | 配置、引擎/会话、认证与权限、错误码与异常处理器、中间件、日志、常量、UUIDv7 生成、微信凭据 |
 ## 后端目录结构
-`server/app/` 共 79 个 Python 文件：
+`server/app/` 共 82 个 Python 文件：
 
 ```text
 server/app/
@@ -375,10 +384,10 @@ server/app/
 ├── mcp_server.py       # MCP 服务与 5 个工具、McpTokenAuthMiddleware
 ├── api/deps.py         # PageNo/PageSize/SortOrder/OrSearch/RequireFullSecondaryWarehouse
 ├── api/v1/__init__.py  # 汇总 router，统一声明错误响应模型
-├── api/v1/             # 21 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、hazards、
+├── api/v1/             # 22 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、hazards、
 │                       #   huaxing_inventory、inventory、ledger、material_code_library、memos、mini_program、
-│                       #   purchase_materials、purchase_plan_templates、purchase_record_sync、purchase_requests、
-│                       #   secondary_warehouse、share、stock_materials、system_settings、version
+│                       #   projects、purchase_materials、purchase_plan_templates、purchase_record_sync、
+│                       #   purchase_requests、secondary_warehouse、share、stock_materials、system_settings、version
 ├── core/               # config（Settings，env 前缀 APP_）、constants、database（Base/engine/SessionLocal/get_db）、
 │                       #   db_timing、errors、exception_handlers、identifiers（uuid7_string）、logging、middleware、
 │                       #   permissions（认证/角色/接口令牌/If-Match）、security（JWT/argon2/Fernet）、wechat
@@ -388,10 +397,10 @@ server/app/
 │                       #   ledger_repository、material_repository、purchase_plan_template_repository、
 │                       #   purchase_request_repository
 ├── schemas/__init__.py
-└── services/           # 26 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
+└── services/           # 27 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
                         #   dashboard、dictionary、excel_export_job、excel_export、file、hazard、huaxing_inventory、
                         #   import_file_reader、import_job、inventory、ledger、lite_inventory、material_code_library、
-                        #   material、memo、mini_program、purchase_plan_cleanup、purchase_plan_template、
+                        #   material、memo、mini_program、project、purchase_plan_cleanup、purchase_plan_template、
                         #   purchase_record_sync、purchase_request、replenishment、share_link、webhook
 ```
 
