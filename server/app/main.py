@@ -15,6 +15,7 @@ from app.core.database import engine
 from app.core.exception_handlers import error_response, register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import (
+    CommitBeforeResponseMiddleware,
     RealIPMiddleware,
     RefererCORSMiddleware,
     project_context,
@@ -114,12 +115,15 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
     docs_url="/api/docs",
 )
+# 注意注册顺序：后注册的中间件更外层（先处理请求）。
+# CommitBeforeResponseMiddleware 必须最内层（第一个注册），理由见类文档：它要和路由处理在
+# 同一个任务里提交请求事务，且在响应字节发出之前——所以它必须站在所有 BaseHTTPMiddleware 之内。
+app.add_middleware(CommitBeforeResponseMiddleware)
 app.add_middleware(
     RefererCORSMiddleware,
     allow_credentials=settings.cors_allow_credentials,
     max_age=settings.cors_max_age,
 )
-# 注意注册顺序：后注册的中间件更外层（先处理请求）。
 # request_context 需在 RealIP 内层，才能读到 RealIP 改写后的真实客户端 IP。
 # project_context 解析 X-Project-Id 到请求上下文，需在业务处理前生效。
 app.middleware("http")(project_context)

@@ -3,6 +3,8 @@
 由 GitHub Actions（e2e-simulation.yml）在真实 MySQL + 后端实例上运行：
 通过 HTTP 模拟六种角色用户的核心操作（仓库 / 申购 / 隐患 / 台账 / 只读 / 超管），
 验证主流程可用，并验证「业务数据按项目隔离」这条主线。任一步骤失败即以非零码退出。
+写库的可见性也在验证范围内：出入库返回后**立刻**回读余额必须是提交后的值，不对这种情况
+做重试或等待——「返回 2xx」与「写库可见」必须同时成立（见 `_post`）。
 
 项目上下文：业务接口都要求 `X-Project-Id`，脚本先用超管读项目列表、取默认项目
 （init.sql 种子的那个项目），之后所有角色请求都带上它。用法：
@@ -13,7 +15,6 @@ from __future__ import annotations
 
 import os
 import sys
-import time
 import uuid
 
 import httpx
@@ -47,22 +48,10 @@ def _post(
 ) -> httpx.Response:
     """POST 并断言期望状态码。
 
-    新建物资后立即出入库时，余额记录在 MySQL 上偶发存在短暂提交延迟，
-    首个请求可能报 BALANCE_MISSING（409）。对这类错误做有限重试后再失败，
-    避免偶发可见性竞态让端到端模拟误报。
+    不做重试：写接口返回 2xx 时事务必须已经提交（`CommitBeforeResponseMiddleware`），
+    所以「刚建好的物资」紧接着入库不能再出现 `BALANCE_MISSING`(409) 这类可见性竞态。
     """
-    for attempt in range(8):
-        response = client.post(path, headers=headers, json=json)
-        if response.status_code == expect:
-            return response
-        if (
-            attempt < 7
-            and response.status_code == 409
-            and "BALANCE_MISSING" in response.text
-        ):
-            time.sleep(0.5)
-            continue
-        break
+    response = client.post(path, headers=headers, json=json)
     assert response.status_code == expect, response.text
     return response
 
@@ -135,7 +124,7 @@ def main() -> int:
         print(f"✅ 创建物资 #{material_id}")
 
         # 5. 入库 10
-        inbound = _post(
+        _post(
             client,
             "/api/v1/inventory/inbounds",
             headers=warehouse,
@@ -149,8 +138,16 @@ def main() -> int:
         )
         print("✅ 入库 10")
 
+        # 5.1 刚入库就回读必须看到 10（写接口返回时事务已提交，见 _post 文档）
+        after_inbound = client.get(
+            f"/api/v1/inventory/balances/{material_id}", headers=warehouse
+        )
+        assert after_inbound.status_code == 200, after_inbound.text
+        assert after_inbound.json()["current_qty"] == "10", after_inbound.json()
+        print("✅ 入库后立刻回读 = 10")
+
         # 6. 出库 3
-        outbound = _post(
+        _post(
             client,
             "/api/v1/inventory/outbounds",
             headers=warehouse,
@@ -165,11 +162,11 @@ def main() -> int:
         )
         print("✅ 出库 3")
 
-        # 7. 余额应为 7
+        # 7. 余额应为 7（不等待、不重试：出库返回成功时新余额就应该已经可见）
         balance = client.get(f"/api/v1/inventory/balances/{material_id}", headers=warehouse)
         assert balance.status_code == 200, balance.text
         assert balance.json()["current_qty"] == "7", balance.json()
-        print("✅ 余额 = 7")
+        print("✅ 出库后立刻回读余额 = 7")
 
         # 8. 库存列表查询
         inventory = client.get(

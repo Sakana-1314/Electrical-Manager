@@ -12,6 +12,7 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import PlainTextResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.core.database import commit_current_session
 from app.core.db_timing import begin_database_timing, finish_database_timing
 from app.core.project_scope import pop_current_project, push_current_project
 
@@ -27,6 +28,35 @@ def _project_id_from_header(request: Request) -> int | None:
     except ValueError:
         return None
     return project_id if project_id > 0 else None
+
+
+class CommitBeforeResponseMiddleware:
+    """把请求事务的提交提前到响应头发出之前。
+
+    FastAPI 的 `yield` 依赖（`get_db`）在响应发送**之后**才收尾，于是「接口返回 2xx」与
+    「写库提交可见」之间存在一个窗口：客户端拿到 201 立刻回读，读到的是提交前的旧值
+    （端到端模拟里表现成「出库成功但余额没变」或「刚建的物资入库报 409 BALANCE_MISSING」，
+    网页端表现成保存成功后立刻刷新还是旧数据）。
+
+    本中间件在 `http.response.start` 之前提交，让「返回成功」与「写库可见」对上。它必须是最
+    内层中间件（`main.py` 里第一个注册，因而在所有 `BaseHTTPMiddleware` 之内）：只有和路由处理
+    跑在同一个任务里，提交才不会与依赖收尾跨任务并发抢同一个会话，也必然早于响应字节发出。
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_after_commit(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                await commit_current_session()
+            await send(message)
+
+        await self.app(scope, receive, send_after_commit)
 
 
 async def project_context(request: Request, call_next: RequestResponseEndpoint) -> Response:
