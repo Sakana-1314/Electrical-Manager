@@ -235,7 +235,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `hazard_after_image` | `HazardAfterImage` | 隐患「整改后」图片关联 | 隐患管理 |
 | `ledger_tag` | `LedgerTag` | 台账标签节点（自引用邻接表，至多 3 层） | 台账管理 |
 | `ledger_tag_image` | `LedgerTagImage` | 台账标签图片关联 | 台账管理 |
-| `ledger` | `Ledger` | 台账记录（名称 / 型号 / 数量 / 备注 / 标签） | 台账管理 |
+| `ledger` | `Ledger` | 台账记录（名称 / 型号 / 子项号 / 数量 / 单位 / 用途 / 备注 / 标签） | 台账管理 |
 | `ledger_image` | `LedgerImage` | 台账记录图片关联 | 台账管理 |
 
 `MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
@@ -695,7 +695,10 @@ erDiagram
 | `ledger` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `ledger` | `name` | VARCHAR(128) | 否 | 无 | 名称 |
 | `ledger` | `model_spec` | VARCHAR(255) | 否 | 无 | 型号 |
+| `ledger` | `subitem_no` | VARCHAR(64) | 是 | NULL | 子项号（技改项目下的子项编号，可留空；PATCH 传空串即清空） |
 | `ledger` | `quantity` | INT UNSIGNED | 否 | `0` | 数量（整数件数，按台 / 套 / 件统计） |
+| `ledger` | `unit_name` | VARCHAR(32) | 否 | 无 | 单位；列表与数量合并展示（如「12 台」），因此必填 |
+| `ledger` | `usage` | VARCHAR(500) | 否 | 无 | 用途 |
 | `ledger` | `remark` | VARCHAR(1000) | 是 | NULL | 备注 |
 | `ledger` | `tag_ids` | VARCHAR(500) | 否 | `''` | 标签 id，英文逗号分隔（如 `'3,12,15'`），空串 = 未挂标签；写入时由服务端校验 id 存在并去重、升序规范化，单条记录最多 20 个标签 |
 | `ledger` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |

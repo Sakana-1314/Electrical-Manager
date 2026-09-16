@@ -174,7 +174,10 @@ def item_read(item: Ledger, tags_by_id: dict[int, LedgerTag]) -> LedgerItemRead:
         id=item.id,
         name=item.name,
         model_spec=item.model_spec,
+        subitem_no=item.subitem_no,
         quantity=item.quantity,
+        unit_name=item.unit_name,
+        usage=item.usage,
         remark=item.remark,
         tag_ids=[ref.id for ref in refs],
         tags=refs,
@@ -346,7 +349,10 @@ async def create_item(session: AsyncSession, data: LedgerItemCreate) -> LedgerIt
     item = Ledger(
         name=data.name,
         model_spec=data.model_spec,
+        subitem_no=_trim(data.subitem_no),
         quantity=data.quantity,
+        unit_name=data.unit_name,
+        usage=data.usage,
         remark=_trim(data.remark),
         tag_ids=format_tag_ids(tag_ids),
     )
@@ -369,8 +375,14 @@ async def update_item(
         item.name = data.name
     if data.model_spec is not None:
         item.model_spec = data.model_spec
+    if data.subitem_no is not None:
+        item.subitem_no = _trim(data.subitem_no)
     if data.quantity is not None:
         item.quantity = data.quantity
+    if data.unit_name is not None:
+        item.unit_name = data.unit_name
+    if data.usage is not None:
+        item.usage = data.usage
     if data.remark is not None:
         item.remark = _trim(data.remark)
     if data.tag_ids is not None:

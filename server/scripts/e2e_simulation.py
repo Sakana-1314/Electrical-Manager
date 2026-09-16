@@ -316,13 +316,20 @@ def main() -> int:
             json={
                 "name": f"E2E 抽屉柜 {run}",
                 "model_spec": "MNS-400",
+                "subitem_no": f"TG-E2E-{run}",
                 "quantity": 2,
+                "unit_name": "面",
+                "usage": "E2E 台账用途",
                 "tag_ids": [child_tag.json()["id"], too_deep.json()["id"]],
             },
         )
         assert item.status_code == 201, item.text
         item_row = item.json()
         assert item_row["tag_ids"] == sorted([child_tag.json()["id"], too_deep.json()["id"]])
+        # 子项号 / 单位 / 用途随台账一起回读（列表按「2 面」展示）
+        assert item_row["subitem_no"] == f"TG-E2E-{run}", item_row
+        assert (item_row["quantity"], item_row["unit_name"]) == (2, "面"), item_row
+        assert item_row["usage"] == "E2E 台账用途", item_row
         listed = client.get(
             "/api/v1/ledger-items",
             headers=readonly,
@@ -337,7 +344,12 @@ def main() -> int:
         denied_item = client.post(
             "/api/v1/ledger-items",
             headers=readonly,
-            json={"name": "E2E 越权", "model_spec": "X"},
+            json={
+                "name": "E2E 越权",
+                "model_spec": "X",
+                "unit_name": "台",
+                "usage": "越权用例",
+            },
         )
         assert denied_item.status_code == 403, denied_item.text
         tag_in_use = client.delete(

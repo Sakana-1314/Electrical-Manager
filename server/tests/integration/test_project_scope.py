@@ -86,32 +86,40 @@ async def test_same_identity_hash_allowed_in_other_project(client: AsyncClient) 
 @pytest.mark.asyncio
 async def test_system_scope_sees_every_project(client: AsyncClient) -> None:
     async with project_session(DEFAULT_PROJECT_ID) as session:
-        session.add(Ledger(name="P05 台账", model_spec="A"))
+        session.add(Ledger(name="默认项目台账", model_spec="A", unit_name="台", usage="隔离用例"))
         await session.commit()
     async with project_session(SECOND_PROJECT_ID) as session:
-        session.add(Ledger(name="P06 台账", model_spec="B"))
+        session.add(Ledger(name="二期项目台账", model_spec="B", unit_name="台", usage="隔离用例"))
         await session.commit()
 
     with system_scope():
         async with system_session() as session:
             names = sorted(row.name for row in (await session.scalars(select(Ledger))).all())
-            assert names == ["P05 台账", "P06 台账"]
+            assert names == ["二期项目台账", "默认项目台账"]
 
     async with project_session(DEFAULT_PROJECT_ID) as session:
-        assert [row.name for row in (await session.scalars(select(Ledger))).all()] == ["P05 台账"]
+        assert [row.name for row in (await session.scalars(select(Ledger))).all()] == [
+            "默认项目台账"
+        ]
 
 
 
 @pytest.mark.asyncio
 async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
     async with project_session(SECOND_PROJECT_ID) as session:
-        session.add(Ledger(name="P06 台账", model_spec="B"))
+        session.add(Ledger(name="二期项目台账", model_spec="B", unit_name="台", usage="隔离用例"))
         await session.commit()
 
     async with project_session(DEFAULT_PROJECT_ID) as session:
         # 显式写别的项目的数据：守卫必须拦下，避免跨项目写入/删除。
         with pytest.raises(AppError) as mismatch:
-            session.add(Ledger(name="越界台账", model_spec="C", project_id=SECOND_PROJECT_ID))
+            session.add(Ledger(
+                name="越界台账",
+                model_spec="C",
+                unit_name="台",
+                usage="跨项目写入用例",
+                project_id=SECOND_PROJECT_ID,
+            ))
             await session.flush()
         assert mismatch.value.code == "PROJECT_MISMATCH"
 
