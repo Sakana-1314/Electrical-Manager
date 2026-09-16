@@ -1,0 +1,1 @@
+import{l as n}from"./index-BDXvMQEj.js";import{N as i}from"./Tag-COiutapn.js";function o(t,e="\\"){const r=t==null||t===""?e:String(t);return n("div",{class:"table-text-two-line",title:r===e?void 0:r},r)}function d(t){return t?o(t):n(i,{type:"warning",size:"small"},{default:()=>"暂无编码"})}export{o as a,d as r};
