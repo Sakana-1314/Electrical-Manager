@@ -15,8 +15,7 @@ const listProjects = vi.mocked(projectApi.list)
 function project(overrides: Partial<Project> = {}): Project {
   return {
     id: 1,
-    code: 'P05',
-    name: 'P05 项目',
+    name: '华星现有项目',
     enabled: true,
     is_default: true,
     remark: null,
@@ -27,10 +26,10 @@ function project(overrides: Partial<Project> = {}): Project {
   }
 }
 
-const p05 = project()
-const p06 = project({ id: 2, code: 'P06', name: 'P06 项目', is_default: false })
+const first = project()
+const second = project({ id: 2, name: '二期项目', is_default: false })
 // 停用项目：即便本地选的是它，也不能作为当前项目
-const p07 = project({ id: 3, code: 'P07', name: 'P07 项目', enabled: false, is_default: false })
+const disabled = project({ id: 3, name: '三期项目', enabled: false, is_default: false })
 
 describe('project store（当前项目）', () => {
   beforeEach(() => {
@@ -48,37 +47,37 @@ describe('project store（当前项目）', () => {
 
   it('本地已选且仍是启用项目时沿用本地选择', async () => {
     localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, '2')
-    listProjects.mockResolvedValue([p05, p06])
+    listProjects.mockResolvedValue([first, second])
     const store = useProjectStore()
     await store.ensureLoaded()
     expect(store.currentProjectId).toBe(2)
-    expect(store.currentProject?.code).toBe('P06')
+    expect(store.currentProject?.name).toBe('二期项目')
     expect(store.loaded).toBe(true)
   })
 
   it('本地没选过时落到默认项目，并写回本地', async () => {
-    listProjects.mockResolvedValue([p06, p05])
+    listProjects.mockResolvedValue([second, first])
     const store = useProjectStore()
     await store.ensureLoaded()
     expect(store.currentProjectId).toBe(1)
-    expect(store.currentProject?.code).toBe('P05')
+    expect(store.currentProject?.name).toBe('华星现有项目')
     expect(localStorage.getItem(CURRENT_PROJECT_STORAGE_KEY)).toBe('1')
   })
 
   it('没有默认项目时落到第一个启用项目（跳过停用项目）', async () => {
     listProjects.mockResolvedValue([
-      p07,
-      project({ id: 4, code: 'P08', name: 'P08 项目', is_default: false }),
+      disabled,
+      project({ id: 4, name: '四期项目', is_default: false }),
     ])
     const store = useProjectStore()
     await store.ensureLoaded()
     expect(store.currentProjectId).toBe(4)
-    expect(store.enabledProjects.map((item) => item.code)).toEqual(['P08'])
+    expect(store.enabledProjects.map((item) => item.name)).toEqual(['四期项目'])
   })
 
   it('本地选的是已停用项目时回落到默认项目并改本地记录', async () => {
     localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, '3')
-    listProjects.mockResolvedValue([p05, p06, p07])
+    listProjects.mockResolvedValue([first, second, disabled])
     const store = useProjectStore()
     await store.ensureLoaded()
     expect(store.currentProjectId).toBe(1)
@@ -87,14 +86,14 @@ describe('project store（当前项目）', () => {
 
   it('本地存的是非法值时按未选择处理', async () => {
     localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, 'not-a-number')
-    listProjects.mockResolvedValue([p05])
+    listProjects.mockResolvedValue([first])
     const store = useProjectStore()
     await store.ensureLoaded()
     expect(store.currentProjectId).toBe(1)
   })
 
   it('ensureLoaded 幂等：并发/重复调用只发一次请求', async () => {
-    listProjects.mockResolvedValue([p05, p06])
+    listProjects.mockResolvedValue([first, second])
     const store = useProjectStore()
     await Promise.all([store.ensureLoaded(), store.ensureLoaded()])
     await store.ensureLoaded()
@@ -108,7 +107,7 @@ describe('project store（当前项目）', () => {
     expect(store.projects).toEqual([])
     expect(store.loaded).toBe(false)
 
-    listProjects.mockResolvedValue([p05])
+    listProjects.mockResolvedValue([first])
     await store.ensureLoaded()
     expect(listProjects).toHaveBeenCalledTimes(2)
     expect(store.currentProjectId).toBe(1)
@@ -123,7 +122,7 @@ describe('project store（当前项目）', () => {
       value: { ...window.location, reload },
     })
     localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, '2')
-    listProjects.mockResolvedValue([p05, p06])
+    listProjects.mockResolvedValue([first, second])
     const store = useProjectStore()
     await store.ensureLoaded()
 
@@ -139,7 +138,7 @@ describe('project store（当前项目）', () => {
 
   it('clear 清空状态与本地记录', async () => {
     localStorage.setItem(CURRENT_PROJECT_STORAGE_KEY, '2')
-    listProjects.mockResolvedValue([p05, p06])
+    listProjects.mockResolvedValue([first, second])
     const store = useProjectStore()
     await store.ensureLoaded()
     store.clear()

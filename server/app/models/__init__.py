@@ -92,16 +92,17 @@ class ProjectScoped:
 
 
 class Project(AuditMixin, Base):
-    """项目：业务数据的隔离维度（当前 P05，后续可加 P06）。
+    """项目：业务数据的隔离维度，对外只用名称，标识是内部自增 id（不对外暴露）。
 
     `is_default` 标记唯一的默认项目：小程序 / MCP 未指定项目时的兜底，由 service 保证
     「至多一个默认」；默认项目不可停用、不可删除，也不可把停用的项目设为默认。
+    名称是唯一的人读标识，因此建库级唯一约束，避免切换器里出现两个同名项目。
     """
 
     __tablename__ = "project"
+    __table_args__ = (UniqueConstraint("name", name="uq_project_name"),)
 
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
-    code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
     is_default: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")

@@ -627,11 +627,11 @@
   // 项目列表接口本身不带 X-Project-Id；业务接口通过 apiRequest 统一带上。
   let projects = [];
   const enabledProjects = () => projects.filter((item) => item?.enabled === true);
-  // 下拉项只显示项目名称（编码不外显，避免「P05 P05 项目」这种重复）；状态栏用编码定位当前项目。
+  // 项目没有编码，界面一律只显示名称（下拉项本身就是名称，状态栏是「项目：<名称>」）。
   const projectOptionLabel = (project) =>
-    clean(project?.name) || clean(project?.code) || `#${project?.id ?? ""}`;
+    clean(project?.name) || `#${project?.id ?? ""}`;
   const projectLabel = (project) =>
-    project ? `项目：${clean(project?.code) || clean(project?.name)}` : "项目：未选择";
+    project ? `项目：${clean(project?.name) || `#${project.id}`}` : "项目：未选择";
   const activeProject = () =>
     projects.find((item) => Number(item.id) === Number(config.projectId)) || null;
   const fetchProjects = async () => {
@@ -953,7 +953,7 @@
     try {
       credentials();
       const project = await resolveProject();
-      if (project) log(`项目：${clean(project.code)}`);
+      if (project) log(`项目：${clean(project.name)}`);
       log(`${trigger === "auto" ? "自动" : "手动"}同步开始（按申购单号整单同步）`);
       const orders = await orderTargets();
       // 只处理申购单号以 P 开头的申购单（如 P05SG0398），其余一律跳过，不发起平台查询。

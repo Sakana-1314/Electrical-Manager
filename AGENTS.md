@@ -105,7 +105,7 @@ npm run build             # 类型检查 + 生产构建
 
 ## 项目隔离约定（必须遵守）
 
-业务数据按「项目」隔离（现有 P05，可继续新增 P06 等），实现集中在 `server/app/core/project_scope.py`：
+业务数据按「项目」隔离（现有项目 + 后续可继续新增项目），实现集中在 `server/app/core/project_scope.py`：
 请求头 `X-Project-Id` + `ContextVar` + ORM 事件（读过滤 / 写守卫）。改代码时遵守以下约定：
 
 - **新增业务表必须继承 `ProjectScoped` 并登记到 `app.models.PROJECT_SCOPED_MODELS`**（同时改 `init.sql`、ORM 与 `test_init_sql.py` 能过），否则该表不会被隔离。

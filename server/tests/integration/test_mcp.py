@@ -103,24 +103,24 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
                 assert call.status_code == 200, call.text
                 return call.json()["result"]["structuredContent"]
 
-            # 既不带头也不带链接：默认项目 P05（conftest 里 P05 是默认项目）
+            # 既不带头也不带链接：落 conftest 里的默认项目
             default = await whoami("/api/v1/mcp/")
             assert default["project_id"] == 1
-            assert default["project_code"] == "P05"
+            assert default["project_name"] == "华星现有项目"
 
-            # 链接带 project_id：切到 P06（网页端复制的 MCP 地址就是这个形式）
+            # 链接带 project_id：切到第二个项目（网页端复制的 MCP 地址就是这个形式）
             from_link = await whoami("/api/v1/mcp/?project_id=2")
             assert from_link["project_id"] == 2
-            assert from_link["project_code"] == "P06"
+            assert from_link["project_name"] == "二期项目"
 
             # 请求头优先于链接
             from_header = await whoami("/api/v1/mcp/?project_id=2", {"X-Project-Id": "1"})
             assert from_header["project_id"] == 1
-            assert from_header["project_code"] == "P05"
+            assert from_header["project_name"] == "华星现有项目"
 
             # 未知 id 不落到别的项目，而是回退默认项目
             unknown = await whoami("/api/v1/mcp/?project_id=999999")
             assert unknown["project_id"] == 1
-            assert unknown["project_code"] == "P05"
+            assert unknown["project_name"] == "华星现有项目"
     finally:
         client.headers["X-Project-Id"] = "1"

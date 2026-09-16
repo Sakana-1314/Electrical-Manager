@@ -25,8 +25,17 @@ from app.services.common import validate_version
 
 
 async def list_projects(session: AsyncSession) -> list[Project]:
-    """全部项目（含停用），按编码排序：切换器只展示启用的，管理页展示全部。"""
-    return list((await session.scalars(select(Project).order_by(Project.code))).all())
+    """全部项目（含停用）：默认项目排最前，其余按创建顺序。
+
+    切换器只展示启用的项目，项目管理页展示全部。
+    """
+    return list(
+        (
+            await session.scalars(
+                select(Project).order_by(Project.is_default.desc(), Project.id)
+            )
+        ).all()
+    )
 
 
 async def get_project(session: AsyncSession, project_id: int) -> Project:
@@ -92,7 +101,6 @@ async def create_project(session: AsyncSession, data: ProjectCreate) -> Project:
     if data.is_default and not data.enabled:
         raise AppError("PROJECT_IS_DEFAULT", "默认项目必须是启用状态", status_code=409)
     item = Project(
-        code=data.code,
         name=data.name,
         enabled=data.enabled,
         is_default=data.is_default,
@@ -102,7 +110,7 @@ async def create_project(session: AsyncSession, data: ProjectCreate) -> Project:
     try:
         await session.flush()
     except IntegrityError as exc:
-        raise AppError("DUPLICATE_PROJECT_CODE", "项目编码已存在", status_code=409) from exc
+        raise AppError("DUPLICATE_PROJECT_NAME", "项目名称已存在", status_code=409) from exc
     if item.is_default:
         await _clear_other_defaults(session, keep_id=item.id)
     return item
@@ -123,7 +131,7 @@ async def update_project(session: AsyncSession, item_id: int, data: ProjectUpdat
             )
     if data.is_default and not enabled:
         raise AppError("PROJECT_IS_DEFAULT", "默认项目必须是启用状态", status_code=409)
-    for key in ("code", "name", "enabled", "is_default", "remark"):
+    for key in ("name", "enabled", "is_default", "remark"):
         value = getattr(data, key)
         if value is not None:
             setattr(item, key, value)
@@ -131,7 +139,7 @@ async def update_project(session: AsyncSession, item_id: int, data: ProjectUpdat
     try:
         await session.flush()
     except IntegrityError as exc:
-        raise AppError("DUPLICATE_PROJECT_CODE", "项目编码已存在", status_code=409) from exc
+        raise AppError("DUPLICATE_PROJECT_NAME", "项目名称已存在", status_code=409) from exc
     if item.is_default:
         await _clear_other_defaults(session, keep_id=item.id)
     return item

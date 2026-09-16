@@ -557,7 +557,7 @@ flowchart LR
 | 入口 | 项目从哪来 |
 | --- | --- |
 | 网页端业务接口 | `X-Project-Id`（前端 `web/src/api/client.ts` 统一注入；右上角切换项目后整页刷新） |
-| 小程序 | 同上；不带时落默认项目 P05（`get_current_mini_program_user` 内统一解析，端点无需各自声明） |
+| 小程序 | 同上；不带时落默认项目（`get_current_mini_program_user` 内统一解析，端点无需各自声明） |
 | MCP | 请求头优先，缺省用默认项目；`operation_call` 转发时带上项目头 |
 | 匿名分享页 | 先在全项目上下文里按 token 取 `share_link`，再切到该分享所属项目读数据 |
 | 导入 / 导出任务 | 任务行记录 `project_id`，后台任务用 `project_scope(job.project_id)` 恢复上下文 |
@@ -760,14 +760,14 @@ flowchart LR
 
 ### 当前项目（多项目数据隔离）
 
-业务数据按项目隔离，小程序同样一次只处理一个项目的数据：默认使用默认项目（P05），可在首页「个人信息」弹窗里切换（`utils/project.js` + `pages/home/home.*`，切换后 `wx.reLaunch` 回首页，避免其它页面残留上一个项目的数据）。
+业务数据按项目隔离，小程序同样一次只处理一个项目的数据：默认使用默认项目，可在首页「个人信息」弹窗里切换（`utils/project.js` + `pages/home/home.*`，切换后 `wx.reLaunch` 回首页，避免其它页面残留上一个项目的数据）。
 
 | 项 | 实现 |
 | --- | --- |
 | 列表来源 | `GET /mini-program/projects`（小程序令牌鉴权，返回全部项目含停用项，前端只展示启用项） |
 | 存储 | storage 键 `currentProjectId`，不落库；本机切换不影响网页端 |
 | 请求头 | `utils/request.js` 在请求与图片上传时都带上 `X-Project-Id`（每次尝试重新读取，重登/重试后仍生效） |
-| 默认兜底 | 不带项目头时服务端用默认项目 P05，因此未升级的旧客户端照常可用 |
+| 默认兜底 | 不带项目头时服务端用默认项目，因此未升级的旧客户端照常可用 |
 | 失效恢复 | 服务端返回 `PROJECT_DISABLED` / `PROJECT_NOT_FOUND` 时，小程序清掉已存项目、重新解析默认项目并重试一次 |
 
 ### 登录与建档

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -189,32 +188,17 @@ class UserApiTokenRegenerate(RequestModel):
     version: int
 
 
-# 项目编码：统一为大写字母/数字/下划线/短横线，长度 2–32。入口就把非法编码拦下，
-# 避免出现「看起来一样、实际不同」的编码（如 p05 / P05）让切换器与运维混淆。
-# 先按 StringConstraints 去空格并转大写，再用 field_validator 校验（pydantic 的 pattern
-# 校验发生在大小写转换之前，写进 StringConstraints 会把 "p06" 误判为非法）。
-ProjectCode = Annotated[
-    str,
-    StringConstraints(strip_whitespace=True, to_upper=True, min_length=2, max_length=32),
-]
+# 项目没有对外编码：标识是内部自增 id（不暴露给界面），对外只有名称。
 ProjectName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)
 ]
 ProjectRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
-PROJECT_CODE_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9_-]{1,31}$")
-
-
-def _ensure_project_code(value: str | None) -> str | None:
-    if value is not None and not PROJECT_CODE_PATTERN.match(value):
-        raise ValueError("项目编码只能由大写字母、数字、下划线或短横线组成（2–32 位）")
-    return value
 
 
 class ProjectRead(ReadModel):
     """项目：业务数据的隔离维度，切换当前项目后只能看到该项目的数据。"""
 
     id: int
-    code: str
     name: str
     enabled: bool
     is_default: bool
@@ -225,33 +209,18 @@ class ProjectRead(ReadModel):
 
 
 class ProjectCreate(RequestModel):
-    code: Annotated[
-        ProjectCode,
-        Field(description="项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）"),
-    ]
     name: ProjectName
     enabled: bool = True
     is_default: bool = False
     remark: ProjectRemark | None = None
 
-    _validate_code = field_validator("code")(_ensure_project_code)
-
 
 class ProjectUpdate(RequestModel):
-    code: (
-        Annotated[
-            ProjectCode,
-            Field(description="项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）"),
-        ]
-        | None
-    ) = None
     name: ProjectName | None = None
     enabled: bool | None = None
     is_default: bool | None = None
     remark: ProjectRemark | None = None
     version: int
-
-    _validate_code = field_validator("code")(_ensure_project_code)
 
 
 class MiniProgramIdentityRead(ReadModel):

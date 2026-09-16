@@ -130,11 +130,14 @@ erDiagram
 
 | 列 | 类型 | 说明 |
 | --- | --- | --- |
-| `code` | `VARCHAR(32)` | 项目编码（唯一，统一大写，如 `P05`、`P06`） |
-| `name` | `VARCHAR(128)` | 项目名称 |
+| `id` | `BIGINT UNSIGNED` | 自增主键，项目的唯一标识（内部使用，界面不外显） |
+| `name` | `VARCHAR(128)` | 项目名称（唯一），界面与接口对外只用名称 |
 | `enabled` | `TINYINT(1)` | 停用后不能再被选为当前项目，数据仍保留 |
-| `is_default` | `TINYINT(1)` | 唯一默认项目：小程序 / MCP 未指定项目时兜底（P05） |
+| `is_default` | `TINYINT(1)` | 唯一默认项目：小程序 / MCP 未指定项目时兜底 |
 | `remark` | `VARCHAR(500)` | 备注 |
+
+项目没有编码字段：标识一律用自增 `id`（`X-Project-Id` 请求头、小程序 / MCP 链接的 `project_id` 参数都是它），
+人读的部分只有名称，因此名称不能重复（`uq_project_name`）。
 
 默认项目不能停用、不能删除，也不能直接取消默认（把别的项目设为默认即可）；项目下已有业务数据时不能删除，只能停用。
 
@@ -153,7 +156,7 @@ erDiagram
 | `project` | 项目自身就是隔离维度 |
 | `user`、`mini_program_user`、`mini_program_identity` | 用户与身份绑定属用户管理 |
 | `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、AI 搜索配置、Webhook 渠道与订阅） |
-| `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_code` 供接收方区分） |
+| `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
 | `file_object` | 全局附件池：按 `sha256` 全局去重、引用计数跨项目统计 |
 | `memo` | 个人备忘录按创建人隔离，不随项目切换 |
@@ -180,7 +183,7 @@ erDiagram
 ```mermaid
 flowchart TD
     H["请求头 X-Project-Id"] --> W["网页端业务接口：缺失即 400 PROJECT_REQUIRED"]
-    M["小程序：缺失时落默认项目 P05"] --> D["默认项目 is_default"]
+    M["小程序：缺失时落默认项目"] --> D["默认项目 is_default"]
     MCP["MCP：请求头优先，缺省用默认项目"] --> D
     ANON["匿名分享页：按 share_link.project_id"] --> R["读取时切到该分享所属项目"]
     JOB["导入 / 导出后台任务：按任务行的 project_id"] --> R
@@ -813,11 +816,11 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 有三段 `INSERT`：先插入项目表里的默认项目 P05，再插入 `hazard_type` 隐患类型字典（带上 `project_id`），最后插入 `user` 表 6 个初始账号。
+`init.sql` 有三段 `INSERT`：先插入项目表里的默认项目，再插入 `hazard_type` 隐患类型字典（带上 `project_id`），最后插入 `user` 表 6 个初始账号。
 
 #### 隐患类型字典
 
-`hazard_type` 预置 **157 条「大类 + 小类」组合、共 16 个大类**（源自车间原有隐患系统的类型清单），使新库导入后隐患登记页的「隐患类型」下拉即可用，无需先人工录入。语句按 `(project_id, major, minor)` 唯一键幂等，重复导入不会产生重复行；种子行挂在默认项目 P05（`@p05_project_id`）下。
+`hazard_type` 预置 **157 条「大类 + 小类」组合、共 16 个大类**（源自车间原有隐患系统的类型清单），使新库导入后隐患登记页的「隐患类型」下拉即可用，无需先人工录入。语句按 `(project_id, major, minor)` 唯一键幂等，重复导入不会产生重复行；种子行挂在默认项目（`@default_project_id`）下。
 
 | 大类 | 条数 | 大类 | 条数 |
 | --- | --- | --- | --- |

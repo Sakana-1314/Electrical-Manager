@@ -380,8 +380,8 @@ if (themedPage.data.i18n === undefined) {
   if (setCurrentProjectId('7') !== 7 || getCurrentProjectId() !== 7) {
     throw new Error('Mini Program current project id must be persisted as a number.');
   }
-  storage.set(CURRENT_PROJECT_CACHE_KEY, { id: 7, code: 'P05', name: '默认项目', label: 'P05 默认项目' });
-  if (!getCurrentProject() || getCurrentProject().code !== 'P05') {
+  storage.set(CURRENT_PROJECT_CACHE_KEY, { id: 7, name: '默认项目', label: '默认项目' });
+  if (!getCurrentProject() || getCurrentProject().name !== '默认项目') {
     throw new Error('Mini Program must show the cached current project.');
   }
   if (setCurrentProjectId(7) !== 7 || storage.has(CURRENT_PROJECT_CACHE_KEY)) {

@@ -170,17 +170,17 @@ async def _project_payload_fields(session: AsyncSession) -> dict[str, Any]:
     """
     project_id = current_project_id_or_none()
     if project_id is not None:
-        code = await session.scalar(select(Project.code).where(Project.id == project_id))
-        if code:
-            return {"project_id": project_id, "project_code": code}
+        name = await session.scalar(select(Project.name).where(Project.id == project_id))
+        if name:
+            return {"project_id": project_id, "project_name": name}
     row = await session.scalar(
-        select(Project.id, Project.code)
+        select(Project.id, Project.name)
         .where(Project.is_default.is_(True), Project.enabled.is_(True))
         .limit(1)
     )
     if row is None:
         return {}
-    return {"project_id": row.id, "project_code": row.code}
+    return {"project_id": row.id, "project_name": row.name}
 
 
 async def enqueue_event(
@@ -273,10 +273,10 @@ def _message_text(payload: dict[str, Any]) -> tuple[str, str]:
             f"账号状态：{'已启用' if data.get('enabled') else '待审核'}",
             f"绑定时间：{data.get('bound_at', '-')}",
         ]
-    project_code = str(data.get("project_code") or "").strip()
-    if project_code and event_type != "webhook.test":
+    project_name = str(data.get("project_name") or "").strip()
+    if project_name and event_type != "webhook.test":
         # 多项目后同一条通知必须能看出属于哪个项目（渠道是全局的，各项目共用）。
-        details.insert(0, f"项目：{project_code}")
+        details.insert(0, f"项目：{project_name}")
     return title, "\n".join(details)
 
 

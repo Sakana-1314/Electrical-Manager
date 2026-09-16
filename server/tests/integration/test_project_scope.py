@@ -17,7 +17,7 @@ from app.core.database import SessionLocal
 from app.core.errors import AppError
 from app.core.project_scope import current_project_id, project_scope, system_scope
 from app.models import Ledger, StockMaterial, User
-from tests.conftest import P05_PROJECT_ID, P06_PROJECT_ID, project_session, system_session
+from tests.conftest import DEFAULT_PROJECT_ID, SECOND_PROJECT_ID, project_session, system_session
 
 
 @pytest.mark.asyncio
@@ -42,20 +42,20 @@ async def test_project_required_when_context_missing(client: AsyncClient) -> Non
 
 @pytest.mark.asyncio
 async def test_reads_are_filtered_by_current_project(client: AsyncClient) -> None:
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         session.add(
-            StockMaterial(name="P05 物资", model_spec="A", unit_name="个", identity_hash="a")
+            StockMaterial(name="默认项目物资", model_spec="A", unit_name="个", identity_hash="a")
         )
         await session.commit()
-    async with project_session(P06_PROJECT_ID) as session:
-        other = StockMaterial(name="P06 物资", model_spec="B", unit_name="个", identity_hash="a")
+    async with project_session(SECOND_PROJECT_ID) as session:
+        other = StockMaterial(name="二期项目物资", model_spec="B", unit_name="个", identity_hash="a")
         session.add(other)
         await session.commit()
         p06_id = other.id
 
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         rows = list((await session.scalars(select(StockMaterial))).all())
-        assert [row.name for row in rows] == ["P05 物资"]
+        assert [row.name for row in rows] == ["默认项目物资"]
         assert await session.scalar(select(func.count()).select_from(StockMaterial)) == 1
         # 取主键 / 只取列 / 聚合都被过滤：别的项目的主键在本项目看来「不存在」。
         assert await session.get(StockMaterial, p06_id) is None
@@ -69,7 +69,7 @@ async def test_reads_are_filtered_by_current_project(client: AsyncClient) -> Non
 @pytest.mark.asyncio
 async def test_same_identity_hash_allowed_in_other_project(client: AsyncClient) -> None:
     """同名物资在两个项目各存一份：项目域唯一键不能跨项目互斥。"""
-    for project_id in (P05_PROJECT_ID, P06_PROJECT_ID):
+    for project_id in (DEFAULT_PROJECT_ID, SECOND_PROJECT_ID):
         async with project_session(project_id) as session:
             session.add(
                 StockMaterial(name="同名物资", model_spec="A", unit_name="个", identity_hash="same")
@@ -83,10 +83,10 @@ async def test_same_identity_hash_allowed_in_other_project(client: AsyncClient) 
 
 @pytest.mark.asyncio
 async def test_system_scope_sees_every_project(client: AsyncClient) -> None:
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         session.add(Ledger(name="P05 台账", model_spec="A"))
         await session.commit()
-    async with project_session(P06_PROJECT_ID) as session:
+    async with project_session(SECOND_PROJECT_ID) as session:
         session.add(Ledger(name="P06 台账", model_spec="B"))
         await session.commit()
 
@@ -95,21 +95,21 @@ async def test_system_scope_sees_every_project(client: AsyncClient) -> None:
             names = sorted(row.name for row in (await session.scalars(select(Ledger))).all())
             assert names == ["P05 台账", "P06 台账"]
 
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         assert [row.name for row in (await session.scalars(select(Ledger))).all()] == ["P05 台账"]
 
 
 
 @pytest.mark.asyncio
 async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
-    async with project_session(P06_PROJECT_ID) as session:
+    async with project_session(SECOND_PROJECT_ID) as session:
         session.add(Ledger(name="P06 台账", model_spec="B"))
         await session.commit()
 
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         # 显式写别的项目的数据：守卫必须拦下，避免跨项目写入/删除。
         with pytest.raises(AppError) as mismatch:
-            session.add(Ledger(name="越界台账", model_spec="C", project_id=P06_PROJECT_ID))
+            session.add(Ledger(name="越界台账", model_spec="C", project_id=SECOND_PROJECT_ID))
             await session.flush()
         assert mismatch.value.code == "PROJECT_MISMATCH"
 
@@ -117,8 +117,8 @@ async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_context_is_restored_after_scope_exits(client: AsyncClient) -> None:
-    with project_scope(P06_PROJECT_ID):
-        assert current_project_id() == P06_PROJECT_ID
+    with project_scope(SECOND_PROJECT_ID):
+        assert current_project_id() == SECOND_PROJECT_ID
     with pytest.raises(AppError) as missing:
         current_project_id()
     assert missing.value.code == "PROJECT_REQUIRED"

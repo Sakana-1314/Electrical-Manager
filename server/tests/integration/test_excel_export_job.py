@@ -18,7 +18,7 @@ from app.domain.enums import ExcelExportJobStatus
 from app.models import ExcelExportJob, PurchaseMaterial
 from app.services import excel_export_job_service
 from app.services.common import utcnow
-from tests.conftest import P05_PROJECT_ID, auth_headers, await_export_job, project_session
+from tests.conftest import DEFAULT_PROJECT_ID, auth_headers, await_export_job, project_session
 
 
 async def _insert_job(
@@ -240,7 +240,7 @@ async def test_enqueue_export_returns_pending_job_and_job_runs_to_completion(
         return {"download_filename": "enqueued.xlsx", "rows": 1}
 
     # enqueue_export 从请求上下文取项目（真实调用发生在带 X-Project-Id 的接口里）。
-    with project_scope(P05_PROJECT_ID):
+    with project_scope(DEFAULT_PROJECT_ID):
         job = await excel_export_job_service.enqueue_export(
             export_type="UNIT",
             params={"columns": ["name"]},
