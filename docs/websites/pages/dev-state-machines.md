@@ -29,7 +29,7 @@ flowchart LR
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
 | `MiniProgramCodeEnv` | `trial` / `release` | — | 小程序码环境 |
 | `MiniProgramStockStatus` | `normal` / `out_of_stock` / `low_stock` | 计算得出，不落库 | 小程序库存标签 |
-| `MiniProgramFeatureMode` | `disabled` / `query_only` / `read_write` | 存在 `system_setting.setting_value` JSON | 5 个小程序功能页各自一档 |
+| `MiniProgramFeatureMode` | `disabled` / `query_only` / `read_write` | 存在 `system_setting.setting_value` JSON | 6 个小程序功能页各自一档（库存、华星总库存、申购计划、申购记录、物料编码库、隐患管理） |
 | `SecondaryWarehouseMode` | `full` / `lite` | 同上 | 二级库运行模式 |
 | `WebhookPlatform` | `FEISHU` / `DINGTALK` | ENUM 同名 | 推送渠道 |
 | `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `webhook_channel.subscribed_events` JSON 存**值**（点号形式） |
@@ -54,7 +54,8 @@ stateDiagram-v2
     已归档 --> [*] : 删除（需写入权限与版本号）
     note right of 已归档
         三个状态是运营标记，不是流程阶段：任意互转，只校验版本号
-        非超管看不到「暂不申购」与「已归档」，查询被强制限定为正常：ARCHIVED_PURCHASE_PLAN_FORBIDDEN
+        非超管看不到「已归档」（显式筛选会 403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN）；
+        不传 status 时查询默认只返回「正常」，「暂不申购」可以显式筛选出来
         删除已转入申购记录的计划会被拒绝：PURCHASE_PLAN_IN_USE
     end note
 ```
@@ -147,8 +148,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     A["提交出入库：携带客户端请求键"] --> B{"库里已有同键单据？"}
-    B -- "是" --> C["返回原单据，库存不变"]
-    B -- "是，但小程序出库的物资与请求不一致" --> D["拒绝：同键不同物资"]
+    B -- "是" --> C["原样返回原单据（不比对物资与数量），库存不变"]
     B -- "否" --> E["落单据并重放余额"]
 ```
 
@@ -418,9 +418,11 @@ stateDiagram-v2
 
 ```mermaid
 flowchart LR
-    A["生成物资小程序码"] --> B{"指定了环境与 AppID？"}
-    B -- "缺失或 AppID 未配置" --> N1["拒绝：小程序 App 未配置（MINI_PROGRAM_APP_NOT_CONFIGURED）"]
-    B -- "已指定（trial 或 release）" --> C["调用微信接口生成"]
+    A["生成物资小程序码"] --> B{"带了 env 与 appid 查询参数？"}
+    B -- "缺失" --> N0["拒绝：422 VALIDATION_ERROR（env / appid 是必填查询参数）"]
+    B -- "都带了" --> D{"appid 在已配置的小程序列表里？"}
+    D -- "不在" --> N1["拒绝：微信凭据未配置（503 WECHAT_NOT_CONFIGURED）"]
+    D -- "在" --> C["调用微信接口生成"]
     C -- "微信侧失败" --> N2["返回上游失败（WECHAT_MINI_PROGRAM_CODE_FAILED）"]
 ```
 
