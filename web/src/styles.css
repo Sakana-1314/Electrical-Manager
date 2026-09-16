@@ -402,6 +402,8 @@ a {
 }
 .muted {
   color: var(--color-text-muted);
+  /* 次要说明文字（「最后更新：…」、开关说明、表格里的型号副行）比正文小一档 */
+  font-size: 13px;
 }
 .danger-text {
   color: var(--color-danger);

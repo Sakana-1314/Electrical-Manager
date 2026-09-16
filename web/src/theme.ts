@@ -131,6 +131,10 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
       borderRadiusSmall: '8px',
       boxShadow1: palette.boxShadow1,
       boxShadow2: palette.boxShadow2,
+      // 控件与表单文字小一档（Naive 默认 14px → 13px）：输入框 / 下拉 / 日期 / 数字输入的
+      // 文字与占位文字、按钮、分页都跟这一档走；数据展示类（表格、描述列表）在各组件覆盖里
+      // 显式写回 14px，见下方 DataTable / Descriptions。标签自身按小一档映射渲染，无需覆盖。
+      fontSizeMedium: '13px',
     },
     Card: {
       borderRadius: '14px',
@@ -144,6 +148,16 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
       borderRadiusMedium: '9px',
       borderRadiusSmall: '8px',
       fontWeight: '500',
+    },
+    Form: {
+      // 表单标签跟控件同档（Naive 把标签字号写死在 Form 主题里，不跟随 fontSizeMedium）
+      labelFontSizeTopMedium: '13px',
+      labelFontSizeLeftMedium: '13px',
+    },
+    Pagination: {
+      // 分页属于控件：Naive 给分页的档位映射与按钮不同，默认量出来仍是 14px，这里显式压到同档
+      itemFontSizeMedium: '13px',
+      jumperFontSizeMedium: '13px',
     },
     Input: {
       borderRadius: '9px',
@@ -163,6 +177,12 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
       thTextColor: palette.tableHeaderTextColor,
       thFontWeight: '600',
       tdColorHover: palette.tableColorHover,
+      // 表格是数据展示：字号保持正文 14px，不跟控件档位一起缩小
+      fontSizeMedium: '14px',
+    },
+    Descriptions: {
+      // 描述列表承载数据值，同样保持 14px
+      fontSizeMedium: '14px',
     },
     Menu: {
       borderRadius: '10px',
