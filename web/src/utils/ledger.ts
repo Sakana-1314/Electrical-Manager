@@ -70,6 +70,22 @@ export function isOrphanTag(tag: LedgerTag): boolean {
   return (tag.parent_id ?? null) === null && tag.child_count === 0
 }
 
+/**
+ * 标签上展示的「台账使用数量」：直接引用该标签的台账记录数（不含子标签的使用量）。
+ *
+ * 返回 `null` 表示接口没给这个字段（还没升级的后端）：此时页面不渲染徽标，
+ * 而不是把它当成 0 显示一个错误的使用量。
+ */
+export function tagItemCount(tag: LedgerTag): number | null {
+  const value = (tag as Partial<LedgerTag>).item_count
+  return typeof value === 'number' ? value : null
+}
+
+/** 节点徽标的 tooltip 文案：0 与被使用时分开表述，避免看成「加载失败」。 */
+export function tagItemCountHint(count: number): string {
+  return count > 0 ? `${count} 条台账使用该标签` : '暂无台账使用该标签'
+}
+
 /** 标签的完整层级路径，如「配电柜 / 低压柜 / 抽屉柜」。 */
 export function tagPath(tags: LedgerTag[], tag: LedgerTag): string {
   const byId = new Map(tags.map((item) => [item.id, item]))

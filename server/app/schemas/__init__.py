@@ -2045,7 +2045,8 @@ class LedgerTagRead(ReadModel):
     """台账标签节点：平铺返回（靠 `parent_id` 表达层级），前端据此拼横向树。
 
     `level`（1..3，由祖先链算出）与 `child_count`（直接子节点数）供页面判断
-    「还能不能再挂子标签」与节点计数展示。
+    「还能不能再挂子标签」；`item_count` 是直接引用该标签的台账记录数（**不含**子标签的
+    使用量），节点计数展示用它。
     """
 
     id: int
@@ -2054,6 +2055,7 @@ class LedgerTagRead(ReadModel):
     remark: str | None = None
     level: int
     child_count: int
+    item_count: int
     images: list[FileObjectRead]
     created_at: UtcDateTime
     updated_at: UtcDateTime

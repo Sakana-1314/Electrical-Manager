@@ -10,12 +10,20 @@ import {
   ledgerQuery,
   parseTagIds,
   tagColumnDisplay,
+  tagItemCount,
+  tagItemCountHint,
   tagParentOptions,
   tagPath,
   tagSelectOptions,
 } from './ledger'
 
-function tag(id: number, name: string, parentId: number | null, childCount = 0): LedgerTag {
+function tag(
+  id: number,
+  name: string,
+  parentId: number | null,
+  childCount = 0,
+  itemCount = 0,
+): LedgerTag {
   return {
     id,
     parent_id: parentId,
@@ -23,6 +31,7 @@ function tag(id: number, name: string, parentId: number | null, childCount = 0):
     remark: null,
     level: parentId === null ? 1 : 2,
     child_count: childCount,
+    item_count: itemCount,
     images: [] as FileObject[],
     created_at: '2026-09-01T00:00:00+00:00',
     updated_at: '2026-09-01T00:00:00+00:00',
@@ -70,6 +79,22 @@ describe('孤立标签判定与层级路径', () => {
   it('路径按层级拼接，父节点缺失时止于当前节点', () => {
     expect(tagPath(tags, tag(3, '抽屉柜', 2))).toBe('配电柜 / 低压柜 / 抽屉柜')
     expect(tagPath(tags, tag(99, '孤儿', 88))).toBe('孤儿')
+  })
+})
+
+describe('标签的台账使用数量', () => {
+  it('0 也照常返回数字（页面按徽标展示）', () => {
+    expect(tagItemCount(tag(6, '临时标签', null, 0, 0))).toBe(0)
+    expect(tagItemCount(tag(2, '低压柜', 1, 1, 3))).toBe(3)
+  })
+  it('接口还没返回该字段时返回 null，页面不渲染徽标（避免误显示 0）', () => {
+    const legacy = { ...tag(6, '临时标签', null) } as Partial<LedgerTag>
+    delete legacy.item_count
+    expect(tagItemCount(legacy as LedgerTag)).toBeNull()
+  })
+  it('tooltip 文案区分「0 条」与被使用', () => {
+    expect(tagItemCountHint(0)).toBe('暂无台账使用该标签')
+    expect(tagItemCountHint(3)).toBe('3 条台账使用该标签')
   })
 })
 

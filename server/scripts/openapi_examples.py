@@ -2809,12 +2809,20 @@ _LEDGER_ITEMS: list[dict[str, Any]] = [
 
 
 def _ledger_tag_rows() -> list[dict[str, Any]]:
-    """标签读模型：按祖先链算出 level（1..3）与直接子节点数。"""
+    """标签读模型：按祖先链算出 level（1..3）、直接子节点数与直接引用它的台账条数。
+
+    `item_count` 只统计**直接**挂了这个标签的台账记录（与读接口口径一致）：挂了父标签的
+    记录不会算到子标签头上，反之亦然。
+    """
     by_id = {item["id"]: item for item in _LEDGER_TAGS}
     child_counts: dict[int, int] = {}
     for item in _LEDGER_TAGS:
         if item["parent_id"] is not None:
             child_counts[item["parent_id"]] = child_counts.get(item["parent_id"], 0) + 1
+    item_counts: dict[int, int] = {}
+    for row in _LEDGER_ITEMS:
+        for tag_id in row["tag_ids"]:
+            item_counts[tag_id] = item_counts.get(tag_id, 0) + 1
     rows = []
     for item in _LEDGER_TAGS:
         level = 1
@@ -2830,6 +2838,7 @@ def _ledger_tag_rows() -> list[dict[str, Any]]:
                 "remark": item["remark"],
                 "level": level,
                 "child_count": child_counts.get(item["id"], 0),
+                "item_count": item_counts.get(item["id"], 0),
                 "images": [
                     _file_row(seed, _LEDGER_TAG_IMAGE_NAMES[seed], 402_800)
                     for seed in item.get("image_seeds", [])

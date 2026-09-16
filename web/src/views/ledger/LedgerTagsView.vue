@@ -6,7 +6,9 @@
  * - 鼠标悬停节点时浮层展示备注与图片；
  * - 点击节点打开编辑弹窗（可改名称 / 备注 / 图片 / 上级标签）；节点上的「+」在未到第 3 层且有写权限时出现，
  *   点它新增子标签并预选当前节点为上级；
- * - 各层节点样式一致（同字号同字重、卡片同尺寸），层级只由连线与缩进表达，子标签数量用数字计数；
+ * - 各层节点样式一致（同字号同字重、卡片同尺寸），层级只由连线与缩进表达；
+ *   节点上的数字是「使用该标签的台账记录数」（只算直接挂这个标签的记录，不含子标签的使用量，含 0），
+ *   含义放在 tooltip 里；
  * - 顶部下拉筛选「孤立标签 / 树标签」，清空即不限（与全站筛选下拉一致，不放「全部」）。
  */
 import { computed, ref, watch } from 'vue'
@@ -35,6 +37,8 @@ import {
   buildLedgerTagTree,
   isOrphanTag,
   ledgerTagScopeOptions,
+  tagItemCount,
+  tagItemCountHint,
   type LedgerTagNode,
   type LedgerTagScope,
 } from '@/utils/ledger'
@@ -175,12 +179,12 @@ function hasDetail(node: unknown): boolean {
                 <template #trigger>
                   <div class="ledger-tag-node" :title="tagOf(node)?.remark || tagOf(node)?.name">
                     <span class="ledger-tag-node__label">{{ node.label }}</span>
-                    <!-- 子标签数量：只用数字，含义靠 tooltip 说明 -->
-                    <n-tooltip v-if="tagOf(node)?.child_count" trigger="hover">
+                    <!-- 台账使用数量：只用数字（含 0），口径放在 tooltip 里 -->
+                    <n-tooltip v-if="tagItemCount(tagOf(node)!) !== null" trigger="hover">
                       <template #trigger>
-                        <span class="ledger-tag-node__count">{{ tagOf(node)?.child_count }}</span>
+                        <span class="ledger-tag-node__count">{{ tagItemCount(tagOf(node)!) }}</span>
                       </template>
-                      {{ tagOf(node)?.child_count }} 个子标签
+                      {{ tagItemCountHint(tagItemCount(tagOf(node)!) ?? 0) }}
                     </n-tooltip>
                     <span v-if="isOrphanTag(tagOf(node)!)" class="ledger-tag-node__orphan">
                       孤立
@@ -255,7 +259,7 @@ function hasDetail(node: unknown): boolean {
   padding: 4px 0 12px;
 }
 
-/* 节点内容：名称 + 子标签计数 + 可选「+」入口。
+/* 节点内容：名称 + 台账使用数量 + 可选「+」入口。
    各层节点样式刻意保持一致（同字号、同字重、同内边距）：层级由连线表达，
    不用字号 / 字重 / 卡片尺寸区分；颜色一律走 styles.css 里针对 .org-tree-horizontal 的令牌适配，
    这里只管尺寸与排版。 */
@@ -274,7 +278,7 @@ function hasDetail(node: unknown): boolean {
   font-weight: 500;
 }
 
-/* 子标签数量：一个安静的数字计数，不做成彩色标签以免抢层级视线 */
+/* 台账使用数量：一个安静的数字计数（含 0），不做成彩色标签以免抢层级视线 */
 .ledger-tag-node__count {
   min-width: 18px;
   padding: 0 5px;

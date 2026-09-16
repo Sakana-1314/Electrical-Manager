@@ -510,6 +510,8 @@ sequenceDiagram
     S->>DB: 写 ledger_tag（含 parent_id），并整表替换 ledger_tag_image 关联
     W->>S: 删除标签（If-Match）
     S->>S: 有子标签、或自身与子孙被台账记录引用 → 拒绝（409）
+    W->>S: 标签列表（读模型回填 item_count）
+    S->>DB: 按 ledger.tag_ids 逗号串统计每个标签被直接引用的条数（不含子孙）
     W->>S: 保存台账记录（name / model_spec / quantity / remark / tag_ids / image_ids）
     S->>S: 校验 tag_ids 全部存在（缺失 → INVALID_TAG_ID），去重后升序
     S->>DB: 写 ledger（tag_ids 存成 '3,12,15' 逗号串）并整表替换 ledger_image 关联
@@ -526,6 +528,7 @@ sequenceDiagram
 | 改上级 | 标签可以改上级：`PATCH` 带 `parent_id`——传具体 id 换父节点，传 `null` 移为一级标签，**不传该字段表示不动层级**（只改名称 / 备注 / 图片的调用照旧）。改后整棵子树重新计入层级：「会超过 3 层」与「移到自己子孙下（成环）」都被 `LEDGER_TAG_MAX_LEVEL` 拒绝（400），同级重名按**落库后的父节点**判断（`DUPLICATE_LEDGER_TAG`）。页面上的上级选择器把第 3 层节点与自身子树置灰，服务端仍会再校验一次 |
 | 同级名称唯一 | 同一 `parent_id` 下名称唯一（`DUPLICATE_LEDGER_TAG`）；根节点的 `parent_id` 为 NULL，MySQL 唯一索引对 NULL 不去重，因此这条由服务端校验 |
 | 删除保护 | 有子标签 → `LEDGER_TAG_HAS_CHILDREN`；自身或子孙被台账记录引用 → `LEDGER_TAG_IN_USE`（都按子树展开检查），均返回 409，未被引用则物理删除 |
+| 标签使用数量 | 读接口回填 `item_count`：**直接**引用该标签的台账记录数（不含子标签的使用量，按 `ledger.tag_ids` 逗号串匹配统计，与删除保护的引用判定同口径），标签管理页把它作为节点上的数字徽标（含 0，含义放 tooltip） |
 | 标签存储 | 台账记录的标签是 `ledger.tag_ids` 里的逗号分隔 id（写入时去重、升序规范化），没有关联表；写接口校验存在性，读接口回填标签名称与完整层级路径 |
 | 标签筛选 | 列表按 `tag_ids` 筛选时展开为「选中标签 + 全部子孙」；选中的 id 一个都不存在时返回空结果，不当作「不限」（手改 URL 不会误返回全量） |
 | 图片 | 标签图片与台账图片各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |

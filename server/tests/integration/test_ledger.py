@@ -144,12 +144,61 @@ async def test_tag_scope_filters_orphan_and_tree(client: AsyncClient) -> None:
     assert [row["id"] for row in matched] == [child["id"]]
 
 
+async def test_tag_item_count_counts_direct_ledger_references_only(
+    client: AsyncClient,
+) -> None:
+    """标签上的使用数量只算「直接挂了这个标签」的台账记录，不含子孙标签的使用量。"""
+    headers = await auth_headers(client, "ledger")
+    root = await create_tag(client, headers, name="配电柜")
+    child = await create_tag(client, headers, name="低压柜", parent_id=root["id"])
+    leaf = await create_tag(client, headers, name="抽屉柜", parent_id=child["id"])
+    # 新建的标签还没被任何台账使用
+    assert (root["item_count"], child["item_count"], leaf["item_count"]) == (0, 0, 0)
+
+    referenced_child = await create_item(client, headers, name="低压抽屉柜", tag_ids=[child["id"]])
+    await create_item(client, headers, name="高压开关柜", tag_ids=[root["id"], leaf["id"]])
+
+    rows = {
+        row["id"]: row
+        for row in (await client.get("/api/v1/ledger-tags", headers=headers)).json()
+    }
+    # 三个节点各被 1 条记录直接引用：挂了子标签的记录不会算到父标签头上
+    assert (
+        rows[root["id"]]["item_count"],
+        rows[child["id"]]["item_count"],
+        rows[leaf["id"]]["item_count"],
+    ) == (1, 1, 1)
+    # 子标签数量仍按直接子节点统计（「孤立 / 树标签」筛选与「还能不能加子标签」靠它）
+    assert (rows[root["id"]]["child_count"], rows[child["id"]]["child_count"]) == (1, 1)
+
+    # 单节点路径（改名返回的读模型）同口径
+    renamed = await client.patch(
+        f"/api/v1/ledger-tags/{leaf['id']}",
+        headers=headers,
+        json={"name": "抽屉柜（改名）", "version": leaf["version"]},
+    )
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["item_count"] == 1
+
+    # 解除引用后计数回落
+    removed = await client.delete(
+        f"/api/v1/ledger-items/{referenced_child['id']}",
+        headers={**headers, "If-Match": str(referenced_child["version"])},
+    )
+    assert removed.status_code == 204, removed.text
+    rows = {
+        row["id"]: row
+        for row in (await client.get("/api/v1/ledger-tags", headers=headers)).json()
+    }
+    assert rows[child["id"]]["item_count"] == 0
+
+
 async def test_delete_tag_blocks_children_and_references(client: AsyncClient) -> None:
     headers = await auth_headers(client, "ledger")
     root = await create_tag(client, headers, name="配电柜")
     child = await create_tag(client, headers, name="低压柜", parent_id=root["id"])
     leaf = await create_tag(client, headers, name="抽屉柜", parent_id=child["id"])
-    await create_item(client, headers, tag_ids=[leaf["id"]])
+    referencing = await create_item(client, headers, tag_ids=[leaf["id"]])
 
     blocked_by_children = await client.delete(
         f"/api/v1/ledger-tags/{root['id']}",
@@ -166,12 +215,33 @@ async def test_delete_tag_blocks_children_and_references(client: AsyncClient) ->
     assert in_use.status_code == 409, in_use.text
     assert in_use.json()["code"] == "LEDGER_TAG_IN_USE"
 
+    # 页面上「不能删」的两个依据：child_count > 0（有子标签）或 item_count > 0（被台账使用）
+    rows = {
+        row["id"]: row
+        for row in (await client.get("/api/v1/ledger-tags", headers=headers)).json()
+    }
+    assert (rows[root["id"]]["child_count"], rows[root["id"]]["item_count"]) == (1, 0)
+    assert (rows[leaf["id"]]["child_count"], rows[leaf["id"]]["item_count"]) == (0, 1)
+
     free = await create_tag(client, headers, name="未使用标签")
     removed = await client.delete(
         f"/api/v1/ledger-tags/{free['id']}",
         headers={**headers, "If-Match": str(free["version"])},
     )
     assert removed.status_code == 204, removed.text
+
+    # 解除引用（删掉那条台账记录）后，整棵子树按自底向上都能删掉
+    released = await client.delete(
+        f"/api/v1/ledger-items/{referencing['id']}",
+        headers={**headers, "If-Match": str(referencing["version"])},
+    )
+    assert released.status_code == 204, released.text
+    for tag in (leaf, child, root):
+        response = await client.delete(
+            f"/api/v1/ledger-tags/{tag['id']}",
+            headers={**headers, "If-Match": str(tag["version"])},
+        )
+        assert response.status_code == 204, response.text
 
 
 async def test_update_tag_renames_and_checks_duplicates(client: AsyncClient) -> None:

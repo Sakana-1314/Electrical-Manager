@@ -116,8 +116,8 @@ web/src/
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
-| `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（名称 / 型号 / 子项号 / 标签 / 数量（合并单位展示）/ 用途 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
-| `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
+| `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（子项号 / 名称 + 型号（合并一列两行展示）/ 标签 / 数量（合并单位展示）/ 用途 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
+| `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点上的数字是「使用该标签的台账记录数」（`item_count`，只算直接引用，不含子标签的使用量，含 0）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
@@ -281,7 +281,7 @@ web/src/
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |
 | `hazard.ts` | 隐患纯逻辑：`hazardStatuses` / `hazardLevels` / `hazardStatusTypes` / `hazardLevelTypes`（状态与等级选项、标签色）、`initialHazardFilters()` / `hazardQuery(filters)`（筛选默认值与 URL query 互转）、`isHazardOverdue(dueDate, status, today)`（逾期判定）、`buildHazardTypeTree(types)`（扁平「大类 + 小类」→ 两级横向树） |
-| `ledger.ts` | 台账标签纯逻辑：`parseTagIds` / `formatTagIds`（`tag_ids` 逗号串与数组互转）、`isOrphanTag`（孤立标签判定）、`tagPath`（完整层级路径）、`collectSubtreeIds`（节点自身 + 全部子孙，改上级时排除可选父节点）、`buildLedgerTagTree`（扁平标签 → 横向树，返回全新对象）、`tagSelectOptions` / `tagParentOptions`（标签选择器与上级选择器选项，后者支持按节点排除子树）、`tagColumnDisplay`（标签列展示切片）、`ledgerQuery` / `ledgerFiltersFromQuery`（筛选与 URL 同步） |
+| `ledger.ts` | 台账标签纯逻辑：`parseTagIds` / `formatTagIds`（`tag_ids` 逗号串与数组互转）、`isOrphanTag`（孤立标签判定）、`tagItemCount` / `tagItemCountHint`（节点上的台账使用数量与 tooltip 文案；字段缺失时返回 `null` 不显示徽标）、`tagPath`（完整层级路径）、`collectSubtreeIds`（节点自身 + 全部子孙，改上级时排除可选父节点）、`buildLedgerTagTree`（扁平标签 → 横向树，返回全新对象）、`tagSelectOptions` / `tagParentOptions`（标签选择器与上级选择器选项，后者支持按节点排除子树）、`tagColumnDisplay`（标签列展示切片）、`ledgerQuery` / `ledgerFiltersFromQuery`（筛选与 URL 同步） |
 #### `web/src/constants/`、`types/`、`config/`
 | 文件 | 职责 |
 | --- | --- |
