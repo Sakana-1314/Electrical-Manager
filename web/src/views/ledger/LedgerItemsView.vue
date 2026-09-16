@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 台账总览：台账记录列表（名称 / 型号 / 子项号 / 标签 / 数量 / 用途 / 备注 / 图片）。
+ * 台账总览：台账记录列表（子项号 / 名称 + 型号（合并一列两行展示）/ 标签 / 数量 / 用途 / 备注 / 图片）。
  *
  * 单位跟随数量展示（如「12 台」），不单独占一列（与出入库明细、小程序列表同一口径）。
  *
@@ -89,26 +89,6 @@ const activeFilterCount = computed(
 
 const allColumns: { key: string; label: string; column: DataTableColumns<LedgerItem>[number] }[] = [
   {
-    key: 'name',
-    label: '名称',
-    column: {
-      title: '名称',
-      key: 'name',
-      width: tableColumnWidths.name,
-      ellipsis: { tooltip: true },
-    },
-  },
-  {
-    key: 'model_spec',
-    label: '型号',
-    column: {
-      title: '型号',
-      key: 'model_spec',
-      width: tableColumnWidths.model,
-      ellipsis: { tooltip: true },
-    },
-  },
-  {
     key: 'subitem_no',
     label: '子项号',
     column: {
@@ -117,6 +97,29 @@ const allColumns: { key: string; label: string; column: DataTableColumns<LedgerI
       width: tableColumnWidths.code,
       ellipsis: { tooltip: true },
       render: (row) => row.subitem_no || '—',
+    },
+  },
+  {
+    // 名称与型号合成一列（两行展示），比并排两列省下约 180px 宽度
+    key: 'name',
+    label: '名称 / 型号',
+    column: {
+      title: '名称 / 型号',
+      key: 'name',
+      width: tableColumnWidths.material,
+      // 两行都靠 CSS 截断（名称加粗 + 型号灰色小字），完整内容看 title
+      render: (row) =>
+        h(
+          'div',
+          {
+            class: 'table-material-summary',
+            title: `${row.name}\n${row.model_spec}`,
+          },
+          [
+            h('div', { class: 'table-material-summary__name' }, row.name),
+            h('div', { class: 'table-material-summary__meta' }, row.model_spec),
+          ],
+        ),
     },
   },
   {
@@ -199,7 +202,8 @@ const allColumns: { key: string; label: string; column: DataTableColumns<LedgerI
   },
 ]
 
-// 列显隐的本地键带版本号：新增列时版本 +1，让旧选择失效，新列默认可见（与申购各页一致）。
+// 列显隐的本地键带版本号：新增 / 合并列导致列集合变化时版本 +1，让旧选择失效，新列默认可见
+// （与申购各页一致；本次「型号」并入「名称 / 型号」，所以 v2 → v3）。
 const visibleColumnKeys = ref<string[]>(allColumns.map((item) => item.key))
 const fieldOptions = allColumns.map((item) => ({ label: item.label, value: item.key }))
 const columns = computed(() =>
@@ -289,7 +293,7 @@ onMounted(loadTags)
         <ColumnVisibilityPicker
           :value="visibleColumnKeys"
           :options="fieldOptions"
-          storage-key="ledger.items.visible-columns.v2"
+          storage-key="ledger.items.visible-columns.v3"
           @update:value="visibleColumnKeys = $event"
         />
         <div class="filter-action-buttons">

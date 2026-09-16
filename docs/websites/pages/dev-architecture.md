@@ -116,7 +116,7 @@ web/src/
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
-| `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（名称 / 型号 / 子项号 / 标签 / 数量（合并单位展示）/ 用途 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
+| `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（子项号 / 名称 + 型号（合并一列两行展示）/ 标签 / 数量（合并单位展示）/ 用途 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
 | `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点上的数字是「使用该标签的台账记录数」（`item_count`，只算直接引用，不含子标签的使用量，含 0）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
