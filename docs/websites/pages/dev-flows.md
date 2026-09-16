@@ -505,9 +505,9 @@ sequenceDiagram
     participant W as 网页端
     participant S as 服务端
     participant DB as MySQL
-    W->>S: 新增 / 编辑标签（名称、备注、图片；PATCH 带 version）
-    S->>S: 校验上级标签存在且层级 < 3、同一层级下名称唯一
-    S->>DB: 写 ledger_tag，并整表替换 ledger_tag_image 关联
+    W->>S: 新增 / 编辑标签（名称、备注、图片、上级标签；编辑带 version）
+    S->>S: 校验上级存在、改后子树不超过 3 层、未移入自身子孙，且同级名称唯一
+    S->>DB: 写 ledger_tag（含 parent_id），并整表替换 ledger_tag_image 关联
     W->>S: 删除标签（If-Match）
     S->>S: 有子标签、或自身与子孙被台账记录引用 → 拒绝（409）
     W->>S: 保存台账记录（name / model_spec / quantity / remark / tag_ids / image_ids）
@@ -522,7 +522,8 @@ sequenceDiagram
 
 | 项 | 说明 |
 | --- | --- |
-| 标签层级 | 至多 3 层：在已到第 3 层的节点下新增子标签直接拒绝（`LEDGER_TAG_MAX_LEVEL`）；层级由祖先链实时算出，不落库，编辑也不允许改上级 |
+| 标签层级 | 至多 3 层：在已到第 3 层的节点下新增子标签直接拒绝（`LEDGER_TAG_MAX_LEVEL`）；层级由祖先链实时算出，不落库 |
+| 改上级 | 标签可以改上级：`PATCH` 带 `parent_id`——传具体 id 换父节点，传 `null` 移为一级标签，**不传该字段表示不动层级**（只改名称 / 备注 / 图片的调用照旧）。改后整棵子树重新计入层级：「会超过 3 层」与「移到自己子孙下（成环）」都被 `LEDGER_TAG_MAX_LEVEL` 拒绝（400），同级重名按**落库后的父节点**判断（`DUPLICATE_LEDGER_TAG`）。页面上的上级选择器把第 3 层节点与自身子树置灰，服务端仍会再校验一次 |
 | 同级名称唯一 | 同一 `parent_id` 下名称唯一（`DUPLICATE_LEDGER_TAG`）；根节点的 `parent_id` 为 NULL，MySQL 唯一索引对 NULL 不去重，因此这条由服务端校验 |
 | 删除保护 | 有子标签 → `LEDGER_TAG_HAS_CHILDREN`；自身或子孙被台账记录引用 → `LEDGER_TAG_IN_USE`（都按子树展开检查），均返回 409，未被引用则物理删除 |
 | 标签存储 | 台账记录的标签是 `ledger.tag_ids` 里的逗号分隔 id（写入时去重、升序规范化），没有关联表；写接口校验存在性，读接口回填标签名称与完整层级路径 |

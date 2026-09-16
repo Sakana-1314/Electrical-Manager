@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from typing import Any
 
 from httpx import AsyncClient
 from PIL import Image
@@ -201,6 +202,137 @@ async def test_update_tag_renames_and_checks_duplicates(client: AsyncClient) -> 
         f"/api/v1/ledger-tags/{second['id']}",
         headers=headers,
         json={"name": "又改名", "version": second["version"]},
+    )
+    assert stale.status_code == 409, stale.text
+    assert stale.json()["code"] == "VERSION_CONFLICT"
+
+
+async def _tag_rows(client: AsyncClient, headers: dict[str, str]) -> dict[int, dict[str, Any]]:
+    """当前全部标签，按 id 建索引，便于断言层级与子节点计数。"""
+    response = await client.get("/api/v1/ledger-tags", headers=headers)
+    assert response.status_code == 200, response.text
+    return {row["id"]: row for row in response.json()}
+
+
+async def test_update_tag_reparents_and_guards_hierarchy(client: AsyncClient) -> None:
+    """改上级：传 null 移为一级、传父 id 换父；环与超 3 层都按 LEDGER_TAG_MAX_LEVEL 拒绝。"""
+    headers = await auth_headers(client, "ledger")
+    root = await create_tag(client, headers, name="配电柜")
+    branch = await create_tag(client, headers, name="低压柜", parent_id=root["id"])
+    leaf = await create_tag(client, headers, name="抽屉柜", parent_id=branch["id"])
+    other_root = await create_tag(client, headers, name="电动机")
+
+    # 带子标签的节点整棵子树换父：两侧父节点的计数跟着变，子孙层级随根平移
+    moved = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": other_root["id"], "version": branch["version"]},
+    )
+    assert moved.status_code == 200, moved.text
+    assert moved.json()["parent_id"] == other_root["id"]
+    # 原来在第 2 层，挂到另一个一级节点下仍是第 2 层；子标签仍在第 3 层
+    assert moved.json()["level"] == 2
+    rows = await _tag_rows(client, headers)
+    assert rows[root["id"]]["child_count"] == 0
+    assert rows[other_root["id"]]["child_count"] == 1
+    assert rows[leaf["id"]]["level"] == 3
+
+    # parent_id = null：节点（连同子树）升级为一级标签，子树整体上移一层
+    promoted = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": None, "version": moved.json()["version"]},
+    )
+    assert promoted.status_code == 200, promoted.text
+    assert promoted.json()["parent_id"] is None
+    assert promoted.json()["level"] == 1
+    rows = await _tag_rows(client, headers)
+    assert rows[other_root["id"]]["child_count"] == 0
+    assert rows[leaf["id"]]["level"] == 2
+
+    # 不传 parent_id：只改名称 / 备注，上级保持不变（旧客户端与既有用法行为不变）
+    renamed = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={
+            "name": "低压柜（改）",
+            "remark": "只改名，不动层级",
+            "version": promoted.json()["version"],
+        },
+    )
+    assert renamed.status_code == 200, renamed.text
+    assert renamed.json()["parent_id"] is None
+    assert renamed.json()["level"] == 1
+    version = renamed.json()["version"]
+
+    # 环：移到自己、或移到自己子孙下都被拒绝
+    for parent_id in (branch["id"], leaf["id"]):
+        onto_cycle = await client.patch(
+            f"/api/v1/ledger-tags/{branch['id']}",
+            headers=headers,
+            json={"parent_id": parent_id, "version": version},
+        )
+        assert onto_cycle.status_code == 400, onto_cycle.text
+        assert onto_cycle.json()["code"] == "LEDGER_TAG_MAX_LEVEL"
+
+    # 超 3 层：带子标签的节点挂到第 2 层节点下 → 第 3 层的子标签会到第 4 层；挂到第 3 层下同理
+    level2 = await create_tag(client, headers, name="第二层", parent_id=other_root["id"])
+    level3 = await create_tag(client, headers, name="第三层", parent_id=level2["id"])
+    for parent_id in (level2["id"], level3["id"]):
+        over_limit = await client.patch(
+            f"/api/v1/ledger-tags/{branch['id']}",
+            headers=headers,
+            json={"parent_id": parent_id, "version": version},
+        )
+        assert over_limit.status_code == 400, over_limit.text
+        assert over_limit.json()["code"] == "LEDGER_TAG_MAX_LEVEL"
+
+    # 叶子（子树只有自己）挂到第 2 层是允许的：正好占满第 3 层
+    leaf_move = await client.patch(
+        f"/api/v1/ledger-tags/{leaf['id']}",
+        headers=headers,
+        json={"parent_id": level2["id"], "version": leaf["version"]},
+    )
+    assert leaf_move.status_code == 200, leaf_move.text
+    assert leaf_move.json()["level"] == 3
+
+    # 换父后按「新父下同名」判断重名：新父下已有同名 → 409
+    await create_tag(client, headers, name="低压柜（改）", parent_id=root["id"])
+    duplicate = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": root["id"], "version": version},
+    )
+    assert duplicate.status_code == 409, duplicate.text
+    assert duplicate.json()["code"] == "DUPLICATE_LEDGER_TAG"
+
+    # 换父 + 改名一起提交：按新父下的同名判断（新父下没有同名就放行，上层同名不受影响）
+    new_root = await create_tag(client, headers, name="干净上级")
+    renamed_after_move = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": new_root["id"], "name": "配电柜", "version": version},
+    )
+    assert renamed_after_move.status_code == 200, renamed_after_move.text
+    assert renamed_after_move.json()["name"] == "配电柜"
+    assert renamed_after_move.json()["parent_id"] == new_root["id"]
+    rows = await _tag_rows(client, headers)
+    assert rows[root["id"]]["child_count"] == 1  # 只剩新加的「低压柜（改）」
+    assert rows[new_root["id"]]["child_count"] == 1
+
+    # 未知上级 → NOT_FOUND；旧 version → VERSION_CONFLICT
+    unknown_parent = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": 9999, "version": renamed_after_move.json()["version"]},
+    )
+    assert unknown_parent.status_code == 400, unknown_parent.text
+    assert unknown_parent.json()["code"] == "NOT_FOUND"
+
+    stale = await client.patch(
+        f"/api/v1/ledger-tags/{branch['id']}",
+        headers=headers,
+        json={"parent_id": root["id"], "version": version},
     )
     assert stale.status_code == 409, stale.text
     assert stale.json()["code"] == "VERSION_CONFLICT"

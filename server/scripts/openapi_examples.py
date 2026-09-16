@@ -1533,6 +1533,8 @@ def _build_schema_examples() -> dict[str, Any]:
             "image_ids": [_file_id(403)],
         },
         "LedgerTagUpdate": {
+            # 带上 parent_id 表示同时改上级（传 null 则移为一级标签；不传该字段则不动层级）。
+            "parent_id": 1,
             "name": "电容器柜（低压）",
             "remark": "无功补偿柜，2026 年 9 月新增 2 台",
             "image_ids": [_file_id(403)],

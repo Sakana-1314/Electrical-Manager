@@ -3823,8 +3823,13 @@ export interface components {
         };
         /**
          * LedgerTagUpdate
-         * @description 编辑标签：只改名称 / 备注 / 图片，不支持改上级（层级上限因此静态可保）。
+         * @description 编辑标签：名称 / 备注 / 图片，以及上级节点。
+         *
+         *     `parent_id` 走「字段是否出现」区分：传 `null` 表示移为一级标签，**不传该字段表示不改上级**
+         *     （旧客户端与只改名称 / 备注 / 图片的调用照旧）。改上级后整棵子树重新计入层级，
+         *     「超过 3 层」或「移到自己子孙下」由 service 拒绝（`LEDGER_TAG_MAX_LEVEL`）。
          * @example {
+         *       "parent_id": 1,
          *       "name": "电容器柜（低压）",
          *       "remark": "无功补偿柜，2026 年 9 月新增 2 台",
          *       "image_ids": [
@@ -3834,6 +3839,8 @@ export interface components {
          *     }
          */
         LedgerTagUpdate: {
+            /** Parent Id */
+            parent_id?: number | null;
             /** Name */
             name?: string | null;
             /** Remark */

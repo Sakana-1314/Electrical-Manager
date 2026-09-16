@@ -157,11 +157,41 @@ export function tagColumnDisplay(
   return { visible: refs.slice(0, max), extra: Math.max(0, refs.length - max) }
 }
 
-/** 「上级标签」选择器的选项：已到第 3 层的节点不能再挂子标签，置灰不可选。 */
-export function tagParentOptions(tags: LedgerTag[]): LedgerTagSelectOption[] {
+/** 节点自身 + 全部子孙的 id（改上级时用来把自己这棵子树排除掉；环状脏数据也终止）。 */
+export function collectSubtreeIds(tags: LedgerTag[], rootId: number): number[] {
+  const children = new Map<number, number[]>()
+  for (const tag of tags) {
+    const parentId = tag.parent_id ?? null
+    if (parentId === null) continue
+    children.set(parentId, [...(children.get(parentId) ?? []), tag.id])
+  }
+  const collected: number[] = []
+  const seen = new Set<number>()
+  const stack: number[] = [rootId]
+  while (stack.length) {
+    const current = stack.pop()
+    if (current === undefined || seen.has(current)) continue
+    seen.add(current)
+    collected.push(current)
+    stack.push(...(children.get(current) ?? []))
+  }
+  // 顺序与层级无关（只用于置灰判断），升序返回便于断言与阅读。
+  return collected.sort((a, b) => a - b)
+}
+
+/**
+ * 「上级标签」选择器的选项：
+ * - 已到第 3 层的节点不能再挂子标签，置灰不可选；
+ * - 传 `excludeId`（编辑某个标签时传它自己的 id）时，该节点**及其全部子孙**一并置灰——
+ *   移到自身或子孙下会形成环，后端也会拒绝。
+ */
+export function tagParentOptions(tags: LedgerTag[], excludeId?: number): LedgerTagSelectOption[] {
   const blocked = new Set(
     tags.filter((tag) => tag.level >= LEDGER_TAG_MAX_LEVEL).map((tag) => tag.id),
   )
+  if (excludeId !== undefined) {
+    for (const id of collectSubtreeIds(tags, excludeId)) blocked.add(id)
+  }
   const decorate = (options: LedgerTagSelectOption[]): LedgerTagSelectOption[] =>
     options.map((option) => ({
       ...option,

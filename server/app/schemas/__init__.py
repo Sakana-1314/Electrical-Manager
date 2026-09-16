@@ -2073,8 +2073,14 @@ class LedgerTagCreate(RequestModel):
 
 
 class LedgerTagUpdate(RequestModel):
-    """编辑标签：只改名称 / 备注 / 图片，不支持改上级（层级上限因此静态可保）。"""
+    """编辑标签：名称 / 备注 / 图片，以及上级节点。
 
+    `parent_id` 走「字段是否出现」区分：传 `null` 表示移为一级标签，**不传该字段表示不改上级**
+    （旧客户端与只改名称 / 备注 / 图片的调用照旧）。改上级后整棵子树重新计入层级，
+    「超过 3 层」或「移到自己子孙下」由 service 拒绝（`LEDGER_TAG_MAX_LEVEL`）。
+    """
+
+    parent_id: int | None = None
     name: LedgerName | None = None
     remark: LedgerTagRemark | None = None
     image_ids: LedgerImageIds | None = None

@@ -88,7 +88,7 @@
 | `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `webhook_service` |
 | `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `mini_program_service` |
 | `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `ai_search_service` |
-| `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层，不能再往下新增子标签 | `ledger_service` |
+| `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `ledger_service` |
 | `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `ledger_service` |
 | `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `hazard_service` |
 
