@@ -2,7 +2,9 @@
 
 规则要点：
 - 标签是自引用邻接表，至多 3 层：新增时「父节点层级 + 1」超过 3 直接拒绝（400）。
-- 同一父节点下不允许同名标签（不同分支可同名），重名返回 409；改名同样校验同级。
+- 标签可以改上级（含移为一级）：改后整棵子树重新计入层级，超过 3 层、或移到自己子孙下
+  （成环）同样拒绝（400）。
+- 同一父节点下不允许同名标签（不同分支可同名），重名返回 409；改名、换父都按落库后的父节点校验同级。
 - 标签还有子节点、或（连同子孙）已被台账记录引用时不允许删除（409），删除是物理删除。
 - 台账记录可挂多个标签：落库前统一规范化为「去重 + 升序 + 英文逗号分隔」的 id 串，
   读出来还原成 id 列表，并附标签名称与完整层级路径，列表页无需再自行解析。
@@ -244,6 +246,67 @@ async def create_tag(session: AsyncSession, data: LedgerTagCreate) -> LedgerTagR
     return await get_tag_read(session, tag.id)
 
 
+def _deepest_depth(
+    tags_by_id: dict[int, LedgerTag], children: dict[int, list[int]], tag: LedgerTag
+) -> int:
+    """子树里最深的节点所在层级（自身没有子标签时就是自身层级）。"""
+    deepest = _tag_level(tags_by_id, tag)
+    # 层级上限保证深度有界；数据被手工改坏成环时 visited 兜底。
+    visited: set[int] = {tag.id}
+    stack = list(_subtree_ids(children, tag.id))
+    while stack:
+        current_id = stack.pop()
+        if current_id in visited:
+            continue
+        visited.add(current_id)
+        current = tags_by_id.get(current_id)
+        if current is None:
+            continue
+        deepest = max(deepest, _tag_level(tags_by_id, current))
+    return deepest
+
+
+def _validated_new_parent(
+    tags_by_id: dict[int, LedgerTag],
+    children: dict[int, list[int]],
+    tag: LedgerTag,
+    parent_id: int,
+) -> LedgerTag:
+    """校验「把 tag 挂到 parent_id 下」是否合法，返回新的父节点。
+
+    两条拒绝理由都复用 `LEDGER_TAG_MAX_LEVEL`（都是层级约束）：
+    改成自己或自己的子孙会形成环；挂上去后子树最深处会超过层数上限。
+    """
+    if parent_id == tag.id or tag.id in _subtree_ids(children, parent_id):
+        raise AppError(
+            "LEDGER_TAG_MAX_LEVEL",
+            f"标签最多 {MAX_TAG_LEVEL} 层，不能把「{tag.name}」移到它自己或其子孙标签下",
+        )
+    parent = tags_by_id.get(parent_id)
+    if parent is None:
+        raise not_found("上级标签")
+    # 整棵子树随根平移：挂到第 N 层后，最深节点也平移相同的层数。
+    shift = _tag_level(tags_by_id, parent) + 1 - _tag_level(tags_by_id, tag)
+    if _deepest_depth(tags_by_id, children, tag) + shift > MAX_TAG_LEVEL:
+        raise AppError(
+            "LEDGER_TAG_MAX_LEVEL",
+            f"标签最多 {MAX_TAG_LEVEL} 层，移到该上级后「{tag.name}」及其子标签"
+            f"会超过 {MAX_TAG_LEVEL} 层",
+        )
+    return parent
+
+
+async def _ensure_sibling_name_free(
+    session: AsyncSession, parent_id: int | None, name: str, exclude_id: int
+) -> None:
+    """同一父节点下不允许同名标签（不同分支可同名）。"""
+    existing = await ledger_repository.find_tag_by_sibling(
+        session, parent_id, name, exclude_id=exclude_id
+    )
+    if existing is not None:
+        raise AppError("DUPLICATE_LEDGER_TAG", f"同一层级下已有标签「{name}」")
+
+
 async def update_tag(
     session: AsyncSession, tag_id: int, data: LedgerTagUpdate
 ) -> LedgerTagRead:
@@ -251,13 +314,21 @@ async def update_tag(
     if tag is None:
         raise not_found("标签")
     validate_version(data.version, tag.version)
+    # `parent_id` 只在请求里出现时才处理：传 null = 移为一级，不传 = 不改上级。
+    reparent = "parent_id" in data.model_fields_set and data.parent_id != tag.parent_id
+    new_parent_id = data.parent_id if reparent else tag.parent_id
+    if reparent:
+        tags = await ledger_repository.list_tags(session)
+        tags_by_id = {item.id: item for item in tags}
+        if new_parent_id is not None:
+            _validated_new_parent(tags_by_id, _children_map(tags), tag, new_parent_id)
+    # 改名后按「落库后的父节点」判断重名：换父 + 改名一起提交时只看新父下有没有同名。
+    if reparent or (data.name is not None and data.name != tag.name):
+        await _ensure_sibling_name_free(session, new_parent_id, data.name or tag.name, tag.id)
     if data.name is not None and data.name != tag.name:
-        existing = await ledger_repository.find_tag_by_sibling(
-            session, tag.parent_id, data.name, exclude_id=tag.id
-        )
-        if existing is not None:
-            raise AppError("DUPLICATE_LEDGER_TAG", f"同一层级下已有标签「{data.name}」")
         tag.name = data.name
+    if reparent:
+        tag.parent_id = new_parent_id
     if data.remark is not None:
         tag.remark = _trim(data.remark)
     if data.image_ids is not None:
