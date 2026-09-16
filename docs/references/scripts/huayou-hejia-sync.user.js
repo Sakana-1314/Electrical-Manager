@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         备件管理系统 - 华友何佳状态同步（旧系统）
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      2.0.0
-// @description  对「申购单号 < 阈值（默认 P05SG0300）」的申购单按申购单号整单查询华友何佳“物资状态查询”，一次批量回写业务员、状态、合同号、合同签订日期、船号、集港与发运信息。
-// @match        https://materials-manager.qcloud.19890605.xyz/*
+// @version      2.1.0
+// @description  在何佳（旧系统）站点上把 P05SG0300 以前的申购单按申购单号整单查询“物资状态查询”，并把业务员、状态、合同号、合同签订日期、船号、集港与发运信息提交到备件管理系统。
+// @match        https://quick-hejia.qcloud.19890605.xyz/*
 // @updateURL    https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-hejia-sync.user.js
 // @downloadURL  https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-hejia-sync.user.js
-// @connect      materials-manager.qcloud.19890605.xyz
 // @connect      quick-hejia.qcloud.19890605.xyz
+// @connect      materials-manager.qcloud.19890605.xyz
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -15,12 +15,17 @@
 // @run-at       document-idle
 // ==/UserScript==
 
-// —— 与新版脚本（huayou-new-sync.user.js）的分工 ——
+// —— 运行位置与分工 ——
+// 本脚本运行在**何佳（旧系统）站点**上，向备件管理系统提交数据；新版脚本
+//（huayou-new-sync.user.js）运行在华友印尼数据平台站点上，同样向备件管理系统提交数据。
+// 两个脚本按申购单号分工，互不重叠：
 //   华友印尼数据平台脚本：申购单号 >= 阈值（默认 P05SG0300）
 //   本脚本（华友何佳旧系统）：申购单号 < 阈值（默认 P05SG0300）
-// 两个脚本互补、互不重叠；阈值在悬浮窗「连接与同步设置 → 申购单号上限（不含）」里改。
+// 阈值在悬浮窗「连接与同步设置 → 申购单号上限（不含）」里改。
+// 何佳站点与本系统不同源，提交数据走 GM_xmlhttpRequest（见 @connect）；何佳会话是同源会话，
+// 直接复用浏览器登录状态。
 // 本脚本对齐新版脚本的做法：按申购单号整单查询、整单批量回写、3 天冷却去重、
-// 首次请求做结构校验、悬浮窗输入即自动保存。
+// 首次请求做结构校验、悬浮窗输入即自动保存；游标与 3 天冷却都按项目隔离。
 //
 // —— 何佳请求协议（据附件 HAR 与站点自身实现核对，载荷逐字节一致）——
 //   1. POST /hjerp/servlet/ComIDServlet           取组织列表（华越物资供应追踪系统）
@@ -69,6 +74,8 @@
   // 本地更新记录（IndexedDB）：每个申购单记录最近成功同步时间，冷却期内不再查询何佳。
   const IDB_NAME = `${PREFIX}order_sync`;
   const IDB_STORE = "orders";
+  // 2 = 记录键改为「项目 + 申购单号」（多项目隔离），升级时重建该 store。
+  const IDB_VERSION = 2;
   const ORDER_COOLDOWN_DAYS = 3;
   const ORDER_COOLDOWN_MS = ORDER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
   const defaults = {
@@ -105,6 +112,8 @@
     config = { ...config, [name]: value };
     GM_setValue(key(name), value);
   };
+  // 当前项目 id（0 = 未选择）：本地同步状态（翻页游标、3 天冷却记录）一律按项目隔离。
+  const projectStateId = () => Number(config.projectId) || 0;
   const int = (value, fallback, min, max) => {
     const parsed = Number.parseInt(String(value), 10);
     return Number.isFinite(parsed)
@@ -189,6 +198,9 @@
   let stats = { scanned: 0, found: 0, updated: 0, skipped: 0, failed: 0 };
 
   // —— 本地更新记录（IndexedDB）：3 天内已成功同步过的申购单不再查询何佳 ——
+  // 记录按「项目 + 申购单号」隔离：同一申购单号可能同时存在于多个项目（项目域唯一键带
+  // project_id、跨项目允许同号），共享去重记录会把另一个项目里没同步过的单当成「已更新」跳过。
+  const idbRecordKey = (projectId, orderNo) => `${projectId}\u0000${orderNo}`;
   // 油猴隔离沙箱里可能拿不到页面的 indexedDB，需回退到 unsafeWindow（同源页面）。
   const idbFactory = () => {
     if (typeof indexedDB !== "undefined") return indexedDB;
@@ -207,22 +219,22 @@
       }
       let openRequest;
       try {
-        openRequest = factory.open(IDB_NAME, 1);
+        openRequest = factory.open(IDB_NAME, IDB_VERSION);
       } catch (error) {
         reject(error);
         return;
       }
       openRequest.onupgradeneeded = () => {
         const db = openRequest.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: "orderNo" });
-        }
+        // 旧结构（keyPath=orderNo，跨项目共享去重）直接重建：冷却记录本身只有 3 天，丢了无妨。
+        if (db.objectStoreNames.contains(IDB_STORE)) db.deleteObjectStore(IDB_STORE);
+        db.createObjectStore(IDB_STORE, { keyPath: "key" });
       };
       openRequest.onsuccess = () => resolve(openRequest.result);
       openRequest.onerror = () =>
         reject(openRequest.error || new Error("IndexedDB 打开失败"));
     });
-  const idbRecentOrderNos = async (cooldownMs) => {
+  const idbRecentOrderNos = async (projectId, cooldownMs) => {
     const db = await openIdb();
     try {
       return await new Promise((resolve, reject) => {
@@ -232,6 +244,8 @@
           const now = Date.now();
           const recent = new Set();
           for (const record of request.result || []) {
+            // 只认当前项目的记录，避免跨项目“误判已同步”。
+            if (Number(record.projectId) !== Number(projectId)) continue;
             if (now - Number(record.updatedAt) < cooldownMs) {
               recent.add(String(record.orderNo));
             }
@@ -245,12 +259,14 @@
       db.close();
     }
   };
-  const idbRememberOrder = async (orderNo) => {
+  const idbRememberOrder = async (projectId, orderNo) => {
     const db = await openIdb();
     try {
       return await new Promise((resolve, reject) => {
         const transaction = db.transaction(IDB_STORE, "readwrite");
         transaction.objectStore(IDB_STORE).put({
+          key: idbRecordKey(projectId, orderNo),
+          projectId: Number(projectId),
           orderNo: String(orderNo),
           updatedAt: Date.now(),
         });
@@ -436,11 +452,15 @@
   };
   // —— 整单目标：一次拿一批申购单（含每单待同步追溯号），并带上单号上限 ——
   let signDateSyncSupported = true;
+  // 翻页游标按项目隔离：line.id 游标只在同一个项目里有意义，跨项目共享会让切项目后跳过一片目标。
+  const readCursor = () =>
+    Number(GM_getValue(`${key("cursor")}_${projectStateId()}`, 0)) || 0;
+  const writeCursor = (value) =>
+    GM_setValue(`${key("cursor")}_${projectStateId()}`, Number(value) || 0);
   const orderTargetsUrl = (fieldList) => {
     const limit = int(config.batchSize, 30, 1, 200);
-    const cursor = Number(GM_getValue(key("cursor"), 0)) || 0;
     const maxPo = clean(config.maxPurchaseOrderNo);
-    const base = `${MATERIALS_API}/purchase-record-sync/order-targets?limit=${limit}&cursor=${cursor}&fields=${encodeURIComponent(fieldList)}`;
+    const base = `${MATERIALS_API}/purchase-record-sync/order-targets?limit=${limit}&cursor=${readCursor()}&fields=${encodeURIComponent(fieldList)}`;
     // 上限参数由后端做半开区间过滤 [min, max)：单号 < 上限的记录才属于旧系统。
     return maxPo ? `${base}&max_purchase_order_no=${encodeURIComponent(maxPo)}` : base;
   };
@@ -477,8 +497,8 @@
         throw structuralError("整单目标缺少追溯号列表");
     }
     const rows = result.items;
-    if (!rows.length && Number(GM_getValue(key("cursor"), 0)) > 0) {
-      GM_setValue(key("cursor"), 0);
+    if (!rows.length && readCursor() > 0) {
+      writeCursor(0);
       return orderTargets();
     }
     return rows;
@@ -883,7 +903,7 @@
   // 让后续批次继续处理更早的申购单（与新版脚本一致）。
   const advanceCursor = (orders) => {
     const ids = orders.map((order) => Number(order.cursor_id)).filter(Number.isFinite);
-    if (ids.length) GM_setValue(key("cursor"), Math.min(...ids));
+    if (ids.length) writeCursor(Math.min(...ids));
   };
 
   const run = async (trigger = "manual") => {
@@ -939,7 +959,7 @@
       let recentOrderNos = new Set();
       let idbAvailable = true;
       try {
-        recentOrderNos = await idbRecentOrderNos(ORDER_COOLDOWN_MS);
+        recentOrderNos = await idbRecentOrderNos(projectStateId(), ORDER_COOLDOWN_MS);
       } catch (error) {
         idbAvailable = false;
         log(`本地更新记录不可用（${error.message}），本次不做 3 天去重`, "warn");
@@ -1054,7 +1074,7 @@
           // 查询与（如需）回写都成功后才记录最近更新时间；演练模式不记，避免挡住后续正式同步。
           if (!config.dryRun) {
             try {
-              await idbRememberOrder(orderNo);
+              await idbRememberOrder(projectStateId(), orderNo);
             } catch (error) {
               log(`申购单 ${orderNo}：写入本地更新记录失败：${error.message}`, "warn");
             }

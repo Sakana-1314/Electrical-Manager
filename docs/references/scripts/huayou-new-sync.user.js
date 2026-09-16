@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.4.0
+// @version      3.5.0
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-new-sync.user.js
@@ -89,6 +89,8 @@
     config = { ...config, [name]: value };
     GM_setValue(key(name), value);
   };
+  // 当前项目 id（0 = 未选择）：本地同步状态（翻页游标、3 天冷却记录）一律按项目隔离。
+  const projectStateId = () => Number(config.projectId) || 0;
   const int = (value, fallback, min, max) => {
     const parsed = Number.parseInt(String(value), 10);
     return Number.isFinite(parsed)
@@ -147,10 +149,15 @@
   };
 
   // —— 本地更新记录（IndexedDB）：每个申购单记录最近成功同步时间，冷却期内不再请求平台 ——
+  // 记录按「项目 + 申购单号」隔离：同一申购单号可能同时存在于多个项目（项目域唯一键带
+  // project_id、跨项目允许同号），共享去重记录会把另一个项目里没同步过的单当成「已更新」跳过。
   const IDB_NAME = `${PREFIX}order_sync`;
   const IDB_STORE = "orders";
+  // 2 = 记录键改为「项目 + 申购单号」（多项目隔离），升级时重建该 store。
+  const IDB_VERSION = 2;
   const ORDER_COOLDOWN_DAYS = 3;
   const ORDER_COOLDOWN_MS = ORDER_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+  const idbRecordKey = (projectId, orderNo) => `${projectId}\u0000${orderNo}`;
   // 油猴隔离沙箱里可能拿不到页面的 indexedDB，需回退到 unsafeWindow（同源页面）。
   const idbFactory = () => {
     if (typeof indexedDB !== "undefined") return indexedDB;
@@ -169,22 +176,22 @@
       }
       let openRequest;
       try {
-        openRequest = factory.open(IDB_NAME, 1);
+        openRequest = factory.open(IDB_NAME, IDB_VERSION);
       } catch (error) {
         reject(error);
         return;
       }
       openRequest.onupgradeneeded = () => {
         const db = openRequest.result;
-        if (!db.objectStoreNames.contains(IDB_STORE)) {
-          db.createObjectStore(IDB_STORE, { keyPath: "orderNo" });
-        }
+        // 旧结构（keyPath=orderNo，跨项目共享去重）直接重建：冷却记录本身只有 3 天，丢了无妨。
+        if (db.objectStoreNames.contains(IDB_STORE)) db.deleteObjectStore(IDB_STORE);
+        db.createObjectStore(IDB_STORE, { keyPath: "key" });
       };
       openRequest.onsuccess = () => resolve(openRequest.result);
       openRequest.onerror = () =>
         reject(openRequest.error || new Error("IndexedDB 打开失败"));
     });
-  const idbRecentOrderNos = async (cooldownMs) => {
+  const idbRecentOrderNos = async (projectId, cooldownMs) => {
     const db = await openIdb();
     try {
       return await new Promise((resolve, reject) => {
@@ -195,6 +202,8 @@
           const now = Date.now();
           const recent = new Set();
           for (const record of request.result || []) {
+            // 只认当前项目的记录，避免跨项目“误判已同步”。
+            if (Number(record.projectId) !== Number(projectId)) continue;
             if (now - Number(record.updatedAt) < cooldownMs) {
               recent.add(String(record.orderNo));
             }
@@ -208,12 +217,14 @@
       db.close();
     }
   };
-  const idbRememberOrder = async (orderNo) => {
+  const idbRememberOrder = async (projectId, orderNo) => {
     const db = await openIdb();
     try {
       return await new Promise((resolve, reject) => {
         const transaction = db.transaction(IDB_STORE, "readwrite");
         transaction.objectStore(IDB_STORE).put({
+          key: idbRecordKey(projectId, orderNo),
+          projectId: Number(projectId),
           orderNo: String(orderNo),
           updatedAt: Date.now(),
         });
@@ -709,9 +720,14 @@
       throw structuralError(`${label}不是 JSON 对象`);
     return payload;
   };
+  // 翻页游标按项目隔离：line.id 游标只在同一个项目里有意义，跨项目共享会让切项目后跳过一片目标。
+  const readCursor = () =>
+    Number(GM_getValue(`${key("cursor")}_${projectStateId()}`, 0)) || 0;
+  const writeCursor = (value) =>
+    GM_setValue(`${key("cursor")}_${projectStateId()}`, Number(value) || 0);
   const orderTargets = async () => {
     const limit = int(config.batchSize, 30, 1, 200);
-    const cursor = Number(GM_getValue(key("cursor"), 0)) || 0;
+    const cursor = readCursor();
     const minPo = clean(config.minPurchaseOrderNo);
     const fields = () => (signDateSyncSupported ? SYNC_FIELDS : LEGACY_SYNC_FIELDS);
     const targetsUrl = (fieldList) => {
@@ -745,7 +761,7 @@
     }
     const rows = result.items;
     if (!rows.length && cursor > 0) {
-      GM_setValue(key("cursor"), 0);
+      writeCursor(0);
       return orderTargets();
     }
     return rows;
@@ -982,7 +998,7 @@
             .map((order) => Number(order.cursor_id))
             .filter(Number.isFinite);
           if (pageCursorIds.length) {
-            GM_setValue(key("cursor"), Math.min(...pageCursorIds));
+            writeCursor(Math.min(...pageCursorIds));
           }
           log("本批申购单均非 P 开头，已跳过并推进批次，本次未请求平台", "warn");
         } else {
@@ -994,7 +1010,7 @@
       let recentOrderNos = new Set();
       let idbAvailable = true;
       try {
-        recentOrderNos = await idbRecentOrderNos(ORDER_COOLDOWN_MS);
+        recentOrderNos = await idbRecentOrderNos(projectStateId(), ORDER_COOLDOWN_MS);
       } catch (error) {
         idbAvailable = false;
         log(`本地更新记录不可用（${error.message}），本次不做 3 天去重`, "warn");
@@ -1022,7 +1038,7 @@
           .map((order) => Number(order.cursor_id))
           .filter(Number.isFinite);
         if (pageCursorIds.length) {
-          GM_setValue(key("cursor"), Math.min(...pageCursorIds));
+          writeCursor(Math.min(...pageCursorIds));
         }
         status("全部在冷却期内", "success");
         log(
@@ -1108,7 +1124,7 @@
           // 查询与（如需）回写都成功后才记录最近更新时间；演练模式不记，避免挡住后续正式同步。
           if (!config.dryRun) {
             try {
-              await idbRememberOrder(orderNo);
+              await idbRememberOrder(projectStateId(), orderNo);
             } catch (error) {
               log(`申购单 ${orderNo}：写入本地更新记录失败：${error.message}`, "warn");
             }
@@ -1145,7 +1161,7 @@
         const cursorIds = orders
           .map((order) => Number(order.cursor_id))
           .filter(Number.isFinite);
-        if (cursorIds.length) GM_setValue(key("cursor"), Math.min(...cursorIds));
+        if (cursorIds.length) writeCursor(Math.min(...cursorIds));
         status(stats.failed ? "完成（有失败）" : "同步完成", stats.failed ? "warn" : "success");
         log(
           `同步完成：申购单 ${stats.scanned}，追溯号命中 ${stats.found}，更新 ${stats.updated}，失败 ${stats.failed}`,
