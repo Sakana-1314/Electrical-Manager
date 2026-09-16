@@ -51,9 +51,16 @@ async def create_item(
     *,
     name: str = "1# 回转窑主电机",
     model_spec: str = "YVFE3-315L1-4",
+    unit_name: str = "台",
+    usage: str = "窑尾收尘系统备机",
     **overrides: object,
 ) -> dict:
-    payload: dict[str, object] = {"name": name, "model_spec": model_spec}
+    payload: dict[str, object] = {
+        "name": name,
+        "model_spec": model_spec,
+        "unit_name": unit_name,
+        "usage": usage,
+    }
     payload.update(overrides)
     response = await client.post("/api/v1/ledger-items", headers=headers, json=payload)
     assert response.status_code == 201, response.text
@@ -220,11 +227,33 @@ async def test_create_item_normalizes_tags_and_rejects_unknown_tag(
     assert [ref["path"] for ref in created["tags"]] == ["配电柜", "电动机"]
     assert created["quantity"] == 3
     assert created["version"] == 1
+    # 子项号 / 单位 / 用途：前两个可留空，单位与用途必填
+    assert created["subitem_no"] is None
+    assert created["unit_name"] == "台"
+    assert created["usage"] == "窑尾收尘系统备机"
+
+    missing_unit = await client.post(
+        "/api/v1/ledger-items", headers=headers, json={"name": "x", "model_spec": "y"}
+    )
+    assert missing_unit.status_code == 422, missing_unit.text
+
+    blank_usage = await client.post(
+        "/api/v1/ledger-items",
+        headers=headers,
+        json={"name": "x", "model_spec": "y", "unit_name": "台", "usage": "   "},
+    )
+    assert blank_usage.status_code == 422, blank_usage.text
 
     unknown = await client.post(
         "/api/v1/ledger-items",
         headers=headers,
-        json={"name": "x", "model_spec": "y", "tag_ids": [9999]},
+        json={
+            "name": "x",
+            "model_spec": "y",
+            "unit_name": "台",
+            "usage": "测试用途",
+            "tag_ids": [9999],
+        },
     )
     assert unknown.status_code == 400, unknown.text
     assert unknown.json()["code"] == "INVALID_TAG_ID"
@@ -233,14 +262,26 @@ async def test_create_item_normalizes_tags_and_rejects_unknown_tag(
     duplicated = await client.post(
         "/api/v1/ledger-items",
         headers=headers,
-        json={"name": "x", "model_spec": "y", "tag_ids": [first["id"], first["id"]]},
+        json={
+            "name": "x",
+            "model_spec": "y",
+            "unit_name": "台",
+            "usage": "测试用途",
+            "tag_ids": [first["id"], first["id"]],
+        },
     )
     assert duplicated.status_code == 422, duplicated.text
 
     negative = await client.post(
         "/api/v1/ledger-items",
         headers=headers,
-        json={"name": "x", "model_spec": "y", "quantity": -1},
+        json={
+            "name": "x",
+            "model_spec": "y",
+            "unit_name": "台",
+            "usage": "测试用途",
+            "quantity": -1,
+        },
     )
     assert negative.status_code == 422, negative.text
 
@@ -319,6 +360,9 @@ async def test_update_and_delete_item(client: AsyncClient) -> None:
         headers=headers,
         json={
             "quantity": 5,
+            "unit_name": "套",
+            "usage": "备用抽屉柜",
+            "subitem_no": "TG-2026-018",
             "remark": "已核对",
             "tag_ids": [tag["id"]],
             "version": created["version"],
@@ -326,8 +370,22 @@ async def test_update_and_delete_item(client: AsyncClient) -> None:
     )
     assert updated.status_code == 200, updated.text
     assert updated.json()["quantity"] == 5
+    assert updated.json()["unit_name"] == "套"
+    assert updated.json()["usage"] == "备用抽屉柜"
+    assert updated.json()["subitem_no"] == "TG-2026-018"
     assert updated.json()["tag_ids"] == [tag["id"]]
     assert updated.json()["version"] == created["version"] + 1
+
+    # 子项号传空串表示清空；未传的字段保持原值
+    cleared = await client.patch(
+        f"/api/v1/ledger-items/{created['id']}",
+        headers=headers,
+        json={"subitem_no": "  ", "version": updated.json()["version"]},
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["subitem_no"] is None
+    assert cleared.json()["unit_name"] == "套"
+    assert cleared.json()["usage"] == "备用抽屉柜"
 
     stale = await client.patch(
         f"/api/v1/ledger-items/{created['id']}",
@@ -339,7 +397,7 @@ async def test_update_and_delete_item(client: AsyncClient) -> None:
 
     removed = await client.delete(
         f"/api/v1/ledger-items/{created['id']}",
-        headers={**headers, "If-Match": str(updated.json()["version"])},
+        headers={**headers, "If-Match": str(cleared.json()["version"])},
     )
     assert removed.status_code == 204, removed.text
 

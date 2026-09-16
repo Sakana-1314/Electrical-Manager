@@ -3575,7 +3575,10 @@ export interface components {
          * @example {
          *       "name": "窑尾排风机电机",
          *       "model_spec": "YKK-400-8 220kW",
+         *       "subitem_no": "TG-2026-025",
          *       "quantity": 2,
+         *       "unit_name": "台",
+         *       "usage": "窑尾收尘系统配套",
          *       "remark": "窑尾收尘系统配套",
          *       "tag_ids": [
          *         5,
@@ -3591,11 +3594,17 @@ export interface components {
             name: string;
             /** Model Spec */
             model_spec: string;
+            /** Subitem No */
+            subitem_no?: string | null;
             /**
              * Quantity
              * @default 0
              */
             quantity: number;
+            /** Unit Name */
+            unit_name: string;
+            /** Usage */
+            usage: string;
             /** Remark */
             remark?: string | null;
             /** Tag Ids */
@@ -3610,7 +3619,10 @@ export interface components {
          *       "id": 1,
          *       "name": "1# 回转窑主电机",
          *       "model_spec": "YKK-450-6 355kW",
+         *       "subitem_no": "TG-2026-011",
          *       "quantity": 1,
+         *       "unit_name": "台",
+         *       "usage": "窑尾主传动备用电机",
          *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
          *       "tag_ids": [
          *         6
@@ -3644,8 +3656,14 @@ export interface components {
             name: string;
             /** Model Spec */
             model_spec: string;
+            /** Subitem No */
+            subitem_no?: string | null;
             /** Quantity */
             quantity: number;
+            /** Unit Name */
+            unit_name: string;
+            /** Usage */
+            usage: string;
             /** Remark */
             remark?: string | null;
             /** Tag Ids */
@@ -3672,7 +3690,10 @@ export interface components {
          * @example {
          *       "name": "窑尾排风机电机",
          *       "model_spec": "YKK-400-8 220kW",
+         *       "subitem_no": "TG-2026-025",
          *       "quantity": 3,
+         *       "unit_name": "台",
+         *       "usage": "窑尾收尘系统配套",
          *       "remark": "窑尾收尘系统配套，含 1 台备用",
          *       "tag_ids": [
          *         5,
@@ -3689,8 +3710,14 @@ export interface components {
             name?: string | null;
             /** Model Spec */
             model_spec?: string | null;
+            /** Subitem No */
+            subitem_no?: string | null;
             /** Quantity */
             quantity?: number | null;
+            /** Unit Name */
+            unit_name?: string | null;
+            /** Usage */
+            usage?: string | null;
             /** Remark */
             remark?: string | null;
             /** Tag Ids */
@@ -5892,7 +5919,10 @@ export interface components {
          *           "id": 1,
          *           "name": "1# 回转窑主电机",
          *           "model_spec": "YKK-450-6 355kW",
+         *           "subitem_no": "TG-2026-011",
          *           "quantity": 1,
+         *           "unit_name": "台",
+         *           "usage": "窑尾主传动备用电机",
          *           "remark": "窑尾主传动，2026 年 5 月更换轴承",
          *           "tag_ids": [
          *             6
@@ -5922,7 +5952,10 @@ export interface components {
          *           "id": 2,
          *           "name": "低压抽屉柜",
          *           "model_spec": "MNS-400 8E/2",
+         *           "subitem_no": "TG-2026-014",
          *           "quantity": 6,
+         *           "unit_name": "面",
+         *           "usage": "201 冶炼主厂房低压配电",
          *           "remark": "201 冶炼主厂房配电室",
          *           "tag_ids": [
          *             2,
@@ -5966,7 +5999,10 @@ export interface components {
          *           "id": 3,
          *           "name": "高压开关柜",
          *           "model_spec": "KYN28A-12 05",
+         *           "subitem_no": null,
          *           "quantity": 3,
+         *           "unit_name": "面",
+         *           "usage": "6kV 高压室馈出柜",
          *           "remark": "6kV 高压室",
          *           "tag_ids": [
          *             4
@@ -5987,7 +6023,10 @@ export interface components {
          *           "id": 4,
          *           "name": "窑尾高温风机变频器",
          *           "model_spec": "ACS880-07-0320A-3",
+         *           "subitem_no": "TG-2026-021",
          *           "quantity": 1,
+         *           "unit_name": "台",
+         *           "usage": "窑尾高温风机调速",
          *           "remark": "与主电机联锁，参数已备份",
          *           "tag_ids": [
          *             6,
@@ -6014,7 +6053,10 @@ export interface components {
          *           "id": 5,
          *           "name": "现场压力变送器",
          *           "model_spec": "EJA530E-JCS4N",
+         *           "subitem_no": null,
          *           "quantity": 12,
+         *           "unit_name": "只",
+         *           "usage": "现场压力监测",
          *           "remark": "暂未归类到具体装置",
          *           "tag_ids": [],
          *           "tags": [],
@@ -34656,7 +34698,10 @@ export interface operations {
                      *           "id": 1,
                      *           "name": "1# 回转窑主电机",
                      *           "model_spec": "YKK-450-6 355kW",
+                     *           "subitem_no": "TG-2026-011",
                      *           "quantity": 1,
+                     *           "unit_name": "台",
+                     *           "usage": "窑尾主传动备用电机",
                      *           "remark": "窑尾主传动，2026 年 5 月更换轴承",
                      *           "tag_ids": [
                      *             6
@@ -34686,7 +34731,10 @@ export interface operations {
                      *           "id": 2,
                      *           "name": "低压抽屉柜",
                      *           "model_spec": "MNS-400 8E/2",
+                     *           "subitem_no": "TG-2026-014",
                      *           "quantity": 6,
+                     *           "unit_name": "面",
+                     *           "usage": "201 冶炼主厂房低压配电",
                      *           "remark": "201 冶炼主厂房配电室",
                      *           "tag_ids": [
                      *             2,
@@ -34730,7 +34778,10 @@ export interface operations {
                      *           "id": 3,
                      *           "name": "高压开关柜",
                      *           "model_spec": "KYN28A-12 05",
+                     *           "subitem_no": null,
                      *           "quantity": 3,
+                     *           "unit_name": "面",
+                     *           "usage": "6kV 高压室馈出柜",
                      *           "remark": "6kV 高压室",
                      *           "tag_ids": [
                      *             4
@@ -34751,7 +34802,10 @@ export interface operations {
                      *           "id": 4,
                      *           "name": "窑尾高温风机变频器",
                      *           "model_spec": "ACS880-07-0320A-3",
+                     *           "subitem_no": "TG-2026-021",
                      *           "quantity": 1,
+                     *           "unit_name": "台",
+                     *           "usage": "窑尾高温风机调速",
                      *           "remark": "与主电机联锁，参数已备份",
                      *           "tag_ids": [
                      *             6,
@@ -34778,7 +34832,10 @@ export interface operations {
                      *           "id": 5,
                      *           "name": "现场压力变送器",
                      *           "model_spec": "EJA530E-JCS4N",
+                     *           "subitem_no": null,
                      *           "quantity": 12,
+                     *           "unit_name": "只",
+                     *           "usage": "现场压力监测",
                      *           "remark": "暂未归类到具体装置",
                      *           "tag_ids": [],
                      *           "tags": [],
@@ -34909,7 +34966,10 @@ export interface operations {
                      *       "id": 1,
                      *       "name": "1# 回转窑主电机",
                      *       "model_spec": "YKK-450-6 355kW",
+                     *       "subitem_no": "TG-2026-011",
                      *       "quantity": 1,
+                     *       "unit_name": "台",
+                     *       "usage": "窑尾主传动备用电机",
                      *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
                      *       "tag_ids": [
                      *         6
@@ -35050,7 +35110,10 @@ export interface operations {
                      *       "id": 1,
                      *       "name": "1# 回转窑主电机",
                      *       "model_spec": "YKK-450-6 355kW",
+                     *       "subitem_no": "TG-2026-011",
                      *       "quantity": 1,
+                     *       "unit_name": "台",
+                     *       "usage": "窑尾主传动备用电机",
                      *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
                      *       "tag_ids": [
                      *         6
@@ -35303,7 +35366,10 @@ export interface operations {
                      *       "id": 1,
                      *       "name": "1# 回转窑主电机",
                      *       "model_spec": "YKK-450-6 355kW",
+                     *       "subitem_no": "TG-2026-011",
                      *       "quantity": 1,
+                     *       "unit_name": "台",
+                     *       "usage": "窑尾主传动备用电机",
                      *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
                      *       "tag_ids": [
                      *         6

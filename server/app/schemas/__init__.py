@@ -2025,6 +2025,14 @@ LedgerModelSpec = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)
 ]
 LedgerRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
+# 子项号：技改项目下的子项编号，可留空（与申购计划的 subitem_no 同口径）。
+# 不设 min_length：与 remark 一样，PATCH 传空串表示「清空该字段」。
+LedgerSubitemNo = Annotated[str, StringConstraints(strip_whitespace=True, max_length=64)]
+# 单位与数量一起展示（列表按「12 台」呈现），因此必填。
+LedgerUnitName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)
+]
+LedgerUsage = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 LedgerTagRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
 # 数量是整数件数（按台 / 套 / 件统计）。
 LedgerQuantity = Annotated[int, Field(ge=0)]
@@ -2092,7 +2100,10 @@ class LedgerItemRead(ReadModel):
     id: int
     name: str
     model_spec: str
+    subitem_no: str | None = None
     quantity: int
+    unit_name: str
+    usage: str
     remark: str | None = None
     tag_ids: list[int]
     tags: list[LedgerTagRefRead]
@@ -2105,7 +2116,10 @@ class LedgerItemRead(ReadModel):
 class LedgerItemCreate(RequestModel):
     name: LedgerName
     model_spec: LedgerModelSpec
+    subitem_no: LedgerSubitemNo | None = None
     quantity: LedgerQuantity = 0
+    unit_name: LedgerUnitName
+    usage: LedgerUsage
     remark: LedgerRemark | None = None
     tag_ids: LedgerTagIds = Field(default_factory=list)
     image_ids: LedgerImageIds = Field(default_factory=list)
@@ -2126,7 +2140,10 @@ class LedgerItemCreate(RequestModel):
 class LedgerItemUpdate(RequestModel):
     name: LedgerName | None = None
     model_spec: LedgerModelSpec | None = None
+    subitem_no: LedgerSubitemNo | None = None
     quantity: LedgerQuantity | None = None
+    unit_name: LedgerUnitName | None = None
+    usage: LedgerUsage | None = None
     remark: LedgerRemark | None = None
     tag_ids: LedgerTagIds | None = None
     image_ids: LedgerImageIds | None = None

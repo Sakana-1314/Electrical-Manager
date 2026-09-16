@@ -4,6 +4,7 @@
  *
  * 与隐患、申购等模块一致：新增与编辑共用同一弹窗，删除入口在页脚左下角，列表行点击进入编辑。
  * 标签是多选（任意层级都可挂），提交时按 id 升序交给后端，后端再规范化为逗号分隔串落库。
+ * 单位紧挨数量（与申购计划同一顺序），列表中两者合并成「12 台」展示；子项号可留空。
  */
 import { computed, reactive, ref, watch } from 'vue'
 import {
@@ -51,7 +52,10 @@ const images = ref<FileObject[]>([])
 const form = reactive({
   name: '',
   modelSpec: '',
+  subitemNo: '',
   quantity: 1,
+  unitName: '',
+  usage: '',
   tagIds: [] as number[],
   remark: '',
 })
@@ -59,6 +63,8 @@ const form = reactive({
 const rules: FormRules = {
   name: { required: true, message: '请输入台账名称', trigger: ['input', 'blur'] },
   modelSpec: { required: true, message: '请输入型号', trigger: ['input', 'blur'] },
+  unitName: { required: true, message: '请输入单位', trigger: ['input', 'blur'] },
+  usage: { required: true, message: '请输入用途', trigger: ['input', 'blur'] },
 }
 
 /** 标签选择器选项：与标签树同构，任意层级都能选中。 */
@@ -67,7 +73,16 @@ const tagOptions = computed<TreeSelectOption[]>(
 )
 
 function resetForm(): void {
-  Object.assign(form, { name: '', modelSpec: '', quantity: 1, tagIds: [], remark: '' })
+  Object.assign(form, {
+    name: '',
+    modelSpec: '',
+    subitemNo: '',
+    quantity: 1,
+    unitName: '',
+    usage: '',
+    tagIds: [],
+    remark: '',
+  })
   images.value = []
   formRef.value?.restoreValidation()
 }
@@ -76,7 +91,10 @@ function applyDetail(item: LedgerItem): void {
   Object.assign(form, {
     name: item.name,
     modelSpec: item.model_spec,
+    subitemNo: item.subitem_no ?? '',
     quantity: item.quantity,
+    unitName: item.unit_name,
+    usage: item.usage,
     tagIds: [...item.tag_ids],
     remark: item.remark ?? '',
   })
@@ -113,7 +131,11 @@ function payload(): LedgerItemWrite {
   return {
     name: form.name.trim(),
     model_spec: form.modelSpec.trim(),
+    // 子项号可留空：空串发给后端即「清空该字段」
+    subitem_no: form.subitemNo.trim(),
     quantity: form.quantity ?? 0,
+    unit_name: form.unitName.trim(),
+    usage: form.usage.trim(),
     remark: form.remark.trim() || null,
     // 标签 id 去重升序：与后端存储口径一致，避免提交顺序影响回显
     tag_ids: [...new Set(form.tagIds)].sort((a, b) => a - b),
@@ -199,14 +221,40 @@ function confirmDelete(): void {
           </n-form-item>
         </n-grid-item>
         <n-grid-item>
-          <n-form-item label="数量">
-            <n-input-number
-              v-model:value="form.quantity"
-              :min="0"
-              :precision="0"
-              class="full-width"
-              placeholder="按台 / 套 / 件统计"
+          <n-form-item label="子项号">
+            <n-input
+              v-model:value="form.subitemNo"
+              maxlength="64"
+              placeholder="可留空，如 TG-2026-018"
             />
+          </n-form-item>
+        </n-grid-item>
+        <n-grid-item>
+          <n-form-item label="用途" path="usage">
+            <n-input
+              v-model:value="form.usage"
+              maxlength="500"
+              placeholder="如：窑尾收尘系统配套"
+            />
+          </n-form-item>
+        </n-grid-item>
+        <n-grid-item>
+          <n-form-item label="数量" path="unitName">
+            <div class="quantity-row">
+              <n-input-number
+                v-model:value="form.quantity"
+                :min="0"
+                :precision="0"
+                class="quantity-input"
+                placeholder="按台 / 套 / 件统计"
+              />
+              <n-input
+                v-model:value="form.unitName"
+                maxlength="32"
+                class="unit-input"
+                placeholder="单位，如 台"
+              />
+            </div>
           </n-form-item>
         </n-grid-item>
         <n-grid-item>
@@ -255,6 +303,22 @@ function confirmDelete(): void {
 </template>
 
 <style scoped>
+/* 数量与单位同一行：列表里两者也是合并展示的（「12 台」） */
+.quantity-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.quantity-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.unit-input {
+  flex: 0 0 104px;
+}
+
 .modal-footer {
   display: flex;
   align-items: center;

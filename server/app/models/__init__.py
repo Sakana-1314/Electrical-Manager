@@ -1020,7 +1020,11 @@ class LedgerTagImage(ProjectScoped, Base):
 
 
 class Ledger(ProjectScoped, AuditMixin, Base):
-    """台账记录：电气台账总览的一行（名称 / 型号 / 数量 / 备注 / 图片 + 标签）。
+    """台账记录：电气台账总览的一行。
+
+    字段：名称 / 型号 / 子项号 / 数量 / 单位 / 用途 / 备注 + 标签 + 图片。
+
+    单位与数量一起展示（界面按「12 台」呈现），子项号沿用申购计划的技改项目子项号口径。
 
     `tag_ids` 是英文逗号分隔的标签 id（如 `3,12,15`），由 service 统一规范化写入
     （去重、升序、无空格；空串表示未挂标签）。按标签筛选时用「左右补逗号再精确命中」
@@ -1032,8 +1036,12 @@ class Ledger(ProjectScoped, AuditMixin, Base):
     id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     model_spec: Mapped[str] = mapped_column(String(255), nullable=False)
-    # 数量是整数件数（按台/套/件统计，不做小数）。
+    # 子项号：技改项目下的子项编号，可留空（口径与申购计划的 subitem_no 一致）。
+    subitem_no: Mapped[str | None] = mapped_column(String(64))
+    # 数量是整数件数（按台/套/件统计，不做小数），单位与数量一起展示。
     quantity: Mapped[int] = mapped_column(UINT, nullable=False, default=0, server_default="0")
+    unit_name: Mapped[str] = mapped_column(String(32), nullable=False)
+    usage: Mapped[str] = mapped_column(String(500), nullable=False)
     remark: Mapped[str | None] = mapped_column(String(1000))
     tag_ids: Mapped[str] = mapped_column(String(500), nullable=False, default="", server_default="")
     images: Mapped[list[LedgerImage]] = relationship(

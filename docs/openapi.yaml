@@ -19415,7 +19415,10 @@ paths:
                 - id: 1
                   name: 1# 回转窑主电机
                   model_spec: YKK-450-6 355kW
+                  subitem_no: TG-2026-011
                   quantity: 1
+                  unit_name: 台
+                  usage: 窑尾主传动备用电机
                   remark: 窑尾主传动，2026 年 5 月更换轴承
                   tag_ids:
                   - 6
@@ -19436,7 +19439,10 @@ paths:
                 - id: 2
                   name: 低压抽屉柜
                   model_spec: MNS-400 8E/2
+                  subitem_no: TG-2026-014
                   quantity: 6
+                  unit_name: 面
+                  usage: 201 冶炼主厂房低压配电
                   remark: 201 冶炼主厂房配电室
                   tag_ids:
                   - 2
@@ -19467,7 +19473,10 @@ paths:
                 - id: 3
                   name: 高压开关柜
                   model_spec: KYN28A-12 05
+                  subitem_no: null
                   quantity: 3
+                  unit_name: 面
+                  usage: 6kV 高压室馈出柜
                   remark: 6kV 高压室
                   tag_ids:
                   - 4
@@ -19482,7 +19491,10 @@ paths:
                 - id: 4
                   name: 窑尾高温风机变频器
                   model_spec: ACS880-07-0320A-3
+                  subitem_no: TG-2026-021
                   quantity: 1
+                  unit_name: 台
+                  usage: 窑尾高温风机调速
                   remark: 与主电机联锁，参数已备份
                   tag_ids:
                   - 6
@@ -19501,7 +19513,10 @@ paths:
                 - id: 5
                   name: 现场压力变送器
                   model_spec: EJA530E-JCS4N
+                  subitem_no: null
                   quantity: 12
+                  unit_name: 只
+                  usage: 现场压力监测
                   remark: 暂未归类到具体装置
                   tag_ids: []
                   tags: []
@@ -19601,7 +19616,10 @@ paths:
                 id: 1
                 name: 1# 回转窑主电机
                 model_spec: YKK-450-6 355kW
+                subitem_no: TG-2026-011
                 quantity: 1
+                unit_name: 台
+                usage: 窑尾主传动备用电机
                 remark: 窑尾主传动，2026 年 5 月更换轴承
                 tag_ids:
                 - 6
@@ -19709,7 +19727,10 @@ paths:
                 id: 1
                 name: 1# 回转窑主电机
                 model_spec: YKK-450-6 355kW
+                subitem_no: TG-2026-011
                 quantity: 1
+                unit_name: 台
+                usage: 窑尾主传动备用电机
                 remark: 窑尾主传动，2026 年 5 月更换轴承
                 tag_ids:
                 - 6
@@ -19822,7 +19843,10 @@ paths:
                 id: 1
                 name: 1# 回转窑主电机
                 model_spec: YKK-450-6 355kW
+                subitem_no: TG-2026-011
                 quantity: 1
+                unit_name: 台
+                usage: 窑尾主传动备用电机
                 remark: 窑尾主传动，2026 年 5 月更换轴承
                 tag_ids:
                 - 6
@@ -22228,11 +22252,27 @@ components:
           maxLength: 255
           minLength: 1
           title: Model Spec
+        subitem_no:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Subitem No
         quantity:
           type: integer
           minimum: 0.0
           title: Quantity
           default: 0
+        unit_name:
+          type: string
+          maxLength: 32
+          minLength: 1
+          title: Unit Name
+        usage:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Usage
         remark:
           anyOf:
           - type: string
@@ -22258,11 +22298,16 @@ components:
       required:
       - name
       - model_spec
+      - unit_name
+      - usage
       title: LedgerItemCreate
       examples:
       - name: 窑尾排风机电机
         model_spec: YKK-400-8 220kW
+        subitem_no: TG-2026-025
         quantity: 2
+        unit_name: 台
+        usage: 窑尾收尘系统配套
         remark: 窑尾收尘系统配套
         tag_ids:
         - 5
@@ -22280,9 +22325,20 @@ components:
         model_spec:
           type: string
           title: Model Spec
+        subitem_no:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subitem No
         quantity:
           type: integer
           title: Quantity
+        unit_name:
+          type: string
+          title: Unit Name
+        usage:
+          type: string
+          title: Usage
         remark:
           anyOf:
           - type: string
@@ -22320,6 +22376,8 @@ components:
       - name
       - model_spec
       - quantity
+      - unit_name
+      - usage
       - tag_ids
       - tags
       - images
@@ -22332,7 +22390,10 @@ components:
       - id: 1
         name: 1# 回转窑主电机
         model_spec: YKK-450-6 355kW
+        subitem_no: TG-2026-011
         quantity: 1
+        unit_name: 台
+        usage: 窑尾主传动备用电机
         remark: 窑尾主传动，2026 年 5 月更换轴承
         tag_ids:
         - 6
@@ -22366,12 +22427,32 @@ components:
             minLength: 1
           - type: 'null'
           title: Model Spec
+        subitem_no:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          title: Subitem No
         quantity:
           anyOf:
           - type: integer
             minimum: 0.0
           - type: 'null'
           title: Quantity
+        unit_name:
+          anyOf:
+          - type: string
+            maxLength: 32
+            minLength: 1
+          - type: 'null'
+          title: Unit Name
+        usage:
+          anyOf:
+          - type: string
+            maxLength: 500
+            minLength: 1
+          - type: 'null'
+          title: Usage
         remark:
           anyOf:
           - type: string
@@ -22407,7 +22488,10 @@ components:
       examples:
       - name: 窑尾排风机电机
         model_spec: YKK-400-8 220kW
+        subitem_no: TG-2026-025
         quantity: 3
+        unit_name: 台
+        usage: 窑尾收尘系统配套
         remark: 窑尾收尘系统配套，含 1 台备用
         tag_ids:
         - 5
@@ -25219,7 +25303,10 @@ components:
         - id: 1
           name: 1# 回转窑主电机
           model_spec: YKK-450-6 355kW
+          subitem_no: TG-2026-011
           quantity: 1
+          unit_name: 台
+          usage: 窑尾主传动备用电机
           remark: 窑尾主传动，2026 年 5 月更换轴承
           tag_ids:
           - 6
@@ -25240,7 +25327,10 @@ components:
         - id: 2
           name: 低压抽屉柜
           model_spec: MNS-400 8E/2
+          subitem_no: TG-2026-014
           quantity: 6
+          unit_name: 面
+          usage: 201 冶炼主厂房低压配电
           remark: 201 冶炼主厂房配电室
           tag_ids:
           - 2
@@ -25271,7 +25361,10 @@ components:
         - id: 3
           name: 高压开关柜
           model_spec: KYN28A-12 05
+          subitem_no: null
           quantity: 3
+          unit_name: 面
+          usage: 6kV 高压室馈出柜
           remark: 6kV 高压室
           tag_ids:
           - 4
@@ -25286,7 +25379,10 @@ components:
         - id: 4
           name: 窑尾高温风机变频器
           model_spec: ACS880-07-0320A-3
+          subitem_no: TG-2026-021
           quantity: 1
+          unit_name: 台
+          usage: 窑尾高温风机调速
           remark: 与主电机联锁，参数已备份
           tag_ids:
           - 6
@@ -25305,7 +25401,10 @@ components:
         - id: 5
           name: 现场压力变送器
           model_spec: EJA530E-JCS4N
+          subitem_no: null
           quantity: 12
+          unit_name: 只
+          usage: 现场压力监测
           remark: 暂未归类到具体装置
           tag_ids: []
           tags: []

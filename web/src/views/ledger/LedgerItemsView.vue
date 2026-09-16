@@ -1,6 +1,8 @@
 <script setup lang="ts">
 /**
- * 台账总览：台账记录列表（名称 / 型号 / 标签 / 数量 / 备注 / 图片）。
+ * 台账总览：台账记录列表（名称 / 型号 / 子项号 / 标签 / 数量 / 用途 / 备注 / 图片）。
+ *
+ * 单位跟随数量展示（如「12 台」），不单独占一列（与出入库明细、小程序列表同一口径）。
  *
  * 标签以多选筛选，命中「选中标签及其全部子孙标签」的记录（由服务端展开子孙）；
  * 整行点击进入编辑弹窗，写操作按 `ledger:write` 权限隐藏。
@@ -107,6 +109,17 @@ const allColumns: { key: string; label: string; column: DataTableColumns<LedgerI
     },
   },
   {
+    key: 'subitem_no',
+    label: '子项号',
+    column: {
+      title: '子项号',
+      key: 'subitem_no',
+      width: tableColumnWidths.code,
+      ellipsis: { tooltip: true },
+      render: (row) => row.subitem_no || '—',
+    },
+  },
+  {
     key: 'tags',
     label: '标签',
     column: {
@@ -148,6 +161,19 @@ const allColumns: { key: string; label: string; column: DataTableColumns<LedgerI
       key: 'quantity',
       width: tableColumnWidths.quantity,
       align: 'right',
+      // 单位与数量一起展示，如「12 台」
+      render: (row) => `${row.quantity} ${row.unit_name}`,
+    },
+  },
+  {
+    key: 'usage',
+    label: '用途',
+    column: {
+      title: '用途',
+      key: 'usage',
+      minWidth: tableColumnWidths.text,
+      ellipsis: { tooltip: true },
+      render: (row) => row.usage || '—',
     },
   },
   {
@@ -173,6 +199,7 @@ const allColumns: { key: string; label: string; column: DataTableColumns<LedgerI
   },
 ]
 
+// 列显隐的本地键带版本号：新增列时版本 +1，让旧选择失效，新列默认可见（与申购各页一致）。
 const visibleColumnKeys = ref<string[]>(allColumns.map((item) => item.key))
 const fieldOptions = allColumns.map((item) => ({ label: item.label, value: item.key }))
 const columns = computed(() =>
@@ -262,7 +289,7 @@ onMounted(loadTags)
         <ColumnVisibilityPicker
           :value="visibleColumnKeys"
           :options="fieldOptions"
-          storage-key="ledger.items.visible-columns.v1"
+          storage-key="ledger.items.visible-columns.v2"
           @update:value="visibleColumnKeys = $event"
         />
         <div class="filter-action-buttons">
