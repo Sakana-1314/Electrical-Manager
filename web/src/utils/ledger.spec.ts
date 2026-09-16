@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FileObject, LedgerTag } from '@/api/generated'
 import {
   buildLedgerTagTree,
+  collectSubtreeIds,
   formatTagIds,
   initialLedgerFilters,
   isOrphanTag,
@@ -120,5 +121,43 @@ describe('标签选择器与列表展示', () => {
     expect(level2[1]?.disabled).toBeUndefined()
     expect(level3[0]?.disabled).toBeUndefined()
     expect(level3[0]?.children?.[0]).toMatchObject({ key: 7, disabled: true })
+  })
+})
+
+describe('改上级（reparent）辅助', () => {
+  it('collectSubtreeIds 返回自身与全部子孙，环状脏数据也能终止', () => {
+    expect(collectSubtreeIds(tags, 1)).toEqual([1, 2, 3, 4])
+    expect(collectSubtreeIds(tags, 3)).toEqual([3])
+    expect(collectSubtreeIds(tags, 99)).toEqual([99])
+    // a → b → a：环里两个节点都只出现一次
+    const loop = [tag(11, 'a', 12), tag(12, 'b', 11)]
+    expect(collectSubtreeIds(loop, 11)).toEqual([11, 12])
+  })
+
+  it('传 excludeId 时自身与子孙置灰，兄弟与非本子树节点保持可选', () => {
+    const options = tagParentOptions(tags, 2)
+    const root = options[0]
+    // 配电柜(1) 不是 低压柜(2) 的子孙，仍可作上级
+    expect(root?.disabled).toBeUndefined()
+    const children = root?.children ?? []
+    expect(children[0]).toMatchObject({ key: 2, disabled: true })
+    // 低压柜自己的子标签也在禁用集里
+    expect(children[0]?.children?.[0]).toMatchObject({ key: 3, disabled: true })
+    // 同层兄弟与其它根节点不受影响
+    expect(children[1]?.disabled).toBeUndefined()
+    expect(options[1]?.disabled).toBeUndefined()
+  })
+
+  it('excludeId 为一级标签时整棵子树（含跨级子孙）都置灰', () => {
+    const deep = [...tags, { ...tag(7, '抽屉单元', 3), level: 3 }]
+    const options = tagParentOptions(deep, 1)
+    const root = options.find((option) => option.key === 1)
+    expect(root?.disabled).toBe(true)
+    expect(root?.children?.[0]?.disabled).toBe(true)
+    expect(root?.children?.[0]?.children?.[0]?.disabled).toBe(true)
+    expect(root?.children?.[0]?.children?.[0]?.children?.[0]).toMatchObject({
+      key: 7,
+      disabled: true,
+    })
   })
 })

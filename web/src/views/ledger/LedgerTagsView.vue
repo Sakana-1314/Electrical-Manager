@@ -4,7 +4,9 @@
  *
  * 标签最多 3 层，页面用横向树呈现（大类在左、子标签向右展开，连线由 vue3-tree-org 绘制）：
  * - 鼠标悬停节点时浮层展示备注与图片；
- * - 点击节点打开编辑弹窗，节点右下角「+ 子标签」在未到第 3 层且有写权限时出现；
+ * - 点击节点打开编辑弹窗（可改名称 / 备注 / 图片 / 上级标签）；节点上的「+」在未到第 3 层且有写权限时出现，
+ *   点它新增子标签并预选当前节点为上级；
+ * - 各层节点样式一致（同字号同字重、卡片同尺寸），层级只由连线与缩进表达，子标签数量用数字计数；
  * - 顶部下拉筛选「孤立标签 / 树标签」，清空即不限（与全站筛选下拉一致，不放「全部」）。
  */
 import { computed, ref, watch } from 'vue'
@@ -16,7 +18,7 @@ import {
   NPopover,
   NSelect,
   NSpin,
-  NTag,
+  NTooltip,
   useMessage,
   type SelectOption,
 } from 'naive-ui'
@@ -91,6 +93,15 @@ function openCreateChild(node: LedgerTagNode, event: MouseEvent): void {
 }
 
 /**
+ * 节点点击是否应该被忽略：只忽略落在「+」按钮上的点击。
+ * 该按钮在未悬停时是透明的（见样式），点它不应连带打开编辑弹窗。
+ */
+function clickedAddButton(event: MouseEvent): boolean {
+  const target = event.target
+  return target instanceof Element && target.closest('.ledger-tag-node__add') !== null
+}
+
+/**
  * 取节点上的原始标签数据。组件在不同回调里给的形状不同：
  * 默认插槽给的是树节点（自定义字段挂在 `$$data` 上），`on-node-click` 的第二个参数直接就是它。
  */
@@ -102,7 +113,8 @@ function tagOf(node: unknown): LedgerTag | null {
   return data.tag ?? null
 }
 
-function onNodeClick(node: unknown): void {
+function onNodeClick(event: MouseEvent, node: unknown): void {
+  if (clickedAddButton(event)) return
   const tag = tagOf(node)
   if (tag) openEdit(tag)
 }
@@ -156,41 +168,43 @@ function hasDetail(node: unknown): boolean {
             :node-draggable="false"
             :tool-bar="false"
             :define-menus="[]"
-            @on-node-click="(_event: MouseEvent, node: unknown) => onNodeClick(node)"
+            @on-node-click="(event: MouseEvent, node: unknown) => onNodeClick(event, node)"
           >
             <template #default="{ node }">
               <n-popover v-if="tagOf(node)" :disabled="!hasDetail(node)" trigger="hover" raw>
                 <template #trigger>
-                  <div
-                    class="ledger-tag-node"
-                    :class="tagOf(node)?.child_count ? 'is-branch' : 'is-leaf'"
-                    :title="tagOf(node)?.remark || tagOf(node)?.name"
-                  >
+                  <div class="ledger-tag-node" :title="tagOf(node)?.remark || tagOf(node)?.name">
                     <span class="ledger-tag-node__label">{{ node.label }}</span>
-                    <n-tag
-                      v-if="tagOf(node)?.child_count"
-                      size="small"
-                      type="info"
-                      :bordered="false"
-                    >
-                      {{ tagOf(node)?.child_count }} 个子标签
-                    </n-tag>
-                    <n-tag v-if="isOrphanTag(tagOf(node)!)" size="small" :bordered="false">
-                      孤立
-                    </n-tag>
-                    <n-button
-                      v-if="canWrite && (tagOf(node)?.level ?? 1) < LEDGER_TAG_MAX_LEVEL"
-                      text
-                      size="tiny"
-                      type="primary"
-                      class="ledger-tag-node__add"
-                      @click="openCreateChild(node, $event)"
-                    >
-                      <template #icon>
-                        <n-icon><AddOutline /></n-icon>
+                    <!-- 子标签数量：只用数字，含义靠 tooltip 说明 -->
+                    <n-tooltip v-if="tagOf(node)?.child_count" trigger="hover">
+                      <template #trigger>
+                        <span class="ledger-tag-node__count">{{ tagOf(node)?.child_count }}</span>
                       </template>
-                      子标签
-                    </n-button>
+                      {{ tagOf(node)?.child_count }} 个子标签
+                    </n-tooltip>
+                    <span v-if="isOrphanTag(tagOf(node)!)" class="ledger-tag-node__orphan">
+                      孤立
+                    </span>
+                    <n-tooltip
+                      v-if="canWrite && (tagOf(node)?.level ?? 1) < LEDGER_TAG_MAX_LEVEL"
+                      trigger="hover"
+                    >
+                      <template #trigger>
+                        <n-button
+                          text
+                          size="tiny"
+                          type="primary"
+                          class="ledger-tag-node__add"
+                          aria-label="添加子标签"
+                          @click="openCreateChild(node, $event)"
+                        >
+                          <template #icon>
+                            <n-icon><AddOutline /></n-icon>
+                          </template>
+                        </n-button>
+                      </template>
+                      添加子标签
+                    </n-tooltip>
                   </div>
                 </template>
                 <div class="ledger-tag-popover">
@@ -219,7 +233,6 @@ function hasDetail(node: unknown): boolean {
       v-model:show="showModal"
       :tag="editingTag"
       :parent-id="parentId"
-      :tags="tags"
       @saved="load"
     />
   </div>
@@ -242,19 +255,18 @@ function hasDetail(node: unknown): boolean {
   padding: 4px 0 12px;
 }
 
-/* 节点内容：只有一个名称 + 计数标签 + 可选「+ 子标签」入口。
-   颜色一律走 styles.css 里针对 .org-tree-horizontal 的令牌适配，这里只管尺寸与排版。 */
+/* 节点内容：名称 + 子标签计数 + 可选「+」入口。
+   各层节点样式刻意保持一致（同字号、同字重、同内边距）：层级由连线表达，
+   不用字号 / 字重 / 卡片尺寸区分；颜色一律走 styles.css 里针对 .org-tree-horizontal 的令牌适配，
+   这里只管尺寸与排版。 */
 .ledger-tag-node {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 120px;
   padding: 8px 14px;
-  white-space: nowrap;
-}
-
-.ledger-tag-node.is-leaf {
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .ledger-tag-node__label {
@@ -262,11 +274,24 @@ function hasDetail(node: unknown): boolean {
   font-weight: 500;
 }
 
-.ledger-tag-node.is-branch .ledger-tag-node__label {
-  font-size: 14px;
-  font-weight: 600;
+/* 子标签数量：一个安静的数字计数，不做成彩色标签以免抢层级视线 */
+.ledger-tag-node__count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background-color: var(--color-primary-soft);
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
 }
 
+.ledger-tag-node__orphan {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+/* 「+」入口：悬停节点时才显现（去掉文字，靠 tooltip 说明） */
 .ledger-tag-node__add {
   opacity: 0;
   transition: opacity 0.15s ease;

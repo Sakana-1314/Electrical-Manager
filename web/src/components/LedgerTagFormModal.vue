@@ -2,8 +2,9 @@
 /**
  * 标签节点新增 / 编辑弹窗。
  *
- * 标签是至多 3 层的树：新建时可选上级（已到第 3 层的节点置灰，不能再挂子标签），
- * 编辑时不允许改上级（避免子树深度变化），只改名称、备注与图片。
+ * 标签是至多 3 层的树：新增与编辑都选上级（不选 = 一级标签），
+ * 已到第 3 层的节点不能再挂子标签，编辑时自身与自己的子孙也不能选（会成环）——这两类在选项里置灰，
+ * 「移动后超过 3 层」由后端再校验一次（`LEDGER_TAG_MAX_LEVEL`）。
  * 删除入口在页脚左下角：有子标签或已被台账引用时后端返回 409，这里直接展示其文案。
  */
 import { computed, reactive, ref, watch } from 'vue'
@@ -23,17 +24,15 @@ import {
 import { ledgerApi } from '@/api/ledger'
 import type { FileObject, LedgerTag, LedgerTagWrite } from '@/api/generated'
 import ImageUploader from '@/components/ImageUploader.vue'
-import { tagParentOptions, tagPath } from '@/utils/ledger'
+import { tagParentOptions } from '@/utils/ledger'
 
 const props = withDefaults(
   defineProps<{
     show: boolean
     /** 编辑对象；为空表示新增 */
     tag?: LedgerTag | null
-    /** 新增时的上级标签（从节点上的「+ 子标签」进来时预填） */
+    /** 新增时的上级标签（从节点上的「+」进来时预填） */
     parentId?: number | null
-    /** 当前全部标签（用于上级选择与路径展示，由页面统一加载，避免弹窗重复请求） */
-    tags: LedgerTag[]
   }>(),
   { tag: null, parentId: null },
 )
@@ -51,25 +50,38 @@ const formRef = ref<FormInst | null>(null)
 const saving = ref(false)
 const deleting = ref(false)
 const images = ref<FileObject[]>([])
+/** 弹窗自己加载全量标签：页面可能正按「孤立 / 树标签」筛选，筛选后的局部列表不能当上级候选。 */
+const allTags = ref<LedgerTag[]>([])
+const loadingParent = ref(false)
 const form = reactive({ name: '', parentId: null as number | null, remark: '' })
 
 const rules: FormRules = {
   name: { required: true, message: '请输入标签名称', trigger: ['input', 'blur'] },
 }
 
-/** 上级标签选项：第 3 层节点置灰（不能再挂子标签）。 */
+/**
+ * 上级标签选项：第 3 层节点不能挂子标签，编辑时自身与自己的子孙也不能选（会成环）。
+ * 不选上级就是一级标签。
+ */
 const parentOptions = computed<TreeSelectOption[]>(
-  () => tagParentOptions(props.tags) as unknown as TreeSelectOption[],
+  () => tagParentOptions(allTags.value, props.tag?.id) as unknown as TreeSelectOption[],
 )
 
-/** 编辑态展示当前层级路径（上级不可改，用只读文本说明它挂在哪里）。 */
-const currentPath = computed(() =>
-  isEdit.value && props.tag ? tagPath(props.tags, props.tag) : '',
-)
+async function loadAllTags(): Promise<void> {
+  loadingParent.value = true
+  try {
+    allTags.value = await ledgerApi.tags()
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '上级标签加载失败')
+  } finally {
+    loadingParent.value = false
+  }
+}
 
 function resetForm(): void {
   Object.assign(form, {
     name: props.tag?.name ?? '',
+    // 一级标签的 parent_id 是 null，这里保持为空而不是回填自己
     parentId: props.tag?.parent_id ?? props.parentId ?? null,
     remark: props.tag?.remark ?? '',
   })
@@ -80,7 +92,9 @@ function resetForm(): void {
 watch(
   () => props.show,
   (open) => {
-    if (open) resetForm()
+    if (!open) return
+    resetForm()
+    void loadAllTags()
   },
 )
 
@@ -104,6 +118,7 @@ async function handleSubmit(): Promise<void> {
     }
     if (isEdit.value && props.tag) {
       await ledgerApi.updateTag(props.tag.id, {
+        parent_id: payload.parent_id,
         name: payload.name,
         remark: payload.remark,
         image_ids: payload.image_ids,
@@ -167,14 +182,13 @@ function confirmDelete(): void {
       </n-form-item>
       <n-form-item label="上级标签">
         <n-tree-select
-          v-if="!isEdit"
           v-model:value="form.parentId"
           :options="parentOptions"
+          :loading="loadingParent"
           clearable
           filterable
-          placeholder="不选则为一级标签（最多 3 层）"
+          placeholder="不选即为一级标签（最多 3 层）"
         />
-        <n-input v-else :value="currentPath" disabled />
       </n-form-item>
       <n-form-item label="备注">
         <n-input
