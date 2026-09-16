@@ -1,13 +1,15 @@
 """校验「MCP 服务」文档与代码一致。
 
-文档：`docs/websites/pages/dev-architecture.md` 的「MCP 服务」小节（工具清单、操作目录排除项）。
+文档：`docs/websites/pages/dev-architecture.md` 的「MCP 服务」小节（工具清单、操作目录排除项）
+      与 `resolveMcpUrl` 行；`web/src/config/env.ts` 的 MCP 链接参数顺序。
 代码：`server/app/mcp_server.py` 的工具注册与 `EXCLUDED_PATHS` / `EXCLUDED_PREFIXES`。
 
 做的事：
 1. 代码里注册的每个 MCP 工具都必须在文档里出现，且文档写明请求头传参与附件上限；
-2. 文档里写的排除清单必须与代码的排除清单完全一致（多一个少一个都失败）。
+2. 文档里写的排除清单必须与代码的排除清单完全一致（多一个少一个都失败）；
+3. 文档里的 MCP 链接必须体现「`project_id` 在 `token` 之前」的参数顺序。
 
-新增/删除 MCP 工具、改动排除清单时忘了同步文档，CI 会在这里失败。
+新增/删除 MCP 工具、改动排除清单或链接参数顺序时忘了同步文档，CI 会在这里失败。
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from app.mcp_server import EXCLUDED_PATHS, EXCLUDED_PREFIXES, mcp
 SERVER_DIR = Path(__file__).resolve().parents[1]
 REPO_ROOT = SERVER_DIR.parent
 ARCHITECTURE_DOC = REPO_ROOT / "docs" / "websites" / "pages" / "dev-architecture.md"
+ENV_TS = REPO_ROOT / "web" / "src" / "config" / "env.ts"
 SECTION_START = "#### MCP 服务（`server/app/mcp_server.py`）"
 SECTION_END = "#### 健康检查与接口文档"
 
@@ -78,3 +81,22 @@ def test_documented_mcp_exclusions_match_code() -> None:
         assert any(path.startswith(prefix) for path in paths), (
             f"代码里的排除前缀 {prefix} 已匹配不到任何路由，请同步清理代码与文档"
         )
+
+
+def test_documented_mcp_link_puts_project_before_token() -> None:
+    """MCP 链接参数顺序：`project_id` 在 `token` 之前；文档不能再出现旧写法。"""
+    text = _architecture_text()
+    assert "mcp/?token=" not in text, (
+        "MCP 链接已改为 project_id 在 token 之前，dev-architecture.md 里仍有旧写法"
+    )
+    row = next(
+        (line for line in text.splitlines() if line.startswith("| `resolveMcpUrl(")),
+        None,
+    )
+    assert row is not None, "dev-architecture.md 缺少 resolveMcpUrl 行"
+    assert "project_id" in row, "resolveMcpUrl 行没有说明 project_id 参数"
+
+    body = ENV_TS.read_text(encoding="utf-8").split("export function resolveMcpUrl", 1)[1]
+    assert body.index("'project_id'") < body.index("'token'"), (
+        "env.ts 的 resolveMcpUrl 必须把 project_id 写在 token 参数之前"
+    )
