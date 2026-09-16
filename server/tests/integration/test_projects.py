@@ -107,6 +107,36 @@ async def test_project_guards_for_default_and_non_empty_project(client: AsyncCli
     assert in_use.status_code == 409, in_use.text
     assert in_use.json()["code"] == "PROJECT_IN_USE"
 
+    # 删除前的统计要覆盖全部项目域表，不能只看主表：换成隐患责任单位这类「字典表」同样要拦住。
+    # （只建一个新项目，避免污染 SECOND_PROJECT_ID 的现有数据。）
+    empty_project = await client.post(
+        "/api/v1/projects", headers=admin, json={"name": "空项目（可删除）"}
+    )
+    assert empty_project.status_code == 201, empty_project.text
+    empty_id = empty_project.json()["id"]
+    unit = await client.post(
+        "/api/v1/hazard-units",
+        headers=_headers(admin, empty_id),
+        json={"name": "二期责任单位", "person": "王五"},
+    )
+    assert unit.status_code == 201, unit.text
+    blocked = await client.delete(
+        f"/api/v1/projects/{empty_id}", headers={**admin, "If-Match": "1"}
+    )
+    assert blocked.status_code == 409, blocked.text
+    assert blocked.json()["code"] == "PROJECT_IN_USE"
+
+    # 清掉这条数据后同一个项目就能删掉（证明拦的是「有数据」，不是项目本身）。
+    deleted_unit = await client.delete(
+        f"/api/v1/hazard-units/{unit.json()['id']}",
+        headers={**_headers(admin, empty_id), "If-Match": str(unit.json()["version"])},
+    )
+    assert deleted_unit.status_code == 204, deleted_unit.text
+    removed_empty = await client.delete(
+        f"/api/v1/projects/{empty_id}", headers={**admin, "If-Match": "1"}
+    )
+    assert removed_empty.status_code == 204, removed_empty.text
+
 
 async def test_business_request_requires_project_header(client: AsyncClient) -> None:
     admin = await auth_headers(client, "admin")

@@ -48,7 +48,9 @@ async def test_reads_are_filtered_by_current_project(client: AsyncClient) -> Non
         )
         await session.commit()
     async with project_session(SECOND_PROJECT_ID) as session:
-        other = StockMaterial(name="二期项目物资", model_spec="B", unit_name="个", identity_hash="a")
+        other = StockMaterial(
+            name="二期项目物资", model_spec="B", unit_name="个", identity_hash="a"
+        )
         session.add(other)
         await session.commit()
         p06_id = other.id
