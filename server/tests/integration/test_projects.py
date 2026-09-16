@@ -9,8 +9,8 @@ from sqlalchemy import select
 from app.models import StockMaterial
 from app.services import mini_program_service
 from tests.conftest import (
-    P05_PROJECT_ID,
-    P06_PROJECT_ID,
+    DEFAULT_PROJECT_ID,
+    SECOND_PROJECT_ID,
     auth_headers,
     project_session,
 )
@@ -24,10 +24,10 @@ async def test_project_list_is_readable_by_every_role(client: AsyncClient) -> No
     readonly = await auth_headers(client, "readonly")
     response = await client.get("/api/v1/projects", headers=readonly)
     assert response.status_code == 200, response.text
-    codes = [item["code"] for item in response.json()]
-    assert codes == ["P05", "P06"]
+    names = [item["name"] for item in response.json()]
+    assert names == ["华星现有项目", "二期项目"]
     default = [item for item in response.json() if item["is_default"]]
-    assert [item["code"] for item in default] == ["P05"]
+    assert [item["name"] for item in default] == ["华星现有项目"]
 
 
 async def test_project_crud_and_guards(client: AsyncClient) -> None:
@@ -36,33 +36,31 @@ async def test_project_crud_and_guards(client: AsyncClient) -> None:
     created = await client.post(
         "/api/v1/projects",
         headers=admin,
-        json={"code": "p07", "name": "P07 项目", "remark": "新项目"},
+        json={"name": "三期项目", "remark": "新项目"},
     )
     assert created.status_code == 201, created.text
     project = created.json()
-    # 编码统一转大写；新项目默认启用、非默认项目。
-    assert project["code"] == "P07"
+    # 项目只对外显示名称；新项目默认启用、非默认项目。
+    assert project["name"] == "三期项目"
     assert project["enabled"] is True
     assert project["is_default"] is False
 
     duplicate = await client.post(
-        "/api/v1/projects", headers=admin, json={"code": "P07", "name": "重复项目"}
+        "/api/v1/projects", headers=admin, json={"name": "三期项目"}
     )
     assert duplicate.status_code == 409, duplicate.text
-    assert duplicate.json()["code"] == "DUPLICATE_PROJECT_CODE"
+    assert duplicate.json()["code"] == "DUPLICATE_PROJECT_NAME"
 
-    invalid_code = await client.post(
-        "/api/v1/projects", headers=admin, json={"code": "P0 7", "name": "非法编码"}
-    )
-    assert invalid_code.status_code == 422, invalid_code.text
+    blank_name = await client.post("/api/v1/projects", headers=admin, json={"name": "   "})
+    assert blank_name.status_code == 422, blank_name.text
 
     updated = await client.patch(
         f"/api/v1/projects/{project['id']}",
         headers=admin,
-        json={"name": "P07 项目（改名）", "enabled": False, "version": project["version"]},
+        json={"name": "三期项目（改名）", "enabled": False, "version": project["version"]},
     )
     assert updated.status_code == 200, updated.text
-    assert updated.json()["name"] == "P07 项目（改名）"
+    assert updated.json()["name"] == "三期项目（改名）"
     assert updated.json()["enabled"] is False
 
     # 停用的项目不能再作为当前项目使用。
@@ -83,7 +81,7 @@ async def test_project_guards_for_default_and_non_empty_project(client: AsyncCli
     admin = await auth_headers(client, "admin")
 
     default_disable = await client.patch(
-        f"/api/v1/projects/{P05_PROJECT_ID}",
+        f"/api/v1/projects/{DEFAULT_PROJECT_ID}",
         headers=admin,
         json={"enabled": False, "version": 1},
     )
@@ -91,20 +89,20 @@ async def test_project_guards_for_default_and_non_empty_project(client: AsyncCli
     assert default_disable.json()["code"] == "PROJECT_IS_DEFAULT"
 
     default_delete = await client.delete(
-        f"/api/v1/projects/{P05_PROJECT_ID}", headers={**admin, "If-Match": "1"}
+        f"/api/v1/projects/{DEFAULT_PROJECT_ID}", headers={**admin, "If-Match": "1"}
     )
     assert default_delete.status_code == 409, default_delete.text
     assert default_delete.json()["code"] == "PROJECT_IS_DEFAULT"
 
-    # P06 有业务数据后不能删除（避免连带丢数据）。
+    # 第二个项目有业务数据后不能删除（避免连带丢数据）。
     created = await client.post(
         "/api/v1/stock-materials",
-        headers=_headers(admin, P06_PROJECT_ID),
-        json={"name": "P06 物资", "model_spec": "B", "unit_name": "个", "image_ids": []},
+        headers=_headers(admin, SECOND_PROJECT_ID),
+        json={"name": "二期物资", "model_spec": "B", "unit_name": "个", "image_ids": []},
     )
     assert created.status_code == 201, created.text
     in_use = await client.delete(
-        f"/api/v1/projects/{P06_PROJECT_ID}", headers={**admin, "If-Match": "1"}
+        f"/api/v1/projects/{SECOND_PROJECT_ID}", headers={**admin, "If-Match": "1"}
     )
     assert in_use.status_code == 409, in_use.text
     assert in_use.json()["code"] == "PROJECT_IN_USE"
@@ -117,7 +115,7 @@ async def test_business_request_requires_project_header(client: AsyncClient) -> 
     try:
         response = await client.get("/api/v1/stock-materials", headers=admin)
     finally:
-        client.headers["X-Project-Id"] = str(P05_PROJECT_ID)
+        client.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
     assert response.status_code == 400, response.text
     assert response.json()["code"] == "PROJECT_REQUIRED"
 
@@ -131,30 +129,30 @@ async def test_data_is_isolated_between_projects(client: AsyncClient) -> None:
     payload = {"name": "交流接触器", "model_spec": "CJX2-2510", "unit_name": "个", "image_ids": []}
 
     created = await client.post(
-        "/api/v1/stock-materials", headers=_headers(admin, P05_PROJECT_ID), json=payload
+        "/api/v1/stock-materials", headers=_headers(admin, DEFAULT_PROJECT_ID), json=payload
     )
     assert created.status_code == 201, created.text
 
-    # 同名的物资在 P06 可以再建一份（项目域唯一键只在项目内生效）。
+    # 同名的物资在另一个项目可以再建一份（项目域唯一键只在项目内生效）。
     same_name = await client.post(
-        "/api/v1/stock-materials", headers=_headers(admin, P06_PROJECT_ID), json=payload
+        "/api/v1/stock-materials", headers=_headers(admin, SECOND_PROJECT_ID), json=payload
     )
     assert same_name.status_code == 201, same_name.text
 
-    async with project_session(P05_PROJECT_ID) as session:
+    async with project_session(DEFAULT_PROJECT_ID) as session:
         rows = list((await session.scalars(select(StockMaterial))).all())
         assert [row.name for row in rows] == ["交流接触器"]
 
     # 清单接口各自只看到自己项目的物资。
-    for project_id, expected_total in ((P05_PROJECT_ID, 1), (P06_PROJECT_ID, 1)):
+    for project_id, expected_total in ((DEFAULT_PROJECT_ID, 1), (SECOND_PROJECT_ID, 1)):
         listing = await client.get("/api/v1/stock-materials", headers=_headers(admin, project_id))
         assert listing.status_code == 200, listing.text
         assert listing.json()["total"] == expected_total
 
-    # 危害面：另一个项目里看不到 P05 的物资详情（id 归属不跨项目）。
+    # 危害面：另一个项目里看不到默认项目的物资详情（id 归属不跨项目）。
     material_id = created.json()["id"]
     other_detail = await client.get(
-        f"/api/v1/stock-materials/{material_id}", headers=_headers(admin, P06_PROJECT_ID)
+        f"/api/v1/stock-materials/{material_id}", headers=_headers(admin, SECOND_PROJECT_ID)
     )
     assert other_detail.status_code == 400, other_detail.text
     assert other_detail.json()["code"] == "NOT_FOUND"
@@ -165,27 +163,27 @@ async def test_memo_stays_personal_and_not_project_scoped(client: AsyncClient) -
     admin = await auth_headers(client, "admin")
     created = await client.post(
         "/api/v1/memos",
-        headers=_headers(admin, P05_PROJECT_ID),
+        headers=_headers(admin, DEFAULT_PROJECT_ID),
         json={"title": "跨项目备忘录", "content": "内容"},
     )
     assert created.status_code == 201, created.text
 
-    switched = await client.get("/api/v1/memos", headers=_headers(admin, P06_PROJECT_ID))
+    switched = await client.get("/api/v1/memos", headers=_headers(admin, SECOND_PROJECT_ID))
     assert switched.status_code == 200, switched.text
     titles = [item["title"] for item in switched.json()]
     assert "跨项目备忘录" in titles
 
 
 async def test_share_link_reads_its_own_project_anonymously(client: AsyncClient) -> None:
-    """分享链接的记录在 P06，匿名读取（不带项目头）也必须读到 P06 的那条数据。"""
+    """分享链接的记录在第二个项目，匿名读取（不带项目头）也必须读到该项目的数据。"""
     purchase = await auth_headers(client, "purchase")
     created = await client.post(
         "/api/v1/purchase-materials",
-        headers=_headers(purchase, P06_PROJECT_ID),
+        headers=_headers(purchase, SECOND_PROJECT_ID),
         json={
             "plan_date": "2026-08-05",
             "category": "备品备件",
-            "name": "P06 分享物资",
+            "name": "二期分享物资",
             "model_spec": "SHARE-1",
             "unit_name": "个",
             "planned_qty": "3",
@@ -199,7 +197,7 @@ async def test_share_link_reads_its_own_project_anonymously(client: AsyncClient)
 
     share = await client.post(
         "/api/v1/shares",
-        headers=_headers(purchase, P06_PROJECT_ID),
+        headers=_headers(purchase, SECOND_PROJECT_ID),
         json={"share_type": "purchase_plan", "item_ids": [plan_id], "expires_in": "24h"},
     )
     assert share.status_code == 201, share.text
@@ -210,17 +208,17 @@ async def test_share_link_reads_its_own_project_anonymously(client: AsyncClient)
     try:
         view = await client.get(f"/api/v1/shares/{token}")
     finally:
-        client.headers["X-Project-Id"] = str(P05_PROJECT_ID)
+        client.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
     assert view.status_code == 200, view.text
     payload = view.json()
     assert payload["item_count"] == 1
-    assert [item["name"] for item in payload["items"]] == ["P06 分享物资"]
+    assert [item["name"] for item in payload["items"]] == ["二期分享物资"]
 
 
 async def test_mini_program_follows_project_header(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """小程序不带项目头时落默认项目（P05），带头时按头读写该项目的数据。"""
+    """小程序不带项目头时落默认项目，带头时按头读写该项目的数据。"""
     async def fake_exchange(code: str, app_id: str | None = None) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
@@ -234,13 +232,13 @@ async def test_mini_program_follows_project_header(
     )
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
 
-    # 项目列表对小程序可读，默认项目是 P05。
+    # 项目列表对小程序可读，只给名称（排序：默认项目在前）。
     projects = await client.get("/api/v1/mini-program/projects", headers=mini_headers)
     assert projects.status_code == 200, projects.text
-    assert [item["code"] for item in projects.json()] == ["P05", "P06"]
+    assert [item["name"] for item in projects.json()] == ["华星现有项目", "二期项目"]
 
     admin = await auth_headers(client, "admin")
-    for project_id, name in ((P05_PROJECT_ID, "P05 物资"), (P06_PROJECT_ID, "P06 物资")):
+    for project_id, name in ((DEFAULT_PROJECT_ID, "默认物资"), (SECOND_PROJECT_ID, "二期物资")):
         created = await client.post(
             "/api/v1/stock-materials",
             headers=_headers(admin, project_id),
@@ -248,32 +246,32 @@ async def test_mini_program_follows_project_header(
         )
         assert created.status_code == 201, created.text
 
-    # 不带项目头（旧客户端）：落默认项目 P05，只看到 P05 的物资。
+    # 不带项目头（旧客户端）：落默认项目，只看到默认项目的物资。
     client.headers.pop("X-Project-Id", None)
     try:
         default_view = await client.get("/api/v1/mini-program/inventory", headers=mini_headers)
     finally:
-        client.headers["X-Project-Id"] = str(P05_PROJECT_ID)
+        client.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
     assert default_view.status_code == 200, default_view.text
-    assert [item["name"] for item in default_view.json()["items"]] == ["P05 物资"]
+    assert [item["name"] for item in default_view.json()["items"]] == ["默认物资"]
 
-    # 带 P06 项目头：切换后只看得到 P06 的物资。
+    # 带第二个项目头：切换后只看得到该项目的物资。
     switched = await client.get(
-        "/api/v1/mini-program/inventory", headers=_headers(mini_headers, P06_PROJECT_ID)
+        "/api/v1/mini-program/inventory", headers=_headers(mini_headers, SECOND_PROJECT_ID)
     )
     assert switched.status_code == 200, switched.text
-    assert [item["name"] for item in switched.json()["items"]] == ["P06 物资"]
+    assert [item["name"] for item in switched.json()["items"]] == ["二期物资"]
 
     # 项目已停用时明确报错，小程序据此清掉本地项目并回落默认项目。
     admin_headers = {**admin}
     disabled = await client.patch(
-        f"/api/v1/projects/{P06_PROJECT_ID}",
+        f"/api/v1/projects/{SECOND_PROJECT_ID}",
         headers=admin_headers,
         json={"enabled": False, "version": 1},
     )
     assert disabled.status_code == 200, disabled.text
     rejected = await client.get(
-        "/api/v1/mini-program/inventory", headers=_headers(mini_headers, P06_PROJECT_ID)
+        "/api/v1/mini-program/inventory", headers=_headers(mini_headers, SECOND_PROJECT_ID)
     )
     assert rejected.status_code == 400, rejected.text
     assert rejected.json()["code"] == "PROJECT_DISABLED"

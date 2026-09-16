@@ -24,14 +24,14 @@ from app.models import Project, User
 
 settings.template_dir = Path(__file__).parents[1] / "app" / "templates"
 
-# 测试库固定两个项目：P05（默认项目，等同于线上现有项目）与 P06（用于隔离用例）。
+# 测试库固定两个项目：默认项目（等同于线上现有项目）与第二个项目（用于隔离用例）。
 # `client` fixture 默认带上 X-Project-Id=1，因此既有接口测试无需逐个改请求头。
-P05_PROJECT_ID = 1
-P06_PROJECT_ID = 2
+DEFAULT_PROJECT_ID = 1
+SECOND_PROJECT_ID = 2
 
 
-def project_session(project_id: int = P05_PROJECT_ID):
-    """测试里直接开库会话时用：把上下文设成指定项目（默认 P05，与 client 默认头一致）。"""
+def project_session(project_id: int = DEFAULT_PROJECT_ID):
+    """测试里直接开库会话时用：把上下文设成指定项目（默认与 client 默认头一致）。"""
     return _project_session(project_id)
 
 
@@ -44,16 +44,14 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
         session.add_all(
             [
                 Project(
-                    id=P05_PROJECT_ID,
-                    code="P05",
-                    name="P05 项目",
+                    id=DEFAULT_PROJECT_ID,
+                    name="华星现有项目",
                     enabled=True,
                     is_default=True,
                 ),
                 Project(
-                    id=P06_PROJECT_ID,
-                    code="P06",
-                    name="P06 项目",
+                    id=SECOND_PROJECT_ID,
+                    name="二期项目",
                     enabled=True,
                     is_default=False,
                 ),
@@ -108,8 +106,8 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
         await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
-        # 默认项目 P05：业务接口都要求项目上下文，这样既有测试不用逐个加请求头。
-        http.headers["X-Project-Id"] = str(P05_PROJECT_ID)
+        # 默认项目：业务接口都要求项目上下文，这样既有测试不用逐个加请求头。
+        http.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
         yield http
 
     async with engine.begin() as connection:

@@ -25,10 +25,7 @@ const { items, loading, load } = usePagedTable<Project, Record<string, never>>({
 })
 const show = ref(false)
 const editing = ref<Project | null>(null)
-/** 项目编码规则与后端一致：2–32 位大写字母/数字/下划线/短横线，提交前统一转大写。 */
-const CODE_PATTERN = /^[A-Z0-9][A-Z0-9_-]{1,31}$/
 const form = reactive({
-  code: '',
   name: '',
   enabled: true,
   is_default: false,
@@ -36,7 +33,6 @@ const form = reactive({
   version: 0,
 })
 const columns = preventTableColumnCompression<Project>([
-  { title: '编码', key: 'code', width: tableColumnWidths.code },
   { title: '名称', key: 'name', width: tableColumnWidths.name },
   {
     title: '启用',
@@ -79,7 +75,6 @@ function open(row?: Project) {
     form,
     row
       ? {
-          code: row.code,
           name: row.name,
           enabled: row.enabled,
           is_default: row.is_default,
@@ -87,7 +82,6 @@ function open(row?: Project) {
           version: row.version,
         }
       : {
-          code: '',
           name: '',
           enabled: true,
           is_default: false,
@@ -98,19 +92,13 @@ function open(row?: Project) {
   show.value = true
 }
 async function save() {
-  const code = form.code.trim().toUpperCase()
   const name = form.name.trim()
-  if (!CODE_PATTERN.test(code)) {
-    message.error('项目编码需为 2–32 位大写字母、数字、下划线或短横线，如 P05')
-    return
-  }
   if (!name) {
     message.error('请填写项目名称')
     return
   }
   try {
     const payload = {
-      code,
       name,
       enabled: form.enabled,
       is_default: form.is_default,
@@ -134,7 +122,7 @@ function remove(row: Project) {
   dialog.warning({
     draggable: true,
     title: '删除项目',
-    content: `确认删除项目“${row.code} ${row.name}”吗？默认项目或项目下已有数据的项目不能删除。`,
+    content: `确认删除项目“${row.name}”吗？默认项目或项目下已有数据的项目不能删除。`,
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -179,14 +167,8 @@ function remove(row: Project) {
       style="width: min(560px, calc(100vw - 32px))"
     >
       <n-form label-placement="top">
-        <n-form-item label="编码" required>
-          <n-input
-            v-model:value="form.code"
-            placeholder="2–32 位大写字母、数字、下划线或短横线，如 P05"
-          />
-        </n-form-item>
         <n-form-item label="名称" required>
-          <n-input v-model:value="form.name" placeholder="如 P05 项目" />
+          <n-input v-model:value="form.name" placeholder="如 华星现有项目" />
         </n-form-item>
         <n-form-item label="启用">
           <n-switch v-model:value="form.enabled" />

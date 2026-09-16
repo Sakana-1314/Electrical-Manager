@@ -8958,19 +8958,13 @@ export interface components {
         /**
          * ProjectCreate
          * @example {
-         *       "code": "P07",
-         *       "name": "P07 项目",
+         *       "name": "三期项目",
          *       "enabled": true,
          *       "is_default": false,
-         *       "remark": "三期项目"
+         *       "remark": "三期规划"
          *     }
          */
         ProjectCreate: {
-            /**
-             * Code
-             * @description 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
-             */
-            code: string;
             /** Name */
             name: string;
             /**
@@ -8991,11 +8985,10 @@ export interface components {
          * @description 项目：业务数据的隔离维度，切换当前项目后只能看到该项目的数据。
          * @example {
          *       "id": 1,
-         *       "code": "P05",
-         *       "name": "P05 项目",
+         *       "name": "华星现有项目",
          *       "enabled": true,
          *       "is_default": true,
-         *       "remark": "华星现有项目",
+         *       "remark": "系统初始项目",
          *       "created_at": "2026-01-05T09:00:00+08:00",
          *       "updated_at": "2026-01-05T09:00:00+08:00",
          *       "version": 1
@@ -9004,8 +8997,6 @@ export interface components {
         ProjectRead: {
             /** Id */
             id: number;
-            /** Code */
-            code: string;
             /** Name */
             name: string;
             /** Enabled */
@@ -9030,17 +9021,14 @@ export interface components {
         /**
          * ProjectUpdate
          * @example {
-         *       "code": "P06",
-         *       "name": "P06 项目（二期）",
+         *       "name": "二期项目（改名）",
          *       "enabled": true,
          *       "is_default": false,
-         *       "remark": "二期项目",
+         *       "remark": "二期规划",
          *       "version": 2
          *     }
          */
         ProjectUpdate: {
-            /** Code */
-            code?: string | null;
             /** Name */
             name?: string | null;
             /** Enabled */
@@ -20409,11 +20397,10 @@ export interface operations {
                      * @example [
                      *       {
                      *         "id": 1,
-                     *         "code": "P05",
-                     *         "name": "P05 项目",
+                     *         "name": "华星现有项目",
                      *         "enabled": true,
                      *         "is_default": true,
-                     *         "remark": "华星现有项目",
+                     *         "remark": "系统初始项目",
                      *         "created_at": "2026-01-05T09:00:00+08:00",
                      *         "updated_at": "2026-01-05T09:00:00+08:00",
                      *         "version": 1
@@ -35452,11 +35439,10 @@ export interface operations {
                      * @example [
                      *       {
                      *         "id": 1,
-                     *         "code": "P05",
-                     *         "name": "P05 项目",
+                     *         "name": "华星现有项目",
                      *         "enabled": true,
                      *         "is_default": true,
-                     *         "remark": "华星现有项目",
+                     *         "remark": "系统初始项目",
                      *         "created_at": "2026-01-05T09:00:00+08:00",
                      *         "updated_at": "2026-01-05T09:00:00+08:00",
                      *         "version": 1
@@ -35575,11 +35561,10 @@ export interface operations {
                     /**
                      * @example {
                      *       "id": 1,
-                     *       "code": "P05",
-                     *       "name": "P05 项目",
+                     *       "name": "华星现有项目",
                      *       "enabled": true,
                      *       "is_default": true,
-                     *       "remark": "华星现有项目",
+                     *       "remark": "系统初始项目",
                      *       "created_at": "2026-01-05T09:00:00+08:00",
                      *       "updated_at": "2026-01-05T09:00:00+08:00",
                      *       "version": 1
@@ -35806,11 +35791,10 @@ export interface operations {
                     /**
                      * @example {
                      *       "id": 1,
-                     *       "code": "P05",
-                     *       "name": "P05 项目",
+                     *       "name": "华星现有项目",
                      *       "enabled": true,
                      *       "is_default": true,
-                     *       "remark": "华星现有项目",
+                     *       "remark": "系统初始项目",
                      *       "created_at": "2026-01-05T09:00:00+08:00",
                      *       "updated_at": "2026-01-05T09:00:00+08:00",
                      *       "version": 1

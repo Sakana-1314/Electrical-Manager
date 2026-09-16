@@ -7491,11 +7491,10 @@ paths:
                   Get
               example:
               - id: 1
-                code: P05
-                name: P05 项目
+                name: 华星现有项目
                 enabled: true
                 is_default: true
-                remark: 华星现有项目
+                remark: 系统初始项目
                 created_at: '2026-01-05T09:00:00+08:00'
                 updated_at: '2026-01-05T09:00:00+08:00'
                 version: 1
@@ -20003,11 +20002,10 @@ paths:
                 title: Response List Projects Api V1 Projects Get
               example:
               - id: 1
-                code: P05
-                name: P05 项目
+                name: 华星现有项目
                 enabled: true
                 is_default: true
-                remark: 华星现有项目
+                remark: 系统初始项目
                 created_at: '2026-01-05T09:00:00+08:00'
                 updated_at: '2026-01-05T09:00:00+08:00'
                 version: 1
@@ -20089,11 +20087,10 @@ paths:
                 $ref: '#/components/schemas/ProjectRead'
               example:
                 id: 1
-                code: P05
-                name: P05 项目
+                name: 华星现有项目
                 enabled: true
                 is_default: true
-                remark: 华星现有项目
+                remark: 系统初始项目
                 created_at: '2026-01-05T09:00:00+08:00'
                 updated_at: '2026-01-05T09:00:00+08:00'
                 version: 1
@@ -20186,11 +20183,10 @@ paths:
                 $ref: '#/components/schemas/ProjectRead'
               example:
                 id: 1
-                code: P05
-                name: P05 项目
+                name: 华星现有项目
                 enabled: true
                 is_default: true
-                remark: 华星现有项目
+                remark: 系统初始项目
                 created_at: '2026-01-05T09:00:00+08:00'
                 updated_at: '2026-01-05T09:00:00+08:00'
                 version: 1
@@ -27970,12 +27966,6 @@ components:
         total: 1
     ProjectCreate:
       properties:
-        code:
-          type: string
-          maxLength: 32
-          minLength: 2
-          title: Code
-          description: 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
         name:
           type: string
           maxLength: 128
@@ -27998,23 +27988,18 @@ components:
       additionalProperties: false
       type: object
       required:
-      - code
       - name
       title: ProjectCreate
       examples:
-      - code: P07
-        name: P07 项目
+      - name: 三期项目
         enabled: true
         is_default: false
-        remark: 三期项目
+        remark: 三期规划
     ProjectRead:
       properties:
         id:
           type: integer
           title: Id
-        code:
-          type: string
-          title: Code
         name:
           type: string
           title: Name
@@ -28043,7 +28028,6 @@ components:
       type: object
       required:
       - id
-      - code
       - name
       - enabled
       - is_default
@@ -28054,24 +28038,15 @@ components:
       description: 项目：业务数据的隔离维度，切换当前项目后只能看到该项目的数据。
       examples:
       - id: 1
-        code: P05
-        name: P05 项目
+        name: 华星现有项目
         enabled: true
         is_default: true
-        remark: 华星现有项目
+        remark: 系统初始项目
         created_at: '2026-01-05T09:00:00+08:00'
         updated_at: '2026-01-05T09:00:00+08:00'
         version: 1
     ProjectUpdate:
       properties:
-        code:
-          anyOf:
-          - type: string
-            maxLength: 32
-            minLength: 2
-            description: 项目编码（大写字母/数字/下划线/短横线，2–32 位，如 P05、P06）
-          - type: 'null'
-          title: Code
         name:
           anyOf:
           - type: string
@@ -28104,11 +28079,10 @@ components:
       - version
       title: ProjectUpdate
       examples:
-      - code: P06
-        name: P06 项目（二期）
+      - name: 二期项目（改名）
         enabled: true
         is_default: false
-        remark: 二期项目
+        remark: 二期规划
         version: 2
     PurchaseFilterOptions:
       properties:

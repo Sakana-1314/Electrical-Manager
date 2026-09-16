@@ -168,7 +168,6 @@ async def system_whoami() -> dict[str, Any]:
         async with SessionLocal() as session:
             project = await session.get(Project, project_id)
             if project is not None:
-                payload["project_code"] = project.code
                 payload["project_name"] = project.name
     return payload
 

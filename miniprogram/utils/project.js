@@ -5,7 +5,7 @@ const { request } = require('./request');
  *
  * - 业务数据全部按项目隔离，小程序始终处在某一个项目内；当前项目 id 存本机 storage，
  *   与外观档位同一语义（换设备各自独立，不落库、不产生额外请求）。
- * - 每个业务请求都带 `X-Project-Id` 头（见 utils/request.js）；缺头时后端落到默认项目（P05），
+ * - 每个业务请求都带 `X-Project-Id` 头（见 utils/request.js）；缺头时后端落到默认项目，
  *   所以老版本客户端与网络异常都还能继续用。
  * - 项目列表一次会话只拉一次；拉取失败不阻塞业务（后端有默认项目兜底）。
  *
@@ -15,7 +15,7 @@ const { request } = require('./request');
 
 /** 当前项目 id（值为主键整数）。 */
 const CURRENT_PROJECT_STORAGE_KEY = 'currentProjectId';
-/** 当前项目对象缓存（`{id, code, name, label}`）：网络不可用时弹窗仍能显示当前项目。 */
+/** 当前项目对象缓存（`{id, name, label}`）：网络不可用时弹窗仍能显示当前项目。 */
 const CURRENT_PROJECT_CACHE_KEY = 'currentProjectCache';
 /**
  * 「已切换项目」提示标记（一次性）：切换会整页重启，页面里的 toast 活不到新页面，
@@ -23,7 +23,7 @@ const CURRENT_PROJECT_CACHE_KEY = 'currentProjectCache';
  */
 const PROJECT_SWITCH_NOTICE_KEY = 'projectSwitchedNotice';
 
-/** 最近一次成功拉取的可选项目（仅启用项，后端按 code 升序返回）。 */
+/** 最近一次成功拉取的可选项目（仅启用项，后端按「默认项目在前、其余按 id」返回）。 */
 let projectList = [];
 /** 项目列表请求（并发只发一次）；失败后置空，下次再试。 */
 let projectsPromise = null;
@@ -64,13 +64,12 @@ function isEnabledProject(project) {
   return !!project && Number(project.id) > 0 && project.enabled === true;
 }
 
-/** 项目对象裁剪成展示与缓存需要的字段（`label` 即弹窗显示的文字：只用名称，不外显编码）。 */
+/** 项目对象裁剪成展示与缓存需要的字段（`label` 即弹窗显示的文字：项目没有编码，只显示名称）。 */
 function projectSummary(project) {
   return {
     id: project.id,
-    code: project.code,
     name: project.name,
-    label: project.name || project.code,
+    label: (project.name || '').trim() || '未命名项目',
   };
 }
 
@@ -122,7 +121,7 @@ function loadProjects(force) {
   return projectsPromise;
 }
 
-/** 可选项目（仅启用项，按 code 升序）；尚未成功拉取过时为空数组。 */
+/** 可选项目（仅启用项）；尚未成功拉取过时为空数组。 */
 function getEnabledProjects() {
   return projectList;
 }
@@ -143,8 +142,8 @@ function getCurrentProject() {
  * 2. 存储里的 id 已是启用项目 → 直接沿用；
  * 3. 否则落到默认项目（`is_default`），没有默认项时取第一个启用项目，并写入存储。
  *
- * 任何异常都被吞掉：网络失败不该卡住小程序（此时请求不带 `X-Project-Id`，后端会落到默认项目
- * P05）。返回解析出的项目 id，解析不出来时返回 null。
+ * 任何异常都被吞掉：网络失败不该卡住小程序（此时请求不带 `X-Project-Id`，后端会落到默认项目）。
+ * 返回解析出的项目 id，解析不出来时返回 null。
  */
 async function ensureProject(options = {}) {
   const currentId = getCurrentProjectId();

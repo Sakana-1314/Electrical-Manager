@@ -31,7 +31,7 @@
 | `PROJECT_MISMATCH` | 409 | 不能跨项目写入或删除数据 | `core/project_scope.py` |
 | `PROJECT_IS_DEFAULT` | 409 | 默认项目不能停用、删除或取消默认（请改设其他项目为默认） | `project_service` |
 | `PROJECT_IN_USE` | 409 | 项目下已有业务数据，不能删除（请改为停用） | `project_service` |
-| `DUPLICATE_PROJECT_CODE` | 409 | 项目编码已存在 | `project_service` |
+| `DUPLICATE_PROJECT_NAME` | 409 | 项目名称已存在 | `project_service` |
 
 ## 并发与状态流转
 

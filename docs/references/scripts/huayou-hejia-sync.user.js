@@ -202,12 +202,12 @@
   function enabledProjects() {
     return projects.filter((item) => item?.enabled === true);
   }
-  // 下拉项只显示项目名称（编码不外显，避免「P05 P05 项目」这种重复）；状态栏用编码定位当前项目。
+  // 项目没有编码，界面一律只显示名称（下拉项本身就是名称，状态栏是「项目：<名称>」）。
   function projectOptionLabel(project) {
-    return clean(project?.name) || clean(project?.code) || `#${project?.id ?? ""}`;
+    return clean(project?.name) || `#${project?.id ?? ""}`;
   }
   function projectLabel(project) {
-    return project ? `项目：${clean(project?.code) || clean(project?.name)}` : "项目：未选择";
+    return project ? `项目：${clean(project?.name) || `#${project.id}`}` : "项目：未选择";
   }
   function activeProject() {
     return projects.find((item) => Number(item.id) === Number(config.projectId)) || null;
@@ -566,7 +566,7 @@
     try {
       credentials();
       const project = await resolveProject();
-      if (project) log(`项目：${clean(project.code)}`);
+      if (project) log(`项目：${clean(project.name)}`);
       log(`${trigger === "auto" ? "自动" : "手动"}同步开始`);
       const rows = await targets();
       stats.scanned = rows.length;

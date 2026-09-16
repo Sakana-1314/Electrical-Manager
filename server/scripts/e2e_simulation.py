@@ -5,7 +5,7 @@
 验证主流程可用，并验证「业务数据按项目隔离」这条主线。任一步骤失败即以非零码退出。
 
 项目上下文：业务接口都要求 `X-Project-Id`，脚本先用超管读项目列表、取默认项目
-（init.sql 种子的 P05），之后所有角色请求都带上它。用法：
+（init.sql 种子的那个项目），之后所有角色请求都带上它。用法：
     E2E_BASE_URL=http://127.0.0.1:8000 python scripts/e2e_simulation.py
 """
 
@@ -75,7 +75,7 @@ def main() -> int:
         assert health.status_code == 200 and health.json()["database"] == "ok", "健康检查失败"
         print("✅ 健康检查")
 
-        # 2. 默认项目（P05）与六种角色登录
+        # 2. 默认项目与六种角色登录
         admin = _auth(client, "admin")
         listed_projects = client.get("/api/v1/projects", headers=admin)
         assert listed_projects.status_code == 200, listed_projects.text
@@ -89,7 +89,7 @@ def main() -> int:
         ledger = _auth(client, "ledger", project_id)
         readonly = _auth(client, "readonly", project_id)
         admin = _auth(client, "admin", project_id)
-        print(f"✅ 默认项目 {default_projects[0]['code']}（#{project_id}）与六种角色登录")
+        print(f"✅ 默认项目 {default_projects[0]['name']}（#{project_id}）与六种角色登录")
 
         # 2.1 业务接口缺项目上下文必须被拦下（fail-closed，不允许静默看全库）
         no_project = client.get(
@@ -365,7 +365,7 @@ def main() -> int:
         new_project = client.post(
             "/api/v1/projects",
             headers=admin,
-            json={"code": f"P{run[:4].upper()}", "name": f"E2E 临时项目 {run}"},
+            json={"name": f"E2E 临时项目 {run}"},
         )
         assert new_project.status_code == 201, new_project.text
         other_project = int(new_project.json()["id"])
