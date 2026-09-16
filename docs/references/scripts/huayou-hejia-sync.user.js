@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         备件管理系统 - 华友何佳状态同步（旧系统）
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      2.1.0
+// @version      2.1.1
 // @description  在何佳（旧系统）站点上把 P05SG0300 以前的申购单按申购单号整单查询“物资状态查询”，并把业务员、状态、合同号、合同签订日期、船号、集港与发运信息提交到备件管理系统。
 // @match        https://quick-hejia.qcloud.19890605.xyz/*
-// @updateURL    https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-hejia-sync.user.js
-// @downloadURL  https://github.com/Sakana-1314/Electrical-Manager/raw/refs/heads/main/docs/references/scripts/huayou-hejia-sync.user.js
+// @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-hejia-sync.user.js
+// @downloadURL  https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-hejia-sync.user.js
 // @connect      quick-hejia.qcloud.19890605.xyz
 // @connect      materials-manager.qcloud.19890605.xyz
 // @grant        GM_xmlhttpRequest
