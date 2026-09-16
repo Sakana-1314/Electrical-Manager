@@ -3,9 +3,15 @@ from __future__ import annotations
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.mcp_server import mcp
+from app.mcp_server import (
+    _project_context,
+    _project_source_context,
+    _token_context,
+    mcp,
+    operation_call,
+)
 from app.models import User
-from tests.conftest import project_session
+from tests.conftest import auth_headers, project_session
 
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
@@ -65,10 +71,11 @@ async def _issue_admin_api_token(client: AsyncClient) -> str:
 async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_project(
     client: AsyncClient,
 ) -> None:
-    """MCP 端到端：工具清单可读，且项目按「请求头 → 链接 ?project_id= → 默认项目」解析。
+    """MCP 端到端：工具清单可读、项目按「请求头 → 链接 ?project_id= → 默认项目」解析，
+    并能用 operation_call 完成一次带 If-Match 的真实写入。
 
     注意：`StreamableHTTPSessionManager.run()` 每个实例只能进一次，且必须在同一个任务里
-    进出，所以工具清单与项目解析放在同一个用例、同一个上下文中。
+    进出，所以工具清单、项目解析与工具调用放在同一个用例、同一个上下文中。
     """
     token = await _issue_admin_api_token(client)
     client.headers.pop("X-Project-Id", None)  # 真实 MCP 客户端只配置地址，不发项目头
@@ -91,6 +98,11 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
                 "operation_describe",
                 "operation_call",
             }
+            # operation_call 必须能接受请求头，否则带乐观锁的写操作在 MCP 侧无法完成
+            arguments = next(item for item in tools if item["name"] == "operation_call")[
+                "inputSchema"
+            ]["properties"]
+            assert "headers" in arguments
 
             async def whoami(url: str, extra_headers: dict[str, str] | None = None) -> dict:
                 call = await client.post(
@@ -103,24 +115,97 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
                 assert call.status_code == 200, call.text
                 return call.json()["result"]["structuredContent"]
 
+            async def call_operation(operation_id: str, arguments: dict) -> dict:
+                call = await client.post(
+                    "/api/v1/mcp/",
+                    headers={**MCP_HEADERS, "X-API-Token": token},
+                    json=mcp_request(
+                        "tools/call",
+                        {
+                            "name": "operation_call",
+                            "arguments": {"operation_id": operation_id, **arguments},
+                        },
+                    ),
+                )
+                assert call.status_code == 200, call.text
+                return call.json()["result"]["structuredContent"]
+
             # 既不带头也不带链接：落 conftest 里的默认项目
             default = await whoami("/api/v1/mcp/")
             assert default["project_id"] == 1
             assert default["project_name"] == "华星现有项目"
+            assert default["project_source"] == "default"
 
             # 链接带 project_id：切到第二个项目（网页端复制的 MCP 地址就是这个形式）
             from_link = await whoami("/api/v1/mcp/?project_id=2")
             assert from_link["project_id"] == 2
             assert from_link["project_name"] == "二期项目"
+            assert from_link["project_source"] == "link"
 
             # 请求头优先于链接
             from_header = await whoami("/api/v1/mcp/?project_id=2", {"X-Project-Id": "1"})
             assert from_header["project_id"] == 1
             assert from_header["project_name"] == "华星现有项目"
+            assert from_header["project_source"] == "header"
 
             # 未知 id 不落到别的项目，而是回退默认项目
             unknown = await whoami("/api/v1/mcp/?project_id=999999")
             assert unknown["project_id"] == 1
             assert unknown["project_name"] == "华星现有项目"
+            assert unknown["project_source"] == "default"
+
+            # operation_call 完整跑通一次带 If-Match 的写入：新建标签 → 按版本号删除
+            created = await call_operation(
+                "create_ledger_tag_api_v1_ledger_tags_post", {"body": {"name": "MCP 端到端"}}
+            )
+            assert created["status_code"] == 201, created
+            tag = created["data"]
+            deleted = await call_operation(
+                "delete_ledger_tag_api_v1_ledger_tags__tag_id__delete",
+                {
+                    "path_params": {"tag_id": tag["id"]},
+                    "headers": {"If-Match": str(tag["version"])},
+                },
+            )
+            assert deleted == {"status_code": 204, "data": None}
     finally:
         client.headers["X-Project-Id"] = "1"
+
+
+async def test_mcp_operation_call_sends_if_match_header(client: AsyncClient) -> None:
+    """operation_call 把 If-Match 送到业务接口：版本不符 409 VERSION_CONFLICT，版本正确 204。
+
+    这里直接调用工具函数并把令牌/项目放进上下文（等价于中间件做的事），
+    避免与上面的用例争抢只能进一次的 `session_manager.run()`。
+    """
+    token = await _issue_admin_api_token(client)
+    headers = await auth_headers(client, "admin")
+    created = await client.post(
+        "/api/v1/ledger-tags", headers=headers, json={"name": "MCP 版本校验"}
+    )
+    assert created.status_code == 201, created.text
+    tag = created.json()
+
+    token_marker = _token_context.set(token)
+    project_marker = _project_context.set(1)
+    source_marker = _project_source_context.set("default")
+    try:
+        conflict = await operation_call(
+            "delete_ledger_tag_api_v1_ledger_tags__tag_id__delete",
+            path_params={"tag_id": tag["id"]},
+            headers={"If-Match": str(tag["version"] + 1)},
+        )
+        assert conflict["status_code"] == 409
+        assert conflict["data"]["code"] == "VERSION_CONFLICT"
+
+        deleted = await operation_call(
+            "delete_ledger_tag_api_v1_ledger_tags__tag_id__delete",
+            path_params={"tag_id": tag["id"]},
+            headers={"If-Match": str(tag["version"])},
+        )
+        assert deleted == {"status_code": 204, "data": None}
+        assert (await client.get("/api/v1/ledger-tags", headers=headers)).json() == []
+    finally:
+        _project_source_context.reset(source_marker)
+        _project_context.reset(project_marker)
+        _token_context.reset(token_marker)

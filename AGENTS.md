@@ -117,6 +117,15 @@ npm run build             # 类型检查 + 生产构建
 - **匿名分享/导出下载按记录自身解析项目**：分享页先在全项目上下文取 `share_link`，再切到该分享的项目读数据。
 - **老库升级**：仓库不提交迁移脚本；已有库的升级 SQL 放在 PR 描述或对话里（`outputs/` 下的脚本不入库），新库直接用 `init.sql`。
 
+## MCP 可调用性约定（必须遵守）
+
+MCP 工具目录由 `app.openapi()` 自动生成（`server/app/mcp_server.py`），**默认要求每个管理端接口都能被 `operation_call` 完整操作**：
+
+- **参数位置只用** 路径 / 查询 / 请求头 / JSON 请求体；文件上传只能单文件 multipart 且表单字段名必须是 `file`（cookie、多文件或其它表单字段 MCP 传不进去，新增这类接口必须同时扩展 `operation_call`）。
+- **乐观锁版本号走 `If-Match` 请求头**（`IfMatchVersion`）：网页端由 `web/src/api/*.ts` 按需传，MCP 端用 `operation_call` 的 `headers` 传（如 `{"If-Match": "3"}`）；`X-API-Token` 与 `X-Project-Id` 由 MCP 层统一设置，不接受调用方传入。
+- **排除项必须显式且同步**：需要排除的接口（登录/刷新、小程序专用前缀等）写进 `mcp_server.py` 的 `EXCLUDED_PATHS` / `EXCLUDED_PREFIXES`，同时更新 `docs/websites/pages/dev-architecture.md` 的 MCP 小节；排除项必须仍能命中存活路由（端点删除后要清理），由 `server/tests/test_mcp_docs.py` 与 `server/tests/unit/test_mcp_server.py` 校验。
+- **文档同步**：改工具清单、排除清单或 MCP 链接参数（`project_id` 在 `token` 之前）时必须同步文档，否则 CI 的文档一致性测试失败。
+
 ## 标准开发与发布工作流（必须遵守）
 
 > 目标：每个功能点独立成 PR，合并后不留残余分支。所有操作在仓库根目录执行。

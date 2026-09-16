@@ -372,7 +372,7 @@ FastAPI + SQLAlchemy 2.x async 单进程应用（MySQL 8.0 / asyncmy），源码
 ```text
 server/app/
 ├── main.py             # FastAPI 实例、lifespan（启动清理 + worker）、/health、router 与 MCP 挂载
-├── mcp_server.py       # MCP 服务与 4 个工具、McpTokenAuthMiddleware
+├── mcp_server.py       # MCP 服务与 5 个工具、McpTokenAuthMiddleware
 ├── api/deps.py         # PageNo/PageSize/SortOrder/OrSearch/RequireFullSecondaryWarehouse
 ├── api/v1/__init__.py  # 汇总 router，统一声明错误响应模型
 ├── api/v1/             # 21 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、hazards、
@@ -558,7 +558,7 @@ flowchart LR
 | --- | --- |
 | 网页端业务接口 | `X-Project-Id`（前端 `web/src/api/client.ts` 统一注入；右上角切换项目后整页刷新） |
 | 小程序 | 同上；不带时落默认项目（`get_current_mini_program_user` 内统一解析，端点无需各自声明） |
-| MCP | 请求头优先，缺省用默认项目；`operation_call` 转发时带上项目头 |
+| MCP | 请求头 `X-Project-Id` 优先，其次 MCP 链接上的 `?project_id=`，都缺省时用系统默认项目（`system_whoami` 回显项目与 `project_source`）；`operation_call` 转发时带上项目头 |
 | 匿名分享页 | 先在全项目上下文里按 token 取 `share_link`，再切到该分享所属项目读数据 |
 | 导入 / 导出任务 | 任务行记录 `project_id`，后台任务用 `project_scope(job.project_id)` 恢复上下文 |
 | 清理任务、附件引用统计、匿名导出下载 | 显式 `system_scope()` / `system_session()`（这些入口本就不属于单个项目） |
@@ -703,9 +703,11 @@ flowchart LR
 | 项 | 内容 |
 | --- | --- |
 | 挂载 | `MCPServer("spare-parts-management", title="备件管理系统")`，`app.mount("/api/v1/mcp", mcp_http_app, name="mcp")`；传输 Streamable HTTP（`streamable_http_path="/"`、`stateless_http=True`、`json_response=True`、`max_request_body_size=16MB`），并显式关闭 DNS rebinding 保护以适配反向代理的 Host 头 |
-| 工具 | `system_whoami`（返回令牌对应用户与角色）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数与响应契约）、`operation_call`（以 `X-API-Token` 调用业务接口；文件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
-| 操作目录 | 来自应用自身的 `app.openapi()` 路径，按 `operationId` 索引；排除 `/api/v1/auth/login`、`/api/v1/auth/refresh` 以及前缀 `/api/v1/agent/database`、`/api/v1/mini-program/` |
-| 调用方式 | `operation_call` 通过 `httpx.ASGITransport` 在本进程内回环调用，仍完整经过参数校验、角色权限、乐观锁与事务；超时 60 秒 |
+| 工具 | `system_whoami`（返回令牌对应用户、角色、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
+| 操作目录 | 来自应用自身的 `app.openapi()` 路径，按 `operationId` 索引；排除 `/api/v1/auth/login`、`/api/v1/auth/refresh` 与小程序专用前缀 `/api/v1/mini-program/`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
+| 参数映射 | `operation_describe` 的 `call_arguments` 由 OpenAPI 派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号 String(version)」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。令牌头与项目头由 MCP 层统一设置，不接受调用方传入 |
+| 上限 | 请求体上限 `max_request_body_size=16MB`（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
+| 调用方式 | `operation_call` 通过 `httpx.ASGITransport` 在本进程内回环调用，仍完整经过参数校验、角色权限、乐观锁与事务；超时 60 秒。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`IfMatchVersion`） |
 | 认证 | `McpTokenAuthMiddleware` 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，命中用户后把身份放进 `ContextVar`，失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |
 #### 健康检查与接口文档
 | 项 | 内容 |

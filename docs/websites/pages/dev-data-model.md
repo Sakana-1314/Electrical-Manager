@@ -53,7 +53,7 @@ flowchart LR
 | 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
 | 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏入口）/ `query_only`（只读）/ `read_write`（可写：库存可出库、隐患可登记与跟进）；只作用于小程序前端，后端数据接口不按它鉴权 |
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
-| MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具（`operations_list` / `operation_describe` / `operation_call`），按接口令牌对应的用户角色鉴权 |
+| MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应的用户角色鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
 | 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
