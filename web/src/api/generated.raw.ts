@@ -3753,7 +3753,8 @@ export interface components {
          * @description 台账标签节点：平铺返回（靠 `parent_id` 表达层级），前端据此拼横向树。
          *
          *     `level`（1..3，由祖先链算出）与 `child_count`（直接子节点数）供页面判断
-         *     「还能不能再挂子标签」与节点计数展示。
+         *     「还能不能再挂子标签」；`item_count` 是直接引用该标签的台账记录数（**不含**子标签的
+         *     使用量），节点计数展示用它。
          * @example {
          *       "id": 2,
          *       "parent_id": 1,
@@ -3761,6 +3762,7 @@ export interface components {
          *       "remark": "AC 400V 系统，MNS / GGD 柜型",
          *       "level": 2,
          *       "child_count": 1,
+         *       "item_count": 1,
          *       "images": [
          *         {
          *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
@@ -3789,6 +3791,8 @@ export interface components {
             level: number;
             /** Child Count */
             child_count: number;
+            /** Item Count */
+            item_count: number;
             /** Images */
             images: components["schemas"]["FileObjectRead"][];
             /**
@@ -34191,6 +34195,7 @@ export interface operations {
                      *         "remark": "AC 400V 系统，MNS / GGD 柜型",
                      *         "level": 2,
                      *         "child_count": 1,
+                     *         "item_count": 1,
                      *         "images": [
                      *           {
                      *             "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
@@ -34326,6 +34331,7 @@ export interface operations {
                      *       "remark": "AC 400V 系统，MNS / GGD 柜型",
                      *       "level": 2,
                      *       "child_count": 1,
+                     *       "item_count": 1,
                      *       "images": [
                      *         {
                      *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
@@ -34570,6 +34576,7 @@ export interface operations {
                      *       "remark": "AC 400V 系统，MNS / GGD 柜型",
                      *       "level": 2,
                      *       "child_count": 1,
+                     *       "item_count": 1,
                      *       "images": [
                      *         {
                      *           "id": "3abf840e-14ec-7623-8b1c-713899902cc4",

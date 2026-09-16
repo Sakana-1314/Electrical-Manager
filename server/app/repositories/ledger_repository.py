@@ -106,6 +106,16 @@ async def count_children(session: AsyncSession, tag_id: int) -> int:
     return int((await session.scalar(query)) or 0)
 
 
+async def list_item_tag_ids(session: AsyncSession) -> list[str]:
+    """全部挂了标签的台账记录的 `tag_ids` 串（标签使用计数用）。
+
+    一次取回窄列即可：台账是字典量级，逐标签发 `LIKE` 查询反而更慢；命中口径与
+    `tag_id_match()` 一致（`1,12` 不会被 `1` 误命中），由调用方逐串解析累加。
+    """
+    query = select(Ledger.tag_ids).where(Ledger.tag_ids != "")
+    return list((await session.scalars(query)).all())
+
+
 async def filter_used_tag_ids(session: AsyncSession, tag_ids: Sequence[int]) -> set[int]:
     """在被台账记录引用的标签 id 中，挑出传入集合命中的那些。"""
     used: set[int] = set()

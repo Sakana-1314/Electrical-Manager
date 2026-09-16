@@ -335,7 +335,18 @@ def main() -> int:
         assert listed.status_code == 200 and item_row["id"] in [
             row["id"] for row in listed.json()["items"]
         ], listed.text
-        print(f"✅ 登记台账 #{item_row['id']} 与父标签筛选")
+        # 标签上的使用数量只算直接挂了该标签的记录：父标签不因子标签被引用而计数
+        tag_counts = {
+            row["id"]: row["item_count"]
+            for row in client.get("/api/v1/ledger-tags", headers=ledger).json()
+            if row["id"] in {root_tag.json()["id"], child_tag.json()["id"], too_deep.json()["id"]}
+        }
+        assert tag_counts == {
+            root_tag.json()["id"]: 0,
+            child_tag.json()["id"]: 1,
+            too_deep.json()["id"]: 1,
+        }, tag_counts
+        print(f"✅ 登记台账 #{item_row['id']} 与父标签筛选、标签使用数量")
 
         # 19. 只读用户不能写台账；被台账引用的标签不能删除
         denied_item = client.post(

@@ -6,6 +6,9 @@
   （成环）同样拒绝（400）。
 - 同一父节点下不允许同名标签（不同分支可同名），重名返回 409；改名、换父都按落库后的父节点校验同级。
 - 标签还有子节点、或（连同子孙）已被台账记录引用时不允许删除（409），删除是物理删除。
+- 标签节点的 `item_count` 是**直接**引用该标签的台账记录数（不含子孙标签的使用量），
+  与删除保护的引用判定同一口径（都按 `ledger.tag_ids` 的逗号串匹配）：被引用的节点删除时
+  会连同子孙一起拒绝，因此页面上「有子标签」与「item_count > 0」合起来就是不能删的全部情形。
 - 台账记录可挂多个标签：落库前统一规范化为「去重 + 升序 + 英文逗号分隔」的 id 串，
   读出来还原成 id 列表，并附标签名称与完整层级路径，列表页无需再自行解析。
 - 按标签筛选命中「选中标签及其全部子孙标签」的记录。
@@ -86,6 +89,19 @@ def _child_counts(tags: Iterable[LedgerTag]) -> dict[int, int]:
     return counts
 
 
+async def _item_counts(session: AsyncSession) -> dict[int, int]:
+    """每个标签被台账记录**直接**引用的条数（不含子孙标签的使用量）。
+
+    口径与 `delete_tag()` 的引用判定一致：一条记录挂了父标签就不算在子标签头上，
+    反之亦然（`ledger.tag_ids` 里出现的 id 才计数）。
+    """
+    counts: dict[int, int] = {}
+    for tag_ids in await ledger_repository.list_item_tag_ids(session):
+        for tag_id in parse_tag_ids(tag_ids):
+            counts[tag_id] = counts.get(tag_id, 0) + 1
+    return counts
+
+
 def _children_map(tags: Iterable[LedgerTag]) -> dict[int, list[int]]:
     children: dict[int, list[int]] = {}
     for tag in tags:
@@ -148,7 +164,10 @@ def _is_in_subtree(tags_by_id: dict[int, LedgerTag], node: LedgerTag, root_id: i
 
 
 def tag_read(
-    tag: LedgerTag, tags_by_id: dict[int, LedgerTag], child_counts: dict[int, int]
+    tag: LedgerTag,
+    tags_by_id: dict[int, LedgerTag],
+    child_counts: dict[int, int],
+    item_counts: dict[int, int],
 ) -> LedgerTagRead:
     return LedgerTagRead(
         id=tag.id,
@@ -157,6 +176,7 @@ def tag_read(
         remark=tag.remark,
         level=_tag_level(tags_by_id, tag),
         child_count=child_counts.get(tag.id, 0),
+        item_count=item_counts.get(tag.id, 0),
         images=[file_read(link.file) for link in tag.images],
         created_at=utc_aware(tag.created_at),
         updated_at=utc_aware(tag.updated_at),
@@ -204,7 +224,8 @@ async def list_tags(
     tags = await ledger_repository.list_tags(session, _trim(keyword))
     tags_by_id = {tag.id: tag for tag in tags}
     child_counts = _child_counts(tags)
-    rows = [tag_read(tag, tags_by_id, child_counts) for tag in tags]
+    item_counts = await _item_counts(session)
+    rows = [tag_read(tag, tags_by_id, child_counts, item_counts) for tag in tags]
     if scope == "orphan":
         return [row for row in rows if row.parent_id is None and row.child_count == 0]
     if scope == "tree":
@@ -218,7 +239,7 @@ async def get_tag_read(session: AsyncSession, tag_id: int) -> LedgerTagRead:
     tag = tags_by_id.get(tag_id)
     if tag is None:
         raise not_found("标签")
-    return tag_read(tag, tags_by_id, _child_counts(tags))
+    return tag_read(tag, tags_by_id, _child_counts(tags), await _item_counts(session))
 
 
 async def create_tag(session: AsyncSession, data: LedgerTagCreate) -> LedgerTagRead:
