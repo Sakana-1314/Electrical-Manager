@@ -81,7 +81,7 @@
 | 匿名分享页 `GET /shares/{token}` | 不带项目头，服务端按分享记录所属项目读取数据 |
 | 匿名导出下载 `GET /excel-export-jobs/files/{file_uuid}` | 不带项目头（uuid 不可猜解；查任务行取下载名时按全项目处理） |
 | 小程序 | 可带 `X-Project-Id` 切换项目；不带时落默认项目，旧版本客户端因此不受影响 |
-| MCP | 请求头 `X-Project-Id` 优先，缺省用默认项目；`operation_call` 会把项目头转发给业务接口 |
+| MCP | 请求头 `X-Project-Id` 优先，其次 MCP 链接上的 `?project_id=`，都缺省时用默认项目；`operation_call` 会把项目头转发给业务接口 |
 | 后台任务（导入 / 导出 / 清理） | 按任务行上记录的项目恢复上下文；跨项目的系统级任务显式声明「全项目」上下文 |
 
 ## 前端如何消费
