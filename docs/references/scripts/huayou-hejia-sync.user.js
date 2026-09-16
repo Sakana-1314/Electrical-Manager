@@ -546,7 +546,7 @@
   const loginHejia = async () => {
     if (!config.hejiaPassword)
       throw new Error(
-        "何佳登录已失效，且未填写何佳密码无法自动补登：请在悬浮窗填写何佳密码后重试",
+        "何佳未登录（或登录已失效），且未填写何佳密码无法自动补登：请先在何佳站点登录，或在悬浮窗填写何佳密码后重试",
       );
     const companies = await json({
       method: "POST",
