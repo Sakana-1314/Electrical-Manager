@@ -55,7 +55,7 @@ flowchart LR
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
 | MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应的用户角色鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
-| 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气设备 / 绝缘破损`），无父子层级；同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
+| 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气安全 / 电缆敷设不规范`），无父子层级；同一项目内同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
 | 隐患登记幂等键 | `hazard.client_request_id` | 小程序登记隐患时生成一次、重试复用：重复提交返回同一条隐患而不是新增；网页端登记留空，因此「非空」也表示该条来自小程序 |
 | 整改状态 / 隐患等级 | `HazardStatus` / `HazardLevel` | 状态三态：待整改 / 整改受阻 / 已整改；等级两档：一般隐患 / 重大隐患。逾期 = `due_date` 早于今天且状态非已整改（今天到期不算逾期） |
@@ -94,7 +94,7 @@ flowchart TD
     M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
     M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、华星总库存、精简库存"]
-    M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，只有更新时间"]
+    M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，有更新时间与乐观锁版本"]
     M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>八张图片关联表"]
     M --> G["只有 id 与业务时间<br/>业务事件日志"]
 ```
@@ -106,7 +106,7 @@ flowchart TD
     R["数据生命周期"]
     R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
     R --> U["没有 updated_by 列"]
-    R --> S["没有软删除列：删除一律物理删除"]
+    R --> S["业务表没有软删除列：删除一律物理删除（唯一例外是 file_object.deleted_at，附件的软删标记）"]
     R --> D["ON DELETE CASCADE：库存余额、补库策略、八张图片关联表随主表一并删除"]
 ```
 
@@ -145,7 +145,7 @@ erDiagram
 
 `excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`。
 
-每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。
+每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
 ### 全局表（10 张，不隔离）
 
@@ -445,11 +445,11 @@ erDiagram
 | `excel_export_job` | `finished_at` | DATETIME(6) | 是 | NULL | 结束时间 |
 | `excel_export_job` | *索引 / 外键* | — | — | — | 索引 `pk_excel_export_job(id)`、`ix_excel_export_job_type_status(export_type, status, id)`；外键 `created_by → user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `material_code_library` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `material_code_library` | `material_code` | VARCHAR(64) | 否 | 无 | 物资编码，唯一 |
+| `material_code_library` | `material_code` | VARCHAR(64) | 否 | 无 | 物资编码，项目内唯一 |
 | `material_code_library` | `name` | VARCHAR(128) | 是 | NULL | 名称 |
 | `material_code_library` | `model_spec` | VARCHAR(255) | 是 | NULL | 型号规格 |
 | `material_code_library` | `unit_name` | VARCHAR(32) | 否 | 无 | 单位 |
-| `material_code_library` | *索引 / 外键* | — | — | — | 索引 `pk_material_code_library(id)`；唯一 `uq_material_code_library_material_code(material_code)`；外键：无 |
+| `material_code_library` | *索引 / 外键* | — | — | — | 索引 `pk_material_code_library(id)`；唯一 `uq_material_code_library_project_material_code(project_id, material_code)`（按项目唯一）；外键：无 |
 | `share_link` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `share_link` | `token` | VARCHAR(36) | 否 | 无 | 分享令牌（UUID，唯一，不可猜解） |
 | `share_link` | `share_type` | ENUM('PURCHASE_PLAN','PURCHASE_RECORD') | 否 | 无 | 分享数据类型，接口值为 `purchase_plan` / `purchase_record` |
@@ -505,9 +505,9 @@ erDiagram
 | `stock_material` | `unit_name` | VARCHAR(32) | 否 | 无 | 单位 |
 | `stock_material` | `remark` | VARCHAR(1000) | 是 | NULL | 备注 |
 | `stock_material` | `identity_hash` | VARCHAR(64) | 否 | 无 | 名称+型号+单位归一化哈希，唯一，用于去重 |
-| `stock_material` | *索引 / 外键* | — | — | — | 索引 `pk_stock_material(id)`；唯一 `uq_stock_material_uuid(uuid)`、`uq_stock_material_identity_hash(identity_hash)`；外键：无 |
+| `stock_material` | *索引 / 外键* | — | — | — | 索引 `pk_stock_material(id)`；唯一 `uq_stock_material_uuid(uuid)`、`uq_stock_material_project_identity_hash(project_id, identity_hash)`；外键：无 |
 | `stock_operation` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `stock_operation` | `operation_no` | VARCHAR(32) | 否 | 无 | 单据编号，唯一 |
+| `stock_operation` | `operation_no` | VARCHAR(32) | 否 | 无 | 单据编号，项目内唯一 |
 | `stock_operation` | `operation_type` | ENUM('INBOUND','OUTBOUND') | 否 | 无 | 出入库方向 |
 | `stock_operation` | `occurred_at` | DATETIME(6) | 否 | 无 | 业务发生时间（必填，无默认值） |
 | `stock_operation` | `business_reason` | VARCHAR(500) | 否 | 无 | 业务原因 |
@@ -518,9 +518,9 @@ erDiagram
 | `stock_operation` | `reversal_of_id` | BIGINT UNSIGNED | 是 | NULL | 被冲销单据（自引用） |
 | `stock_operation` | `client_request_id` | VARCHAR(64) | 否 | 无 | 客户端请求 id，唯一，幂等键 |
 | `stock_operation` | `mini_program_user_name_snapshot` | VARCHAR(128) | 是 | NULL | 小程序提交人姓名快照 |
-| `stock_operation` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation(id)`；唯一 `uq_stock_operation_operation_no(operation_no)`、`uq_stock_operation_client_request_id(client_request_id)`；`ix_stock_operation_occurred_at(occurred_at)`、`ix_stock_operation_source_occurred(source_type, occurred_at)`、`ix_stock_operation_type_occurred(operation_type, occurred_at)`、`ix_stock_operation_reversal_of_id(reversal_of_id)`；外键 `reversal_of_id → stock_operation.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `stock_operation` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation(id)`；唯一 `uq_stock_operation_project_operation_no(project_id, operation_no)`、`uq_stock_operation_project_client_request_id(project_id, client_request_id)`；`ix_stock_operation_occurred_at(occurred_at)`、`ix_stock_operation_source_occurred(source_type, occurred_at)`、`ix_stock_operation_type_occurred(operation_type, occurred_at)`、`ix_stock_operation_reversal_of_id(reversal_of_id)`；外键 `reversal_of_id → stock_operation.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `purchase_material` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `purchase_material` | `plan_no` | VARCHAR(32) | 否 | 无 | 计划编号，唯一 |
+| `purchase_material` | `plan_no` | VARCHAR(32) | 否 | 无 | 计划编号，项目内唯一 |
 | `purchase_material` | `plan_date` | DATE | 否 | 无 | 计划日期 |
 | `purchase_material` | `material_code` | VARCHAR(64) | 是 | NULL | 物资编码；NULL 即未编码 |
 | `purchase_material` | `category` | VARCHAR(64) | 是 | NULL | 分类 |
@@ -537,7 +537,7 @@ erDiagram
 | `purchase_material` | `remark` | VARCHAR(1000) | 是 | NULL | 备注 |
 | `purchase_material` | `stock_material_id` | BIGINT UNSIGNED | 是 | NULL | 关联二级库物资 |
 | `purchase_material` | `status` | ENUM('NORMAL','DEFERRED','ARCHIVED') | 否 | `'NORMAL'` | 计划状态，接口序列化为 正常 / 暂不申购 / 已归档 |
-| `purchase_material` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material(id)`；唯一 `uq_purchase_material_plan_no(plan_no)`；`ix_purchase_material_status(status)`、`ix_purchase_material_stock_material_id(stock_material_id)`；外键 `stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `purchase_material` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material(id)`；唯一 `uq_purchase_material_project_plan_no(project_id, plan_no)`；`ix_purchase_material_status(status)`、`ix_purchase_material_stock_material_id(stock_material_id)`；外键 `stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
 </TabsContent>
 
@@ -642,13 +642,13 @@ erDiagram
 | `hazard_unit` | `enabled` | TINYINT(1) | 否 | `1` | 0=停用（登记下拉不可选）1=启用 |
 | `hazard_unit` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `hazard_unit` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `hazard_unit` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_unit(id)`；唯一 `uq_hazard_unit_name(name)` |
+| `hazard_unit` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_unit(id)`；唯一 `uq_hazard_unit_project_name(project_id, name)`（按项目唯一） |
 | `hazard_type` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `hazard_type` | `major` | VARCHAR(128) | 否 | 无 | 大类 |
 | `hazard_type` | `minor` | VARCHAR(128) | 否 | 无 | 小类 |
 | `hazard_type` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `hazard_type` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `hazard_type` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_type(id)`；唯一 `uq_hazard_type_major(major, minor)` |
+| `hazard_type` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_type(id)`；唯一 `uq_hazard_type_project_major(project_id, major, minor)`（按项目唯一） |
 | `hazard` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `hazard` | `inspection_area` | VARCHAR(128) | 否 | `'华星现场'` | 检查区域 |
 | `hazard` | `inspection_date` | DATE | 否 | 无 | 检查日期 |
@@ -667,7 +667,7 @@ erDiagram
 | `hazard` | `client_request_id` | VARCHAR(64) | 是 | 无 | 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）；网页端登记为空，非空即表示小程序登记 |
 | `hazard` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `hazard` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；唯一 `uq_hazard_client_request_id(client_request_id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
+| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；唯一 `uq_hazard_project_client_request_id(project_id, client_request_id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
 | `hazard_before_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
 | `hazard_before_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `hazard_before_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序） |
@@ -815,7 +815,7 @@ flowchart LR
 | --- | --- |
 | JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 MySQL `JSON` 类型，不建额外索引 |
 | 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，ORM 侧另有 `default=""` / `server_default=""`；`file_object.mime_type` 同样只在 ORM 侧有 `default="image/png"`（`test_init_sql.py` 不校验默认值） |
-| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、软删除列、`updated_by` 列与数据库分区/视图，表结构变更必须同时改 `init.sql` 与 ORM 模型 |
+| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，次日凌晨复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
 
 
 ### 种子数据
