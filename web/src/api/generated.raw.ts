@@ -27855,6 +27855,8 @@ export interface operations {
                 fields?: string | null;
                 /** @description 只返回申购单号（purchase_order_no）>= 该值的记录（含该值） */
                 min_purchase_order_no?: string | null;
+                /** @description 只返回申购单号（purchase_order_no）< 该值的记录（不含该值） */
+                max_purchase_order_no?: string | null;
             };
             header?: {
                 "X-Project-Id"?: number | null;
@@ -28101,6 +28103,8 @@ export interface operations {
                 fields?: string | null;
                 /** @description 只返回申购单号（purchase_order_no）>= 该值的记录（含该值） */
                 min_purchase_order_no?: string | null;
+                /** @description 只返回申购单号（purchase_order_no）< 该值的记录（不含该值） */
+                max_purchase_order_no?: string | null;
             };
             header?: {
                 "X-Project-Id"?: number | null;

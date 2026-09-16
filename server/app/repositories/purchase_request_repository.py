@@ -95,6 +95,7 @@ async def list_sync_targets(
     cursor: int,
     fields: set[str] | None = None,
     min_purchase_order_no: str | None = None,
+    max_purchase_order_no: str | None = None,
 ) -> list[tuple[str, int, int]]:
     """按追溯号分组的待同步目标（trace_no 非空且存在缺失字段或未完成状态）。
 
@@ -102,7 +103,8 @@ async def list_sync_targets(
     排序取每组的最大 line.id 倒序。limit 应传 limit+1 由调用方截断判定 has_more。
     fields 为空时覆盖全部同步字段；仅包含调用方实际关心的字段（如何佳脚本只需
     salesperson/contract_no/vessel_no/status），避免“补不完的字段”长期占用目标。
-    min_purchase_order_no 非空时仅保留申购单号 >= 该值的记录（含该值）。
+    min_/max_purchase_order_no 非空时按申购单号做半开区间过滤 [min, max)：
+    下界含端点、上界不含端点，便于两个同步脚本按阈值分工（新旧系统各查一段）。
     """
     where_clauses = [
         PurchaseRequestLine.trace_no.is_not(None),
@@ -112,6 +114,10 @@ async def list_sync_targets(
     if min_purchase_order_no:
         where_clauses.append(
             func.trim(PurchaseRequest.purchase_order_no) >= min_purchase_order_no
+        )
+    if max_purchase_order_no:
+        where_clauses.append(
+            func.trim(PurchaseRequest.purchase_order_no) < max_purchase_order_no
         )
     if cursor:
         where_clauses.append(PurchaseRequestLine.id < cursor)
@@ -138,12 +144,14 @@ async def list_sync_order_targets(
     cursor: int,
     fields: set[str] | None = None,
     min_purchase_order_no: str | None = None,
+    max_purchase_order_no: str | None = None,
 ) -> list[tuple[str, list[str], int]]:
     """按申购单号分组的待同步目标，每组返回该申购单下所有待同步追溯号。
 
     返回 (purchase_order_no, trace_nos, cursor_id) 三元组：以“申购单号”为同步单元，
     供整单一次查询、整单批量回写；cursor 仍按 line.id 在分组前过滤（语义与
     list_sync_targets 一致，每组完整、不会被页边界切开）。trace_nos 去重保序。
+    min_/max_purchase_order_no 语义同 list_sync_targets：半开区间 [min, max)。
     """
     where_clauses = [
         PurchaseRequestLine.trace_no.is_not(None),
@@ -155,6 +163,11 @@ async def list_sync_order_targets(
         where_clauses.append(
             func.coalesce(func.trim(PurchaseRequest.purchase_order_no), "")
             >= min_purchase_order_no
+        )
+    if max_purchase_order_no:
+        where_clauses.append(
+            func.coalesce(func.trim(PurchaseRequest.purchase_order_no), "")
+            < max_purchase_order_no
         )
     if cursor:
         where_clauses.append(PurchaseRequestLine.id < cursor)

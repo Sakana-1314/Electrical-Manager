@@ -36,6 +36,11 @@ async def sync_targets(
         max_length=128,
         description="只返回申购单号（purchase_order_no）>= 该值的记录（含该值）",
     ),
+    max_purchase_order_no: str | None = Query(
+        default=None,
+        max_length=128,
+        description="只返回申购单号（purchase_order_no）< 该值的记录（不含该值）",
+    ),
 ) -> PurchaseRecordSyncTargetsRead:
     return await service.list_sync_targets(
         session,
@@ -43,6 +48,7 @@ async def sync_targets(
         cursor=cursor,
         fields=fields,
         min_purchase_order_no=min_purchase_order_no,
+        max_purchase_order_no=max_purchase_order_no,
     )
 
 
@@ -79,6 +85,11 @@ async def sync_order_targets(
         max_length=128,
         description="只返回申购单号（purchase_order_no）>= 该值的记录（含该值）",
     ),
+    max_purchase_order_no: str | None = Query(
+        default=None,
+        max_length=128,
+        description="只返回申购单号（purchase_order_no）< 该值的记录（不含该值）",
+    ),
 ) -> PurchaseRecordSyncOrderTargetsRead:
     """按申购单号列出待同步整单目标（整单一次平台查询、整单批量回写）。"""
     return await service.list_sync_order_targets(
@@ -87,6 +98,7 @@ async def sync_order_targets(
         cursor=cursor,
         fields=fields,
         min_purchase_order_no=min_purchase_order_no,
+        max_purchase_order_no=max_purchase_order_no,
     )
 
 

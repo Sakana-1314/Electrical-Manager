@@ -142,6 +142,43 @@ async def test_sync_targets_min_purchase_order_no(client) -> None:
     assert [item["trace_no"] for item in filtered["items"]] == ["SYNC-P2"]
 
 
+async def test_sync_targets_max_purchase_order_no(client) -> None:
+    """上界不含端点：max 只返回严格小于该值的申购单号（旧系统脚本按阈值分流用）。"""
+    headers = await auth_headers(client, "purchase")
+    for name, code, po in [
+        ("同步电机Q1", "SYNC-Q1", "P05SG0299"),
+        ("同步电机Q2", "SYNC-Q2", "P05SG0300"),
+        ("同步电机Q3", "SYNC-Q3", "P05SG0301"),
+    ]:
+        motor = await create_purchase_plan(client, headers, name, code=code)
+        await _move_plan(client, headers, int(motor["id"]), code, purchase_order_no=po)
+
+    below = await _targets(client, headers, max_purchase_order_no="P05SG0300")
+    assert [item["trace_no"] for item in below["items"]] == ["SYNC-Q1"]
+
+    # 半开区间 [min, max)：只留下恰好在阈值上的那一单
+    window = await _targets(
+        client,
+        headers,
+        min_purchase_order_no="P05SG0300",
+        max_purchase_order_no="P05SG0301",
+    )
+    assert [item["trace_no"] for item in window["items"]] == ["SYNC-Q2"]
+
+
+async def test_sync_targets_rejects_over_long_order_no_bounds(client) -> None:
+    headers = await auth_headers(client, "purchase")
+    for params in (
+        {"min_purchase_order_no": "P" * 129},
+        {"max_purchase_order_no": "P" * 129},
+    ):
+        response = await client.get(
+            "/api/v1/purchase-record-sync/targets", headers=headers, params=params
+        )
+        assert response.status_code == 422
+        assert response.json()["code"] == "VALIDATION_ERROR"
+
+
 async def test_sync_targets_invalid_fields(client) -> None:
     headers = await auth_headers(client, "purchase")
     response = await client.get(
@@ -269,6 +306,37 @@ async def test_sync_order_targets_min_purchase_order_no(client) -> None:
 
     filtered = await _order_targets(client, headers, min_purchase_order_no="P05SG0300")
     assert [item["purchase_order_no"] for item in filtered["items"]] == ["P05SG0300"]
+
+
+async def test_sync_order_targets_max_purchase_order_no(client) -> None:
+    """旧系统脚本按阈值分流：max 只返回严格小于该值的整单，端点归属上界之外。"""
+    headers = await auth_headers(client, "purchase")
+    for name, code, po in [
+        ("整单电机M1", "ORD-M1", "P05SG0299"),
+        ("整单电机M2", "ORD-M2", "P05SG0300"),
+        ("整单电机M3", "ORD-M3", "P05SG0301"),
+    ]:
+        motor = await create_purchase_plan(client, headers, name, code=code)
+        await _move_plan(client, headers, int(motor["id"]), f"TR-{code}", purchase_order_no=po)
+
+    below = await _order_targets(client, headers, max_purchase_order_no="P05SG0300")
+    assert [item["purchase_order_no"] for item in below["items"]] == ["P05SG0299"]
+
+    window = await _order_targets(
+        client,
+        headers,
+        min_purchase_order_no="P05SG0300",
+        max_purchase_order_no="P05SG0301",
+    )
+    assert [item["purchase_order_no"] for item in window["items"]] == ["P05SG0300"]
+
+    response = await client.get(
+        "/api/v1/purchase-record-sync/order-targets",
+        headers=headers,
+        params={"max_purchase_order_no": "P" * 129},
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_ERROR"
 
 
 async def test_sync_order_apply_writes_whole_order_in_one_call(client) -> None:
