@@ -3,8 +3,11 @@
 本目录用于存放备件管理系统配套的 Tampermonkey / Violentmonkey 用户脚本。
 
 > 目录调整说明：本目录原为 `example/script/`，已随仓库结构整理迁移到 `docs/references/scripts/`。
-> 两个脚本的 `@updateURL` / `@downloadURL` 已同步指向新地址并递增 `@version`；已安装旧地址的
-> 脚本不会自动更新，需要在脚本管理器中按本目录的新地址更新一次（或重新新建脚本粘贴内容）。
+> 两个脚本的 `@updateURL` / `@downloadURL` 统一指向 raw 地址：
+> `https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/<脚本文件名>`
+> （脚本管理器直接拉 raw 内容，省掉 GitHub `/raw/` 的一次跳转）。
+> 每次改地址或改内容都会递增 `@version`，脚本管理器检查更新时会自动升级到新地址；
+> 若管理器里装的还是很早以前、已不再维护的地址，按上面的 raw 地址重新新建一次脚本即可。
 
 ## 两个脚本的分工（华友单号阈值）
 
