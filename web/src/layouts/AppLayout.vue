@@ -170,13 +170,13 @@ function onUserMenuSelect(key: string) {
 
 <template>
   <n-layout :has-sider="!isMobile" class="app-shell">
-    <!-- 侧栏几何：展开 200px / 折叠 64px；菜单字号 13px 在 theme.ts 的 Menu 覆盖里（见 UI 设计规范「侧栏导航」） -->
+    <!-- 侧栏几何：展开 180px / 折叠 64px；菜单字号 13px 在 theme.ts 的 Menu 覆盖里（见 UI 设计规范「侧栏导航」） -->
     <n-layout-sider
       v-if="!isMobile"
       bordered
       collapse-mode="width"
       :collapsed-width="64"
-      :width="200"
+      :width="180"
       :collapsed="collapsed"
       show-trigger
       @collapse="collapsed = true"
@@ -272,10 +272,11 @@ function onUserMenuSelect(key: string) {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 16px;
+  /* 200 → 180px 时品牌名放不下，字号与左右内边距同步收一档（Logo 尺寸见 .brand-mark） */
+  padding: 0 13px;
   border-bottom: 1px solid var(--color-border-subtle);
   color: var(--color-text-strong);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 650;
   white-space: nowrap;
 }
@@ -291,8 +292,8 @@ function onUserMenuSelect(key: string) {
   padding: 0;
 }
 .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   flex: none;
 }
