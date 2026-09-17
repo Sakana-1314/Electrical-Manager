@@ -1175,15 +1175,6 @@ onMounted(() => {
           />
         </label>
         <label class="filter-field">
-          <span>用途</span>
-          <n-input
-            v-model:value="filters.usage"
-            placeholder="输入用途关键字"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
           <span>追溯号</span>
           <n-input
             v-model:value="filters.trace_no"
@@ -1249,6 +1240,15 @@ onMounted(() => {
             clearable
             filterable
             placeholder="选择或搜索子项号"
+          />
+        </label>
+        <label class="filter-field">
+          <span>用途</span>
+          <n-input
+            v-model:value="filters.usage"
+            placeholder="输入用途关键字"
+            clearable
+            @keyup.enter="query"
           />
         </label>
       </div>
