@@ -1587,6 +1587,7 @@ class PurchaseRecordResultExportRequest(RequestModel):
     category: str | None = Field(default=None, max_length=64)
     name: str | None = Field(default=None, max_length=128)
     model_spec: str | None = Field(default=None, max_length=255)
+    usage: str | None = Field(default=None, max_length=500)
     actual_demand_person: str | None = Field(default=None, max_length=128)
     purchase_responsible: str | None = Field(default=None, max_length=128)
     salesperson: str | None = Field(default=None, max_length=128)

@@ -21,6 +21,7 @@ OR_SEARCH_DESCRIPTION = "可使用 | 或 ｜ 分隔多个关键词，同一参�
 OrSearch = Annotated[str | None, Query(description=OR_SEARCH_DESCRIPTION)]
 OrSearch128 = Annotated[str | None, Query(max_length=128, description=OR_SEARCH_DESCRIPTION)]
 OrSearch255 = Annotated[str | None, Query(max_length=255, description=OR_SEARCH_DESCRIPTION)]
+OrSearch500 = Annotated[str | None, Query(max_length=500, description=OR_SEARCH_DESCRIPTION)]
 
 
 async def _require_full_secondary_warehouse(session: DbSession) -> None:

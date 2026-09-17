@@ -30,6 +30,7 @@ async def create_purchase_plan(
     subitem_no: str | None = "01-01",
     plan_date: str = "2026-07-01",
     image_ids: list[str] | None = None,
+    usage: str = "控制柜检修",
 ) -> dict[str, object]:
     response = await client.post(
         "/api/v1/purchase-materials",
@@ -44,7 +45,7 @@ async def create_purchase_plan(
             "actual_demand_person": actual_demand_person,
             "purchase_responsible": purchase_responsible,
             "planned_qty": planned_qty,
-            "usage": "控制柜检修",
+            "usage": usage,
             "subitem_no": subitem_no,
             "remark": "新计划",
             "stock_material_id": stock_material_id,
@@ -270,6 +271,67 @@ async def test_purchase_record_subitem_filters_support_exact_and_empty(
         second["line_id"],
         empty["line_id"],
     }
+
+
+@pytest.mark.asyncio
+async def test_purchase_record_usage_filter_supports_keyword_and_export(
+    client: AsyncClient,
+) -> None:
+    headers = await auth_headers(client, "purchase")
+    furnace_plan = await create_purchase_plan(
+        client,
+        headers,
+        "回转窑备件",
+        code="DQ-USE-R1",
+        usage="1#回转窑控制柜检修备件补充",
+    )
+    instrument_plan = await create_purchase_plan(
+        client,
+        headers,
+        "仪表柜保险",
+        code="DQ-USE-R2",
+        usage="仪表柜保险批量更换",
+    )
+    furnace = await move_to_record(client, headers, int(furnace_plan["id"]))
+    instrument = await move_to_record(client, headers, int(instrument_plan["id"]))
+
+    matched = await client.get(
+        "/api/v1/purchase-records", headers=headers, params={"usage": "回转窑"}
+    )
+    assert matched.status_code == 200, matched.text
+    assert [item["line_id"] for item in matched.json()["items"]] == [furnace["line_id"]]
+
+    # 同一参数内支持 | / ｜ 分隔多关键字（OR），与其它模糊筛选一致
+    either = await client.get(
+        "/api/v1/purchase-records", headers=headers, params={"usage": "回转窑|仪表柜"}
+    )
+    assert either.status_code == 200, either.text
+    assert {item["line_id"] for item in either.json()["items"]} == {
+        furnace["line_id"],
+        instrument["line_id"],
+    }
+
+    missing = await client.get(
+        "/api/v1/purchase-records", headers=headers, params={"usage": "不存在的用途"}
+    )
+    assert missing.status_code == 200, missing.text
+    assert missing.json()["items"] == []
+
+    export = await client.post(
+        "/api/v1/purchase-records/export-results",
+        headers=headers,
+        json={"columns": ["material_name", "usage"], "usage": "回转窑"},
+    )
+    assert export.status_code == 202, export.text
+    job = await await_export_job(client, headers, export.json()["id"])
+    assert job["status"] == "SUCCEEDED"
+    assert job["file_uuid"]
+    file = await client.get(f"/api/v1/excel-export-jobs/files/{job['file_uuid']}")
+    assert file.status_code == 200, file.text
+    sheet = load_workbook(BytesIO(file.content)).active
+    assert sheet.max_row == 2
+    assert sheet["A2"].value == furnace["material_name"]
+    assert sheet["B2"].value == furnace["usage"]
 
 
 @pytest.mark.asyncio

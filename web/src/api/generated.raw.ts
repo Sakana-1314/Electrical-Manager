@@ -9843,6 +9843,8 @@ export interface components {
             name?: string | null;
             /** Model Spec */
             model_spec?: string | null;
+            /** Usage */
+            usage?: string | null;
             /** Actual Demand Person */
             actual_demand_person?: string | null;
             /** Purchase Responsible */
@@ -28371,6 +28373,8 @@ export interface operations {
                 name?: string | null;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
                 model_spec?: string | null;
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                usage?: string | null;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
                 actual_demand_person?: string | null;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */

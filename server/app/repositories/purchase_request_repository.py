@@ -226,6 +226,7 @@ async def search_purchase_records(
     category: str | None,
     name: str | None,
     model_spec: str | None,
+    usage: str | None,
     actual_demand_person: str | None,
     purchase_responsible: str | None,
     salesperson: str | None,
@@ -325,6 +326,7 @@ async def search_purchase_records(
         ((PurchaseRequestLine.trace_no,), trace_no),
         ((PurchaseRequestLine.material_name_snapshot,), name),
         ((PurchaseRequestLine.model_spec_snapshot,), model_spec),
+        ((PurchaseRequestLine.usage,), usage),
         ((PurchaseRequestLine.actual_demand_person_snapshot,), actual_demand_person),
         ((PurchaseRequestLine.purchase_responsible_snapshot,), purchase_responsible),
         (
