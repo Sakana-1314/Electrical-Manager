@@ -58,6 +58,7 @@ const EMPTY_SUBITEM_FILTER = '__empty_subitem_no__'
 type RecordFilters = {
   name: string
   model_spec: string
+  usage: string
   trace_no: string
   purchase_order_no: string
   actual_demand_person: string | null
@@ -112,6 +113,7 @@ const {
       page_size: pager.page_size,
       name: searchName.value,
       model_spec: f.model_spec.trim() || undefined,
+      usage: f.usage.trim() || undefined,
       trace_no: f.trace_no.trim() || undefined,
       purchase_order_no: f.purchase_order_no.trim() || undefined,
       actual_demand_person: f.actual_demand_person?.trim() || undefined,
@@ -127,6 +129,7 @@ const {
   initialFilters: () => ({
     name: '',
     model_spec: '',
+    usage: '',
     trace_no: '',
     purchase_order_no: '',
     actual_demand_person: null,
@@ -149,6 +152,7 @@ const {
       return {
         name: routeQueryString(route.query.name),
         model_spec: routeQueryString(route.query.model_spec),
+        usage: routeQueryString(route.query.usage),
         trace_no: routeQueryString(route.query.trace_no),
         purchase_order_no: routeQueryString(route.query.purchase_order_no),
         actual_demand_person: routeQueryString(route.query.actual_demand_person) || null,
@@ -165,6 +169,7 @@ const {
     toQuery: (f) => ({
       name: f.name,
       model_spec: f.model_spec,
+      usage: f.usage,
       trace_no: f.trace_no,
       purchase_order_no: f.purchase_order_no,
       actual_demand_person: f.actual_demand_person || undefined,
@@ -723,6 +728,7 @@ async function exportResults() {
       columns: exportColumns,
       name: searchName.value,
       model_spec: filters.model_spec.trim() || undefined,
+      usage: filters.usage.trim() || undefined,
       trace_no: filters.trace_no.trim() || undefined,
       purchase_order_no: filters.purchase_order_no.trim() || undefined,
       actual_demand_person: filters.actual_demand_person?.trim() || undefined,
@@ -1164,6 +1170,15 @@ onMounted(() => {
           <n-input
             v-model:value="filters.model_spec"
             placeholder="输入型号规格"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
+        <label class="filter-field">
+          <span>用途</span>
+          <n-input
+            v-model:value="filters.usage"
+            placeholder="输入用途关键字"
             clearable
             @keyup.enter="query"
           />

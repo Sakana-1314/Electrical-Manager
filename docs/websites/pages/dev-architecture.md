@@ -612,7 +612,7 @@ flowchart LR
 | 导出上限 | `EXPORT_ROW_LIMIT = 10_000`：导出发起前以 `page_size=EXPORT_ROW_LIMIT + 1` 试探，超限抛 `VALIDATION_ERROR`（`details` 带 `total`/`limit`） |
 | 排序参数 | `sort_by` + `sort_order`；`sort_order` 用 `deps.SortOrder`（`Literal["asc","desc"]`，默认 `"asc"`）；`sort_by` 类型随接口不同——申购计划/申购记录用 `Literal` 列名（`PurchasePlanResultColumn` 15 值、`PurchaseRecordResultColumn` 23 值），周期性计划用 `str \| None` |
 | 排序列白名单 | 仓储层 `PURCHASE_MATERIAL_SORT_COLUMNS`、`PURCHASE_PLAN_TEMPLATE_SORT_COLUMNS`、`PURCHASE_RECORD_SORT_COLUMNS`（注释写明「防止任意属性注入」）；`sort_by` 不在白名单时回退默认排序，固定次级排序键 `id desc`（如 `purchase_plan_template_repository.search_templates`） |
-| 关键词 OR 搜索 | `OrSearch`/`OrSearch128`/`OrSearch255` 用 `|` 或 `｜` 分隔，`common.contains_any` 生成 `OR ... contains(..., autoescape=True)` |
+| 关键词 OR 搜索 | `OrSearch`/`OrSearch128`/`OrSearch255`/`OrSearch500` 用 `|` 或 `｜` 分隔，`common.contains_any` 生成 `OR ... contains(..., autoescape=True)` |
 ### 日志与 request_id
 | 项 | 实现（`server/app/core/logging.py`） |
 | --- | --- |

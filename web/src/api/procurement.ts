@@ -40,6 +40,7 @@ export interface PurchaseMaterialListQuery extends PagedQueryParams {
 export interface PurchaseRecordListQuery extends PagedQueryParams {
   name?: string
   model_spec?: string
+  usage?: string
   trace_no?: string
   purchase_order_no?: string
   actual_demand_person?: string
