@@ -190,6 +190,24 @@ const router = createRouter({
           meta: { title: '标签管理', parent: '台账管理' },
         },
         {
+          path: 'work/overview',
+          name: 'work-overview',
+          component: () => import('@/views/work/WorkOverviewView.vue'),
+          meta: { title: '工作总览', parent: '工作管理', keepAlive: true },
+        },
+        {
+          path: 'work/tasks',
+          name: 'work-tasks',
+          component: () => import('@/views/work/WorkTasksView.vue'),
+          meta: { title: '任务视图', parent: '工作管理', keepAlive: true },
+        },
+        {
+          path: 'work/workers',
+          name: 'work-workers',
+          component: () => import('@/views/work/WorkWorkersView.vue'),
+          meta: { title: '人员视图', parent: '工作管理', keepAlive: true },
+        },
+        {
           path: 'settings/advanced',
           name: 'advanced-settings',
           component: () => import('@/views/settings/AdvancedSettingsView.vue'),

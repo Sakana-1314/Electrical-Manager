@@ -2281,6 +2281,162 @@ export interface paths {
         patch: operations["edit_project_api_v1_projects__item_id__patch"];
         trace?: never;
     };
+    "/api/v1/work-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 任务列表 */
+        get: operations["list_work_tasks_api_v1_work_tasks_get"];
+        put?: never;
+        /** 新增任务 */
+        post: operations["create_work_task_api_v1_work_tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 任务详情 */
+        get: operations["get_work_task_api_v1_work_tasks__task_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * 删除任务
+         * @description 删除任务：任务下还有工作记录时返回 409（不做级联删除）。
+         */
+        delete: operations["delete_work_task_api_v1_work_tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新任务 */
+        patch: operations["update_work_task_api_v1_work_tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/work-records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 工作记录详情 */
+        get: operations["get_work_record_api_v1_work_records__record_id__get"];
+        put?: never;
+        post?: never;
+        /** 删除工作记录 */
+        delete: operations["delete_work_record_api_v1_work_records__record_id__delete"];
+        options?: never;
+        head?: never;
+        /** 更新工作记录 */
+        patch: operations["update_work_record_api_v1_work_records__record_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/work-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 新增工作记录 */
+        post: operations["create_work_record_api_v1_work_records_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 工作总览
+         * @description 每天每个活由哪几个人在干：区间内记录按天展开，一行 = 日期 + 任务 + 时段。
+         */
+        get: operations["list_work_overview_api_v1_work_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-task-timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 任务视图时间线
+         * @description 任务全周期时间线：每个任务一行，带区间内它的工作记录（起止 + 参与人员）。
+         */
+        get: operations["list_work_task_timeline_api_v1_work_task_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-worker-timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 人员视图时间线
+         * @description 每人每天在干什么活：按参与人姓名分组，一人一行，带区间内的记录。
+         */
+        get: operations["list_work_worker_timeline_api_v1_work_worker_timeline_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/work-participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 参与人员名单
+         * @description 项目内历史上出现过的参与人姓名（去重升序）：表单下拉辅助输入与筛选共用。
+         */
+        get: operations["list_work_participants_api_v1_work_participants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9009,6 +9165,726 @@ export interface components {
             total: number;
         };
         /**
+         * Page[WorkOverviewRowRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "date": "2026-09-12",
+         *           "record_id": 2,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "上午",
+         *           "participants": [
+         *             "李建军",
+         *             "陈志远"
+         *           ],
+         *           "remark": "新轴承回装与对中"
+         *         },
+         *         {
+         *           "date": "2026-09-11",
+         *           "record_id": 2,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "陈志远"
+         *           ],
+         *           "remark": "新轴承回装与对中"
+         *         },
+         *         {
+         *           "date": "2026-09-10",
+         *           "record_id": 2,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "陈志远"
+         *           ],
+         *           "remark": "新轴承回装与对中"
+         *         },
+         *         {
+         *           "date": "2026-09-09",
+         *           "record_id": 4,
+         *           "task_id": 4,
+         *           "task_name": "现场压力变送器校验",
+         *           "task_status": "已暂停",
+         *           "slot": "上午",
+         *           "participants": [
+         *             "陈志远"
+         *           ],
+         *           "remark": "拆检 6 只，其余等排期"
+         *         },
+         *         {
+         *           "date": "2026-09-09",
+         *           "record_id": 1,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "王海涛"
+         *           ],
+         *           "remark": "拆卸端盖、取出旧轴承"
+         *         },
+         *         {
+         *           "date": "2026-09-08",
+         *           "record_id": 4,
+         *           "task_id": 4,
+         *           "task_name": "现场压力变送器校验",
+         *           "task_status": "已暂停",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "陈志远"
+         *           ],
+         *           "remark": "拆检 6 只，其余等排期"
+         *         },
+         *         {
+         *           "date": "2026-09-08",
+         *           "record_id": 1,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "王海涛"
+         *           ],
+         *           "remark": "拆卸端盖、取出旧轴承"
+         *         },
+         *         {
+         *           "date": "2026-09-07",
+         *           "record_id": 1,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "王海涛"
+         *           ],
+         *           "remark": "拆卸端盖、取出旧轴承"
+         *         },
+         *         {
+         *           "date": "2026-09-02",
+         *           "record_id": 3,
+         *           "task_id": 2,
+         *           "task_name": "窑尾高温风机变频器参数校验",
+         *           "task_status": "已完成",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "刘振华",
+         *             "杨明辉"
+         *           ],
+         *           "remark": "参数回读、空载试车"
+         *         },
+         *         {
+         *           "date": "2026-09-02",
+         *           "record_id": 5,
+         *           "task_id": 5,
+         *           "task_name": "6kV 高压开关柜绝缘测试",
+         *           "task_status": "已完成",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "刘振华",
+         *             "杨明辉"
+         *           ],
+         *           "remark": "停电测试，恢复送电"
+         *         },
+         *         {
+         *           "date": "2026-09-01",
+         *           "record_id": 5,
+         *           "task_id": 5,
+         *           "task_name": "6kV 高压开关柜绝缘测试",
+         *           "task_status": "已完成",
+         *           "slot": "全天",
+         *           "participants": [
+         *             "李建军",
+         *             "刘振华",
+         *             "杨明辉"
+         *           ],
+         *           "remark": "停电测试，恢复送电"
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 11
+         *     }
+         */
+        Page_WorkOverviewRowRead_: {
+            /** Items */
+            items: components["schemas"]["WorkOverviewRowRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[WorkTaskRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "name": "1# 回转窑主电机轴承更换",
+         *           "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+         *           "status": "进行中",
+         *           "plan_start_date": "2026-09-07",
+         *           "plan_end_date": "2026-09-18",
+         *           "remark": "备件已到货（NU228 轴承 2 套）",
+         *           "images": [
+         *             {
+         *               "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *               "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 486912,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "record_count": 2,
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 2,
+         *           "name": "窑尾高温风机变频器参数校验",
+         *           "description": "停机检修后恢复变频器参数并做空载试车",
+         *           "status": "已完成",
+         *           "plan_start_date": "2026-09-01",
+         *           "plan_end_date": "2026-09-03",
+         *           "remark": "参数已备份到车间共享盘",
+         *           "images": [],
+         *           "record_count": 1,
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 3,
+         *           "name": "201 低压配电室抽屉柜清灰紧固",
+         *           "description": "MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻",
+         *           "status": "未开始",
+         *           "plan_start_date": "2026-09-14",
+         *           "plan_end_date": "2026-09-20",
+         *           "remark": "需提前办理工作票与停电申请",
+         *           "images": [
+         *             {
+         *               "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+         *               "original_name": "201 低压配电室抽屉柜清灰紧固-现场照片.jpg",
+         *               "mime_type": "image/jpeg",
+         *               "size_bytes": 486912,
+         *               "width": 1600,
+         *               "height": 1200
+         *             }
+         *           ],
+         *           "record_count": 0,
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 4,
+         *           "name": "现场压力变送器校验",
+         *           "description": "现场 12 只压力变送器送检与回装",
+         *           "status": "已暂停",
+         *           "plan_start_date": "2026-09-08",
+         *           "plan_end_date": "2026-09-12",
+         *           "remark": "检定站排期调整，已完成的先回装",
+         *           "images": [],
+         *           "record_count": 1,
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 5,
+         *           "name": "6kV 高压开关柜绝缘测试",
+         *           "description": "6kV 高压室馈出柜停电做绝缘电阻与耐压测试",
+         *           "status": "已完成",
+         *           "plan_start_date": "2026-08-31",
+         *           "plan_end_date": "2026-09-02",
+         *           "remark": "测试报告已归档",
+         *           "images": [],
+         *           "record_count": 1,
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 5
+         *     }
+         */
+        Page_WorkTaskRead_: {
+            /** Items */
+            items: components["schemas"]["WorkTaskRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[WorkTaskTimelineRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "task": {
+         *             "id": 1,
+         *             "name": "1# 回转窑主电机轴承更换",
+         *             "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+         *             "status": "进行中",
+         *             "plan_start_date": "2026-09-07",
+         *             "plan_end_date": "2026-09-18",
+         *             "remark": "备件已到货（NU228 轴承 2 套）",
+         *             "images": [
+         *               {
+         *                 "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *                 "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+         *                 "mime_type": "image/jpeg",
+         *                 "size_bytes": 486912,
+         *                 "width": 1600,
+         *                 "height": 1200
+         *               }
+         *             ],
+         *             "record_count": 2,
+         *             "created_at": "2026-09-01T08:30:00+08:00",
+         *             "updated_at": "2026-09-12T17:20:00+08:00",
+         *             "version": 1
+         *           },
+         *           "records": [
+         *             {
+         *               "id": 1,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-07",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-09",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "王海涛"
+         *               ],
+         *               "remark": "拆卸端盖、取出旧轴承",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 2,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-10",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-12",
+         *               "end_half": "AM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "陈志远"
+         *               ],
+         *               "remark": "新轴承回装与对中",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "task": {
+         *             "id": 2,
+         *             "name": "窑尾高温风机变频器参数校验",
+         *             "description": "停机检修后恢复变频器参数并做空载试车",
+         *             "status": "已完成",
+         *             "plan_start_date": "2026-09-01",
+         *             "plan_end_date": "2026-09-03",
+         *             "remark": "参数已备份到车间共享盘",
+         *             "images": [],
+         *             "record_count": 1,
+         *             "created_at": "2026-09-01T08:30:00+08:00",
+         *             "updated_at": "2026-09-12T17:20:00+08:00",
+         *             "version": 1
+         *           },
+         *           "records": [
+         *             {
+         *               "id": 3,
+         *               "task_id": 2,
+         *               "task_name": "窑尾高温风机变频器参数校验",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-02",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "参数回读、空载试车",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "task": {
+         *             "id": 3,
+         *             "name": "201 低压配电室抽屉柜清灰紧固",
+         *             "description": "MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻",
+         *             "status": "未开始",
+         *             "plan_start_date": "2026-09-14",
+         *             "plan_end_date": "2026-09-20",
+         *             "remark": "需提前办理工作票与停电申请",
+         *             "images": [
+         *               {
+         *                 "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+         *                 "original_name": "201 低压配电室抽屉柜清灰紧固-现场照片.jpg",
+         *                 "mime_type": "image/jpeg",
+         *                 "size_bytes": 486912,
+         *                 "width": 1600,
+         *                 "height": 1200
+         *               }
+         *             ],
+         *             "record_count": 0,
+         *             "created_at": "2026-09-01T08:30:00+08:00",
+         *             "updated_at": "2026-09-12T17:20:00+08:00",
+         *             "version": 1
+         *           },
+         *           "records": []
+         *         },
+         *         {
+         *           "task": {
+         *             "id": 4,
+         *             "name": "现场压力变送器校验",
+         *             "description": "现场 12 只压力变送器送检与回装",
+         *             "status": "已暂停",
+         *             "plan_start_date": "2026-09-08",
+         *             "plan_end_date": "2026-09-12",
+         *             "remark": "检定站排期调整，已完成的先回装",
+         *             "images": [],
+         *             "record_count": 1,
+         *             "created_at": "2026-09-01T08:30:00+08:00",
+         *             "updated_at": "2026-09-12T17:20:00+08:00",
+         *             "version": 1
+         *           },
+         *           "records": [
+         *             {
+         *               "id": 4,
+         *               "task_id": 4,
+         *               "task_name": "现场压力变送器校验",
+         *               "task_status": "已暂停",
+         *               "start_date": "2026-09-08",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-09",
+         *               "end_half": "AM",
+         *               "participants": [
+         *                 "陈志远"
+         *               ],
+         *               "remark": "拆检 6 只，其余等排期",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "task": {
+         *             "id": 5,
+         *             "name": "6kV 高压开关柜绝缘测试",
+         *             "description": "6kV 高压室馈出柜停电做绝缘电阻与耐压测试",
+         *             "status": "已完成",
+         *             "plan_start_date": "2026-08-31",
+         *             "plan_end_date": "2026-09-02",
+         *             "remark": "测试报告已归档",
+         *             "images": [],
+         *             "record_count": 1,
+         *             "created_at": "2026-09-01T08:30:00+08:00",
+         *             "updated_at": "2026-09-12T17:20:00+08:00",
+         *             "version": 1
+         *           },
+         *           "records": [
+         *             {
+         *               "id": 5,
+         *               "task_id": 5,
+         *               "task_name": "6kV 高压开关柜绝缘测试",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-01",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "停电测试，恢复送电",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 5
+         *     }
+         */
+        Page_WorkTaskTimelineRead_: {
+            /** Items */
+            items: components["schemas"]["WorkTaskTimelineRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[WorkWorkerTimelineRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "name": "刘振华",
+         *           "record_count": 2,
+         *           "records": [
+         *             {
+         *               "id": 3,
+         *               "task_id": 2,
+         *               "task_name": "窑尾高温风机变频器参数校验",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-02",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "参数回读、空载试车",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 5,
+         *               "task_id": 5,
+         *               "task_name": "6kV 高压开关柜绝缘测试",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-01",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "停电测试，恢复送电",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "name": "李建军",
+         *           "record_count": 3,
+         *           "records": [
+         *             {
+         *               "id": 1,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-07",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-09",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "王海涛"
+         *               ],
+         *               "remark": "拆卸端盖、取出旧轴承",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 2,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-10",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-12",
+         *               "end_half": "AM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "陈志远"
+         *               ],
+         *               "remark": "新轴承回装与对中",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 5,
+         *               "task_id": 5,
+         *               "task_name": "6kV 高压开关柜绝缘测试",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-01",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "停电测试，恢复送电",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "name": "杨明辉",
+         *           "record_count": 2,
+         *           "records": [
+         *             {
+         *               "id": 3,
+         *               "task_id": 2,
+         *               "task_name": "窑尾高温风机变频器参数校验",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-02",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "参数回读、空载试车",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 5,
+         *               "task_id": 5,
+         *               "task_name": "6kV 高压开关柜绝缘测试",
+         *               "task_status": "已完成",
+         *               "start_date": "2026-09-01",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-02",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "刘振华",
+         *                 "杨明辉"
+         *               ],
+         *               "remark": "停电测试，恢复送电",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "name": "王海涛",
+         *           "record_count": 1,
+         *           "records": [
+         *             {
+         *               "id": 1,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-07",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-09",
+         *               "end_half": "PM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "王海涛"
+         *               ],
+         *               "remark": "拆卸端盖、取出旧轴承",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "name": "陈志远",
+         *           "record_count": 2,
+         *           "records": [
+         *             {
+         *               "id": 2,
+         *               "task_id": 1,
+         *               "task_name": "1# 回转窑主电机轴承更换",
+         *               "task_status": "进行中",
+         *               "start_date": "2026-09-10",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-12",
+         *               "end_half": "AM",
+         *               "participants": [
+         *                 "李建军",
+         *                 "陈志远"
+         *               ],
+         *               "remark": "新轴承回装与对中",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             },
+         *             {
+         *               "id": 4,
+         *               "task_id": 4,
+         *               "task_name": "现场压力变送器校验",
+         *               "task_status": "已暂停",
+         *               "start_date": "2026-09-08",
+         *               "start_half": "AM",
+         *               "end_date": "2026-09-09",
+         *               "end_half": "AM",
+         *               "participants": [
+         *                 "陈志远"
+         *               ],
+         *               "remark": "拆检 6 只，其余等排期",
+         *               "created_at": "2026-09-01T08:30:00+08:00",
+         *               "updated_at": "2026-09-12T17:20:00+08:00",
+         *               "version": 1
+         *             }
+         *           ]
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 5
+         *     }
+         */
+        Page_WorkWorkerTimelineRead_: {
+            /** Items */
+            items: components["schemas"]["WorkWorkerTimelineRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
          * ProjectCreate
          * @example {
          *       "name": "三期项目",
@@ -10314,7 +11190,7 @@ export interface components {
          * Role
          * @enum {string}
          */
-        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY" | "LEDGER_ADMIN";
+        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY" | "LEDGER_ADMIN" | "WORK_ADMIN";
         /**
          * SecondaryWarehouseMode
          * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
@@ -11065,6 +11941,443 @@ export interface components {
              * @default
              */
             secret: string;
+        };
+        /**
+         * WorkHalfDay
+         * @description 工作记录的半天档：一条记录的起止都精确到上午 / 下午。
+         *
+         *     `AM` / `PM` 是存储与接口取值，界面标签「上午 / 下午」由前端映射。
+         * @enum {string}
+         */
+        WorkHalfDay: "AM" | "PM";
+        /**
+         * WorkOverviewRowRead
+         * @description 工作总览的一行：某一天某个任务的一段工作。
+         *
+         *     `slot` 是这条记录在那天的占用时段：占满上午 + 下午为「全天」，否则是「上午」或「下午」。
+         *     一条跨天记录会展开成多行（每天一行），行身份是 `record_id` + `date`。
+         * @example {
+         *       "date": "2026-09-12",
+         *       "record_id": 2,
+         *       "task_id": 1,
+         *       "task_name": "1# 回转窑主电机轴承更换",
+         *       "task_status": "进行中",
+         *       "slot": "上午",
+         *       "participants": [
+         *         "李建军",
+         *         "陈志远"
+         *       ],
+         *       "remark": "新轴承回装与对中"
+         *     }
+         */
+        WorkOverviewRowRead: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Record Id */
+            record_id: number;
+            /** Task Id */
+            task_id: number;
+            /** Task Name */
+            task_name: string;
+            task_status: components["schemas"]["WorkTaskStatus"];
+            /**
+             * Slot
+             * @enum {string}
+             */
+            slot: "全天" | "上午" | "下午";
+            /** Participants */
+            participants: string[];
+            /** Remark */
+            remark?: string | null;
+        };
+        /**
+         * WorkRecordCreate
+         * @example {
+         *       "task_id": 1,
+         *       "start_date": "2026-09-15",
+         *       "start_half": "PM",
+         *       "end_date": "2026-09-16",
+         *       "end_half": "AM",
+         *       "participants": [
+         *         "李建军",
+         *         "孙浩宇"
+         *       ],
+         *       "remark": "动平衡复测与收尾"
+         *     }
+         */
+        WorkRecordCreate: {
+            /** Task Id */
+            task_id: number;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            start_half: components["schemas"]["WorkHalfDay"];
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            end_half: components["schemas"]["WorkHalfDay"];
+            /** Participants */
+            participants: string[];
+            /** Remark */
+            remark?: string | null;
+        };
+        /**
+         * WorkRecordRead
+         * @description 工作记录：一段「谁在干哪个活」的时间，起止都精确到上午 / 下午。
+         *
+         *     `participants` 是规范化后的姓名列表（库里存「、」连接的姓名串）。
+         * @example {
+         *       "id": 1,
+         *       "task_id": 1,
+         *       "task_name": "1# 回转窑主电机轴承更换",
+         *       "task_status": "进行中",
+         *       "start_date": "2026-09-07",
+         *       "start_half": "AM",
+         *       "end_date": "2026-09-09",
+         *       "end_half": "PM",
+         *       "participants": [
+         *         "李建军",
+         *         "王海涛"
+         *       ],
+         *       "remark": "拆卸端盖、取出旧轴承",
+         *       "created_at": "2026-09-01T08:30:00+08:00",
+         *       "updated_at": "2026-09-12T17:20:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        WorkRecordRead: {
+            /** Id */
+            id: number;
+            /** Task Id */
+            task_id: number;
+            /** Task Name */
+            task_name: string;
+            task_status: components["schemas"]["WorkTaskStatus"];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            start_half: components["schemas"]["WorkHalfDay"];
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+            end_half: components["schemas"]["WorkHalfDay"];
+            /** Participants */
+            participants: string[];
+            /** Remark */
+            remark?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * WorkRecordUpdate
+         * @description 编辑记录：起止日期与上下午档必须成对出现（只改一半会拼出无从推断的区间）。
+         * @example {
+         *       "task_id": 1,
+         *       "start_date": "2026-09-15",
+         *       "start_half": "PM",
+         *       "end_date": "2026-09-16",
+         *       "end_half": "PM",
+         *       "participants": [
+         *         "李建军",
+         *         "孙浩宇"
+         *       ],
+         *       "remark": "动平衡复测合格，多用了半个下午",
+         *       "version": 1
+         *     }
+         */
+        WorkRecordUpdate: {
+            /** Task Id */
+            task_id?: number | null;
+            /** Start Date */
+            start_date?: string | null;
+            start_half?: components["schemas"]["WorkHalfDay"] | null;
+            /** End Date */
+            end_date?: string | null;
+            end_half?: components["schemas"]["WorkHalfDay"] | null;
+            /** Participants */
+            participants?: string[] | null;
+            /** Remark */
+            remark?: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * WorkTaskCreate
+         * @example {
+         *       "name": "窑尾排风机电机轴承更换",
+         *       "description": "窑尾排风机电机运行异响，计划停机更换轴承",
+         *       "status": "未开始",
+         *       "plan_start_date": "2026-09-21",
+         *       "plan_end_date": "2026-09-25",
+         *       "remark": "备件待领用",
+         *       "image_ids": [
+         *         "5b8acb50-4317-7306-8ef8-e2b59f03da58"
+         *       ]
+         *     }
+         */
+        WorkTaskCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /** @default 未开始 */
+            status: components["schemas"]["WorkTaskStatus"];
+            /** Plan Start Date */
+            plan_start_date?: string | null;
+            /** Plan End Date */
+            plan_end_date?: string | null;
+            /** Remark */
+            remark?: string | null;
+            /** Image Ids */
+            image_ids?: string[];
+        };
+        /**
+         * WorkTaskRead
+         * @description 任务：状态是人工维护的进度标记，`record_count` 是它下面工作记录的条数。
+         * @example {
+         *       "id": 1,
+         *       "name": "1# 回转窑主电机轴承更换",
+         *       "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+         *       "status": "进行中",
+         *       "plan_start_date": "2026-09-07",
+         *       "plan_end_date": "2026-09-18",
+         *       "remark": "备件已到货（NU228 轴承 2 套）",
+         *       "images": [
+         *         {
+         *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *           "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 486912,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "record_count": 2,
+         *       "created_at": "2026-09-01T08:30:00+08:00",
+         *       "updated_at": "2026-09-12T17:20:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        WorkTaskRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            status: components["schemas"]["WorkTaskStatus"];
+            /** Plan Start Date */
+            plan_start_date?: string | null;
+            /** Plan End Date */
+            plan_end_date?: string | null;
+            /** Remark */
+            remark?: string | null;
+            /** Images */
+            images: components["schemas"]["FileObjectRead"][];
+            /** Record Count */
+            record_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * WorkTaskStatus
+         * @description 工作任务的进度标记：人工维护，不做流转校验（与申购计划状态同一取舍）。
+         * @enum {string}
+         */
+        WorkTaskStatus: "未开始" | "进行中" | "已完成" | "已暂停";
+        /**
+         * WorkTaskTimelineRead
+         * @description 任务视图的一行：任务本身 + 查询区间内它的工作记录。
+         * @example {
+         *       "task": {
+         *         "id": 1,
+         *         "name": "1# 回转窑主电机轴承更换",
+         *         "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+         *         "status": "进行中",
+         *         "plan_start_date": "2026-09-07",
+         *         "plan_end_date": "2026-09-18",
+         *         "remark": "备件已到货（NU228 轴承 2 套）",
+         *         "images": [
+         *           {
+         *             "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *             "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+         *             "mime_type": "image/jpeg",
+         *             "size_bytes": 486912,
+         *             "width": 1600,
+         *             "height": 1200
+         *           }
+         *         ],
+         *         "record_count": 2,
+         *         "created_at": "2026-09-01T08:30:00+08:00",
+         *         "updated_at": "2026-09-12T17:20:00+08:00",
+         *         "version": 1
+         *       },
+         *       "records": [
+         *         {
+         *           "id": 1,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "start_date": "2026-09-07",
+         *           "start_half": "AM",
+         *           "end_date": "2026-09-09",
+         *           "end_half": "PM",
+         *           "participants": [
+         *             "李建军",
+         *             "王海涛"
+         *           ],
+         *           "remark": "拆卸端盖、取出旧轴承",
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 2,
+         *           "task_id": 1,
+         *           "task_name": "1# 回转窑主电机轴承更换",
+         *           "task_status": "进行中",
+         *           "start_date": "2026-09-10",
+         *           "start_half": "AM",
+         *           "end_date": "2026-09-12",
+         *           "end_half": "AM",
+         *           "participants": [
+         *             "李建军",
+         *             "陈志远"
+         *           ],
+         *           "remark": "新轴承回装与对中",
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         }
+         *       ]
+         *     }
+         */
+        WorkTaskTimelineRead: {
+            task: components["schemas"]["WorkTaskRead"];
+            /** Records */
+            records: components["schemas"]["WorkRecordRead"][];
+        };
+        /**
+         * WorkTaskUpdate
+         * @description 编辑任务：只处理请求里出现过的字段。
+         *
+         *     计划日期与描述 / 备注传 `null` 或空串表示清空（与台账 `subitem_no` 的口径一致），
+         *     不传表示不改；`version` 走请求体乐观锁。
+         * @example {
+         *       "name": "1# 回转窑主电机轴承更换",
+         *       "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+         *       "status": "已完成",
+         *       "plan_start_date": "2026-09-07",
+         *       "plan_end_date": "2026-09-16",
+         *       "remark": "动平衡复测合格，9 月 16 日恢复备用",
+         *       "image_ids": [
+         *         "5b8acb50-4317-7306-8ef8-e2b59f03da58"
+         *       ],
+         *       "version": 1
+         *     }
+         */
+        WorkTaskUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            status?: components["schemas"]["WorkTaskStatus"] | null;
+            /** Plan Start Date */
+            plan_start_date?: string | null;
+            /** Plan End Date */
+            plan_end_date?: string | null;
+            /** Remark */
+            remark?: string | null;
+            /** Image Ids */
+            image_ids?: string[] | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * WorkWorkerTimelineRead
+         * @description 人员视图的一行：参与人姓名 + 区间内他参与的记录。
+         * @example {
+         *       "name": "刘振华",
+         *       "record_count": 2,
+         *       "records": [
+         *         {
+         *           "id": 3,
+         *           "task_id": 2,
+         *           "task_name": "窑尾高温风机变频器参数校验",
+         *           "task_status": "已完成",
+         *           "start_date": "2026-09-02",
+         *           "start_half": "AM",
+         *           "end_date": "2026-09-02",
+         *           "end_half": "PM",
+         *           "participants": [
+         *             "刘振华",
+         *             "杨明辉"
+         *           ],
+         *           "remark": "参数回读、空载试车",
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         },
+         *         {
+         *           "id": 5,
+         *           "task_id": 5,
+         *           "task_name": "6kV 高压开关柜绝缘测试",
+         *           "task_status": "已完成",
+         *           "start_date": "2026-09-01",
+         *           "start_half": "AM",
+         *           "end_date": "2026-09-02",
+         *           "end_half": "PM",
+         *           "participants": [
+         *             "李建军",
+         *             "刘振华",
+         *             "杨明辉"
+         *           ],
+         *           "remark": "停电测试，恢复送电",
+         *           "created_at": "2026-09-01T08:30:00+08:00",
+         *           "updated_at": "2026-09-12T17:20:00+08:00",
+         *           "version": 1
+         *         }
+         *       ]
+         *     }
+         */
+        WorkWorkerTimelineRead: {
+            /** Name */
+            name: string;
+            /** Record Count */
+            record_count: number;
+            /** Records */
+            records: components["schemas"]["WorkRecordRead"][];
         };
     };
     responses: never;
@@ -35889,6 +37202,2286 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ProjectRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_work_tasks_api_v1_work_tasks_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                keyword?: string | null;
+                /** @description 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停） */
+                status?: string | null;
+            };
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": 1,
+                     *           "name": "1# 回转窑主电机轴承更换",
+                     *           "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+                     *           "status": "进行中",
+                     *           "plan_start_date": "2026-09-07",
+                     *           "plan_end_date": "2026-09-18",
+                     *           "remark": "备件已到货（NU228 轴承 2 套）",
+                     *           "images": [
+                     *             {
+                     *               "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *               "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 486912,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "record_count": 2,
+                     *           "created_at": "2026-09-01T08:30:00+08:00",
+                     *           "updated_at": "2026-09-12T17:20:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 2,
+                     *           "name": "窑尾高温风机变频器参数校验",
+                     *           "description": "停机检修后恢复变频器参数并做空载试车",
+                     *           "status": "已完成",
+                     *           "plan_start_date": "2026-09-01",
+                     *           "plan_end_date": "2026-09-03",
+                     *           "remark": "参数已备份到车间共享盘",
+                     *           "images": [],
+                     *           "record_count": 1,
+                     *           "created_at": "2026-09-01T08:30:00+08:00",
+                     *           "updated_at": "2026-09-12T17:20:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 3,
+                     *           "name": "201 低压配电室抽屉柜清灰紧固",
+                     *           "description": "MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻",
+                     *           "status": "未开始",
+                     *           "plan_start_date": "2026-09-14",
+                     *           "plan_end_date": "2026-09-20",
+                     *           "remark": "需提前办理工作票与停电申请",
+                     *           "images": [
+                     *             {
+                     *               "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *               "original_name": "201 低压配电室抽屉柜清灰紧固-现场照片.jpg",
+                     *               "mime_type": "image/jpeg",
+                     *               "size_bytes": 486912,
+                     *               "width": 1600,
+                     *               "height": 1200
+                     *             }
+                     *           ],
+                     *           "record_count": 0,
+                     *           "created_at": "2026-09-01T08:30:00+08:00",
+                     *           "updated_at": "2026-09-12T17:20:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 4,
+                     *           "name": "现场压力变送器校验",
+                     *           "description": "现场 12 只压力变送器送检与回装",
+                     *           "status": "已暂停",
+                     *           "plan_start_date": "2026-09-08",
+                     *           "plan_end_date": "2026-09-12",
+                     *           "remark": "检定站排期调整，已完成的先回装",
+                     *           "images": [],
+                     *           "record_count": 1,
+                     *           "created_at": "2026-09-01T08:30:00+08:00",
+                     *           "updated_at": "2026-09-12T17:20:00+08:00",
+                     *           "version": 1
+                     *         },
+                     *         {
+                     *           "id": 5,
+                     *           "name": "6kV 高压开关柜绝缘测试",
+                     *           "description": "6kV 高压室馈出柜停电做绝缘电阻与耐压测试",
+                     *           "status": "已完成",
+                     *           "plan_start_date": "2026-08-31",
+                     *           "plan_end_date": "2026-09-02",
+                     *           "remark": "测试报告已归档",
+                     *           "images": [],
+                     *           "record_count": 1,
+                     *           "created_at": "2026-09-01T08:30:00+08:00",
+                     *           "updated_at": "2026-09-12T17:20:00+08:00",
+                     *           "version": 1
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 5
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_WorkTaskRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_work_task_api_v1_work_tasks_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机轴承更换",
+                     *       "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+                     *       "status": "进行中",
+                     *       "plan_start_date": "2026-09-07",
+                     *       "plan_end_date": "2026-09-18",
+                     *       "remark": "备件已到货（NU228 轴承 2 套）",
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 486912,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "record_count": 2,
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkTaskRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_work_task_api_v1_work_tasks__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机轴承更换",
+                     *       "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+                     *       "status": "进行中",
+                     *       "plan_start_date": "2026-09-07",
+                     *       "plan_end_date": "2026-09-18",
+                     *       "remark": "备件已到货（NU228 轴承 2 套）",
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 486912,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "record_count": 2,
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkTaskRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_work_task_api_v1_work_tasks__task_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+                "if-match"?: string | null;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_work_task_api_v1_work_tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path: {
+                task_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkTaskUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机轴承更换",
+                     *       "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+                     *       "status": "进行中",
+                     *       "plan_start_date": "2026-09-07",
+                     *       "plan_end_date": "2026-09-18",
+                     *       "remark": "备件已到货（NU228 轴承 2 套）",
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 486912,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "record_count": 2,
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkTaskRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    get_work_record_api_v1_work_records__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path: {
+                record_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "task_id": 1,
+                     *       "task_name": "1# 回转窑主电机轴承更换",
+                     *       "task_status": "进行中",
+                     *       "start_date": "2026-09-07",
+                     *       "start_half": "AM",
+                     *       "end_date": "2026-09-09",
+                     *       "end_half": "PM",
+                     *       "participants": [
+                     *         "李建军",
+                     *         "王海涛"
+                     *       ],
+                     *       "remark": "拆卸端盖、取出旧轴承",
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkRecordRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_work_record_api_v1_work_records__record_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+                "if-match"?: string | null;
+            };
+            path: {
+                record_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_work_record_api_v1_work_records__record_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path: {
+                record_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkRecordUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "task_id": 1,
+                     *       "task_name": "1# 回转窑主电机轴承更换",
+                     *       "task_status": "进行中",
+                     *       "start_date": "2026-09-07",
+                     *       "start_half": "AM",
+                     *       "end_date": "2026-09-09",
+                     *       "end_half": "PM",
+                     *       "participants": [
+                     *         "李建军",
+                     *         "王海涛"
+                     *       ],
+                     *       "remark": "拆卸端盖、取出旧轴承",
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkRecordRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_work_record_api_v1_work_records_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkRecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "task_id": 1,
+                     *       "task_name": "1# 回转窑主电机轴承更换",
+                     *       "task_status": "进行中",
+                     *       "start_date": "2026-09-07",
+                     *       "start_half": "AM",
+                     *       "end_date": "2026-09-09",
+                     *       "end_half": "PM",
+                     *       "participants": [
+                     *         "李建军",
+                     *         "王海涛"
+                     *       ],
+                     *       "remark": "拆卸端盖、取出旧轴承",
+                     *       "created_at": "2026-09-01T08:30:00+08:00",
+                     *       "updated_at": "2026-09-12T17:20:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WorkRecordRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_work_overview_api_v1_work_overview_get: {
+        parameters: {
+            query: {
+                /** @description 查询区间开始日期（含） */
+                start_date: string;
+                /** @description 查询区间结束日期（含） */
+                end_date: string;
+                page?: number;
+                page_size?: number;
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                keyword?: string | null;
+                /** @description 英文逗号分隔的任务 id，命中任一即返回 */
+                task_ids?: string | null;
+                /** @description 英文逗号分隔的参与人姓名，命中任一即返回（姓名精确匹配） */
+                participants?: string | null;
+            };
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "date": "2026-09-12",
+                     *           "record_id": 2,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "上午",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "陈志远"
+                     *           ],
+                     *           "remark": "新轴承回装与对中"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-11",
+                     *           "record_id": 2,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "陈志远"
+                     *           ],
+                     *           "remark": "新轴承回装与对中"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-10",
+                     *           "record_id": 2,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "陈志远"
+                     *           ],
+                     *           "remark": "新轴承回装与对中"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-09",
+                     *           "record_id": 4,
+                     *           "task_id": 4,
+                     *           "task_name": "现场压力变送器校验",
+                     *           "task_status": "已暂停",
+                     *           "slot": "上午",
+                     *           "participants": [
+                     *             "陈志远"
+                     *           ],
+                     *           "remark": "拆检 6 只，其余等排期"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-09",
+                     *           "record_id": 1,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "王海涛"
+                     *           ],
+                     *           "remark": "拆卸端盖、取出旧轴承"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-08",
+                     *           "record_id": 4,
+                     *           "task_id": 4,
+                     *           "task_name": "现场压力变送器校验",
+                     *           "task_status": "已暂停",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "陈志远"
+                     *           ],
+                     *           "remark": "拆检 6 只，其余等排期"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-08",
+                     *           "record_id": 1,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "王海涛"
+                     *           ],
+                     *           "remark": "拆卸端盖、取出旧轴承"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-07",
+                     *           "record_id": 1,
+                     *           "task_id": 1,
+                     *           "task_name": "1# 回转窑主电机轴承更换",
+                     *           "task_status": "进行中",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "王海涛"
+                     *           ],
+                     *           "remark": "拆卸端盖、取出旧轴承"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-02",
+                     *           "record_id": 3,
+                     *           "task_id": 2,
+                     *           "task_name": "窑尾高温风机变频器参数校验",
+                     *           "task_status": "已完成",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "刘振华",
+                     *             "杨明辉"
+                     *           ],
+                     *           "remark": "参数回读、空载试车"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-02",
+                     *           "record_id": 5,
+                     *           "task_id": 5,
+                     *           "task_name": "6kV 高压开关柜绝缘测试",
+                     *           "task_status": "已完成",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "刘振华",
+                     *             "杨明辉"
+                     *           ],
+                     *           "remark": "停电测试，恢复送电"
+                     *         },
+                     *         {
+                     *           "date": "2026-09-01",
+                     *           "record_id": 5,
+                     *           "task_id": 5,
+                     *           "task_name": "6kV 高压开关柜绝缘测试",
+                     *           "task_status": "已完成",
+                     *           "slot": "全天",
+                     *           "participants": [
+                     *             "李建军",
+                     *             "刘振华",
+                     *             "杨明辉"
+                     *           ],
+                     *           "remark": "停电测试，恢复送电"
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 11
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_WorkOverviewRowRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_work_task_timeline_api_v1_work_task_timeline_get: {
+        parameters: {
+            query: {
+                /** @description 查询区间开始日期（含） */
+                start_date: string;
+                /** @description 查询区间结束日期（含） */
+                end_date: string;
+                page?: number;
+                page_size?: number;
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                keyword?: string | null;
+                /** @description 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停） */
+                status?: string | null;
+            };
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "task": {
+                     *             "id": 1,
+                     *             "name": "1# 回转窑主电机轴承更换",
+                     *             "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
+                     *             "status": "进行中",
+                     *             "plan_start_date": "2026-09-07",
+                     *             "plan_end_date": "2026-09-18",
+                     *             "remark": "备件已到货（NU228 轴承 2 套）",
+                     *             "images": [
+                     *               {
+                     *                 "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *                 "original_name": "1# 回转窑主电机轴承更换-现场照片.jpg",
+                     *                 "mime_type": "image/jpeg",
+                     *                 "size_bytes": 486912,
+                     *                 "width": 1600,
+                     *                 "height": 1200
+                     *               }
+                     *             ],
+                     *             "record_count": 2,
+                     *             "created_at": "2026-09-01T08:30:00+08:00",
+                     *             "updated_at": "2026-09-12T17:20:00+08:00",
+                     *             "version": 1
+                     *           },
+                     *           "records": [
+                     *             {
+                     *               "id": 1,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-07",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-09",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "王海涛"
+                     *               ],
+                     *               "remark": "拆卸端盖、取出旧轴承",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 2,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-10",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-12",
+                     *               "end_half": "AM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "陈志远"
+                     *               ],
+                     *               "remark": "新轴承回装与对中",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "task": {
+                     *             "id": 2,
+                     *             "name": "窑尾高温风机变频器参数校验",
+                     *             "description": "停机检修后恢复变频器参数并做空载试车",
+                     *             "status": "已完成",
+                     *             "plan_start_date": "2026-09-01",
+                     *             "plan_end_date": "2026-09-03",
+                     *             "remark": "参数已备份到车间共享盘",
+                     *             "images": [],
+                     *             "record_count": 1,
+                     *             "created_at": "2026-09-01T08:30:00+08:00",
+                     *             "updated_at": "2026-09-12T17:20:00+08:00",
+                     *             "version": 1
+                     *           },
+                     *           "records": [
+                     *             {
+                     *               "id": 3,
+                     *               "task_id": 2,
+                     *               "task_name": "窑尾高温风机变频器参数校验",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-02",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "参数回读、空载试车",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "task": {
+                     *             "id": 3,
+                     *             "name": "201 低压配电室抽屉柜清灰紧固",
+                     *             "description": "MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻",
+                     *             "status": "未开始",
+                     *             "plan_start_date": "2026-09-14",
+                     *             "plan_end_date": "2026-09-20",
+                     *             "remark": "需提前办理工作票与停电申请",
+                     *             "images": [
+                     *               {
+                     *                 "id": "3abf840e-14ec-7623-8b1c-713899902cc4",
+                     *                 "original_name": "201 低压配电室抽屉柜清灰紧固-现场照片.jpg",
+                     *                 "mime_type": "image/jpeg",
+                     *                 "size_bytes": 486912,
+                     *                 "width": 1600,
+                     *                 "height": 1200
+                     *               }
+                     *             ],
+                     *             "record_count": 0,
+                     *             "created_at": "2026-09-01T08:30:00+08:00",
+                     *             "updated_at": "2026-09-12T17:20:00+08:00",
+                     *             "version": 1
+                     *           },
+                     *           "records": []
+                     *         },
+                     *         {
+                     *           "task": {
+                     *             "id": 4,
+                     *             "name": "现场压力变送器校验",
+                     *             "description": "现场 12 只压力变送器送检与回装",
+                     *             "status": "已暂停",
+                     *             "plan_start_date": "2026-09-08",
+                     *             "plan_end_date": "2026-09-12",
+                     *             "remark": "检定站排期调整，已完成的先回装",
+                     *             "images": [],
+                     *             "record_count": 1,
+                     *             "created_at": "2026-09-01T08:30:00+08:00",
+                     *             "updated_at": "2026-09-12T17:20:00+08:00",
+                     *             "version": 1
+                     *           },
+                     *           "records": [
+                     *             {
+                     *               "id": 4,
+                     *               "task_id": 4,
+                     *               "task_name": "现场压力变送器校验",
+                     *               "task_status": "已暂停",
+                     *               "start_date": "2026-09-08",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-09",
+                     *               "end_half": "AM",
+                     *               "participants": [
+                     *                 "陈志远"
+                     *               ],
+                     *               "remark": "拆检 6 只，其余等排期",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "task": {
+                     *             "id": 5,
+                     *             "name": "6kV 高压开关柜绝缘测试",
+                     *             "description": "6kV 高压室馈出柜停电做绝缘电阻与耐压测试",
+                     *             "status": "已完成",
+                     *             "plan_start_date": "2026-08-31",
+                     *             "plan_end_date": "2026-09-02",
+                     *             "remark": "测试报告已归档",
+                     *             "images": [],
+                     *             "record_count": 1,
+                     *             "created_at": "2026-09-01T08:30:00+08:00",
+                     *             "updated_at": "2026-09-12T17:20:00+08:00",
+                     *             "version": 1
+                     *           },
+                     *           "records": [
+                     *             {
+                     *               "id": 5,
+                     *               "task_id": 5,
+                     *               "task_name": "6kV 高压开关柜绝缘测试",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-01",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "停电测试，恢复送电",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 5
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_WorkTaskTimelineRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_work_worker_timeline_api_v1_work_worker_timeline_get: {
+        parameters: {
+            query: {
+                /** @description 查询区间开始日期（含） */
+                start_date: string;
+                /** @description 查询区间结束日期（含） */
+                end_date: string;
+                page?: number;
+                page_size?: number;
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                keyword?: string | null;
+            };
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "name": "刘振华",
+                     *           "record_count": 2,
+                     *           "records": [
+                     *             {
+                     *               "id": 3,
+                     *               "task_id": 2,
+                     *               "task_name": "窑尾高温风机变频器参数校验",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-02",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "参数回读、空载试车",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 5,
+                     *               "task_id": 5,
+                     *               "task_name": "6kV 高压开关柜绝缘测试",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-01",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "停电测试，恢复送电",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "name": "李建军",
+                     *           "record_count": 3,
+                     *           "records": [
+                     *             {
+                     *               "id": 1,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-07",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-09",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "王海涛"
+                     *               ],
+                     *               "remark": "拆卸端盖、取出旧轴承",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 2,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-10",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-12",
+                     *               "end_half": "AM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "陈志远"
+                     *               ],
+                     *               "remark": "新轴承回装与对中",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 5,
+                     *               "task_id": 5,
+                     *               "task_name": "6kV 高压开关柜绝缘测试",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-01",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "停电测试，恢复送电",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "name": "杨明辉",
+                     *           "record_count": 2,
+                     *           "records": [
+                     *             {
+                     *               "id": 3,
+                     *               "task_id": 2,
+                     *               "task_name": "窑尾高温风机变频器参数校验",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-02",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "参数回读、空载试车",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 5,
+                     *               "task_id": 5,
+                     *               "task_name": "6kV 高压开关柜绝缘测试",
+                     *               "task_status": "已完成",
+                     *               "start_date": "2026-09-01",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-02",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "刘振华",
+                     *                 "杨明辉"
+                     *               ],
+                     *               "remark": "停电测试，恢复送电",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "name": "王海涛",
+                     *           "record_count": 1,
+                     *           "records": [
+                     *             {
+                     *               "id": 1,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-07",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-09",
+                     *               "end_half": "PM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "王海涛"
+                     *               ],
+                     *               "remark": "拆卸端盖、取出旧轴承",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         },
+                     *         {
+                     *           "name": "陈志远",
+                     *           "record_count": 2,
+                     *           "records": [
+                     *             {
+                     *               "id": 2,
+                     *               "task_id": 1,
+                     *               "task_name": "1# 回转窑主电机轴承更换",
+                     *               "task_status": "进行中",
+                     *               "start_date": "2026-09-10",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-12",
+                     *               "end_half": "AM",
+                     *               "participants": [
+                     *                 "李建军",
+                     *                 "陈志远"
+                     *               ],
+                     *               "remark": "新轴承回装与对中",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             },
+                     *             {
+                     *               "id": 4,
+                     *               "task_id": 4,
+                     *               "task_name": "现场压力变送器校验",
+                     *               "task_status": "已暂停",
+                     *               "start_date": "2026-09-08",
+                     *               "start_half": "AM",
+                     *               "end_date": "2026-09-09",
+                     *               "end_half": "AM",
+                     *               "participants": [
+                     *                 "陈志远"
+                     *               ],
+                     *               "remark": "拆检 6 只，其余等排期",
+                     *               "created_at": "2026-09-01T08:30:00+08:00",
+                     *               "updated_at": "2026-09-12T17:20:00+08:00",
+                     *               "version": 1
+                     *             }
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 5
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_WorkWorkerTimelineRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    list_work_participants_api_v1_work_participants_get: {
+        parameters: {
+            query?: {
+                /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
+                keyword?: string | null;
+            };
+            header?: {
+                "X-Project-Id"?: number | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       "刘振华",
+                     *       "李建军",
+                     *       "杨明辉",
+                     *       "王海涛",
+                     *       "陈志远"
+                     *     ]
+                     */
+                    "application/json": string[];
                 };
             };
             /** @description 业务校验失败 */

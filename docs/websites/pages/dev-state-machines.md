@@ -23,7 +23,7 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `LEDGER_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
+| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `LEDGER_ADMIN` / `WORK_ADMIN` / `READ_ONLY` | ENUM 同名 | 一个用户一个角色 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
@@ -34,6 +34,8 @@ flowchart LR
 | `WebhookPlatform` | `FEISHU` / `DINGTALK` | ENUM 同名 | 推送渠道 |
 | `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `webhook_channel.subscribed_events` JSON 存**值**（点号形式） |
 | `WebhookDeliveryStatus` / `ExcelImportJobStatus` / `ExcelExportJobStatus` | 前者 `PENDING` / `SENDING` / `SUCCEEDED` / `FAILED`，后两者 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` | ENUM 同名 | 投递队列 / 异步任务 |
+| `WorkTaskStatus` | `未开始` / `进行中` / `已完成` / `已暂停` | ENUM `PENDING` / `IN_PROGRESS` / `DONE` / `PAUSED` | DB 存枚举名，API 返回中文值；人工维护，不做流转校验 |
+| `WorkHalfDay` | `AM` / `PM`（界面「上午」/「下午」） | ENUM 同名 | 工作记录起止的半天档 |
 | `ShareType` | `purchase_plan` / `purchase_record` | ENUM 同名 | 分享数据类型 |
 | `ShareExpiryOption` | `24h` / `3d` / `7d` / `30d` / `permanent` | 换算为 `share_link.expires_at`（`permanent` → `NULL`） | 前端选择码，不落库 |
 | 申购记录状态 | 自由字符串（`VARCHAR(128)`，默认 `已申购`） | 原样存字符串 | 取值非枚举，筛选项由库中 `DISTINCT` 得出 |
@@ -340,6 +342,35 @@ stateDiagram-v2
 待整改与整改受阻都可能逾期，今天到期不算逾期（与工作台卡片的统计口径一致）。
 小程序端写权限对所有已启用的小程序用户开放（只受账号停用 / 注册开关约束），
 不再按 `hazards_mode` 二次鉴权：该开关只决定小程序前端是否展示入口与写操作按钮。
+
+### 工作任务状态与工作记录的时间段
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> 未开始 : 新增任务
+    未开始 --> 进行中 : 开始施工
+    进行中 --> 已暂停 : 等备件 / 等停机窗口
+    已暂停 --> 进行中 : 条件恢复
+    进行中 --> 已完成 : 完成并验收
+    未开始 --> 已完成 : 提前完成
+    已完成 --> 进行中 : 返工（需重新施工）
+```
+
+任务状态与申购计划状态同一口径：**普通可编辑字段**，没有服务端流转校验、不记录流转历史，
+由 `PATCH /api/v1/work-tasks/{id}`（带 `version` 乐观锁）任意改写；状态只用于筛选与列表标记，
+时间线上的时间段完全由工作记录决定，两者不联动（状态标已完成但仍有未来时间段不会报错）。
+
+工作记录本身**没有状态字段**，它表达的是「一段起止时间」：
+
+| 规则 | 说明 |
+| --- | --- |
+| 起止精度 | 起止都精确到上午（`AM`）/ 下午（`PM`），存 `start_date` + `start_half` + `end_date` + `end_half` |
+| 合法性 | 结束不得早于开始；同一天时不允许「下午 → 上午」（400 `WORK_DATE_RANGE`），规则只在 `work_service` 实现一次 |
+| 某天占用 | 起始日之后全天占用；起始日只在上午档时占上午；结束日之前全天占用；结束日只在下午档时占下午 |
+| 派生结果 | 一天同时占上午与下午 → 工作总览时段「全天」，否则「上午」或「下午」；一条跨天记录在总览里展开成多行（每天一行） |
+| 查询区间 | 三个视图都要求日期区间，最长 92 天（400 `WORK_RANGE_TOO_LONG`）；总览按天展开、人员视图按姓名分组都在服务端完成 |
+| 并发 | 工作记录与任务都用 `version` 乐观锁：PATCH 走请求体、DELETE 走 `If-Match` 头 |
 
 ### 责任单位与隐患类型字典
 

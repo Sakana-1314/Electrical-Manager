@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Annotated, Any, Literal
@@ -33,6 +34,8 @@ from app.domain.enums import (
     SourceType,
     WebhookEventType,
     WebhookPlatform,
+    WorkHalfDay,
+    WorkTaskStatus,
 )
 
 PositiveQuantity = Annotated[Decimal, Field(gt=0, max_digits=18, decimal_places=1)]
@@ -2169,6 +2172,195 @@ class LedgerItemUpdate(RequestModel):
     @classmethod
     def _unique_images(cls, value: list[str] | None) -> list[str] | None:
         return None if value is None else _ensure_unique_image_ids(value)
+
+
+# ===== 工作管理（工作总览 / 任务视图 / 人员视图） =====
+# 任务图片与全站 ImageUploader 上限一致。
+WORK_TASK_IMAGE_LIMIT = 9
+# 一条工作记录最多 20 名参与人、每人姓名最多 24 字：`work_record.participants` 是 VARCHAR(500)，
+# 20 ×（24 字 + 1 个「、」分隔符）= 500 正好放得下，因此不需要再为「超长」加错误码。
+WORK_PARTICIPANT_LIMIT = 20
+WORK_PARTICIPANT_NAME_MAX_LENGTH = 24
+# 三个视图的查询区间上限（含端点）：总览要按天展开，区间越长行数越多。
+WORK_RANGE_MAX_DAYS = 92
+# 参与人姓名的分隔符：界面一次可填多人，服务端统一按这组符号拆分后再规范化落库。
+PARTICIPANT_SEPARATORS = re.compile(r"[、,，;；/|｜\s]+")
+WorkTaskName = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)
+]
+WorkTaskDescription = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1000)]
+WorkTaskRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+WorkRecordRemark = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+WorkImageIds = Annotated[list[FileId], Field(max_length=WORK_TASK_IMAGE_LIMIT)]
+# 参与人原文：允许「张三、李四」这种一次输入的多人串，由 `_normalize_participants` 拆分规范化。
+WorkParticipantInput = Annotated[list[NonBlank], Field(min_length=1)]
+# 总览行的时段：当天占满上午 + 下午即「全天」。
+WorkSlotLabel = Literal["全天", "上午", "下午"]
+
+
+def _normalize_participants(value: list[str]) -> list[str]:
+    """拆分 → 去空 → 去重保序 → 校验人数与姓名长度，返回规范化的姓名列表。"""
+    names: list[str] = []
+    for item in value:
+        for part in PARTICIPANT_SEPARATORS.split(item):
+            name = part.strip()
+            if name and name not in names:
+                names.append(name)
+    if not names:
+        raise ValueError("participants is empty")
+    if len(names) > WORK_PARTICIPANT_LIMIT:
+        raise ValueError(f"participants exceeds {WORK_PARTICIPANT_LIMIT} names")
+    if any(len(name) > WORK_PARTICIPANT_NAME_MAX_LENGTH for name in names):
+        raise ValueError(f"participant name exceeds {WORK_PARTICIPANT_NAME_MAX_LENGTH} chars")
+    return names
+
+
+class WorkTaskRead(ReadModel):
+    """任务：状态是人工维护的进度标记，`record_count` 是它下面工作记录的条数。"""
+
+    id: int
+    name: str
+    description: str | None = None
+    status: WorkTaskStatus
+    plan_start_date: date | None = None
+    plan_end_date: date | None = None
+    remark: str | None = None
+    images: list[FileObjectRead]
+    record_count: int
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class WorkTaskCreate(RequestModel):
+    name: WorkTaskName
+    description: WorkTaskDescription | None = None
+    status: WorkTaskStatus = WorkTaskStatus.PENDING
+    plan_start_date: date | None = None
+    plan_end_date: date | None = None
+    remark: WorkTaskRemark | None = None
+    image_ids: WorkImageIds = Field(default_factory=list)
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str]) -> list[str]:
+        return _ensure_unique_image_ids(value)
+
+
+class WorkTaskUpdate(RequestModel):
+    """编辑任务：只处理请求里出现过的字段。
+
+    计划日期与描述 / 备注传 `null` 或空串表示清空（与台账 `subitem_no` 的口径一致），
+    不传表示不改；`version` 走请求体乐观锁。
+    """
+
+    name: WorkTaskName | None = None
+    description: WorkTaskDescription | None = None
+    status: WorkTaskStatus | None = None
+    plan_start_date: date | None = None
+    plan_end_date: date | None = None
+    remark: WorkTaskRemark | None = None
+    image_ids: WorkImageIds | None = None
+    version: int
+
+    @field_validator("image_ids")
+    @classmethod
+    def _unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
+
+
+class WorkRecordRead(ReadModel):
+    """工作记录：一段「谁在干哪个活」的时间，起止都精确到上午 / 下午。
+
+    `participants` 是规范化后的姓名列表（库里存「、」连接的姓名串）。
+    """
+
+    id: int
+    task_id: int
+    task_name: str
+    task_status: WorkTaskStatus
+    start_date: date
+    start_half: WorkHalfDay
+    end_date: date
+    end_half: WorkHalfDay
+    participants: list[str]
+    remark: str | None = None
+    created_at: UtcDateTime
+    updated_at: UtcDateTime
+    version: int
+
+
+class WorkRecordCreate(RequestModel):
+    task_id: int
+    start_date: date
+    start_half: WorkHalfDay
+    end_date: date
+    end_half: WorkHalfDay
+    participants: WorkParticipantInput
+    remark: WorkRecordRemark | None = None
+
+    @field_validator("participants")
+    @classmethod
+    def _normalize(cls, value: list[str]) -> list[str]:
+        return _normalize_participants(value)
+
+
+class WorkRecordUpdate(RequestModel):
+    """编辑记录：起止日期与上下午档必须成对出现（只改一半会拼出无从推断的区间）。"""
+
+    task_id: int | None = None
+    start_date: date | None = None
+    start_half: WorkHalfDay | None = None
+    end_date: date | None = None
+    end_half: WorkHalfDay | None = None
+    participants: WorkParticipantInput | None = None
+    remark: WorkRecordRemark | None = None
+    version: int
+
+    @field_validator("participants")
+    @classmethod
+    def _normalize(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _normalize_participants(value)
+
+    @model_validator(mode="after")
+    def _paired_halves(self) -> WorkRecordUpdate:
+        pairs = (("start_date", "start_half"), ("end_date", "end_half"))
+        for date_field, half_field in pairs:
+            if (date_field in self.model_fields_set) != (half_field in self.model_fields_set):
+                raise ValueError(f"{date_field} and {half_field} must be updated together")
+        return self
+
+
+class WorkTaskTimelineRead(ReadModel):
+    """任务视图的一行：任务本身 + 查询区间内它的工作记录。"""
+
+    task: WorkTaskRead
+    records: list[WorkRecordRead]
+
+
+class WorkWorkerTimelineRead(ReadModel):
+    """人员视图的一行：参与人姓名 + 区间内他参与的记录。"""
+
+    name: str
+    record_count: int
+    records: list[WorkRecordRead]
+
+
+class WorkOverviewRowRead(ReadModel):
+    """工作总览的一行：某一天某个任务的一段工作。
+
+    `slot` 是这条记录在那天的占用时段：占满上午 + 下午为「全天」，否则是「上午」或「下午」。
+    一条跨天记录会展开成多行（每天一行），行身份是 `record_id` + `date`。
+    """
+
+    date: date
+    record_id: int
+    task_id: int
+    task_name: str
+    task_status: WorkTaskStatus
+    slot: WorkSlotLabel
+    participants: list[str]
+    remark: str | None = None
 
 
 __all__ = [name for name in globals() if not name.startswith("_")]

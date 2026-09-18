@@ -58,7 +58,7 @@ docker compose up -d
 | 事项 | 说明 |
 | --- | --- |
 | 结构与种子数据 | `docs/references/database/init.sql` 是唯一来源，用于新库初始化；`server/tests/test_init_sql.py` 强制校验它与 ORM 模型一致，改模型必须同步改 `init.sql`。 |
-| 初始账号 | `admin`、`warehouse`、`purchase`、`hazard`、`ledger`、`readonly`，初始密码均为 `123456`，首次登录后请修改。 |
+| 初始账号 | `admin`、`warehouse`、`purchase`、`hazard`、`ledger`、`work`、`readonly`，初始密码均为 `123456`，首次登录后请修改。 |
 | 已有库升级 | 仓库不保存增量迁移脚本：先备份，再参照 `init.sql` 与服务端 ORM 模型的差异，按各自流程改库。 |
 
 表结构说明见[数据模型](/dev-data-model)。

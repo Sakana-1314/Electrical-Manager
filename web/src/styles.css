@@ -51,6 +51,19 @@
   --color-status-icon-hover-bg: rgb(148 163 184 / 10%);
   /* 账号/条件选择器里的次级文案 */
   --color-text-subtle: #8a919f;
+  /* 工作管理时间线色块的固定色板（任务 / 人员按 id 或姓名取模选用），明暗两档同名同义 */
+  --color-work-bar-0-bg: #edf2ff;
+  --color-work-bar-0-fg: #3658c7;
+  --color-work-bar-1-bg: #e6f5ee;
+  --color-work-bar-1-fg: #1c7f57;
+  --color-work-bar-2-bg: #fdf3e2;
+  --color-work-bar-2-fg: #96610f;
+  --color-work-bar-3-bg: #fdeef1;
+  --color-work-bar-3-fg: #b33953;
+  --color-work-bar-4-bg: #eef2f9;
+  --color-work-bar-4-fg: #3d4758;
+  --color-work-bar-5-bg: #edeafa;
+  --color-work-bar-5-fg: #5745ad;
   /* 页面背景上的主色光晕（工作台、登录页），浅色几乎不可见、深色下做氛围底色 */
   --page-glow: radial-gradient(circle at 100% 0%, rgb(63 99 216 / 7%), transparent 32%);
   /* 顶栏 / 卡片表面的半透明底色（配合 backdrop-filter） */
@@ -110,6 +123,19 @@
   --color-status-icon-hover: #98a3b4;
   --color-status-icon-hover-bg: rgb(148 163 184 / 14%);
   --color-text-subtle: #98a2b3;
+  /* 工作管理时间线色块：深色下改成低饱和深底 + 亮文字，保证与行底色拉开层次 */
+  --color-work-bar-0-bg: #232f4a;
+  --color-work-bar-0-fg: #9fb5ff;
+  --color-work-bar-1-bg: #1d3329;
+  --color-work-bar-1-fg: #6fd3a4;
+  --color-work-bar-2-bg: #3a2f1c;
+  --color-work-bar-2-fg: #e0b364;
+  --color-work-bar-3-bg: #3a2229;
+  --color-work-bar-3-fg: #f2919f;
+  --color-work-bar-4-bg: #262e39;
+  --color-work-bar-4-fg: #c9d1de;
+  --color-work-bar-5-bg: #2b2545;
+  --color-work-bar-5-fg: #b3a2f0;
   --page-glow: radial-gradient(circle at 100% 0%, rgb(107 140 240 / 8%), transparent 32%);
   --color-surface-translucent: rgb(25 30 38 / 92%);
   --shadow-card-strong: 0 18px 44px rgb(0 0 0 / 45%);

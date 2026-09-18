@@ -20386,6 +20386,1975 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-tasks:
+    get:
+      tags:
+      - 工作管理
+      summary: 任务列表
+      operationId: list_work_tasks_api_v1_work_tasks_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Keyword
+        description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停）
+          title: Status
+        description: 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停）
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_WorkTaskRead_'
+              example:
+                items:
+                - id: 1
+                  name: 1# 回转窑主电机轴承更换
+                  description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+                  status: 进行中
+                  plan_start_date: '2026-09-07'
+                  plan_end_date: '2026-09-18'
+                  remark: 备件已到货（NU228 轴承 2 套）
+                  images:
+                  - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                    original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 486912
+                    width: 1600
+                    height: 1200
+                  record_count: 2
+                  created_at: '2026-09-01T08:30:00+08:00'
+                  updated_at: '2026-09-12T17:20:00+08:00'
+                  version: 1
+                - id: 2
+                  name: 窑尾高温风机变频器参数校验
+                  description: 停机检修后恢复变频器参数并做空载试车
+                  status: 已完成
+                  plan_start_date: '2026-09-01'
+                  plan_end_date: '2026-09-03'
+                  remark: 参数已备份到车间共享盘
+                  images: []
+                  record_count: 1
+                  created_at: '2026-09-01T08:30:00+08:00'
+                  updated_at: '2026-09-12T17:20:00+08:00'
+                  version: 1
+                - id: 3
+                  name: 201 低压配电室抽屉柜清灰紧固
+                  description: MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻
+                  status: 未开始
+                  plan_start_date: '2026-09-14'
+                  plan_end_date: '2026-09-20'
+                  remark: 需提前办理工作票与停电申请
+                  images:
+                  - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                    original_name: 201 低压配电室抽屉柜清灰紧固-现场照片.jpg
+                    mime_type: image/jpeg
+                    size_bytes: 486912
+                    width: 1600
+                    height: 1200
+                  record_count: 0
+                  created_at: '2026-09-01T08:30:00+08:00'
+                  updated_at: '2026-09-12T17:20:00+08:00'
+                  version: 1
+                - id: 4
+                  name: 现场压力变送器校验
+                  description: 现场 12 只压力变送器送检与回装
+                  status: 已暂停
+                  plan_start_date: '2026-09-08'
+                  plan_end_date: '2026-09-12'
+                  remark: 检定站排期调整，已完成的先回装
+                  images: []
+                  record_count: 1
+                  created_at: '2026-09-01T08:30:00+08:00'
+                  updated_at: '2026-09-12T17:20:00+08:00'
+                  version: 1
+                - id: 5
+                  name: 6kV 高压开关柜绝缘测试
+                  description: 6kV 高压室馈出柜停电做绝缘电阻与耐压测试
+                  status: 已完成
+                  plan_start_date: '2026-08-31'
+                  plan_end_date: '2026-09-02'
+                  remark: 测试报告已归档
+                  images: []
+                  record_count: 1
+                  created_at: '2026-09-01T08:30:00+08:00'
+                  updated_at: '2026-09-12T17:20:00+08:00'
+                  version: 1
+                page: 1
+                page_size: 20
+                total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 工作管理
+      summary: 新增任务
+      operationId: create_work_task_api_v1_work_tasks_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTaskCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkTaskRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机轴承更换
+                description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+                status: 进行中
+                plan_start_date: '2026-09-07'
+                plan_end_date: '2026-09-18'
+                remark: 备件已到货（NU228 轴承 2 套）
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 486912
+                  width: 1600
+                  height: 1200
+                record_count: 2
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-tasks/{task_id}:
+    get:
+      tags:
+      - 工作管理
+      summary: 任务详情
+      operationId: get_work_task_api_v1_work_tasks__task_id__get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Task Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkTaskRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机轴承更换
+                description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+                status: 进行中
+                plan_start_date: '2026-09-07'
+                plan_end_date: '2026-09-18'
+                remark: 备件已到货（NU228 轴承 2 套）
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 486912
+                  width: 1600
+                  height: 1200
+                record_count: 2
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    patch:
+      tags:
+      - 工作管理
+      summary: 更新任务
+      operationId: update_work_task_api_v1_work_tasks__task_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Task Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkTaskUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkTaskRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机轴承更换
+                description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+                status: 进行中
+                plan_start_date: '2026-09-07'
+                plan_end_date: '2026-09-18'
+                remark: 备件已到货（NU228 轴承 2 套）
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 486912
+                  width: 1600
+                  height: 1200
+                record_count: 2
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 工作管理
+      summary: 删除任务
+      description: 删除任务：任务下还有工作记录时返回 409（不做级联删除）。
+      operationId: delete_work_task_api_v1_work_tasks__task_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Task Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-records/{record_id}:
+    get:
+      tags:
+      - 工作管理
+      summary: 工作记录详情
+      operationId: get_work_record_api_v1_work_records__record_id__get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: record_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Record Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkRecordRead'
+              example:
+                id: 1
+                task_id: 1
+                task_name: 1# 回转窑主电机轴承更换
+                task_status: 进行中
+                start_date: '2026-09-07'
+                start_half: AM
+                end_date: '2026-09-09'
+                end_half: PM
+                participants:
+                - 李建军
+                - 王海涛
+                remark: 拆卸端盖、取出旧轴承
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    patch:
+      tags:
+      - 工作管理
+      summary: 更新工作记录
+      operationId: update_work_record_api_v1_work_records__record_id__patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: record_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Record Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkRecordUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkRecordRead'
+              example:
+                id: 1
+                task_id: 1
+                task_name: 1# 回转窑主电机轴承更换
+                task_status: 进行中
+                start_date: '2026-09-07'
+                start_half: AM
+                end_date: '2026-09-09'
+                end_half: PM
+                participants:
+                - 李建军
+                - 王海涛
+                remark: 拆卸端盖、取出旧轴承
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 工作管理
+      summary: 删除工作记录
+      operationId: delete_work_record_api_v1_work_records__record_id__delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: record_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Record Id
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      - name: if-match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-records:
+    post:
+      tags:
+      - 工作管理
+      summary: 新增工作记录
+      operationId: create_work_record_api_v1_work_records_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkRecordCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkRecordRead'
+              example:
+                id: 1
+                task_id: 1
+                task_name: 1# 回转窑主电机轴承更换
+                task_status: 进行中
+                start_date: '2026-09-07'
+                start_half: AM
+                end_date: '2026-09-09'
+                end_half: PM
+                participants:
+                - 李建军
+                - 王海涛
+                remark: 拆卸端盖、取出旧轴承
+                created_at: '2026-09-01T08:30:00+08:00'
+                updated_at: '2026-09-12T17:20:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-overview:
+    get:
+      tags:
+      - 工作管理
+      summary: 工作总览
+      description: 每天每个活由哪几个人在干：区间内记录按天展开，一行 = 日期 + 任务 + 时段。
+      operationId: list_work_overview_api_v1_work_overview_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: start_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间开始日期（含）
+          title: Start Date
+        description: 查询区间开始日期（含）
+      - name: end_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间结束日期（含）
+          title: End Date
+        description: 查询区间结束日期（含）
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Keyword
+        description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+      - name: task_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          description: 英文逗号分隔的任务 id，命中任一即返回
+          title: Task Ids
+        description: 英文逗号分隔的任务 id，命中任一即返回
+      - name: participants
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          description: 英文逗号分隔的参与人姓名，命中任一即返回（姓名精确匹配）
+          title: Participants
+        description: 英文逗号分隔的参与人姓名，命中任一即返回（姓名精确匹配）
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_WorkOverviewRowRead_'
+              example:
+                items:
+                - date: '2026-09-12'
+                  record_id: 2
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 上午
+                  participants:
+                  - 李建军
+                  - 陈志远
+                  remark: 新轴承回装与对中
+                - date: '2026-09-11'
+                  record_id: 2
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 陈志远
+                  remark: 新轴承回装与对中
+                - date: '2026-09-10'
+                  record_id: 2
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 陈志远
+                  remark: 新轴承回装与对中
+                - date: '2026-09-09'
+                  record_id: 4
+                  task_id: 4
+                  task_name: 现场压力变送器校验
+                  task_status: 已暂停
+                  slot: 上午
+                  participants:
+                  - 陈志远
+                  remark: 拆检 6 只，其余等排期
+                - date: '2026-09-09'
+                  record_id: 1
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 王海涛
+                  remark: 拆卸端盖、取出旧轴承
+                - date: '2026-09-08'
+                  record_id: 4
+                  task_id: 4
+                  task_name: 现场压力变送器校验
+                  task_status: 已暂停
+                  slot: 全天
+                  participants:
+                  - 陈志远
+                  remark: 拆检 6 只，其余等排期
+                - date: '2026-09-08'
+                  record_id: 1
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 王海涛
+                  remark: 拆卸端盖、取出旧轴承
+                - date: '2026-09-07'
+                  record_id: 1
+                  task_id: 1
+                  task_name: 1# 回转窑主电机轴承更换
+                  task_status: 进行中
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 王海涛
+                  remark: 拆卸端盖、取出旧轴承
+                - date: '2026-09-02'
+                  record_id: 3
+                  task_id: 2
+                  task_name: 窑尾高温风机变频器参数校验
+                  task_status: 已完成
+                  slot: 全天
+                  participants:
+                  - 刘振华
+                  - 杨明辉
+                  remark: 参数回读、空载试车
+                - date: '2026-09-02'
+                  record_id: 5
+                  task_id: 5
+                  task_name: 6kV 高压开关柜绝缘测试
+                  task_status: 已完成
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 刘振华
+                  - 杨明辉
+                  remark: 停电测试，恢复送电
+                - date: '2026-09-01'
+                  record_id: 5
+                  task_id: 5
+                  task_name: 6kV 高压开关柜绝缘测试
+                  task_status: 已完成
+                  slot: 全天
+                  participants:
+                  - 李建军
+                  - 刘振华
+                  - 杨明辉
+                  remark: 停电测试，恢复送电
+                page: 1
+                page_size: 20
+                total: 11
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-task-timeline:
+    get:
+      tags:
+      - 工作管理
+      summary: 任务视图时间线
+      description: 任务全周期时间线：每个任务一行，带区间内它的工作记录（起止 + 参与人员）。
+      operationId: list_work_task_timeline_api_v1_work_task_timeline_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: start_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间开始日期（含）
+          title: Start Date
+        description: 查询区间开始日期（含）
+      - name: end_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间结束日期（含）
+          title: End Date
+        description: 查询区间结束日期（含）
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Keyword
+        description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停）
+          title: Status
+        description: 英文逗号分隔的任务状态（未开始/进行中/已完成/已暂停）
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_WorkTaskTimelineRead_'
+              example:
+                items:
+                - task:
+                    id: 1
+                    name: 1# 回转窑主电机轴承更换
+                    description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+                    status: 进行中
+                    plan_start_date: '2026-09-07'
+                    plan_end_date: '2026-09-18'
+                    remark: 备件已到货（NU228 轴承 2 套）
+                    images:
+                    - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                      original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+                      mime_type: image/jpeg
+                      size_bytes: 486912
+                      width: 1600
+                      height: 1200
+                    record_count: 2
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  records:
+                  - id: 1
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-07'
+                    start_half: AM
+                    end_date: '2026-09-09'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 王海涛
+                    remark: 拆卸端盖、取出旧轴承
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 2
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-10'
+                    start_half: AM
+                    end_date: '2026-09-12'
+                    end_half: AM
+                    participants:
+                    - 李建军
+                    - 陈志远
+                    remark: 新轴承回装与对中
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - task:
+                    id: 2
+                    name: 窑尾高温风机变频器参数校验
+                    description: 停机检修后恢复变频器参数并做空载试车
+                    status: 已完成
+                    plan_start_date: '2026-09-01'
+                    plan_end_date: '2026-09-03'
+                    remark: 参数已备份到车间共享盘
+                    images: []
+                    record_count: 1
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  records:
+                  - id: 3
+                    task_id: 2
+                    task_name: 窑尾高温风机变频器参数校验
+                    task_status: 已完成
+                    start_date: '2026-09-02'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 刘振华
+                    - 杨明辉
+                    remark: 参数回读、空载试车
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - task:
+                    id: 3
+                    name: 201 低压配电室抽屉柜清灰紧固
+                    description: MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻
+                    status: 未开始
+                    plan_start_date: '2026-09-14'
+                    plan_end_date: '2026-09-20'
+                    remark: 需提前办理工作票与停电申请
+                    images:
+                    - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+                      original_name: 201 低压配电室抽屉柜清灰紧固-现场照片.jpg
+                      mime_type: image/jpeg
+                      size_bytes: 486912
+                      width: 1600
+                      height: 1200
+                    record_count: 0
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  records: []
+                - task:
+                    id: 4
+                    name: 现场压力变送器校验
+                    description: 现场 12 只压力变送器送检与回装
+                    status: 已暂停
+                    plan_start_date: '2026-09-08'
+                    plan_end_date: '2026-09-12'
+                    remark: 检定站排期调整，已完成的先回装
+                    images: []
+                    record_count: 1
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  records:
+                  - id: 4
+                    task_id: 4
+                    task_name: 现场压力变送器校验
+                    task_status: 已暂停
+                    start_date: '2026-09-08'
+                    start_half: AM
+                    end_date: '2026-09-09'
+                    end_half: AM
+                    participants:
+                    - 陈志远
+                    remark: 拆检 6 只，其余等排期
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - task:
+                    id: 5
+                    name: 6kV 高压开关柜绝缘测试
+                    description: 6kV 高压室馈出柜停电做绝缘电阻与耐压测试
+                    status: 已完成
+                    plan_start_date: '2026-08-31'
+                    plan_end_date: '2026-09-02'
+                    remark: 测试报告已归档
+                    images: []
+                    record_count: 1
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  records:
+                  - id: 5
+                    task_id: 5
+                    task_name: 6kV 高压开关柜绝缘测试
+                    task_status: 已完成
+                    start_date: '2026-09-01'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 刘振华
+                    - 杨明辉
+                    remark: 停电测试，恢复送电
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                page: 1
+                page_size: 20
+                total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-worker-timeline:
+    get:
+      tags:
+      - 工作管理
+      summary: 人员视图时间线
+      description: 每人每天在干什么活：按参与人姓名分组，一人一行，带区间内的记录。
+      operationId: list_work_worker_timeline_api_v1_work_worker_timeline_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: start_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间开始日期（含）
+          title: Start Date
+        description: 查询区间开始日期（含）
+      - name: end_date
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          description: 查询区间结束日期（含）
+          title: End Date
+        description: 查询区间结束日期（含）
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Keyword
+        description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_WorkWorkerTimelineRead_'
+              example:
+                items:
+                - name: 刘振华
+                  record_count: 2
+                  records:
+                  - id: 3
+                    task_id: 2
+                    task_name: 窑尾高温风机变频器参数校验
+                    task_status: 已完成
+                    start_date: '2026-09-02'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 刘振华
+                    - 杨明辉
+                    remark: 参数回读、空载试车
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 5
+                    task_id: 5
+                    task_name: 6kV 高压开关柜绝缘测试
+                    task_status: 已完成
+                    start_date: '2026-09-01'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 刘振华
+                    - 杨明辉
+                    remark: 停电测试，恢复送电
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - name: 李建军
+                  record_count: 3
+                  records:
+                  - id: 1
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-07'
+                    start_half: AM
+                    end_date: '2026-09-09'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 王海涛
+                    remark: 拆卸端盖、取出旧轴承
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 2
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-10'
+                    start_half: AM
+                    end_date: '2026-09-12'
+                    end_half: AM
+                    participants:
+                    - 李建军
+                    - 陈志远
+                    remark: 新轴承回装与对中
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 5
+                    task_id: 5
+                    task_name: 6kV 高压开关柜绝缘测试
+                    task_status: 已完成
+                    start_date: '2026-09-01'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 刘振华
+                    - 杨明辉
+                    remark: 停电测试，恢复送电
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - name: 杨明辉
+                  record_count: 2
+                  records:
+                  - id: 3
+                    task_id: 2
+                    task_name: 窑尾高温风机变频器参数校验
+                    task_status: 已完成
+                    start_date: '2026-09-02'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 刘振华
+                    - 杨明辉
+                    remark: 参数回读、空载试车
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 5
+                    task_id: 5
+                    task_name: 6kV 高压开关柜绝缘测试
+                    task_status: 已完成
+                    start_date: '2026-09-01'
+                    start_half: AM
+                    end_date: '2026-09-02'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 刘振华
+                    - 杨明辉
+                    remark: 停电测试，恢复送电
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - name: 王海涛
+                  record_count: 1
+                  records:
+                  - id: 1
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-07'
+                    start_half: AM
+                    end_date: '2026-09-09'
+                    end_half: PM
+                    participants:
+                    - 李建军
+                    - 王海涛
+                    remark: 拆卸端盖、取出旧轴承
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                - name: 陈志远
+                  record_count: 2
+                  records:
+                  - id: 2
+                    task_id: 1
+                    task_name: 1# 回转窑主电机轴承更换
+                    task_status: 进行中
+                    start_date: '2026-09-10'
+                    start_half: AM
+                    end_date: '2026-09-12'
+                    end_half: AM
+                    participants:
+                    - 李建军
+                    - 陈志远
+                    remark: 新轴承回装与对中
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                  - id: 4
+                    task_id: 4
+                    task_name: 现场压力变送器校验
+                    task_status: 已暂停
+                    start_date: '2026-09-08'
+                    start_half: AM
+                    end_date: '2026-09-09'
+                    end_half: AM
+                    participants:
+                    - 陈志远
+                    remark: 拆检 6 只，其余等排期
+                    created_at: '2026-09-01T08:30:00+08:00'
+                    updated_at: '2026-09-12T17:20:00+08:00'
+                    version: 1
+                page: 1
+                page_size: 20
+                total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/work-participants:
+    get:
+      tags:
+      - 工作管理
+      summary: 参与人员名单
+      description: 项目内历史上出现过的参与人姓名（去重升序）：表单下拉辅助输入与筛选共用。
+      operationId: list_work_participants_api_v1_work_participants_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Keyword
+        description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+      - name: X-Project-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: X-Project-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                title: Response List Work Participants Api V1 Work Participants Get
+              example:
+              - 刘振华
+              - 李建军
+              - 杨明辉
+              - 王海涛
+              - 陈志远
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
 components:
   schemas:
     AiSearchExpandRead:
@@ -28119,6 +30088,624 @@ components:
         page: 1
         page_size: 20
         total: 1
+    Page_WorkOverviewRowRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkOverviewRowRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[WorkOverviewRowRead]
+      examples:
+      - items:
+        - date: '2026-09-12'
+          record_id: 2
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 上午
+          participants:
+          - 李建军
+          - 陈志远
+          remark: 新轴承回装与对中
+        - date: '2026-09-11'
+          record_id: 2
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 全天
+          participants:
+          - 李建军
+          - 陈志远
+          remark: 新轴承回装与对中
+        - date: '2026-09-10'
+          record_id: 2
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 全天
+          participants:
+          - 李建军
+          - 陈志远
+          remark: 新轴承回装与对中
+        - date: '2026-09-09'
+          record_id: 4
+          task_id: 4
+          task_name: 现场压力变送器校验
+          task_status: 已暂停
+          slot: 上午
+          participants:
+          - 陈志远
+          remark: 拆检 6 只，其余等排期
+        - date: '2026-09-09'
+          record_id: 1
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 全天
+          participants:
+          - 李建军
+          - 王海涛
+          remark: 拆卸端盖、取出旧轴承
+        - date: '2026-09-08'
+          record_id: 4
+          task_id: 4
+          task_name: 现场压力变送器校验
+          task_status: 已暂停
+          slot: 全天
+          participants:
+          - 陈志远
+          remark: 拆检 6 只，其余等排期
+        - date: '2026-09-08'
+          record_id: 1
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 全天
+          participants:
+          - 李建军
+          - 王海涛
+          remark: 拆卸端盖、取出旧轴承
+        - date: '2026-09-07'
+          record_id: 1
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          slot: 全天
+          participants:
+          - 李建军
+          - 王海涛
+          remark: 拆卸端盖、取出旧轴承
+        - date: '2026-09-02'
+          record_id: 3
+          task_id: 2
+          task_name: 窑尾高温风机变频器参数校验
+          task_status: 已完成
+          slot: 全天
+          participants:
+          - 刘振华
+          - 杨明辉
+          remark: 参数回读、空载试车
+        - date: '2026-09-02'
+          record_id: 5
+          task_id: 5
+          task_name: 6kV 高压开关柜绝缘测试
+          task_status: 已完成
+          slot: 全天
+          participants:
+          - 李建军
+          - 刘振华
+          - 杨明辉
+          remark: 停电测试，恢复送电
+        - date: '2026-09-01'
+          record_id: 5
+          task_id: 5
+          task_name: 6kV 高压开关柜绝缘测试
+          task_status: 已完成
+          slot: 全天
+          participants:
+          - 李建军
+          - 刘振华
+          - 杨明辉
+          remark: 停电测试，恢复送电
+        page: 1
+        page_size: 20
+        total: 11
+    Page_WorkTaskRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkTaskRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[WorkTaskRead]
+      examples:
+      - items:
+        - id: 1
+          name: 1# 回转窑主电机轴承更换
+          description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+          status: 进行中
+          plan_start_date: '2026-09-07'
+          plan_end_date: '2026-09-18'
+          remark: 备件已到货（NU228 轴承 2 套）
+          images:
+          - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+            original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+            mime_type: image/jpeg
+            size_bytes: 486912
+            width: 1600
+            height: 1200
+          record_count: 2
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 2
+          name: 窑尾高温风机变频器参数校验
+          description: 停机检修后恢复变频器参数并做空载试车
+          status: 已完成
+          plan_start_date: '2026-09-01'
+          plan_end_date: '2026-09-03'
+          remark: 参数已备份到车间共享盘
+          images: []
+          record_count: 1
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 3
+          name: 201 低压配电室抽屉柜清灰紧固
+          description: MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻
+          status: 未开始
+          plan_start_date: '2026-09-14'
+          plan_end_date: '2026-09-20'
+          remark: 需提前办理工作票与停电申请
+          images:
+          - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+            original_name: 201 低压配电室抽屉柜清灰紧固-现场照片.jpg
+            mime_type: image/jpeg
+            size_bytes: 486912
+            width: 1600
+            height: 1200
+          record_count: 0
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 4
+          name: 现场压力变送器校验
+          description: 现场 12 只压力变送器送检与回装
+          status: 已暂停
+          plan_start_date: '2026-09-08'
+          plan_end_date: '2026-09-12'
+          remark: 检定站排期调整，已完成的先回装
+          images: []
+          record_count: 1
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 5
+          name: 6kV 高压开关柜绝缘测试
+          description: 6kV 高压室馈出柜停电做绝缘电阻与耐压测试
+          status: 已完成
+          plan_start_date: '2026-08-31'
+          plan_end_date: '2026-09-02'
+          remark: 测试报告已归档
+          images: []
+          record_count: 1
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        page: 1
+        page_size: 20
+        total: 5
+    Page_WorkTaskTimelineRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkTaskTimelineRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[WorkTaskTimelineRead]
+      examples:
+      - items:
+        - task:
+            id: 1
+            name: 1# 回转窑主电机轴承更换
+            description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+            status: 进行中
+            plan_start_date: '2026-09-07'
+            plan_end_date: '2026-09-18'
+            remark: 备件已到货（NU228 轴承 2 套）
+            images:
+            - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+              original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+              mime_type: image/jpeg
+              size_bytes: 486912
+              width: 1600
+              height: 1200
+            record_count: 2
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          records:
+          - id: 1
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-07'
+            start_half: AM
+            end_date: '2026-09-09'
+            end_half: PM
+            participants:
+            - 李建军
+            - 王海涛
+            remark: 拆卸端盖、取出旧轴承
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 2
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-10'
+            start_half: AM
+            end_date: '2026-09-12'
+            end_half: AM
+            participants:
+            - 李建军
+            - 陈志远
+            remark: 新轴承回装与对中
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - task:
+            id: 2
+            name: 窑尾高温风机变频器参数校验
+            description: 停机检修后恢复变频器参数并做空载试车
+            status: 已完成
+            plan_start_date: '2026-09-01'
+            plan_end_date: '2026-09-03'
+            remark: 参数已备份到车间共享盘
+            images: []
+            record_count: 1
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          records:
+          - id: 3
+            task_id: 2
+            task_name: 窑尾高温风机变频器参数校验
+            task_status: 已完成
+            start_date: '2026-09-02'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 刘振华
+            - 杨明辉
+            remark: 参数回读、空载试车
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - task:
+            id: 3
+            name: 201 低压配电室抽屉柜清灰紧固
+            description: MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻
+            status: 未开始
+            plan_start_date: '2026-09-14'
+            plan_end_date: '2026-09-20'
+            remark: 需提前办理工作票与停电申请
+            images:
+            - id: 3abf840e-14ec-7623-8b1c-713899902cc4
+              original_name: 201 低压配电室抽屉柜清灰紧固-现场照片.jpg
+              mime_type: image/jpeg
+              size_bytes: 486912
+              width: 1600
+              height: 1200
+            record_count: 0
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          records: []
+        - task:
+            id: 4
+            name: 现场压力变送器校验
+            description: 现场 12 只压力变送器送检与回装
+            status: 已暂停
+            plan_start_date: '2026-09-08'
+            plan_end_date: '2026-09-12'
+            remark: 检定站排期调整，已完成的先回装
+            images: []
+            record_count: 1
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          records:
+          - id: 4
+            task_id: 4
+            task_name: 现场压力变送器校验
+            task_status: 已暂停
+            start_date: '2026-09-08'
+            start_half: AM
+            end_date: '2026-09-09'
+            end_half: AM
+            participants:
+            - 陈志远
+            remark: 拆检 6 只，其余等排期
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - task:
+            id: 5
+            name: 6kV 高压开关柜绝缘测试
+            description: 6kV 高压室馈出柜停电做绝缘电阻与耐压测试
+            status: 已完成
+            plan_start_date: '2026-08-31'
+            plan_end_date: '2026-09-02'
+            remark: 测试报告已归档
+            images: []
+            record_count: 1
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          records:
+          - id: 5
+            task_id: 5
+            task_name: 6kV 高压开关柜绝缘测试
+            task_status: 已完成
+            start_date: '2026-09-01'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 李建军
+            - 刘振华
+            - 杨明辉
+            remark: 停电测试，恢复送电
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        page: 1
+        page_size: 20
+        total: 5
+    Page_WorkWorkerTimelineRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/WorkWorkerTimelineRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[WorkWorkerTimelineRead]
+      examples:
+      - items:
+        - name: 刘振华
+          record_count: 2
+          records:
+          - id: 3
+            task_id: 2
+            task_name: 窑尾高温风机变频器参数校验
+            task_status: 已完成
+            start_date: '2026-09-02'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 刘振华
+            - 杨明辉
+            remark: 参数回读、空载试车
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 5
+            task_id: 5
+            task_name: 6kV 高压开关柜绝缘测试
+            task_status: 已完成
+            start_date: '2026-09-01'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 李建军
+            - 刘振华
+            - 杨明辉
+            remark: 停电测试，恢复送电
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - name: 李建军
+          record_count: 3
+          records:
+          - id: 1
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-07'
+            start_half: AM
+            end_date: '2026-09-09'
+            end_half: PM
+            participants:
+            - 李建军
+            - 王海涛
+            remark: 拆卸端盖、取出旧轴承
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 2
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-10'
+            start_half: AM
+            end_date: '2026-09-12'
+            end_half: AM
+            participants:
+            - 李建军
+            - 陈志远
+            remark: 新轴承回装与对中
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 5
+            task_id: 5
+            task_name: 6kV 高压开关柜绝缘测试
+            task_status: 已完成
+            start_date: '2026-09-01'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 李建军
+            - 刘振华
+            - 杨明辉
+            remark: 停电测试，恢复送电
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - name: 杨明辉
+          record_count: 2
+          records:
+          - id: 3
+            task_id: 2
+            task_name: 窑尾高温风机变频器参数校验
+            task_status: 已完成
+            start_date: '2026-09-02'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 刘振华
+            - 杨明辉
+            remark: 参数回读、空载试车
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 5
+            task_id: 5
+            task_name: 6kV 高压开关柜绝缘测试
+            task_status: 已完成
+            start_date: '2026-09-01'
+            start_half: AM
+            end_date: '2026-09-02'
+            end_half: PM
+            participants:
+            - 李建军
+            - 刘振华
+            - 杨明辉
+            remark: 停电测试，恢复送电
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - name: 王海涛
+          record_count: 1
+          records:
+          - id: 1
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-07'
+            start_half: AM
+            end_date: '2026-09-09'
+            end_half: PM
+            participants:
+            - 李建军
+            - 王海涛
+            remark: 拆卸端盖、取出旧轴承
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        - name: 陈志远
+          record_count: 2
+          records:
+          - id: 2
+            task_id: 1
+            task_name: 1# 回转窑主电机轴承更换
+            task_status: 进行中
+            start_date: '2026-09-10'
+            start_half: AM
+            end_date: '2026-09-12'
+            end_half: AM
+            participants:
+            - 李建军
+            - 陈志远
+            remark: 新轴承回装与对中
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+          - id: 4
+            task_id: 4
+            task_name: 现场压力变送器校验
+            task_status: 已暂停
+            start_date: '2026-09-08'
+            start_half: AM
+            end_date: '2026-09-09'
+            end_half: AM
+            participants:
+            - 陈志远
+            remark: 拆检 6 只，其余等排期
+            created_at: '2026-09-01T08:30:00+08:00'
+            updated_at: '2026-09-12T17:20:00+08:00'
+            version: 1
+        page: 1
+        page_size: 20
+        total: 5
     ProjectCreate:
       properties:
         name:
@@ -30364,6 +32951,7 @@ components:
       - HAZARD_ADMIN
       - READ_ONLY
       - LEDGER_ADMIN
+      - WORK_ADMIN
       title: Role
     SecondaryWarehouseMode:
       type: string
@@ -31418,6 +34006,607 @@ components:
       examples:
       - webhook_url: https://open.feishu.cn/open-apis/bot/v2/hook/8f0c2b74-5d19-4a63-9c81-2e7b4a0d5f13
         secret: hxni-feishu-2026Kx7Q
+    WorkHalfDay:
+      type: string
+      enum:
+      - AM
+      - PM
+      title: WorkHalfDay
+      description: '工作记录的半天档：一条记录的起止都精确到上午 / 下午。
+
+
+        `AM` / `PM` 是存储与接口取值，界面标签「上午 / 下午」由前端映射。'
+    WorkOverviewRowRead:
+      properties:
+        date:
+          type: string
+          format: date
+          title: Date
+        record_id:
+          type: integer
+          title: Record Id
+        task_id:
+          type: integer
+          title: Task Id
+        task_name:
+          type: string
+          title: Task Name
+        task_status:
+          $ref: '#/components/schemas/WorkTaskStatus'
+        slot:
+          type: string
+          enum:
+          - 全天
+          - 上午
+          - 下午
+          title: Slot
+        participants:
+          items:
+            type: string
+          type: array
+          title: Participants
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+      type: object
+      required:
+      - date
+      - record_id
+      - task_id
+      - task_name
+      - task_status
+      - slot
+      - participants
+      title: WorkOverviewRowRead
+      description: '工作总览的一行：某一天某个任务的一段工作。
+
+
+        `slot` 是这条记录在那天的占用时段：占满上午 + 下午为「全天」，否则是「上午」或「下午」。
+
+        一条跨天记录会展开成多行（每天一行），行身份是 `record_id` + `date`。'
+      examples:
+      - date: '2026-09-12'
+        record_id: 2
+        task_id: 1
+        task_name: 1# 回转窑主电机轴承更换
+        task_status: 进行中
+        slot: 上午
+        participants:
+        - 李建军
+        - 陈志远
+        remark: 新轴承回装与对中
+    WorkRecordCreate:
+      properties:
+        task_id:
+          type: integer
+          title: Task Id
+        start_date:
+          type: string
+          format: date
+          title: Start Date
+        start_half:
+          $ref: '#/components/schemas/WorkHalfDay'
+        end_date:
+          type: string
+          format: date
+          title: End Date
+        end_half:
+          $ref: '#/components/schemas/WorkHalfDay'
+        participants:
+          items:
+            type: string
+            minLength: 1
+          type: array
+          minItems: 1
+          title: Participants
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+      additionalProperties: false
+      type: object
+      required:
+      - task_id
+      - start_date
+      - start_half
+      - end_date
+      - end_half
+      - participants
+      title: WorkRecordCreate
+      examples:
+      - task_id: 1
+        start_date: '2026-09-15'
+        start_half: PM
+        end_date: '2026-09-16'
+        end_half: AM
+        participants:
+        - 李建军
+        - 孙浩宇
+        remark: 动平衡复测与收尾
+    WorkRecordRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        task_id:
+          type: integer
+          title: Task Id
+        task_name:
+          type: string
+          title: Task Name
+        task_status:
+          $ref: '#/components/schemas/WorkTaskStatus'
+        start_date:
+          type: string
+          format: date
+          title: Start Date
+        start_half:
+          $ref: '#/components/schemas/WorkHalfDay'
+        end_date:
+          type: string
+          format: date
+          title: End Date
+        end_half:
+          $ref: '#/components/schemas/WorkHalfDay'
+        participants:
+          items:
+            type: string
+          type: array
+          title: Participants
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - task_id
+      - task_name
+      - task_status
+      - start_date
+      - start_half
+      - end_date
+      - end_half
+      - participants
+      - created_at
+      - updated_at
+      - version
+      title: WorkRecordRead
+      description: '工作记录：一段「谁在干哪个活」的时间，起止都精确到上午 / 下午。
+
+
+        `participants` 是规范化后的姓名列表（库里存「、」连接的姓名串）。'
+      examples:
+      - id: 1
+        task_id: 1
+        task_name: 1# 回转窑主电机轴承更换
+        task_status: 进行中
+        start_date: '2026-09-07'
+        start_half: AM
+        end_date: '2026-09-09'
+        end_half: PM
+        participants:
+        - 李建军
+        - 王海涛
+        remark: 拆卸端盖、取出旧轴承
+        created_at: '2026-09-01T08:30:00+08:00'
+        updated_at: '2026-09-12T17:20:00+08:00'
+        version: 1
+    WorkRecordUpdate:
+      properties:
+        task_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Task Id
+        start_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Start Date
+        start_half:
+          anyOf:
+          - $ref: '#/components/schemas/WorkHalfDay'
+          - type: 'null'
+        end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: End Date
+        end_half:
+          anyOf:
+          - $ref: '#/components/schemas/WorkHalfDay'
+          - type: 'null'
+        participants:
+          anyOf:
+          - items:
+              type: string
+              minLength: 1
+            type: array
+            minItems: 1
+          - type: 'null'
+          title: Participants
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: WorkRecordUpdate
+      description: 编辑记录：起止日期与上下午档必须成对出现（只改一半会拼出无从推断的区间）。
+      examples:
+      - task_id: 1
+        start_date: '2026-09-15'
+        start_half: PM
+        end_date: '2026-09-16'
+        end_half: PM
+        participants:
+        - 李建军
+        - 孙浩宇
+        remark: 动平衡复测合格，多用了半个下午
+        version: 1
+    WorkTaskCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Description
+        status:
+          $ref: '#/components/schemas/WorkTaskStatus'
+          default: 未开始
+        plan_start_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan Start Date
+        plan_end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan End Date
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        image_ids:
+          items:
+            type: string
+            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          type: array
+          maxItems: 9
+          title: Image Ids
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: WorkTaskCreate
+      examples:
+      - name: 窑尾排风机电机轴承更换
+        description: 窑尾排风机电机运行异响，计划停机更换轴承
+        status: 未开始
+        plan_start_date: '2026-09-21'
+        plan_end_date: '2026-09-25'
+        remark: 备件待领用
+        image_ids:
+        - 5b8acb50-4317-7306-8ef8-e2b59f03da58
+    WorkTaskRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        status:
+          $ref: '#/components/schemas/WorkTaskStatus'
+        plan_start_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan Start Date
+        plan_end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan End Date
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: Images
+        record_count:
+          type: integer
+          title: Record Count
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - name
+      - status
+      - images
+      - record_count
+      - created_at
+      - updated_at
+      - version
+      title: WorkTaskRead
+      description: 任务：状态是人工维护的进度标记，`record_count` 是它下面工作记录的条数。
+      examples:
+      - id: 1
+        name: 1# 回转窑主电机轴承更换
+        description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+        status: 进行中
+        plan_start_date: '2026-09-07'
+        plan_end_date: '2026-09-18'
+        remark: 备件已到货（NU228 轴承 2 套）
+        images:
+        - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+          original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+          mime_type: image/jpeg
+          size_bytes: 486912
+          width: 1600
+          height: 1200
+        record_count: 2
+        created_at: '2026-09-01T08:30:00+08:00'
+        updated_at: '2026-09-12T17:20:00+08:00'
+        version: 1
+    WorkTaskStatus:
+      type: string
+      enum:
+      - 未开始
+      - 进行中
+      - 已完成
+      - 已暂停
+      title: WorkTaskStatus
+      description: 工作任务的进度标记：人工维护，不做流转校验（与申购计划状态同一取舍）。
+    WorkTaskTimelineRead:
+      properties:
+        task:
+          $ref: '#/components/schemas/WorkTaskRead'
+        records:
+          items:
+            $ref: '#/components/schemas/WorkRecordRead'
+          type: array
+          title: Records
+      type: object
+      required:
+      - task
+      - records
+      title: WorkTaskTimelineRead
+      description: 任务视图的一行：任务本身 + 查询区间内它的工作记录。
+      examples:
+      - task:
+          id: 1
+          name: 1# 回转窑主电机轴承更换
+          description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+          status: 进行中
+          plan_start_date: '2026-09-07'
+          plan_end_date: '2026-09-18'
+          remark: 备件已到货（NU228 轴承 2 套）
+          images:
+          - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+            original_name: 1# 回转窑主电机轴承更换-现场照片.jpg
+            mime_type: image/jpeg
+            size_bytes: 486912
+            width: 1600
+            height: 1200
+          record_count: 2
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        records:
+        - id: 1
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          start_date: '2026-09-07'
+          start_half: AM
+          end_date: '2026-09-09'
+          end_half: PM
+          participants:
+          - 李建军
+          - 王海涛
+          remark: 拆卸端盖、取出旧轴承
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 2
+          task_id: 1
+          task_name: 1# 回转窑主电机轴承更换
+          task_status: 进行中
+          start_date: '2026-09-10'
+          start_half: AM
+          end_date: '2026-09-12'
+          end_half: AM
+          participants:
+          - 李建军
+          - 陈志远
+          remark: 新轴承回装与对中
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+    WorkTaskUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 128
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Description
+        status:
+          anyOf:
+          - $ref: '#/components/schemas/WorkTaskStatus'
+          - type: 'null'
+        plan_start_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan Start Date
+        plan_end_date:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          title: Plan End Date
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          title: Remark
+        image_ids:
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: Image Ids
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: WorkTaskUpdate
+      description: '编辑任务：只处理请求里出现过的字段。
+
+
+        计划日期与描述 / 备注传 `null` 或空串表示清空（与台账 `subitem_no` 的口径一致），
+
+        不传表示不改；`version` 走请求体乐观锁。'
+      examples:
+      - name: 1# 回转窑主电机轴承更换
+        description: 窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测
+        status: 已完成
+        plan_start_date: '2026-09-07'
+        plan_end_date: '2026-09-16'
+        remark: 动平衡复测合格，9 月 16 日恢复备用
+        image_ids:
+        - 5b8acb50-4317-7306-8ef8-e2b59f03da58
+        version: 1
+    WorkWorkerTimelineRead:
+      properties:
+        name:
+          type: string
+          title: Name
+        record_count:
+          type: integer
+          title: Record Count
+        records:
+          items:
+            $ref: '#/components/schemas/WorkRecordRead'
+          type: array
+          title: Records
+      type: object
+      required:
+      - name
+      - record_count
+      - records
+      title: WorkWorkerTimelineRead
+      description: 人员视图的一行：参与人姓名 + 区间内他参与的记录。
+      examples:
+      - name: 刘振华
+        record_count: 2
+        records:
+        - id: 3
+          task_id: 2
+          task_name: 窑尾高温风机变频器参数校验
+          task_status: 已完成
+          start_date: '2026-09-02'
+          start_half: AM
+          end_date: '2026-09-02'
+          end_half: PM
+          participants:
+          - 刘振华
+          - 杨明辉
+          remark: 参数回读、空载试车
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
+        - id: 5
+          task_id: 5
+          task_name: 6kV 高压开关柜绝缘测试
+          task_status: 已完成
+          start_date: '2026-09-01'
+          start_half: AM
+          end_date: '2026-09-02'
+          end_half: PM
+          participants:
+          - 李建军
+          - 刘振华
+          - 杨明辉
+          remark: 停电测试，恢复送电
+          created_at: '2026-09-01T08:30:00+08:00'
+          updated_at: '2026-09-12T17:20:00+08:00'
+          version: 1
   securitySchemes:
     HTTPBearer:
       type: http

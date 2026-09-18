@@ -21,7 +21,8 @@ flowchart TD
   { id: 't3', title: '协作与外部集成' },
   { id: 't4', title: '其它链路索引' },
   { id: 't5', title: '隐患闭环' },
-  { id: 't6', title: '台账维护' }
+  { id: 't6', title: '台账维护' },
+  { id: 't7', title: '工作管理' }
 ]">
 
 <TabsContent id="t0">
@@ -456,6 +457,7 @@ flowchart LR
 | 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
 | 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
 | 台账登记与标签维护 | 标签管理页维护标签树、台账总览页新增/编辑台账记录 | `ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image` |
+| 工作管理 | 任务视图维护任务与工作记录、工作总览 / 人员视图按区间查询 | `work_task`、`work_task_image`、`work_record` |
 | 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
 | 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |
 
@@ -533,6 +535,46 @@ sequenceDiagram
 | 标签筛选 | 列表按 `tag_ids` 筛选时展开为「选中标签 + 全部子孙」；选中的 id 一个都不存在时返回空结果，不当作「不限」（手改 URL 不会误返回全量） |
 | 图片 | 标签图片与台账图片各一张关联表，与其它模块共用图片存储；附件管理的引用次数含这两张表，因此不会被判为悬空 |
 | 并发 | 标签与台账记录的 PATCH 都带 `version`、DELETE 走 `If-Match`，冲突返回 `VERSION_CONFLICT` 提示刷新后重试 |
+
+</TabsContent>
+
+<TabsContent id="t7">
+
+### 任务、工作记录与三个视图
+
+```mermaid
+sequenceDiagram
+    participant W as 网页端（任务 / 人员视图）
+    participant S as 服务端
+    participant DB as MySQL
+    W->>S: 新增 / 编辑任务（名称、状态、计划起止、工作内容、图片；编辑带 version）
+    S->>S: 校验项目内名称唯一（DUPLICATE_WORK_TASK）与计划结束不早于开始
+    S->>DB: 写 work_task，并整表替换 work_task_image 关联
+    W->>S: 给任务排活（任务 + 起止日期 + 上午 / 下午 + 参与人员 + 备注）
+    S->>S: 拆分参与人员（顿号 / 逗号 / 分号 / 空格）→ 去空、去重保序；校验任务存在与区间合法
+    S->>DB: 写 work_record（participants 存「、」连接的姓名串）
+    W->>S: 工作总览（日期区间 + 任务 / 参与人员 / 关键字 + 分页）
+    S->>DB: 按区间重叠粗筛记录（start_date ≤ 区间末 且 end_date ≥ 区间首）
+    S->>S: 每条记录按半日规则展开成 (日期, 时段) 行，再按参与人精确匹配、排序、分页
+    S-->>W: 一行 = 日期 + 任务 + 时段（全天 / 上午 / 下午）+ 参与人员
+    W->>S: 任务视图时间线（任务分页 + 每个任务在该区间内的记录）
+    W->>S: 人员视图时间线（区间内记录按参与人姓名分组）
+    S->>S: 拆分 participants 分组、按姓名关键字过滤、分页（前端再按拼音排序）
+    S-->>W: 一行 = 参与人 + 区间内的记录列表（供半日格时间线绘制色块）
+```
+
+要点：
+
+| 项 | 说明 |
+| --- | --- |
+| 人员不是实体 | 参与人员是 `work_record.participants` 里「、」连接的姓名串（一条记录最多 20 人、每人 ≤24 字），没有人员表；人员视图的人员清单 = 区间内记录里出现过的姓名去重，新姓名第一次录入即成为一行。表单下拉给项目内历史姓名辅助输入（`GET /work-participants`），错别字仍可能造出重名条目 |
+| 半天语义 | 起止都精确到上午 / 下午，某天是否占用由 `work_service.occupied_halves` 一处判定：起始日之后全天、起始日只在上午档时占上午、结束日之前全天、结束日只在下午档时占下午；前端 `recordHalfKeys` 用同一口径算色块范围（两侧改动必须同步） |
+| 区间必填且封顶 | 三个视图都要求 `start_date` / `end_date`，最长 92 天（`WORK_RANGE_TOO_LONG`）；总览按天展开、人员按姓名分组都在服务端过滤与分页（区间封顶后是车间量级的数据） |
+| 参与人筛选 | 工作总览的 `participants` 按拆分后的姓名列表精确匹配（不是子串匹配）：「张三」不会命中「张三丰」 |
+| 任务与记录的关系 | 任务名项目内唯一（同一件活反复干都挂同一个任务）；删任务前必须先删记录（409 `WORK_TASK_HAS_RECORDS`），不做级联删除 |
+| 权限 | 读取对所有登录用户开放；写操作需要 `WorkWriter`（`SUPER_ADMIN` / `WORK_ADMIN`），任务图片上传走同一写角色（`FileWriter` 含 `WORK_ADMIN`） |
+| 图片 | 任务图片一张关联表，与其它模块共用图片存储；附件管理的引用次数含这张表，因此不会被判为悬空 |
+| 并发 | 任务与工作记录的 PATCH 都带 `version`、DELETE 走 `If-Match`，冲突返回 `VERSION_CONFLICT` 提示刷新后重试 |
 
 </TabsContent>
 

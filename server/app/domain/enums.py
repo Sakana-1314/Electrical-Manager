@@ -9,6 +9,8 @@ class Role(StrEnum):
     READ_ONLY = "READ_ONLY"
     # 台账管理员：新值一律追加在末尾，MySQL 枚举追加值可在线完成、不重排既有值序数。
     LEDGER_ADMIN = "LEDGER_ADMIN"
+    # 工作管理员：维护工作管理模块的任务、工作记录与任务图片。
+    WORK_ADMIN = "WORK_ADMIN"
 
 
 class HazardStatus(StrEnum):
@@ -115,3 +117,22 @@ class ShareExpiryOption(StrEnum):
     DAYS_7 = "7d"
     DAYS_30 = "30d"
     PERMANENT = "permanent"
+
+
+class WorkTaskStatus(StrEnum):
+    """工作任务的进度标记：人工维护，不做流转校验（与申购计划状态同一取舍）。"""
+
+    PENDING = "未开始"
+    IN_PROGRESS = "进行中"
+    DONE = "已完成"
+    PAUSED = "已暂停"
+
+
+class WorkHalfDay(StrEnum):
+    """工作记录的半天档：一条记录的起止都精确到上午 / 下午。
+
+    `AM` / `PM` 是存储与接口取值，界面标签「上午 / 下午」由前端映射。
+    """
+
+    AM = "AM"
+    PM = "PM"

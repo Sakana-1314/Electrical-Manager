@@ -46,6 +46,8 @@ from app.domain.enums import (
     WebhookDeliveryStatus,
     WebhookEventType,
     WebhookPlatform,
+    WorkHalfDay,
+    WorkTaskStatus,
 )
 
 BIGINT_ID = BIGINT(unsigned=True).with_variant(Integer, "sqlite")
@@ -1066,6 +1068,84 @@ class LedgerImage(ProjectScoped, Base):
     file: Mapped[FileObject] = relationship(lazy="selectin")
 
 
+class WorkTask(ProjectScoped, AuditMixin, Base):
+    """工作任务（活）：工作管理模块的主体，工作记录挂在它下面。
+
+    任务名在项目内唯一：同一件活反复干（今年换过、明年还要换）都登记到同一个任务下，
+    用工作记录的起止时间表达周期，任务视图因此能看到它的全周期。
+    状态是人工维护的进度标记，不随计划或记录自动流转。
+    """
+
+    __tablename__ = "work_task"
+    __table_args__ = (
+        UniqueConstraint("project_id", "name", name="uq_work_task_project_name"),
+        Index("ix_work_task_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(1000))
+    status: Mapped[WorkTaskStatus] = mapped_column(
+        SAEnum(WorkTaskStatus),
+        nullable=False,
+        default=WorkTaskStatus.PENDING,
+        # 库里存枚举「名」（与隐患状态同一口径），接口按枚举「值」输出中文。
+        server_default=WorkTaskStatus.PENDING.name,
+    )
+    # 计划起止是可选的目标日期，实际工期由工作记录表达（时间线上可对照）。
+    plan_start_date: Mapped[date | None] = mapped_column(Date)
+    plan_end_date: Mapped[date | None] = mapped_column(Date)
+    remark: Mapped[str | None] = mapped_column(String(500))
+
+    images: Mapped[list[WorkTaskImage]] = relationship(
+        back_populates="task",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        order_by="WorkTaskImage.sort_order",
+    )
+
+
+class WorkTaskImage(ProjectScoped, Base):
+    """任务图片关联：一张图一行，sort_order 保留上传顺序（与台账记录同一口径）。"""
+
+    __tablename__ = "work_task_image"
+
+    task_id: Mapped[int] = mapped_column(
+        BIGINT_ID, ForeignKey("work_task.id", ondelete="CASCADE"), primary_key=True
+    )
+    file_id: Mapped[str] = mapped_column(String(36), ForeignKey("file_object.id"), primary_key=True)
+    sort_order: Mapped[int] = mapped_column(UTINYINT, nullable=False, default=0)
+    task: Mapped[WorkTask] = relationship(back_populates="images")
+    file: Mapped[FileObject] = relationship(lazy="selectin")
+
+
+class WorkRecord(ProjectScoped, AuditMixin, Base):
+    """工作记录：一段「谁在干哪个活」的时间，起止都精确到上午 / 下午。
+
+    参与人员是「、」连接的姓名串（界面一次填多人），读接口还原成姓名列表——人员不是名册实体，
+    人员视图按姓名串拆分后分组。半日占用判定（某天算上午 / 下午 / 全天）只在
+    `services/work_service.py` 里实现一次。
+    """
+
+    __tablename__ = "work_record"
+    __table_args__ = (
+        Index("ix_work_record_task_id", "task_id"),
+        Index("ix_work_record_start_date", "start_date"),
+    )
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(BIGINT_ID, ForeignKey("work_task.id"), nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    start_half: Mapped[WorkHalfDay] = mapped_column(SAEnum(WorkHalfDay), nullable=False)
+    end_date: Mapped[date] = mapped_column(Date, nullable=False)
+    end_half: Mapped[WorkHalfDay] = mapped_column(SAEnum(WorkHalfDay), nullable=False)
+    # 参与人员：「、」连接的姓名串；最多 20 人 × 24 字（含分隔符）= 500 字符，正好等于列宽。
+    participants: Mapped[str] = mapped_column(String(500), nullable=False)
+    remark: Mapped[str | None] = mapped_column(String(500))
+
+    task: Mapped[WorkTask] = relationship(lazy="selectin")
+
+
 # 项目域实体清单：全局隔离层（core.project_scope）按它给语句注入 `project_id` 过滤，
 # 并在 flush 时给新对象补项目。新增业务表时**必须**同时继承 ProjectScoped 并登记在这里，
 # 否则该表不会被隔离（详见 AGENTS.md「项目隔离约定」）。
@@ -1098,6 +1178,9 @@ PROJECT_SCOPED_MODELS: tuple[type[ProjectScoped], ...] = (
     StockOperation,
     StockOperationLine,
     StockReplenishmentPolicy,
+    WorkRecord,
+    WorkTask,
+    WorkTaskImage,
 )
 
 
@@ -1141,4 +1224,7 @@ __all__ = [
     "User",
     "WebhookChannel",
     "WebhookDelivery",
+    "WorkRecord",
+    "WorkTask",
+    "WorkTaskImage",
 ]

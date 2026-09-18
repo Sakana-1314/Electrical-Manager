@@ -181,6 +181,8 @@ PurchaseWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.PU
 HazardWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.HAZARD_ADMIN))]
 # 台账管理写权限：超级管理员 + 台账管理员；读取同样对所有登录用户开放（CurrentUser）。
 LedgerWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.LEDGER_ADMIN))]
+# 工作管理写权限：超级管理员 + 工作管理员；读取同样对所有登录用户开放（CurrentUser）。
+WorkWriter = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN, Role.WORK_ADMIN))]
 SuperAdmin = Annotated[User, Depends(require_roles(Role.SUPER_ADMIN))]
 
 
