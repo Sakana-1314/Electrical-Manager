@@ -28,6 +28,7 @@ router = APIRouter(
     dependencies=[Depends(system_scope_dependency)],
 )
 CACHE_CONTROL = "public, max-age=86400, s-maxage=2592000"
+# 各业务模块的写角色都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
 FileWriter = Annotated[
     User,
     Depends(
@@ -37,6 +38,7 @@ FileWriter = Annotated[
             Role.PURCHASE_ADMIN,
             Role.HAZARD_ADMIN,
             Role.LEDGER_ADMIN,
+            Role.WORK_ADMIN,
         )
     ),
 ]

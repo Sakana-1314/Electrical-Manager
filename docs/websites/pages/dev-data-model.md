@@ -1,6 +1,6 @@
 # 数据模型
 
-MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **38 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **41 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -95,7 +95,7 @@ flowchart TD
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
     M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、华星总库存、精简库存"]
     M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，有更新时间与乐观锁版本"]
-    M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>八张图片关联表"]
+    M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>九张图片关联表"]
     M --> G["只有 id 与业务时间<br/>业务事件日志"]
 ```
 
@@ -107,7 +107,7 @@ flowchart TD
     R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
     R --> U["没有 updated_by 列"]
     R --> S["业务表没有软删除列：删除一律物理删除（唯一例外是 file_object.deleted_at，附件的软删标记）"]
-    R --> D["ON DELETE CASCADE：库存余额、补库策略、八张图片关联表随主表一并删除"]
+    R --> D["ON DELETE CASCADE：库存余额、补库策略、九张图片关联表随主表一并删除"]
 ```
 
 </TabsContent>
@@ -141,9 +141,9 @@ erDiagram
 
 默认项目不能停用、不能删除，也不能直接取消默认（把别的项目设为默认即可）；项目下已有业务数据时不能删除，只能停用。
 
-### 项目域表（28 张）
+### 项目域表（31 张）
 
-`excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`。
+`excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`、`work_record`、`work_task`、`work_task_image`。
 
 每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
@@ -175,6 +175,7 @@ erDiagram
 | `hazard` | `uq_hazard_project_client_request_id` (`project_id`, `client_request_id`) |
 | `hazard_unit` | `uq_hazard_unit_project_name` (`project_id`, `name`) |
 | `hazard_type` | `uq_hazard_type_project_major` (`project_id`, `major`, `minor`) |
+| `work_task` | `uq_work_task_project_name` (`project_id`, `name`) |
 
 `plan_no` 必须按项目唯一：计划号规则是「本项目当天最大号 + 1」，跨项目共用唯一键会撞号。
 
@@ -237,6 +238,9 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `ledger_tag_image` | `LedgerTagImage` | 台账标签图片关联 | 台账管理 |
 | `ledger` | `Ledger` | 台账记录（名称 / 型号 / 子项号 / 数量 / 单位 / 用途 / 备注 / 标签） | 台账管理 |
 | `ledger_image` | `LedgerImage` | 台账记录图片关联 | 台账管理 |
+| `work_task` | `WorkTask` | 工作任务（活）：名称 / 状态 / 计划起止 / 工作内容 / 备注 | 工作管理 |
+| `work_task_image` | `WorkTaskImage` | 任务图片关联 | 工作管理 |
+| `work_record` | `WorkRecord` | 工作记录：任务 + 起止（上午 / 下午）+ 参与人员 + 备注 | 工作管理 |
 
 `MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
 
@@ -338,6 +342,17 @@ erDiagram
 
 台账记录与标签**没有关联表**：一条记录的标签是 `ledger.tag_ids` 里的逗号分隔标签 id（读接口另外回填名称与完整路径），因此 ER 图里两者之间没有连线，标签的引用计数也由服务端按字符串匹配统计——标签读模型回填 `item_count`（直接引用该标签的台账记录数，不含子标签的使用量）供标签管理页的节点徽标展示。`ledger_tag.parent_id` 的外键是 RESTRICT，删除父节点必须先删子节点；两张图片关联表沿用同一写法，附件管理的「被引用次数」同样把它们计入。
 
+### 工作管理
+
+```mermaid
+erDiagram
+    work_task ||--o{ work_task_image : "任务图片"
+    work_task ||--o{ work_record : "工作记录（一个任务多段工作）"
+    file_object ||--o{ work_task_image : "图片对象"
+```
+
+一个任务下可以有多条工作记录，每条记录是「一段起止时间（精确到上午 / 下午）+ 参与人员 + 备注」；参与人员是 `work_record.participants` 里「、」连接的姓名串，**没有人员表**——人员视图的人员清单由记录里的姓名拆分去重得到。`work_record.task_id` 的外键是 RESTRICT：删任务前必须先删记录（服务端返回 409 `WORK_TASK_HAS_RECORDS`）。任务图片关联表沿用其它图片表的写法，附件管理的「被引用次数」同样把它计入。
+
 
 </TabsContent>
 
@@ -353,7 +368,7 @@ erDiagram
 | `user` | `api_token_hash` | VARCHAR(64) | 否 | 无 | 接口令牌 SHA-256，唯一，用于认证查找 |
 | `user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
 | `user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
-| `user` | `role` | ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN') | 否 | 无 | 角色，接口同名字符串 |
+| `user` | `role` | ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN', 'WORK_ADMIN') | 否 | 无 | 角色，接口同名字符串 |
 | `user` | `enabled` | TINYINT(1) | 否 | 1 | 账号是否启用 |
 | `user` | *索引 / 外键* | — | — | — | 索引 `pk_user(id)`；唯一 `uq_user_username(username)`、`uq_user_api_token_hash(api_token_hash)`；外键：无 |
 | `mini_program_user` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
@@ -709,6 +724,35 @@ erDiagram
 | `ledger_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每条记录最多 9 张） |
 | `ledger_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_image(ledger_id, file_id)`；外键 `ledger_id → ledger.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
+### 字段明细：工作管理表
+
+| 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| `work_task` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `work_task` | `name` | VARCHAR(128) | 否 | 无 | 任务名称（同一项目内唯一，重名由服务端返回 409 `DUPLICATE_WORK_TASK`） |
+| `work_task` | `description` | VARCHAR(1000) | 是 | NULL | 工作内容（PATCH 传空串即清空） |
+| `work_task` | `status` | ENUM('PENDING', 'IN_PROGRESS', 'DONE', 'PAUSED') | 否 | `PENDING` | 任务状态（接口按中文取值「未开始 / 进行中 / 已完成 / 已暂停」输出，人工维护、不做流转校验） |
+| `work_task` | `plan_start_date` / `plan_end_date` | DATE | 是 | NULL | 计划起止；两者都填时结束不得早于开始（400 `WORK_DATE_RANGE`） |
+| `work_task` | `remark` | VARCHAR(500) | 是 | NULL | 备注（备件、工作票、停机窗口等） |
+| `work_task` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `work_task` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `work_task` | *索引 / 外键* | — | — | — | 主键 `pk_work_task(id)`；唯一键 `uq_work_task_project_name`；索引 `ix_work_task_status(status)` |
+| `work_task_image` | `task_id` | BIGINT UNSIGNED | 否 | 无 | 任务（与 `file_id` 组合主键） |
+| `work_task_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
+| `work_task_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每个任务最多 9 张） |
+| `work_task_image` | *索引 / 外键* | — | — | — | 主键 `pk_work_task_image(task_id, file_id)`；外键 `task_id → work_task.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `work_record` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `work_record` | `task_id` | BIGINT UNSIGNED | 否 | 无 | 所属任务（外键 RESTRICT：删任务前必须先删记录） |
+| `work_record` | `start_date` / `end_date` | DATE | 否 | 无 | 工作起止日期（含端点；结束不得早于开始） |
+| `work_record` | `start_half` / `end_half` | ENUM('AM', 'PM') | 否 | 无 | 起止的半天档（AM 上午 / PM 下午）；同一天时不允许「下午 → 上午」 |
+| `work_record` | `participants` | VARCHAR(500) | 否 | 无 | 参与人员姓名，以「、」连接（最多 20 人 × 24 字含分隔符 = 500 字符）；写入时服务端按顿号 / 逗号 / 分号 / 空格等分隔符拆分、去空、去重保序后规范化落库，读接口还原成姓名列表 |
+| `work_record` | `remark` | VARCHAR(500) | 是 | NULL | 这一步的具体内容、交接说明等 |
+| `work_record` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
+| `work_record` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
+| `work_record` | *索引 / 外键* | — | — | — | 主键 `pk_work_record(id)`；索引 `ix_work_record_task_id(task_id)`、`ix_work_record_start_date(start_date)`；外键 `task_id → work_task.id`（RESTRICT） |
+
+工作总览按天展开、人员视图按姓名分组都在服务端完成（查询区间必填且封顶 92 天），因此这两处不需要额外的物化表。
+
 ### 字段明细：备忘表
 
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
@@ -838,7 +882,7 @@ flowchart LR
 
 #### 初始账号
 
-`user` 表插入 6 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
+`user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
@@ -847,9 +891,10 @@ flowchart LR
 | `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `SHA2(@purchase_api_token, 256)` |
 | `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `SHA2(@hazard_api_token, 256)` |
 | `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `SHA2(@ledger_api_token, 256)` |
+| `work` | 工作管理员 | `WORK_ADMIN` | 1 | `SHA2(@work_api_token, 256)` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
 
-六个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 35 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+七个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 

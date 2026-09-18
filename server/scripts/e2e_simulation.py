@@ -64,7 +64,7 @@ def main() -> int:
         assert health.status_code == 200 and health.json()["database"] == "ok", "健康检查失败"
         print("✅ 健康检查")
 
-        # 2. 默认项目与六种角色登录
+        # 2. 默认项目与七种角色登录
         admin = _auth(client, "admin")
         listed_projects = client.get("/api/v1/projects", headers=admin)
         assert listed_projects.status_code == 200, listed_projects.text
@@ -76,9 +76,10 @@ def main() -> int:
         purchase = _auth(client, "purchase", project_id)
         hazard = _auth(client, "hazard", project_id)
         ledger = _auth(client, "ledger", project_id)
+        work = _auth(client, "work", project_id)
         readonly = _auth(client, "readonly", project_id)
         admin = _auth(client, "admin", project_id)
-        print(f"✅ 默认项目 {default_projects[0]['name']}（#{project_id}）与六种角色登录")
+        print(f"✅ 默认项目 {default_projects[0]['name']}（#{project_id}）与七种角色登录")
 
         # 2.1 业务接口缺项目上下文必须被拦下（fail-closed，不允许静默看全库）
         no_project = client.get(
@@ -381,7 +382,104 @@ def main() -> int:
             assert response.status_code == 204, response.text
         print("✅ 台账模拟数据清理")
 
-        # 20. 跨项目隔离：新建项目后看不到本项目的数据，同 ID 资源在别的项目里「不存在」
+        # 20. 工作管理：建任务 → 排一段跨天（下午 → 上午）的活 → 三个视图都能看到
+        #     → 只读用户不能写 → 有记录的任务不能删 → 清理后任务可删
+        task = client.post(
+            "/api/v1/work-tasks",
+            headers=work,
+            json={
+                "name": f"E2E 主电机轴承更换 {run}",
+                "description": "E2E 覆盖停机窗口更换轴承",
+                "status": "进行中",
+                "plan_start_date": "2026-09-07",
+                "plan_end_date": "2026-09-18",
+            },
+        )
+        assert task.status_code == 201, task.text
+        task_row = task.json()
+        # 一条记录多个人：顿号串提交后规范化成姓名列表
+        record = client.post(
+            "/api/v1/work-records",
+            headers=work,
+            json={
+                "task_id": task_row["id"],
+                "start_date": "2026-09-07",
+                "start_half": "PM",
+                "end_date": "2026-09-08",
+                "end_half": "AM",
+                "participants": ["李建军、王海涛", "李建军"],
+                "remark": "E2E 拆卸与回装",
+            },
+        )
+        assert record.status_code == 201, record.text
+        record_row = record.json()
+        assert record_row["participants"] == ["李建军", "王海涛"], record_row
+
+        # 工作总览：按天 + 时段展开（9/7 下午、9/8 上午）
+        overview = client.get(
+            "/api/v1/work-overview",
+            headers=readonly,
+            params={"start_date": "2026-09-07", "end_date": "2026-09-08"},
+        )
+        assert overview.status_code == 200, overview.text
+        assert [(row["date"], row["slot"]) for row in overview.json()["items"]] == [
+            ("2026-09-08", "上午"),
+            ("2026-09-07", "下午"),
+        ], overview.text
+
+        # 任务视图：任务带出区间内的记录；人员视图：按姓名分组
+        timeline = client.get(
+            "/api/v1/work-task-timeline",
+            headers=work,
+            params={"start_date": "2026-09-01", "end_date": "2026-09-30"},
+        )
+        assert timeline.status_code == 200, timeline.text
+        matched = [row for row in timeline.json()["items"] if row["task"]["id"] == task_row["id"]]
+        assert matched and len(matched[0]["records"]) == 1, timeline.text
+
+        workers = client.get(
+            "/api/v1/work-worker-timeline",
+            headers=work,
+            params={"start_date": "2026-09-01", "end_date": "2026-09-30", "keyword": "李建军"},
+        )
+        assert workers.status_code == 200, workers.text
+        assert [row["name"] for row in workers.json()["items"]] == ["李建军"], workers.text
+
+        # 参与人下拉的历史姓名：项目内去重升序
+        names = client.get(
+            "/api/v1/work-participants", headers=work, params={"keyword": "王海涛"}
+        )
+        assert names.status_code == 200 and names.json() == ["王海涛"], names.text
+        print(
+            f"✅ 工作管理：任务 #{task_row['id']} + 记录 #{record_row['id']}，"
+            "三个视图与人员清单一致"
+        )
+
+        # 只读用户与仓库管理员不能写工作数据
+        denied_task = client.post(
+            "/api/v1/work-tasks", headers=readonly, json={"name": "E2E 越权任务"}
+        )
+        assert denied_task.status_code == 403, denied_task.text
+        # 有记录的任务不允许直接删除，先删记录再删任务
+        task_in_use = client.delete(
+            f"/api/v1/work-tasks/{task_row['id']}",
+            headers={**work, "If-Match": str(task_row["version"])},
+        )
+        assert task_in_use.status_code == 409, task_in_use.text
+        assert task_in_use.json()["code"] == "WORK_TASK_HAS_RECORDS", task_in_use.text
+        removed_record = client.delete(
+            f"/api/v1/work-records/{record_row['id']}",
+            headers={**work, "If-Match": str(record_row["version"])},
+        )
+        assert removed_record.status_code == 204, removed_record.text
+        removed_task = client.delete(
+            f"/api/v1/work-tasks/{task_row['id']}",
+            headers={**work, "If-Match": str(task_row["version"])},
+        )
+        assert removed_task.status_code == 204, removed_task.text
+        print("✅ 工作管理写权限拦截、删除保护与模拟数据清理")
+
+        # 21. 跨项目隔离：新建项目后看不到本项目的数据，同 ID 资源在别的项目里「不存在」
         new_project = client.post(
             "/api/v1/projects",
             headers=admin,

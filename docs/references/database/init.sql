@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `user` (
   `api_token_hash` VARCHAR(64) NOT NULL,
   `api_token_enc` VARCHAR(512) NOT NULL DEFAULT '',
   `display_name` VARCHAR(128) NOT NULL,
-  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN') NOT NULL,
+  `role` ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN', 'WORK_ADMIN') NOT NULL,
   `enabled` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -759,6 +759,70 @@ CREATE TABLE IF NOT EXISTS `ledger_image` (
     FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 工作管理：任务（活）+ 任务图片 + 工作记录（谁在什么时候干哪个活）。
+-- 任务名在项目内唯一：同一件活反复干都登记在同一个任务下，用工作记录的起止时间表达周期，
+-- 任务视图因此能看到它的全周期；状态是人工维护的进度标记，不随计划或记录自动流转。
+CREATE TABLE IF NOT EXISTS `work_task` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `project_id` BIGINT UNSIGNED NOT NULL,
+  `name` VARCHAR(128) NOT NULL,
+  `description` VARCHAR(1000),
+  `status` ENUM('PENDING', 'IN_PROGRESS', 'DONE', 'PAUSED') NOT NULL DEFAULT 'PENDING',
+  `plan_start_date` DATE,
+  `plan_end_date` DATE,
+  `remark` VARCHAR(500),
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_work_task` PRIMARY KEY (`id`),
+  CONSTRAINT `uq_work_task_project_name` UNIQUE (`project_id`, `name`),
+  INDEX `ix_work_task_status` (`status`),
+  INDEX `ix_work_task_project_id` (`project_id`),
+  CONSTRAINT `fk_work_task_project_id_project`
+    FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS `work_task_image` (
+  `task_id` BIGINT UNSIGNED NOT NULL,
+  `project_id` BIGINT UNSIGNED NOT NULL,
+  `file_id` VARCHAR(36) NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  CONSTRAINT `pk_work_task_image` PRIMARY KEY (`task_id`, `file_id`),
+  CONSTRAINT `fk_work_task_image_task_id_work_task`
+    FOREIGN KEY (`task_id`) REFERENCES `work_task` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_work_task_image_file_id_file_object`
+    FOREIGN KEY (`file_id`) REFERENCES `file_object` (`id`),
+  INDEX `ix_work_task_image_project_id` (`project_id`),
+  CONSTRAINT `fk_work_task_image_project_id_project`
+    FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- 工作记录：起止都精确到上午（AM）/ 下午（PM）；参与人员是「、」连接的姓名串
+-- （最多 20 人 × 24 字（含分隔符）= 500 字符，正好等于列宽），人员视图按姓名拆分后分组。
+-- 半日占用判定与「结束不早于开始」都由服务端校验，库里不加 CHECK，规则只有一处实现。
+CREATE TABLE IF NOT EXISTS `work_record` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `project_id` BIGINT UNSIGNED NOT NULL,
+  `task_id` BIGINT UNSIGNED NOT NULL,
+  `start_date` DATE NOT NULL,
+  `start_half` ENUM('AM', 'PM') NOT NULL,
+  `end_date` DATE NOT NULL,
+  `end_half` ENUM('AM', 'PM') NOT NULL,
+  `participants` VARCHAR(500) NOT NULL,
+  `remark` VARCHAR(500),
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `version` INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT `pk_work_record` PRIMARY KEY (`id`),
+  INDEX `ix_work_record_task_id` (`task_id`),
+  INDEX `ix_work_record_start_date` (`start_date`),
+  INDEX `ix_work_record_project_id` (`project_id`),
+  CONSTRAINT `fk_work_record_task_id_work_task`
+    FOREIGN KEY (`task_id`) REFERENCES `work_task` (`id`),
+  CONSTRAINT `fk_work_record_project_id_project`
+    FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 -- 隐患类型字典（大类 + 小类两级；源自旧隐患系统，共 157 条 / 16 个大类）。
 -- 重复导入不改变已有行，仅按 (major, minor) 唯一键跳过。
 INSERT INTO `hazard_type` (`project_id`, `major`, `minor`)
@@ -950,6 +1014,11 @@ SET @ledger_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES
   SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
   '-', HEX(RANDOM_BYTES(6))));
 
+SET @work_api_token = LOWER(CONCAT(HEX(RANDOM_BYTES(4)), '-', HEX(RANDOM_BYTES(2)),
+  '-4', SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3), '-',
+  SUBSTRING('89ab', 1 + FLOOR(RAND() * 4), 1), SUBSTRING(HEX(RANDOM_BYTES(2)), 2, 3),
+  '-', HEX(RANDOM_BYTES(6))));
+
 INSERT INTO `user` (`username`, `password_hash`, `api_token_hash`, `display_name`, `role`, `enabled`)
 VALUES
   ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@admin_api_token, 256), '系统管理员', 'SUPER_ADMIN', 1),
@@ -957,6 +1026,7 @@ VALUES
   ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@purchase_api_token, 256), '申购管理员', 'PURCHASE_ADMIN', 1),
   ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@hazard_api_token, 256), '隐患管理员', 'HAZARD_ADMIN', 1),
   ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@ledger_api_token, 256), '台账管理员', 'LEDGER_ADMIN', 1),
+  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@work_api_token, 256), '工作管理员', 'WORK_ADMIN', 1),
   ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', SHA2(@readonly_api_token, 256), '只读用户', 'READ_ONLY', 1)
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),

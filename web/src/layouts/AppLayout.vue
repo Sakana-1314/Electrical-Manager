@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
 import {
   BusinessOutline,
+  CalendarOutline,
   CartOutline,
   CubeOutline,
   DocumentTextOutline,
@@ -105,6 +106,17 @@ const menuOptions = computed<MenuOption[]>(() => {
     key: 'ledger-group',
     icon: renderIcon(LibraryOutline),
     children: [link('台账总览', 'ledger-items'), link('标签管理', 'ledger-tags')],
+  })
+  // 工作管理：三个子 tab 都是读取开放（写操作在页面内按 work:write 隐藏）。
+  items.push({
+    label: '工作管理',
+    key: 'work-group',
+    icon: renderIcon(CalendarOutline),
+    children: [
+      link('工作总览', 'work-overview'),
+      link('任务视图', 'work-tasks'),
+      link('人员视图', 'work-workers'),
+    ],
   })
   if (auth.can('settings:write'))
     items.push({

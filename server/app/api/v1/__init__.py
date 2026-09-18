@@ -23,6 +23,7 @@ from app.api.v1 import (
     stock_materials,
     system_settings,
     version,
+    work,
 )
 from app.schemas import ApiError
 
@@ -59,3 +60,4 @@ router.include_router(version.router)
 router.include_router(hazards.router)
 router.include_router(ledger.router)
 router.include_router(projects.router)
+router.include_router(work.router)

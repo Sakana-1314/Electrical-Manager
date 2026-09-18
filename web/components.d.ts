@@ -74,5 +74,9 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     ShareLinkDialog: typeof import('./src/components/ShareLinkDialog.vue')['default']
     SortableHeader: typeof import('./src/components/SortableHeader.vue')['default']
+    WorkRangePicker: typeof import('./src/components/WorkRangePicker.vue')['default']
+    WorkRecordFormModal: typeof import('./src/components/WorkRecordFormModal.vue')['default']
+    WorkTaskFormModal: typeof import('./src/components/WorkTaskFormModal.vue')['default']
+    WorkTimelineGrid: typeof import('./src/components/WorkTimelineGrid.vue')['default']
   }
 }

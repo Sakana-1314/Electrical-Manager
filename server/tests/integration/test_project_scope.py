@@ -36,7 +36,7 @@ async def test_project_required_when_context_missing(client: AsyncClient) -> Non
         assert write_error.value.code == "PROJECT_REQUIRED"
 
         # 纯全局表的语句不受影响（登录、项目列表、系统配置等不需要项目上下文）。
-        assert await session.scalar(select(func.count()).select_from(User)) == 6
+        assert await session.scalar(select(func.count()).select_from(User)) == 7
 
 
 

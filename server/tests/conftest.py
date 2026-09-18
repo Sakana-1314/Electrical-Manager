@@ -95,6 +95,13 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
                     enabled=True,
                 ),
                 User(
+                    username="work",
+                    password_hash=hash_password("123456"),
+                    display_name="工作管理员",
+                    role=Role.WORK_ADMIN,
+                    enabled=True,
+                ),
+                User(
                     username="readonly",
                     password_hash=hash_password("123456"),
                     display_name="只读用户",
