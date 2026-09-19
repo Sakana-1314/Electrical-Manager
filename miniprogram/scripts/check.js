@@ -335,6 +335,32 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
+// 列表页筛选下拉：展开面板收成与筛选栏同宽，不再铺满整屏（三个列表页共用 app.wxss 里的这条规则）。
+{
+  const block = styleBlock(appStyles, '.filter-menu .t-dropdown-item__popup-host');
+  if (!block) {
+    throw new Error('app.wxss must narrow the dropdown panel under .filter-menu.');
+  }
+  for (const declaration of ['left: 24rpx', 'right: 24rpx', 'width: auto']) {
+    if (!block.includes(declaration)) {
+      throw new Error(`The narrowed dropdown panel must declare "${declaration}".`);
+    }
+  }
+  // 面板内缩值与圆角跟列表页的页面内边距、.filter-menu 圆角耦合：改页面内边距必须同步这条规则。
+  for (const page of [
+    'hazards/hazards',
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+  ]) {
+    if (!read(`pages/${page}.wxml`).includes('class="filter-menu"')) {
+      throw new Error(`pages/${page}.wxml must anchor the shared .filter-menu panel rule.`);
+    }
+    if (!read(`pages/${page}.wxss`).includes('.filter-menu')) {
+      throw new Error(`pages/${page}.wxss must style .filter-menu.`);
+    }
+  }
+}
+
 // 每个请求（含重试与图片上传）都要带上当前项目，并在项目失效时重新解析后重试一次。
 {
   const requestScript = read('utils/request.js');

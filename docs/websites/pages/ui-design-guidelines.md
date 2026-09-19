@@ -94,6 +94,7 @@
 | 列表页骨架 | 根节点 `class="page-shell … {{themeClass}}"`；自上而下依次为页标题、`t-search`、（有筛选时）`t-dropdown-menu`、结果计数、列表卡片、状态面板 |
 | 搜索 | `t-search`（`shape="round"`、`confirm-type="search"`），只搜该页约定字段：隐患管理只匹配检查区域与隐患描述 |
 | 筛选下拉 | `t-dropdown-menu` + `t-dropdown-item`，选项通过 `options` 传入、当前值走 `value`；**首项固定为「全部××」（`value: ''`）**。网页端「下拉不放『全部』选项、清空即不限」的规则不适用于小程序：这里没有清空态，必须显式给出不限项 |
+| 筛选面板宽度 | 展开面板必须与整条筛选栏同宽（左右边缘对齐上方 `t-search`），不铺满整屏、不贴屏幕边。组件默认给到视口宽度，由 `app.wxss` 的 `.filter-menu .t-dropdown-item__popup-host` 内缩（值与列表页页面内边距、`.filter-menu` 圆角耦合，改内边距要同步这条规则），三个列表页共用；`npm run check` 会校验该规则与三页的 `class="filter-menu"` 锚点 |
 | 主操作 | 列表页的登记/新增入口用 `t-fab` 悬浮圆钮，只在有写权限时渲染（见 `utils/features.js`） |
 | 状态面板 | 加载中用 `t-loading`，无数据用 `t-empty`；「本来为空」与「筛选后为空」用不同文案，避免误导 |
 | 反馈 | 轻提示用 `Toast({ context: this, selector: '#页面-toast' })`，需要提示的页面在 WXML 里放一个对应 id 的 `t-toast`（纯静态提示页如「停用」「注册已关闭」除外） |
