@@ -178,6 +178,18 @@ page,
   --td-dropdown-menu-active-color: var(--app-brand);
 }
 
+/* 列表页筛选下拉（.filter-menu）：TDesign 的面板默认 absolute + width:100%，比筛选栏宽出一圈并贴屏幕两边，
+ * 这里收成与筛选栏同宽——左右内缩等于列表页的页面内边距（三个列表页都是 24rpx），下方圆角与 .filter-menu 一致。
+ * 只收面板本身：.t-dropdown-item__mask 与 popup 自带的整屏遮罩保持全屏，点面板外仍能关闭。 */
+.filter-menu .t-dropdown-item__popup-host {
+  left: 24rpx;
+  right: 24rpx;
+  width: auto;
+  border-bottom-left-radius: 20rpx;
+  border-bottom-right-radius: 20rpx;
+  overflow: hidden;
+}
+
 /* 系统深色时 page 元素自身的底色（显式浅色档由 wx.setBackgroundColor 纠正）。 */
 @media (prefers-color-scheme: dark) {
   page {
