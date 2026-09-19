@@ -37,6 +37,8 @@ from app.repositories import purchase_request_repository
 from app.schemas import (
     MiniProgramHuaXingInventoryRead,
     MiniProgramInventoryItemRead,
+    MiniProgramLedgerItemDetailRead,
+    MiniProgramLedgerItemRead,
     MiniProgramLiteInventoryItemRead,
     MiniProgramMaterialCodeRead,
     MiniProgramMaterialRead,
@@ -56,6 +58,7 @@ from app.services import (
     ai_search_service,
     huaxing_inventory_service,
     inventory_service,
+    ledger_service,
     lite_inventory_service,
     material_code_library_service,
     webhook_service,
@@ -235,6 +238,47 @@ async def list_material_codes(
             for item in items
         ],
         total,
+    )
+
+
+async def list_ledger_items(
+    session: AsyncSession, *, keyword: str | None, page: int, page_size: int
+) -> tuple[list[MiniProgramLedgerItemRead], int]:
+    """小程序台账列表：按名称 / 型号 / 备注模糊搜索，创建时间倒序分页（与网页端同一份口径）。"""
+    items, total = await ledger_service.list_items(
+        session, keyword=keyword, tag_ids=None, page=page, page_size=page_size
+    )
+    return (
+        [
+            MiniProgramLedgerItemRead(
+                id=item.id,
+                name=item.name,
+                model_spec=item.model_spec,
+                subitem_no=item.subitem_no,
+                quantity=item.quantity,
+                unit_name=item.unit_name,
+            )
+            for item in items
+        ],
+        total,
+    )
+
+
+async def ledger_item_detail(
+    session: AsyncSession, item_id: int
+) -> MiniProgramLedgerItemDetailRead:
+    item = await ledger_service.get_item_read(session, item_id)
+    return MiniProgramLedgerItemDetailRead(
+        id=item.id,
+        name=item.name,
+        model_spec=item.model_spec,
+        subitem_no=item.subitem_no,
+        quantity=item.quantity,
+        unit_name=item.unit_name,
+        usage=item.usage,
+        remark=item.remark,
+        tags=item.tags,
+        images=item.images,
     )
 
 

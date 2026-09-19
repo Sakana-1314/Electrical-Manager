@@ -405,6 +405,71 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
+// 台账查看（列表 + 详情）：首页入口接功能开关，列表页只读、详情页按 id 取数。
+{
+  const homeScript = read('pages/home/home.js');
+  const homeMarkup = read('pages/home/home.wxml');
+  if (!homeScript.includes("ensureFeatureEnabled('ledger_mode')")) {
+    throw new Error('The home page must gate the ledger entry behind ledger_mode.');
+  }
+  if (!homeMarkup.includes('i18n.ledgerTitle') || !homeMarkup.includes('bind:tap="openLedger"')) {
+    throw new Error('The home page must render the ledger entry.');
+  }
+  if (!read('utils/features.js').includes('ledger_mode:')) {
+    throw new Error('utils/features.js must define the ledger_mode fallback.');
+  }
+
+  const listScript = read('pages/ledger/ledger.js');
+  for (const snippet of [
+    "'/mini-program/ledger-items'",
+    'onSearchChange',
+    'loadLedger',
+    'onReachBottom',
+    'onPullDownRefresh',
+    'openDetail',
+  ]) {
+    if (!listScript.includes(snippet)) {
+      throw new Error(`pages/ledger/ledger.js must support list browsing: ${snippet}`);
+    }
+  }
+  const listMarkup = read('pages/ledger/ledger.wxml');
+  for (const snippet of ['t-search', 'i18n.ledgerSearchPlaceholder', 'resultCount', 't-empty']) {
+    if (!listMarkup.includes(snippet)) {
+      throw new Error(`pages/ledger/ledger.wxml must render search and results: ${snippet}`);
+    }
+  }
+  if (!listScript.includes('/pages/ledger-detail/ledger-detail?id=')) {
+    throw new Error('The ledger list must open the detail page by id.');
+  }
+
+  const detailScript = read('pages/ledger-detail/ledger-detail.js');
+  for (const snippet of [
+    '/mini-program/ledger-items/${id}',
+    'invalidLedger',
+    'previewImage',
+    'retry',
+  ]) {
+    if (!detailScript.includes(snippet)) {
+      throw new Error(`pages/ledger-detail/ledger-detail.js must support the detail view: ${snippet}`);
+    }
+  }
+  const detailMarkup = read('pages/ledger-detail/ledger-detail.wxml');
+  for (const snippet of ['i18n.ledgerInfo', 'i18n.ledgerTags', 'i18n.imageAttachments']) {
+    if (!detailMarkup.includes(snippet)) {
+      throw new Error(`pages/ledger-detail/ledger-detail.wxml must render: ${snippet}`);
+    }
+  }
+  // 台账只有查看能力：列表页与详情页都不应出现写入口。
+  for (const [file, markup] of [
+    ['pages/ledger/ledger.wxml', listMarkup],
+    ['pages/ledger-detail/ledger-detail.wxml', detailMarkup],
+  ]) {
+    if (markup.includes('t-fab')) {
+      throw new Error(`${file} must stay read-only (no t-fab write entry).`);
+    }
+  }
+}
+
 // 每个请求（含重试与图片上传）都要带上当前项目，并在项目失效时重新解析后重试一次。
 {
   const requestScript = read('utils/request.js');

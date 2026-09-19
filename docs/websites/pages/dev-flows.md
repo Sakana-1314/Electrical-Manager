@@ -457,6 +457,7 @@ flowchart LR
 | 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
 | 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
 | 台账登记与标签维护 | 标签管理页维护标签树、台账总览页新增/编辑台账记录 | `ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image` |
+| 小程序台账查看 | 小程序台账列表搜索/分页、点开详情看用途与标签 | `ledger`（读）、`ledger_tag`（读，拼标签路径）、`file_object`（读图片） |
 | 工作管理 | 任务视图维护任务与工作记录、工作总览 / 人员视图按区间查询 | `work_task`、`work_task_image`、`work_record` |
 | 备忘录 | 备忘录增删改查 | `memo`（草稿与字号存浏览器本地） |
 | 版本信息 | 查询版本（公开） | 无（读构建期注入的构建时间与提交号） |

@@ -1,0 +1,59 @@
+<view class="page-shell ledger-page {{themeClass}}">
+  <view class="list-header"><view class="page-title">{{i18n.ledgerTitle}}</view></view>
+  <view class="list-tools">
+    <t-search
+      value="{{keyword}}"
+      placeholder="{{i18n.ledgerSearchPlaceholder}}"
+      shape="round"
+      confirm-type="search"
+      bind:change="onSearchChange"
+    />
+  </view>
+  <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
+  <view wx:if="{{loading && !items.length}}" class="state-panel">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingLedger}}" />
+  </view>
+  <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
+    <t-empty icon="file" description="{{keyword ? i18n.ledgerEmptyFiltered : i18n.ledgerEmpty}}" />
+  </view>
+  <view wx:else class="ledger-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="ledger-card"
+      hover-class="ledger-card-active"
+      data-id="{{item.id}}"
+      bind:tap="openDetail"
+    >
+      <view class="card-heading">
+        <view class="ledger-name">{{item.name}}</view>
+        <t-icon class="ledger-arrow" name="chevron-right" size="36rpx" />
+      </view>
+      <view class="ledger-spec">{{item.model_spec}}</view>
+      <view class="card-divider"></view>
+      <view class="ledger-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.quantityLabel}}</view>
+          <view class="quantity-value">{{item.quantity_label}}</view>
+        </view>
+        <view class="meta-item subitem-item">
+          <view class="meta-label">{{i18n.subitemNo}}</view>
+          <view class="meta-value">{{item.subitem_no_label}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{loadingMore}}" class="load-more">
+    <t-loading theme="circular" size="36rpx" text="{{i18n.loadMore}}" />
+  </view>
+  <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
+  <t-toast id="ledger-toast" />
+  <button
+    wx:if="{{backTopVisible}}"
+    class="back-top-fab"
+    aria-label="{{i18n.backToTop}}"
+    bind:tap="scrollToTop"
+  >
+    <t-icon name="backtop" size="52rpx" />
+  </button>
+</view>

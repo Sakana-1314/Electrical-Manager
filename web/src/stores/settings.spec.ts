@@ -15,6 +15,7 @@ const fullFeatures = {
   purchase_plans_mode: 'query_only',
   purchase_records_mode: 'query_only',
   material_codes_mode: 'query_only',
+  ledger_mode: 'query_only',
   hazards_mode: 'read_write',
   secondary_warehouse_mode: 'full',
 } as const

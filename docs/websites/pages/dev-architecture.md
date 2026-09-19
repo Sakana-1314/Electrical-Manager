@@ -458,7 +458,7 @@ server/app/
 | `api/v1/work.py` | `CurrentUser`、`WorkWriter`、`IfMatchVersion` | 12 |
 | `api/v1/share.py` | `CurrentUser` | 5 |
 | `api/v1/excel_export_jobs.py` | `CurrentUser` | 2 |
-| `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 32（管理端 4 + 小程序 28） |
+| `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 35（管理端 4 + 小程序 31） |
 | `api/v1/version.py` | 无（公开） | 1 |
 #### 接口令牌（`X-API-Token`）与双列存储
 | 项 | 规则 |
@@ -769,6 +769,7 @@ flowchart LR
 | 申购与记录 | `pages/purchase-plans/purchase-plans`、`pages/purchase-plan-detail/purchase-plan-detail`、`pages/purchase-records/purchase-records`、`pages/purchase-record-detail/purchase-record-detail`、`pages/records/records` |
 | 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
+| 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
 
 公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
@@ -908,6 +909,7 @@ flowchart LR
     S --> P["申购计划<br/>query_only"]
     S --> R["申购记录<br/>query_only"]
     S --> C["物料编码库<br/>query_only"]
+    S --> G["台账查看<br/>query_only"]
     S --> Z["隐患管理<br/>read_write"]
     S --> L["二级库运行模式<br/>full"]
     I -- "disabled" --> I1["隐藏该功能页"]
@@ -917,6 +919,8 @@ flowchart LR
 ```
 
 每个功能页三档：`disabled`（隐藏）、`query_only`（只读）、`read_write`（可写：库存可出库、隐患可登记与跟进）。模式由服务端设置下发，小程序启动时拉取；拉取失败时回落到「库存可写、隐患可写、其余只读、完整二级库模式」的默认值，避免因一次网络失败把出库与隐患登记关掉。开关只用于小程序前端的入口拦截与展示，后端数据接口不按它鉴权。
+
+台账查看只有浏览能力（列表、搜索、详情都是只读），所以网页端设置里只开放 `disabled` / `query_only` 两档，与物料编码库、华星总库存一致；`read_write` 档在台账上没有任何可写入口，因此不提供。
 
 ### 构建与上传
 
