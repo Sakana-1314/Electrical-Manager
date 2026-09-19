@@ -65,6 +65,7 @@ page {
   --app-status-danger-soft: #dfe9fb;
   --app-scrim: rgba(0, 0, 0, 0.6);
   /* 结构令牌（明暗共用一套） */
+  --app-transparent: transparent;
   --td-radius-default: 18rpx;
   --td-radius-large: 28rpx;
   --td-button-border-radius: 18rpx;
@@ -127,6 +128,8 @@ page {
   --app-status-danger: #9fb5ff;
   --app-status-danger-soft: #303d59;
   --app-scrim: rgba(4, 6, 10, 0.68);
+  /* 结构令牌与浅色档同名同义（明暗共用，不随档位变化）。 */
+  --app-transparent: transparent;
   --td-toast-bg-color: rgba(0, 0, 0, 0.82);
   --td-toast-color: #ffffff;
 }
@@ -176,6 +179,14 @@ page,
   --td-dropdown-menu-bg-color: var(--app-surface);
   --td-dropdown-menu-color: var(--app-text);
   --td-dropdown-menu-active-color: var(--app-brand);
+  --td-picker-bg-color: var(--app-surface);
+  --td-picker-title-color: var(--app-text-strong);
+  --td-picker-cancel-color: var(--app-text-secondary);
+  --td-picker-confirm-color: var(--app-brand);
+  --td-picker-indicator-bg-color: var(--app-surface-soft);
+  --td-picker-item-color: var(--app-text-secondary);
+  --td-picker-item-active-color: var(--app-text-strong);
+  --td-picker-transparent-color: var(--app-transparent);
 }
 
 /* 列表页筛选下拉（.filter-menu）：TDesign 的面板默认 absolute + width:100%，比筛选栏宽出一圈并贴屏幕两边，

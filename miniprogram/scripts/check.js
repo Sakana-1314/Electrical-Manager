@@ -127,6 +127,16 @@ for (const token of ['--td-brand-color: var(--app-brand)', '--td-text-color-prim
 if (!appStyles.includes('.theme-dark')) {
   throw new Error('Mini Program styles must define the dark theme scope.');
 }
+// 项目选择器（t-picker）的顶/底渐隐遮罩用 var(--td-picker-transparent-color) 收尾，
+// 桥接缺失会让整条渐变失效（组件默认值来自未被引入的媒体查询主题）。
+for (const token of [
+  '--td-picker-bg-color: var(--app-surface)',
+  '--td-picker-transparent-color: var(--app-transparent)',
+]) {
+  if (!appStyles.includes(token)) {
+    throw new Error(`Missing TDesign picker bridge token: ${token}`);
+  }
+}
 
 function listStyles(dir) {
   return fs
@@ -313,7 +323,7 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
-// 首页个人信息弹窗里的「当前项目」：展示当前项目并可切换到其它启用项目（切换后整页重启）。
+// 首页个人信息弹窗里的「当前项目」：展示当前项目并用 t-picker 滚轮选择器切换到其它启用项目（切换后整页重启）。
 {
   const homeScript = read('pages/home/home.js');
   for (const snippet of [
@@ -321,16 +331,50 @@ if (themedPage.data.i18n === undefined) {
     'getEnabledProjects',
     'switchProject',
     'takeProjectSwitchNotice',
-    'projectsExpanded',
+    'projectPickerVisible',
+    'projectPickerValue',
+    'projectPickerPopupProps',
+    'openProjectPicker',
+    'onProjectPickerConfirm',
+    'onProjectPickerVisibleChange',
   ]) {
     if (!homeScript.includes(snippet)) {
-      throw new Error(`pages/home/home.js must wire the current project switcher: ${snippet}`);
+      throw new Error(`pages/home/home.js must wire the current project picker: ${snippet}`);
     }
   }
   const homeMarkup = read('pages/home/home.wxml');
-  for (const snippet of ['i18n.currentProject', 'projectOptions', 'onProjectSelect']) {
+  for (const snippet of [
+    'i18n.currentProject',
+    'projectOptions',
+    'openProjectPicker',
+    'onProjectPickerConfirm',
+    'bind:visible-change="onProjectPickerVisibleChange"',
+    'popup-props="{{projectPickerPopupProps}}"',
+    '<t-picker',
+    '<t-picker-item',
+  ]) {
     if (!homeMarkup.includes(snippet)) {
-      throw new Error(`pages/home/home.wxml must render the current project switcher: ${snippet}`);
+      throw new Error(`pages/home/home.wxml must render the current project picker: ${snippet}`);
+    }
+  }
+  if (homeMarkup.includes('projectsExpanded') || homeScript.includes('projectsExpanded')) {
+    throw new Error('The current project switcher must not keep the hand-rolled expandable list.');
+  }
+  // 选项必须是组件约定的 { label, value }：t-picker-item 用 value 作 wx:key 并据它回显选中项，
+  // 自定义 keys 映射到别的字段名会让 wx:key 落空。
+  for (const snippet of ['label: project.label', 'value: project.id']) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`The project picker options must use the TDesign label/value contract: ${snippet}`);
+    }
+  }
+  if (homeMarkup.includes('keys="{{projectPickerKeys}}"') || homeScript.includes('projectPickerKeys')) {
+    throw new Error('The project picker must not remap option keys; use label/value instead.');
+  }
+  const homeConfig = JSON.parse(read('pages/home/home.json'));
+  const components = Object.values(homeConfig.usingComponents || {});
+  for (const component of ['tdesign-miniprogram/picker/picker', 'tdesign-miniprogram/picker-item/picker-item']) {
+    if (!components.includes(component)) {
+      throw new Error(`pages/home/home.json must register ${component} for the project picker.`);
     }
   }
 }
@@ -507,6 +551,13 @@ if (t('resultCount', { count: 3 }, LOCALE_ID_ID) !== '3 material') {
 for (const key of ['appearanceTitle', 'themeModeAuto', 'themeModeLight', 'themeModeDark']) {
   if (!dictionaries[LOCALE_ZH_CN][key] || !dictionaries[LOCALE_ID_ID][key]) {
     throw new Error(`Mini Program appearance labels must be translated: ${key}`);
+  }
+}
+// 项目选择器（t-picker）的取消 / 确认文案：不能沿用 TDesign 自带的 zh_CN 词典，
+// 否则印尼语用户在微信里看到的是中文按钮。
+for (const key of ['cancel', 'confirm']) {
+  if (!dictionaries[LOCALE_ZH_CN][key] || !dictionaries[LOCALE_ID_ID][key]) {
+    throw new Error(`Mini Program picker labels must be translated: ${key}`);
   }
 }
 

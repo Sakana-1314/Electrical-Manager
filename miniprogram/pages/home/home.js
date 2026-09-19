@@ -34,9 +34,15 @@ Page(withTheme({
     liteMode: false,
     userProfileVisible: false,
     appearanceExpanded: false,
-    // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）。
-    projectsExpanded: false,
+    // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
+    // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
+    projectPickerVisible: false,
+    // 选项用组件约定的 `{ label, value }`（t-picker-item 以 value 作 wx:key），value 即项目 id。
     projectOptions: [],
+    projectPickerValue: [],
+    // 选择器从「个人信息」弹窗里打开：弹窗本身是 z-index 11500 的 t-popup，
+    // 这里把选择器面板与其遮罩都抬到弹窗之上（仍低于 Toast 的 12001），避免面板被弹窗压住。
+    projectPickerPopupProps: { zIndex: 11700, overlayProps: { zIndex: 11600 } },
     currentProjectId: 0,
     currentProjectLabel: t('projectNotSelected'),
     themeOptions: getAppearanceOptions(),
@@ -103,13 +109,21 @@ Page(withTheme({
     }
     await ensureProject();
     const currentProject = getCurrentProject();
+    // 标签统一取 utils/project.js 里的 label（只显示名称，不外显编码），避免两处拼法不一致；
+    // 选项字段用组件约定的 label / value（value 即项目 id，t-picker-item 以它作 wx:key）。
+    const projectOptions = getEnabledProjects().map((project) => ({
+      label: project.label,
+      value: project.id,
+    }));
+    const currentProjectId = currentProject ? currentProject.id : 0;
     this.setData({
-      // 标签统一取 utils/project.js 里的 label（只显示名称，不外显编码），避免两处拼法不一致
-      projectOptions: getEnabledProjects().map((project) => ({
-        id: project.id,
-        label: project.label,
-      })),
-      currentProjectId: currentProject ? currentProject.id : 0,
+      projectOptions,
+      // 选择器的 value 是「每列选中值」数组；当前项目不在启用列表里（被停用等）时留空，
+      // 由组件自己定位到首项，避免传了无效 id 后回显空白。
+      projectPickerValue: projectOptions.some((project) => project.value === currentProjectId)
+        ? [currentProjectId]
+        : [],
+      currentProjectId,
       currentProjectLabel: currentProject ? currentProject.label : t('projectNotSelected'),
     });
     // 切换项目是整页重启，提示由重启前的标记带过来；此时页面已渲染，toast 组件可用。
@@ -176,11 +190,11 @@ Page(withTheme({
 
   onUserProfileVisibleChange(event) {
     const visible = event.detail.visible;
-    // 关闭弹窗时收起外观与项目下拉，下次打开恢复收起状态。
+    // 关闭弹窗时收起外观下拉与项目选择器，下次打开恢复收起状态。
     this.setData(
       visible
         ? { userProfileVisible: true }
-        : { userProfileVisible: false, appearanceExpanded: false, projectsExpanded: false },
+        : { userProfileVisible: false, appearanceExpanded: false, projectPickerVisible: false },
     );
   },
 
@@ -188,17 +202,35 @@ Page(withTheme({
     this.setData({ appearanceExpanded: !this.data.appearanceExpanded });
   },
 
-  toggleProjects() {
-    this.setData({ projectsExpanded: !this.data.projectsExpanded });
-  },
-
-  /** 选择项目：切换后整页重启（见 utils/project.js 的 switchProject），本页无需刷新数据。 */
-  onProjectSelect(event) {
-    const projectId = Number(event.currentTarget.dataset.projectId);
-    if (!projectId || projectId === this.data.currentProjectId) {
-      this.setData({ projectsExpanded: false });
+  /** 打开项目选择器：没有可选项目时只提示，不弹空选择器。 */
+  openProjectPicker() {
+    if (!this.data.projectOptions.length) {
+      Toast({
+        context: this,
+        selector: '#home-toast',
+        message: t('noAvailableProject'),
+        theme: 'warning',
+        direction: 'column',
+      });
       return;
     }
+    this.setData({ projectPickerVisible: true });
+  },
+
+  closeProjectPicker() {
+    this.setData({ projectPickerVisible: false });
+  },
+
+  /** 点遮罩或自动收起也会走 visible-change，必须同步回 data，否则下次点开不再弹出。 */
+  onProjectPickerVisibleChange(event) {
+    this.setData({ projectPickerVisible: event.detail.visible });
+  },
+
+  /** 确认选择：切换后整页重启（见 utils/project.js 的 switchProject），本页无需刷新数据。 */
+  onProjectPickerConfirm(event) {
+    const [projectId] = event.detail.value || [];
+    this.setData({ projectPickerVisible: false });
+    if (!projectId || projectId === this.data.currentProjectId) return;
     switchProject(projectId);
   },
 
@@ -209,7 +241,11 @@ Page(withTheme({
   },
 
   openRecords() {
-    this.setData({ userProfileVisible: false, appearanceExpanded: false, projectsExpanded: false });
+    this.setData({
+      userProfileVisible: false,
+      appearanceExpanded: false,
+      projectPickerVisible: false,
+    });
     wx.navigateTo({ url: '/pages/records/records' });
   },
 
