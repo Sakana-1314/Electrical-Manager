@@ -29,6 +29,7 @@ from app.domain.enums import (
 )
 from app.models import Project, WebhookChannel, WebhookDelivery
 from app.schemas import WebhookChannelRead, WebhookChannelUpdate, WebhookTestRequest
+from app.services import project_service
 from app.services.common import fernet, utc_aware, utcnow
 
 logger = logging.getLogger(__name__)
@@ -167,20 +168,18 @@ async def _project_payload_fields(session: AsyncSession) -> dict[str, Any]:
     """事件载荷里的项目标识：事件属于哪个项目，接收方据此区分来源。
 
     请求上下文里的项目优先；注册等无项目上下文的入口退回默认项目（与小程序一致）。
+    兜底必须取 ORM 实体：`session.scalar(select(A, B))` 只返回首列，
+    在返回的标量上取 `.id` 会抛 AttributeError（新用户绑定 500 的成因）。
     """
     project_id = current_project_id_or_none()
     if project_id is not None:
         name = await session.scalar(select(Project.name).where(Project.id == project_id))
         if name:
             return {"project_id": project_id, "project_name": name}
-    row = await session.scalar(
-        select(Project.id, Project.name)
-        .where(Project.is_default.is_(True), Project.enabled.is_(True))
-        .limit(1)
-    )
-    if row is None:
+    project = await project_service.default_project(session)
+    if project is None:
         return {}
-    return {"project_id": row.id, "project_name": row.name}
+    return {"project_id": project.id, "project_name": project.name}
 
 
 async def enqueue_event(

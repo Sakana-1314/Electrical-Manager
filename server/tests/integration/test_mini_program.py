@@ -6,13 +6,17 @@ from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from PIL import Image
+from sqlalchemy import select
 
-from app.domain.enums import MiniProgramCodeEnv
-from app.models import HuaXingInventory, MiniProgramUser
+from app.core.database import system_session
+from app.core.security import create_mini_program_registration_token
+from app.domain.enums import MiniProgramCodeEnv, WebhookEventType
+from app.main import app
+from app.models import HuaXingInventory, MiniProgramUser, WebhookDelivery
 from app.services import ai_search_service, mini_program_service
-from tests.conftest import auth_headers, project_session
+from tests.conftest import DEFAULT_PROJECT_ID, auth_headers, project_session
 
 
 @pytest.mark.asyncio
@@ -1619,3 +1623,80 @@ async def test_last_used_at_tracks_mini_program_sign_in(
     listed = users.json()["items"][0]
     assert listed["id"] == created["id"]
     assert listed["last_used_at"] == refreshed["last_used_at"]
+
+
+@pytest.mark.asyncio
+async def test_wechat_registration_without_project_header_falls_back_to_default_project(
+    client: AsyncClient,
+) -> None:
+    """小程序新用户绑定不带 `X-Project-Id` 时必须落默认项目，不能 500。
+
+    线上首次绑定就是这种请求：小程序要先拿到项目列表才会缓存项目 id，绑定发生在缓存之前，
+    因此 `/mini-program/profile` 不带项目头。事件载荷的项目兜底同样要落默认项目，
+    否则新用户绑定会以 500（“服务器异常”）失败。
+    """
+    admin = await auth_headers(client, "admin")
+    configured = await client.put(
+        "/api/v1/system-settings/webhooks/FEISHU",
+        headers=admin,
+        json={
+            "enabled": True,
+            "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/bind-without-header",
+            "secret": "feishu-secret",
+            "subscribed_events": ["mini_program.user.bound"],
+            "version": 0,
+        },
+    )
+    assert configured.status_code == 200, configured.text
+
+    registration_token = create_mini_program_registration_token(
+        "wx-test-primary", "openid-without-project-header"
+    )
+    # 独立客户端：不带 conftest 默认的 X-Project-Id，复刻小程序首次绑定的真实请求。
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anonymous:
+        profile = await anonymous.post(
+            "/api/v1/mini-program/profile",
+            headers={"Authorization": f"Bearer {registration_token}"},
+            json={
+                "display_name": "不带项目头的新用户",
+                "department_name": "华星检修维护部电气车间",
+            },
+        )
+    assert profile.status_code == 200, profile.text
+    assert profile.json()["user"]["display_name"] == "不带项目头的新用户"
+    assert profile.json()["access_token"]
+
+    # 头里的项目已不存在（客户端缓存了被删项目的 id）时同样落默认项目，而不是 500。
+    stale_token = create_mini_program_registration_token(
+        "wx-test-primary", "openid-with-stale-project-header"
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anonymous:
+        stale = await anonymous.post(
+            "/api/v1/mini-program/profile",
+            headers={
+                "Authorization": f"Bearer {stale_token}",
+                "X-Project-Id": "999999",
+            },
+            json={
+                "display_name": "项目头已失效的新用户",
+                "department_name": "华星检修维护部电气车间",
+            },
+        )
+    assert stale.status_code == 200, stale.text
+
+    async with system_session() as session:
+        deliveries = list(
+            (
+                await session.scalars(
+                    select(WebhookDelivery)
+                    .where(
+                        WebhookDelivery.event_type == WebhookEventType.MINI_PROGRAM_USER_BOUND
+                    )
+                    .order_by(WebhookDelivery.id)
+                )
+            ).all()
+        )
+    assert len(deliveries) == 2
+    for delivery in deliveries:
+        assert delivery.payload["data"]["project_id"] == DEFAULT_PROJECT_ID
+        assert delivery.payload["data"]["project_name"] == "华星现有项目"
