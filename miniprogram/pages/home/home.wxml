@@ -110,30 +110,14 @@
           class="project-trigger"
           hover-class="project-trigger-active"
           aria-role="button"
-          aria-expanded="{{projectsExpanded}}"
-          bind:tap="toggleProjects"
+          aria-expanded="{{projectPickerVisible}}"
+          bind:tap="openProjectPicker"
         >
           <view class="project-trigger-label">{{i18n.currentProject}}</view>
           <view class="project-trigger-value">
             <view class="project-trigger-text {{currentProjectId ? '' : 'project-trigger-empty'}}">{{currentProjectLabel}}</view>
-            <t-icon class="project-arrow" name="{{projectsExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+            <t-icon class="project-arrow" name="chevron-down" size="28rpx" />
           </view>
-        </view>
-        <view wx:if="{{projectsExpanded}}" class="project-options">
-          <view class="project-options-title">{{i18n.switchProject}}</view>
-          <view
-            wx:for="{{projectOptions}}"
-            wx:key="id"
-            class="project-option"
-            hover-class="project-option-active"
-            aria-role="button"
-            data-project-id="{{item.id}}"
-            bind:tap="onProjectSelect"
-          >
-            <view class="project-option-text">{{item.label}}</view>
-            <t-icon wx:if="{{item.id === currentProjectId}}" class="project-option-check" name="check" size="28rpx" />
-          </view>
-          <view wx:if="{{!projectOptions.length}}" class="project-empty">{{i18n.noAvailableProject}}</view>
         </view>
       </view>
       <view class="user-profile-appearance">
@@ -172,6 +156,22 @@
       </view>
     </view>
   </t-popup>
+
+  <!-- 当前项目切换：滚轮选择器，默认停在当前项目，确认后才切换（取消不改动）。
+       popup-props 抬高面板与遮罩的层级，避免被上层的个人信息弹窗压住。 -->
+  <t-picker
+    visible="{{projectPickerVisible}}"
+    title="{{i18n.switchProject}}"
+    cancel-btn="{{i18n.cancel}}"
+    confirm-btn="{{i18n.confirm}}"
+    value="{{projectPickerValue}}"
+    popup-props="{{projectPickerPopupProps}}"
+    bind:confirm="onProjectPickerConfirm"
+    bind:cancel="closeProjectPicker"
+    bind:visible-change="onProjectPickerVisibleChange"
+  >
+    <t-picker-item options="{{projectOptions}}" />
+  </t-picker>
 
   <button class="share-fab" open-type="share" aria-label="{{i18n.shareApp}}">
     <t-icon name="share" size="52rpx" />

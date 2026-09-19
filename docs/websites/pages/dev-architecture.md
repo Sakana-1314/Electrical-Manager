@@ -787,7 +787,7 @@ flowchart LR
 
 ### 当前项目（多项目数据隔离）
 
-业务数据按项目隔离，小程序同样一次只处理一个项目的数据：默认使用默认项目，可在首页「个人信息」弹窗里切换（`utils/project.js` + `pages/home/home.*`，切换后 `wx.reLaunch` 回首页，避免其它页面残留上一个项目的数据）。
+业务数据按项目隔离，小程序同样一次只处理一个项目的数据：默认使用默认项目，可在首页「个人信息」弹窗里切换（`utils/project.js` + `pages/home/home.*`，切换后 `wx.reLaunch` 回首页，避免其它页面残留上一个项目的数据）。切换交互是 `t-picker` 滚轮选择器（选项用组件约定的 `label` / `value`，`value` 即项目 id，`value` 属性传 `[当前项目 id]` 以定位当前项），入口是弹窗里的单行触发器。
 
 | 项 | 实现 |
 | --- | --- |
@@ -795,6 +795,7 @@ flowchart LR
 | 存储 | storage 键 `currentProjectId`，不落库；本机切换不影响网页端 |
 | 请求头 | `utils/request.js` 在请求与图片上传时都带上 `X-Project-Id`（每次尝试重新读取，重登/重试后仍生效） |
 | 默认兜底 | 不带项目头时服务端用默认项目，因此未升级的旧客户端照常可用 |
+| 切换入口 | 首页「个人信息」弹窗的「当前项目」行打开 `t-picker` + `t-picker-item`（选项按组件的 `label` / `value` 契约传入，`popup-props` 抬高层级以盖住弹窗），取消 / 确认文案来自 `utils/i18n.js`；确认后整页重启回首页 |
 | 失效恢复 | 服务端返回 `PROJECT_DISABLED` / `PROJECT_NOT_FOUND` 时，小程序清掉已存项目、重新解析默认项目并重试一次 |
 
 ### 登录与建档

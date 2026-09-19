@@ -152,7 +152,7 @@
 .user-profile-popup {
   box-sizing: border-box;
   width: 620rpx;
-  /* 小屏上内容（项目可选列表展开后）可能高过屏幕，让弹窗自身可滚动。 */
+  /* 小屏上内容（外观可选列表展开后）可能高过屏幕，让弹窗自身可滚动。 */
   max-height: 78vh;
   padding: 42rpx 34rpx 30rpx;
   overflow-y: auto;
@@ -218,7 +218,7 @@
   border-top: 2rpx solid var(--app-divider);
 }
 
-/* 当前项目：与「外观」下拉同一套交互，收起时显示「code 名称」，展开后列出可选项目。 */
+/* 当前项目：收起态是「标签 + 当前项目 + 箭头」，点击后弹出 t-picker 滚轮选择器。 */
 .user-profile-projects {
   margin-top: 22rpx;
   border-top: 2rpx solid var(--app-divider);
@@ -267,57 +267,6 @@
 .project-arrow {
   flex: none;
   color: var(--app-brand-icon);
-}
-
-.project-options {
-  padding: 4rpx 22rpx;
-  border-radius: 20rpx;
-  background: var(--app-surface-soft);
-}
-
-.project-options-title {
-  padding: 16rpx 0 4rpx;
-  color: var(--app-text-subtle);
-  font-size: 23rpx;
-}
-
-.project-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-  padding: 20rpx 0;
-  border-bottom: 2rpx solid var(--app-divider);
-  transition: opacity 120ms ease;
-}
-
-.project-option:last-child {
-  border-bottom: 0;
-}
-
-.project-option-active {
-  opacity: 0.6;
-}
-
-.project-option-text {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--app-text-value);
-  font-size: 24rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.project-option-check {
-  flex: none;
-  color: var(--app-brand);
-}
-
-.project-empty {
-  padding: 12rpx 0 20rpx;
-  color: var(--app-text-placeholder);
-  font-size: 23rpx;
 }
 
 /* 收起态是「标签 + 当前档位 + 箭头」，展开态在下方列出三档（与筛选下拉一致的交互）。 */
