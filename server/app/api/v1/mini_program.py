@@ -26,6 +26,8 @@ from app.schemas import (
     MiniProgramHazardUpdate,
     MiniProgramHuaXingInventoryRead,
     MiniProgramInventoryItemRead,
+    MiniProgramLedgerItemDetailRead,
+    MiniProgramLedgerItemRead,
     MiniProgramLiteInventoryItemRead,
     MiniProgramLoginResponse,
     MiniProgramMaterialCodeRead,
@@ -448,6 +450,37 @@ async def mini_program_huaxing_inventory_last_import(
         session, import_type="HUAXING_INVENTORY"
     )
     return LastImportRead(last_import_at=last_import_at)
+
+
+@mini_router.get(
+    "/ledger-items",
+    response_model=Page[MiniProgramLedgerItemRead],
+    summary="台账列表",
+)
+async def mini_program_ledger_items(
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+    page: PageNo = 1,
+    page_size: PageSize = 20,
+    keyword: Annotated[str | None, Query(max_length=255)] = None,
+) -> Page[MiniProgramLedgerItemRead]:
+    items, total = await mini_program_service.list_ledger_items(
+        session, keyword=keyword, page=page, page_size=page_size
+    )
+    return Page(items=items, page=page, page_size=page_size, total=total)
+
+
+@mini_router.get(
+    "/ledger-items/{item_id}",
+    response_model=MiniProgramLedgerItemDetailRead,
+    summary="台账详情",
+)
+async def mini_program_ledger_item_detail(
+    item_id: int,
+    session: DbSession,
+    user: CurrentMiniProgramUser,
+) -> MiniProgramLedgerItemDetailRead:
+    return await mini_program_service.ledger_item_detail(session, item_id)
 
 
 @mini_router.get(

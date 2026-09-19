@@ -168,6 +168,11 @@ Page(withTheme({
     wx.navigateTo({ url: '/pages/material-codes/material-codes' });
   },
 
+  openLedger() {
+    if (!this.ensureFeatureEnabled('ledger_mode')) return;
+    wx.navigateTo({ url: '/pages/ledger/ledger' });
+  },
+
   ensureFeatureEnabled(modeKey) {
     if (isFeatureDisabled(modeKey)) {
       this.showError(new Error(t('featureNotOpen')));

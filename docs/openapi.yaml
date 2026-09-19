@@ -429,6 +429,7 @@ paths:
                 purchase_records_mode: query_only
                 material_codes_mode: query_only
                 hazards_mode: read_write
+                ledger_mode: query_only
                 secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
@@ -527,6 +528,7 @@ paths:
                 purchase_records_mode: query_only
                 material_codes_mode: query_only
                 hazards_mode: read_write
+                ledger_mode: query_only
                 secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
@@ -758,6 +760,7 @@ paths:
                 purchase_records_mode: query_only
                 material_codes_mode: query_only
                 hazards_mode: read_write
+                ledger_mode: query_only
                 secondary_warehouse_mode: full
         '400':
           description: 业务校验失败
@@ -9268,6 +9271,240 @@ paths:
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
       security:
       - HTTPBearer: []
+  /api/v1/mini-program/ledger-items:
+    get:
+      tags:
+      - 小程序
+      summary: 台账列表
+      operationId: mini_program_ledger_items_api_v1_mini_program_ledger_items_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Keyword
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_MiniProgramLedgerItemRead_'
+              example:
+                items:
+                - id: 1
+                  name: 1# 回转窑主电机
+                  model_spec: YKK-450-6 355kW
+                  subitem_no: TG-2026-011
+                  quantity: 1
+                  unit_name: 台
+                - id: 2
+                  name: 低压抽屉柜
+                  model_spec: MNS-400 8E/2
+                  subitem_no: TG-2026-014
+                  quantity: 6
+                  unit_name: 面
+                - id: 3
+                  name: 高压开关柜
+                  model_spec: KYN28A-12 05
+                  subitem_no: null
+                  quantity: 3
+                  unit_name: 面
+                - id: 4
+                  name: 窑尾高温风机变频器
+                  model_spec: ACS880-07-0320A-3
+                  subitem_no: TG-2026-021
+                  quantity: 1
+                  unit_name: 台
+                - id: 5
+                  name: 现场压力变送器
+                  model_spec: EJA530E-JCS4N
+                  subitem_no: null
+                  quantity: 12
+                  unit_name: 只
+                page: 1
+                page_size: 20
+                total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/ledger-items/{item_id}:
+    get:
+      tags:
+      - 小程序
+      summary: 台账详情
+      operationId: mini_program_ledger_item_detail_api_v1_mini_program_ledger_items__item_id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramLedgerItemDetailRead'
+              example:
+                id: 1
+                name: 1# 回转窑主电机
+                model_spec: YKK-450-6 355kW
+                subitem_no: TG-2026-011
+                quantity: 1
+                unit_name: 台
+                usage: 窑尾主传动备用电机
+                remark: 窑尾主传动，2026 年 5 月更换轴承
+                tag_ids:
+                - 6
+                tags:
+                - id: 6
+                  name: 异步电动机
+                  path: 电动机 / 异步电动机
+                images:
+                - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+                  original_name: 异步电动机铭牌.jpg
+                  mime_type: image/jpeg
+                  size_bytes: 512400
+                  width: 1600
+                  height: 1200
+                created_at: '2026-09-02T10:20:00+08:00'
+                updated_at: '2026-09-11T14:05:00+08:00'
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/mini-program/purchase-plans/{material_id}:
     get:
       tags:
@@ -22432,6 +22669,8 @@ components:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
         hazards_mode:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
+        ledger_mode:
+          $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
         updated_at:
@@ -22461,6 +22700,7 @@ components:
       - purchase_records_mode
       - material_codes_mode
       - hazards_mode
+      - ledger_mode
       - secondary_warehouse_mode
       - version
       title: AiSearchSettingsRead
@@ -22483,6 +22723,7 @@ components:
         purchase_records_mode: query_only
         material_codes_mode: query_only
         hazards_mode: read_write
+        ledger_mode: query_only
         secondary_warehouse_mode: full
         updated_at: '2026-09-13T10:30:00+08:00'
         version: 3
@@ -22546,6 +22787,9 @@ components:
         hazards_mode:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
           default: read_write
+        ledger_mode:
+          $ref: '#/components/schemas/MiniProgramFeatureMode'
+          default: query_only
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
           default: full
@@ -22574,6 +22818,7 @@ components:
         purchase_records_mode: query_only
         material_codes_mode: query_only
         hazards_mode: read_write
+        ledger_mode: query_only
         secondary_warehouse_mode: full
         version: 3
     AiSearchStatusRead:
@@ -24968,6 +25213,8 @@ components:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
         hazards_mode:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
+        ledger_mode:
+          $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
       type: object
@@ -24978,6 +25225,7 @@ components:
       - purchase_records_mode
       - material_codes_mode
       - hazards_mode
+      - ledger_mode
       - secondary_warehouse_mode
       title: MiniProgramFeaturesRead
       examples:
@@ -24987,6 +25235,7 @@ components:
         purchase_records_mode: query_only
         material_codes_mode: query_only
         hazards_mode: read_write
+        ledger_mode: query_only
         secondary_warehouse_mode: full
     MiniProgramHazardCreate:
       properties:
@@ -25287,6 +25536,119 @@ components:
         unit_name: 个
         current_qty: '6'
         stock_status: low_stock
+    MiniProgramLedgerItemDetailRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        model_spec:
+          type: string
+          title: Model Spec
+        subitem_no:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subitem No
+        quantity:
+          type: integer
+          title: Quantity
+        unit_name:
+          type: string
+          title: Unit Name
+        usage:
+          type: string
+          title: Usage
+        remark:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Remark
+        tags:
+          items:
+            $ref: '#/components/schemas/LedgerTagRefRead'
+          type: array
+          title: Tags
+        images:
+          items:
+            $ref: '#/components/schemas/FileObjectRead'
+          type: array
+          title: Images
+      type: object
+      required:
+      - id
+      - name
+      - model_spec
+      - quantity
+      - unit_name
+      - usage
+      title: MiniProgramLedgerItemDetailRead
+      description: 小程序台账详情：在列表行基础上补齐用途 / 备注 / 标签路径 / 图片。
+      examples:
+      - id: 1
+        name: 1# 回转窑主电机
+        model_spec: YKK-450-6 355kW
+        subitem_no: TG-2026-011
+        quantity: 1
+        unit_name: 台
+        usage: 窑尾主传动备用电机
+        remark: 窑尾主传动，2026 年 5 月更换轴承
+        tag_ids:
+        - 6
+        tags:
+        - id: 6
+          name: 异步电动机
+          path: 电动机 / 异步电动机
+        images:
+        - id: 5b8acb50-4317-7306-8ef8-e2b59f03da58
+          original_name: 异步电动机铭牌.jpg
+          mime_type: image/jpeg
+          size_bytes: 512400
+          width: 1600
+          height: 1200
+        created_at: '2026-09-02T10:20:00+08:00'
+        updated_at: '2026-09-11T14:05:00+08:00'
+        version: 1
+    MiniProgramLedgerItemRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        model_spec:
+          type: string
+          title: Model Spec
+        subitem_no:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subitem No
+        quantity:
+          type: integer
+          title: Quantity
+        unit_name:
+          type: string
+          title: Unit Name
+      type: object
+      required:
+      - id
+      - name
+      - model_spec
+      - quantity
+      - unit_name
+      title: MiniProgramLedgerItemRead
+      description: 小程序台账列表行：只带列表要展示的字段（名称 / 型号 / 子项号 / 数量与单位）。
+      examples:
+      - id: 1
+        name: 1# 回转窑主电机
+        model_spec: YKK-450-6 355kW
+        subitem_no: TG-2026-011
+        quantity: 1
+        unit_name: 台
     MiniProgramLiteInventoryItemRead:
       properties:
         id:
@@ -27859,6 +28221,64 @@ components:
         page: 1
         page_size: 20
         total: 8
+    Page_MiniProgramLedgerItemRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MiniProgramLedgerItemRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[MiniProgramLedgerItemRead]
+      examples:
+      - items:
+        - id: 1
+          name: 1# 回转窑主电机
+          model_spec: YKK-450-6 355kW
+          subitem_no: TG-2026-011
+          quantity: 1
+          unit_name: 台
+        - id: 2
+          name: 低压抽屉柜
+          model_spec: MNS-400 8E/2
+          subitem_no: TG-2026-014
+          quantity: 6
+          unit_name: 面
+        - id: 3
+          name: 高压开关柜
+          model_spec: KYN28A-12 05
+          subitem_no: null
+          quantity: 3
+          unit_name: 面
+        - id: 4
+          name: 窑尾高温风机变频器
+          model_spec: ACS880-07-0320A-3
+          subitem_no: TG-2026-021
+          quantity: 1
+          unit_name: 台
+        - id: 5
+          name: 现场压力变送器
+          model_spec: EJA530E-JCS4N
+          subitem_no: null
+          quantity: 12
+          unit_name: 只
+        page: 1
+        page_size: 20
+        total: 5
     Page_MiniProgramLiteInventoryItemRead_:
       properties:
         items:

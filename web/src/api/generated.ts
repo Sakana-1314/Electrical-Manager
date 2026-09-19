@@ -182,6 +182,7 @@ export interface AiSearchSettingsWrite {
   purchase_plans_mode: MiniProgramFeatureMode
   purchase_records_mode: MiniProgramFeatureMode
   material_codes_mode: MiniProgramFeatureMode
+  ledger_mode: MiniProgramFeatureMode
   hazards_mode: MiniProgramFeatureMode
   secondary_warehouse_mode: SecondaryWarehouseMode
   version: number

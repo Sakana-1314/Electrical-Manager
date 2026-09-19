@@ -336,6 +336,7 @@ class AiSearchSettingsRead(ReadModel):
     purchase_records_mode: MiniProgramFeatureMode
     material_codes_mode: MiniProgramFeatureMode
     hazards_mode: MiniProgramFeatureMode
+    ledger_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
     updated_at: datetime | None = None
     version: int
@@ -357,6 +358,7 @@ class AiSearchSettingsUpdate(RequestModel):
     purchase_records_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     material_codes_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     hazards_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.READ_WRITE
+    ledger_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     secondary_warehouse_mode: SecondaryWarehouseMode = SecondaryWarehouseMode.FULL
     version: int = Field(ge=0)
 
@@ -448,6 +450,7 @@ class MiniProgramFeaturesRead(BaseModel):
     purchase_records_mode: MiniProgramFeatureMode
     material_codes_mode: MiniProgramFeatureMode
     hazards_mode: MiniProgramFeatureMode
+    ledger_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
 
 
@@ -2172,6 +2175,26 @@ class LedgerItemUpdate(RequestModel):
     @classmethod
     def _unique_images(cls, value: list[str] | None) -> list[str] | None:
         return None if value is None else _ensure_unique_image_ids(value)
+
+
+class MiniProgramLedgerItemRead(ReadModel):
+    """小程序台账列表行：只带列表要展示的字段（名称 / 型号 / 子项号 / 数量与单位）。"""
+
+    id: int
+    name: str
+    model_spec: str
+    subitem_no: str | None = None
+    quantity: int
+    unit_name: str
+
+
+class MiniProgramLedgerItemDetailRead(MiniProgramLedgerItemRead):
+    """小程序台账详情：在列表行基础上补齐用途 / 备注 / 标签路径 / 图片。"""
+
+    usage: str
+    remark: str | None = None
+    tags: list[LedgerTagRefRead] = Field(default_factory=list)
+    images: list[FileObjectRead] = Field(default_factory=list)
 
 
 # ===== 工作管理（工作总览 / 任务视图 / 人员视图） =====

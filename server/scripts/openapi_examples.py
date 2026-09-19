@@ -1632,6 +1632,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
             "hazards_mode": "read_write",
+            "ledger_mode": "query_only",
             "secondary_warehouse_mode": "full",
             "updated_at": _LATEST_STAMP,
             "version": 3,
@@ -1652,6 +1653,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
             "hazards_mode": "read_write",
+            "ledger_mode": "query_only",
             "secondary_warehouse_mode": "full",
             "version": 3,
         },
@@ -1668,6 +1670,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "purchase_records_mode": "query_only",
             "material_codes_mode": "query_only",
             "hazards_mode": "read_write",
+            "ledger_mode": "query_only",
             "secondary_warehouse_mode": "full",
         },
         "WebhookChannelRead": {
@@ -1872,6 +1875,28 @@ def _build_schema_examples() -> dict[str, Any]:
             "unit_name": _CODE_ROWS[0]["unit_name"],
         },
         "Page_MiniProgramMaterialCodeRead_": _page(_CODE_ROWS[:8]),
+        "MiniProgramLedgerItemRead": {
+            "id": _LEDGER_ITEM_ROWS[0]["id"],
+            "name": _LEDGER_ITEM_ROWS[0]["name"],
+            "model_spec": _LEDGER_ITEM_ROWS[0]["model_spec"],
+            "subitem_no": _LEDGER_ITEM_ROWS[0]["subitem_no"],
+            "quantity": _LEDGER_ITEM_ROWS[0]["quantity"],
+            "unit_name": _LEDGER_ITEM_ROWS[0]["unit_name"],
+        },
+        "Page_MiniProgramLedgerItemRead_": _page(
+            [
+                {
+                    "id": row["id"],
+                    "name": row["name"],
+                    "model_spec": row["model_spec"],
+                    "subitem_no": row["subitem_no"],
+                    "quantity": row["quantity"],
+                    "unit_name": row["unit_name"],
+                }
+                for row in _LEDGER_ITEM_ROWS
+            ]
+        ),
+        "MiniProgramLedgerItemDetailRead": _LEDGER_ITEM_ROWS[0],
         "MiniProgramOperationRead": _mini_program_operation_read(mini_operation),
         "Page_MiniProgramOperationRead_": _page(
             [_mini_program_operation_read(row) for row in reversed(_MINI_PROGRAM_OPERATIONS)]
@@ -2331,6 +2356,7 @@ _FIELD_EXAMPLES: dict[str, Any] = {
     "purchase_plans_mode": "query_only",
     "purchase_records_mode": "query_only",
     "material_codes_mode": "query_only",
+    "ledger_mode": "query_only",
     "mini_program_code_env": "release",
     "mini_program_code_app_id": _MINI_PROGRAM_APP_IDS[0],
     "mini_program_app_ids": _MINI_PROGRAM_APP_IDS,

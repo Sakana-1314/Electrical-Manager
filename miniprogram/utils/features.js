@@ -11,6 +11,7 @@ const DEFAULT_MODES = {
   purchase_plans_mode: MODE_QUERY_ONLY,
   purchase_records_mode: MODE_QUERY_ONLY,
   material_codes_mode: MODE_QUERY_ONLY,
+  ledger_mode: MODE_QUERY_ONLY,
   hazards_mode: MODE_READ_WRITE,
   secondary_warehouse_mode: SECONDARY_WAREHOUSE_FULL,
 };

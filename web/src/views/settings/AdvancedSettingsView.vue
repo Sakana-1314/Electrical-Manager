@@ -69,6 +69,7 @@ const form = reactive({
   purchase_plans_mode: 'query_only' as MiniProgramFeatureMode,
   purchase_records_mode: 'query_only' as MiniProgramFeatureMode,
   material_codes_mode: 'query_only' as MiniProgramFeatureMode,
+  ledger_mode: 'query_only' as MiniProgramFeatureMode,
   hazards_mode: 'read_write' as MiniProgramFeatureMode,
   secondary_warehouse_mode: 'full' as SecondaryWarehouseMode,
   version: 0,
@@ -172,6 +173,7 @@ async function save() {
       purchase_plans_mode: form.purchase_plans_mode,
       purchase_records_mode: form.purchase_records_mode,
       material_codes_mode: form.material_codes_mode,
+      ledger_mode: form.ledger_mode,
       hazards_mode: form.hazards_mode,
       secondary_warehouse_mode: form.secondary_warehouse_mode,
       version: form.version,
@@ -361,6 +363,9 @@ onMounted(load)
             </n-form-item>
             <n-form-item label="物料编码">
               <n-select v-model:value="form.material_codes_mode" :options="readOnlyModeOptions" />
+            </n-form-item>
+            <n-form-item label="台账查看">
+              <n-select v-model:value="form.ledger_mode" :options="readOnlyModeOptions" />
             </n-form-item>
             <n-form-item label="隐患管理">
               <n-select v-model:value="form.hazards_mode" :options="hazardsModeOptions" />

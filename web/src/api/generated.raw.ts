@@ -1120,6 +1120,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mini-program/ledger-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 台账列表 */
+        get: operations["mini_program_ledger_items_api_v1_mini_program_ledger_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mini-program/ledger-items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 台账详情 */
+        get: operations["mini_program_ledger_item_detail_api_v1_mini_program_ledger_items__item_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mini-program/purchase-plans/{material_id}": {
         parameters: {
             query?: never;
@@ -2486,6 +2520,7 @@ export interface components {
          *       "purchase_records_mode": "query_only",
          *       "material_codes_mode": "query_only",
          *       "hazards_mode": "read_write",
+         *       "ledger_mode": "query_only",
          *       "secondary_warehouse_mode": "full",
          *       "updated_at": "2026-09-13T10:30:00+08:00",
          *       "version": 3
@@ -2517,6 +2552,7 @@ export interface components {
             purchase_records_mode: components["schemas"]["MiniProgramFeatureMode"];
             material_codes_mode: components["schemas"]["MiniProgramFeatureMode"];
             hazards_mode: components["schemas"]["MiniProgramFeatureMode"];
+            ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
             /** Updated At */
             updated_at?: string | null;
@@ -2541,6 +2577,7 @@ export interface components {
          *       "purchase_records_mode": "query_only",
          *       "material_codes_mode": "query_only",
          *       "hazards_mode": "read_write",
+         *       "ledger_mode": "query_only",
          *       "secondary_warehouse_mode": "full",
          *       "version": 3
          *     }
@@ -2600,6 +2637,8 @@ export interface components {
             material_codes_mode: components["schemas"]["MiniProgramFeatureMode"];
             /** @default read_write */
             hazards_mode: components["schemas"]["MiniProgramFeatureMode"];
+            /** @default query_only */
+            ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             /** @default full */
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
             /** Version */
@@ -4212,6 +4251,7 @@ export interface components {
          *       "purchase_records_mode": "query_only",
          *       "material_codes_mode": "query_only",
          *       "hazards_mode": "read_write",
+         *       "ledger_mode": "query_only",
          *       "secondary_warehouse_mode": "full"
          *     }
          */
@@ -4222,6 +4262,7 @@ export interface components {
             purchase_records_mode: components["schemas"]["MiniProgramFeatureMode"];
             material_codes_mode: components["schemas"]["MiniProgramFeatureMode"];
             hazards_mode: components["schemas"]["MiniProgramFeatureMode"];
+            ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
         };
         /**
@@ -4397,6 +4438,91 @@ export interface components {
             /** Current Qty */
             current_qty: string;
             stock_status: components["schemas"]["MiniProgramStockStatus"];
+        };
+        /**
+         * MiniProgramLedgerItemDetailRead
+         * @description 小程序台账详情：在列表行基础上补齐用途 / 备注 / 标签路径 / 图片。
+         * @example {
+         *       "id": 1,
+         *       "name": "1# 回转窑主电机",
+         *       "model_spec": "YKK-450-6 355kW",
+         *       "subitem_no": "TG-2026-011",
+         *       "quantity": 1,
+         *       "unit_name": "台",
+         *       "usage": "窑尾主传动备用电机",
+         *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+         *       "tag_ids": [
+         *         6
+         *       ],
+         *       "tags": [
+         *         {
+         *           "id": 6,
+         *           "name": "异步电动机",
+         *           "path": "电动机 / 异步电动机"
+         *         }
+         *       ],
+         *       "images": [
+         *         {
+         *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+         *           "original_name": "异步电动机铭牌.jpg",
+         *           "mime_type": "image/jpeg",
+         *           "size_bytes": 512400,
+         *           "width": 1600,
+         *           "height": 1200
+         *         }
+         *       ],
+         *       "created_at": "2026-09-02T10:20:00+08:00",
+         *       "updated_at": "2026-09-11T14:05:00+08:00",
+         *       "version": 1
+         *     }
+         */
+        MiniProgramLedgerItemDetailRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Subitem No */
+            subitem_no?: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Unit Name */
+            unit_name: string;
+            /** Usage */
+            usage: string;
+            /** Remark */
+            remark?: string | null;
+            /** Tags */
+            tags?: components["schemas"]["LedgerTagRefRead"][];
+            /** Images */
+            images?: components["schemas"]["FileObjectRead"][];
+        };
+        /**
+         * MiniProgramLedgerItemRead
+         * @description 小程序台账列表行：只带列表要展示的字段（名称 / 型号 / 子项号 / 数量与单位）。
+         * @example {
+         *       "id": 1,
+         *       "name": "1# 回转窑主电机",
+         *       "model_spec": "YKK-450-6 355kW",
+         *       "subitem_no": "TG-2026-011",
+         *       "quantity": 1,
+         *       "unit_name": "台"
+         *     }
+         */
+        MiniProgramLedgerItemRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Subitem No */
+            subitem_no?: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Unit Name */
+            unit_name: string;
         };
         /**
          * MiniProgramLiteInventoryItemRead
@@ -6730,6 +6856,66 @@ export interface components {
         Page_MiniProgramInventoryItemRead_: {
             /** Items */
             items: components["schemas"]["MiniProgramInventoryItemRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * Page[MiniProgramLedgerItemRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "name": "1# 回转窑主电机",
+         *           "model_spec": "YKK-450-6 355kW",
+         *           "subitem_no": "TG-2026-011",
+         *           "quantity": 1,
+         *           "unit_name": "台"
+         *         },
+         *         {
+         *           "id": 2,
+         *           "name": "低压抽屉柜",
+         *           "model_spec": "MNS-400 8E/2",
+         *           "subitem_no": "TG-2026-014",
+         *           "quantity": 6,
+         *           "unit_name": "面"
+         *         },
+         *         {
+         *           "id": 3,
+         *           "name": "高压开关柜",
+         *           "model_spec": "KYN28A-12 05",
+         *           "subitem_no": null,
+         *           "quantity": 3,
+         *           "unit_name": "面"
+         *         },
+         *         {
+         *           "id": 4,
+         *           "name": "窑尾高温风机变频器",
+         *           "model_spec": "ACS880-07-0320A-3",
+         *           "subitem_no": "TG-2026-021",
+         *           "quantity": 1,
+         *           "unit_name": "台"
+         *         },
+         *         {
+         *           "id": 5,
+         *           "name": "现场压力变送器",
+         *           "model_spec": "EJA530E-JCS4N",
+         *           "subitem_no": null,
+         *           "quantity": 12,
+         *           "unit_name": "只"
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 5
+         *     }
+         */
+        Page_MiniProgramLedgerItemRead_: {
+            /** Items */
+            items: components["schemas"]["MiniProgramLedgerItemRead"][];
             /** Page */
             page: number;
             /** Page Size */
@@ -13004,6 +13190,7 @@ export interface operations {
                      *       "purchase_records_mode": "query_only",
                      *       "material_codes_mode": "query_only",
                      *       "hazards_mode": "read_write",
+                     *       "ledger_mode": "query_only",
                      *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3
@@ -13139,6 +13326,7 @@ export interface operations {
                      *       "purchase_records_mode": "query_only",
                      *       "material_codes_mode": "query_only",
                      *       "hazards_mode": "read_write",
+                     *       "ledger_mode": "query_only",
                      *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3
@@ -13482,6 +13670,7 @@ export interface operations {
                      *       "purchase_records_mode": "query_only",
                      *       "material_codes_mode": "query_only",
                      *       "hazards_mode": "read_write",
+                     *       "ledger_mode": "query_only",
                      *       "secondary_warehouse_mode": "full"
                      *     }
                      */
@@ -23920,6 +24109,306 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["LastImportRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_ledger_items_api_v1_mini_program_ledger_items_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                keyword?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": 1,
+                     *           "name": "1# 回转窑主电机",
+                     *           "model_spec": "YKK-450-6 355kW",
+                     *           "subitem_no": "TG-2026-011",
+                     *           "quantity": 1,
+                     *           "unit_name": "台"
+                     *         },
+                     *         {
+                     *           "id": 2,
+                     *           "name": "低压抽屉柜",
+                     *           "model_spec": "MNS-400 8E/2",
+                     *           "subitem_no": "TG-2026-014",
+                     *           "quantity": 6,
+                     *           "unit_name": "面"
+                     *         },
+                     *         {
+                     *           "id": 3,
+                     *           "name": "高压开关柜",
+                     *           "model_spec": "KYN28A-12 05",
+                     *           "subitem_no": null,
+                     *           "quantity": 3,
+                     *           "unit_name": "面"
+                     *         },
+                     *         {
+                     *           "id": 4,
+                     *           "name": "窑尾高温风机变频器",
+                     *           "model_spec": "ACS880-07-0320A-3",
+                     *           "subitem_no": "TG-2026-021",
+                     *           "quantity": 1,
+                     *           "unit_name": "台"
+                     *         },
+                     *         {
+                     *           "id": 5,
+                     *           "name": "现场压力变送器",
+                     *           "model_spec": "EJA530E-JCS4N",
+                     *           "subitem_no": null,
+                     *           "quantity": 12,
+                     *           "unit_name": "只"
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 5
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_MiniProgramLedgerItemRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_ledger_item_detail_api_v1_mini_program_ledger_items__item_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "name": "1# 回转窑主电机",
+                     *       "model_spec": "YKK-450-6 355kW",
+                     *       "subitem_no": "TG-2026-011",
+                     *       "quantity": 1,
+                     *       "unit_name": "台",
+                     *       "usage": "窑尾主传动备用电机",
+                     *       "remark": "窑尾主传动，2026 年 5 月更换轴承",
+                     *       "tag_ids": [
+                     *         6
+                     *       ],
+                     *       "tags": [
+                     *         {
+                     *           "id": 6,
+                     *           "name": "异步电动机",
+                     *           "path": "电动机 / 异步电动机"
+                     *         }
+                     *       ],
+                     *       "images": [
+                     *         {
+                     *           "id": "5b8acb50-4317-7306-8ef8-e2b59f03da58",
+                     *           "original_name": "异步电动机铭牌.jpg",
+                     *           "mime_type": "image/jpeg",
+                     *           "size_bytes": 512400,
+                     *           "width": 1600,
+                     *           "height": 1200
+                     *         }
+                     *       ],
+                     *       "created_at": "2026-09-02T10:20:00+08:00",
+                     *       "updated_at": "2026-09-11T14:05:00+08:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MiniProgramLedgerItemDetailRead"];
                 };
             };
             /** @description 业务校验失败 */
