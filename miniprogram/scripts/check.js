@@ -683,6 +683,81 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
   }
 }
 
+// 分享带参数：各列表页的转发链接必须带上当前搜索 / 筛选，且对方点开后按同一份条件取数。
+{
+  const share = require(path.join(root, 'utils/share.js'));
+  // 编解码：中文与 & = # 必须编码；解码对已解码 / 裸 % 都要容错。
+  const encoded = share.buildSharePath('/pages/ledger/ledger', { keyword: '熔断 & 芯=1#2' });
+  if (!encoded.startsWith('/pages/ledger/ledger?keyword=') || encoded.includes('熔断')) {
+    throw new Error('Share paths must percent-encode search keywords.');
+  }
+  if (share.readShareParams({ keyword: '熔断' }, ['keyword']).keyword !== '熔断') {
+    throw new Error('Share params must tolerate already-decoded values.');
+  }
+  if (share.readShareParams({ keyword: '100%' }, ['keyword']).keyword !== '100%') {
+    throw new Error('Share params must tolerate bare percent signs.');
+  }
+  if (share.buildSharePath('/pages/x/x', { keyword: '', a: null, b: undefined }) !== '/pages/x/x') {
+    throw new Error('Empty share values must be omitted from the path.');
+  }
+  if (
+    share.readShareParams({ keyword: 'a', redirect: '/pages/y' }, ['keyword']).redirect !== undefined
+  ) {
+    throw new Error('Share params must be filtered by the page whitelist.');
+  }
+
+  // 每个带搜索 / 筛选的列表页都必须：导入 share 工具、用 sharePath() 转发、回跳带参。
+  const shareablePages = [
+    { page: 'inventory/inventory', params: ['keyword', 'stockStatus'] },
+    { page: 'huaxing-inventory/huaxing-inventory', params: ['keyword'] },
+    { page: 'material-codes/material-codes', params: ['keyword'] },
+    { page: 'ledger/ledger', params: ['keyword'] },
+    {
+      page: 'purchase-plans/purchase-plans',
+      params: ['keyword', 'actualDemandPerson', 'subitemNo'],
+    },
+    { page: 'purchase-records/purchase-records', params: ['keyword', 'status', 'subitemNo'] },
+    { page: 'hazards/hazards', params: ['keyword', 'status', 'rectifyPerson'] },
+  ];
+  for (const { page, params } of shareablePages) {
+    const script = read(`pages/${page}.js`);
+    for (const snippet of [
+      "require('../../utils/share')",
+      'readShareParams(options, SHARE_PARAMS)',
+      'path: this.sharePath()',
+    ]) {
+      if (!script.includes(snippet)) {
+        throw new Error(`pages/${page}.js must share search/filter state: ${snippet}`);
+      }
+    }
+    // 分享与回跳必须用同一份参数，否则未注册用户绑定后会丢掉筛选。
+    if (!script.includes('buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared))')) {
+      throw new Error(`pages/${page}.js must keep share params across the bind redirect.`);
+    }
+    if (!script.includes('SHARE_PARAMS = [')) {
+      throw new Error(`pages/${page}.js must declare its share param whitelist.`);
+    }
+    for (const param of params) {
+      if (!script.includes(`'${param}'`)) {
+        throw new Error(`pages/${page}.js must share the "${param}" filter.`);
+      }
+    }
+  }
+
+  // 分享值可能已不在候选项里：下拉页必须补选项，固定枚举（页签 / 状态）必须白名单校验。
+  for (const page of ['purchase-plans/purchase-plans', 'purchase-records/purchase-records']) {
+    if (!read(`pages/${page}.js`).includes('withSharedOption(')) {
+      throw new Error(`pages/${page}.js must append missing shared filter options.`);
+    }
+  }
+  if (!read('pages/hazards/hazards.js').includes('isAllowedShareValue(shared.status')) {
+    throw new Error('pages/hazards/hazards.js must validate the shared status enum.');
+  }
+  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(restored.stockStatus')) {
+    throw new Error('pages/inventory/inventory.js must validate the shared stock status enum.');
+  }
+}
+
 // 项目解析是异步的：放在最后，成功才打印通过，失败时报错并以非零码退出。
 checkProjectResolution().then(
   () => console.log('Mini Program static structure check passed.'),

@@ -2,9 +2,17 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { decorateStock } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
+const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
+const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
+
+// 分享链接携带的搜索词与库存状态（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'stockStatus'];
+const PAGE_ROUTE = '/pages/inventory/inventory';
+// 库存状态页签是固定三档（与页面上的 t-tabs 一致）：非法值直接忽略，不凭空造页签。
+const STOCK_STATUSES = ['all', 'out_of_stock', 'low_stock'];
 
 Page(withTheme({
   data: {
@@ -22,8 +30,10 @@ Page(withTheme({
     i18n: getMessages(),
   },
 
-  async onLoad() {
+  async onLoad(options = {}) {
     setNavigationBarTitle('inventoryTitle');
+    // 分享链接带来的搜索词 / 库存状态；精简模式下没有库存状态页签，忽略该参数。
+    const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const [session, featureModes] = await Promise.all([
         getApp().globalData.authPromise,
@@ -38,12 +48,18 @@ Page(withTheme({
         return;
       }
       if (session.requires_profile) {
-        const redirect = buildRedirectQuery('/pages/inventory/inventory');
+        // 带上分享参数回跳，未注册用户绑定后仍落在同一份筛选结果上。
+        const redirect = buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared));
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
       // 精简模式：二级库独立表 + 只读，调用精简接口且无库存状态/详情。
-      this.setData({ liteMode: featureModes.secondary_warehouse_mode === 'lite' });
+      const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
+      const restored = { ...shared };
+      if (liteMode || !isAllowedShareValue(restored.stockStatus, STOCK_STATUSES)) {
+        delete restored.stockStatus;
+      }
+      this.setData({ liteMode, ...restored });
       await this.loadInventory(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -152,10 +168,18 @@ Page(withTheme({
     });
   },
 
+  /** 分享路径：把当前搜索词与库存状态页签一起带出去（精简模式没有页签，不带该参数）。 */
+  sharePath() {
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      stockStatus: this.data.liteMode ? '' : this.data.stockStatus,
+    });
+  },
+
   onShareAppMessage() {
     return {
       title: t('shareInventory'),
-      path: '/pages/inventory/inventory',
+      path: this.sharePath(),
     };
   },
 

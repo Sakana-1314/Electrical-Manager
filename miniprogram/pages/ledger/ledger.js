@@ -1,9 +1,14 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
+const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
+
+// 分享链接携带的搜索词（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword'];
+const PAGE_ROUTE = '/pages/ledger/ledger';
 
 const PAGE_SIZE = 15;
 
@@ -31,17 +36,21 @@ Page(withTheme({
     i18n: getMessages(),
   },
 
-  async onLoad() {
+  async onLoad(options = {}) {
     setNavigationBarTitle('ledgerTitle');
+    // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
+    const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
       if (session.registration_disabled) return;
       if (session.requires_profile) {
-        const redirect = buildRedirectQuery('/pages/ledger/ledger');
+        // 带上分享参数回跳，未注册用户绑定后仍落在同一份搜索结果上。
+        const redirect = buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared));
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
+      if (Object.keys(shared).length) this.setData(shared);
       await this.loadLedger(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -125,10 +134,15 @@ Page(withTheme({
     });
   },
 
+  /** 分享路径：把当前搜索词一起带出去。 */
+  sharePath() {
+    return buildSharePath(PAGE_ROUTE, { keyword: this.data.keyword.trim() });
+  },
+
   onShareAppMessage() {
     return {
       title: t('shareLedger'),
-      path: '/pages/ledger/ledger',
+      path: this.sharePath(),
     };
   },
 

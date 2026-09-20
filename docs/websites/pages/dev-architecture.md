@@ -760,7 +760,7 @@ flowchart LR
 
 原生微信小程序（WXML / WXSS / CommonJS JS），组件库 TDesign Mini Program，通过 `wx.login` 静默登录后使用。
 
-### 页面构成（`miniprogram/app.json`，18 页）
+### 页面构成（`miniprogram/app.json`，20 页）
 
 | 分组 | 页面 |
 | --- | --- |
@@ -771,7 +771,21 @@ flowchart LR
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 | 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+
+### 分享带搜索 / 筛选（`utils/share.js`）
+
+列表页转发给同事时，把当前的搜索词与筛选值一并写进分享 `path`：对方点开分享卡片，**已注册直接落到同一份筛选结果**；未注册则先走绑定页，注册完由 `redirect` 回跳到同一份结果（`buildRedirectQuery(buildSharePath(route, shared))`）。
+
+| 环节 | 实现 |
+| --- | --- |
+| 写 | 各页重写 `sharePath()`，用 `buildSharePath(route, params)` 拼 query：空值 / `null` / `undefined` 一律省略，其余逐个 `encodeURIComponent`（中文与 `&` `=` `#` 都不会破坏结构） |
+| 读 | 小程序 `onLoad(options)` 的 query **不会自动解码**，统一走 `readShareParams(options, SHARE_PARAMS)`：按白名单 key 取值并解码，对已解码 / 含裸 `%` 的值做兜底，不抛错 |
+| 携带范围 | 申购计划 `keyword`/`actualDemandPerson`/`subitemNo`；申购记录 `keyword`/`status`/`subitemNo`；隐患管理 `keyword`/`status`/`rectifyPerson`；二级库库存 `keyword`/`stockStatus`；物料编码、华星总库存、台账查看 `keyword` |
+| 回填时机 | 带下拉筛选的页面先 `loadFilterOptions()` 再回填——`t-dropdown-item` 要靠 `options` 才能把当前值解析成文案，早于选项写入会显示成默认的「全部××」 |
+| 值已不在候选项 | 自由文本类（申购人、子项号、整改人）用 `withSharedOption()` 把缺失值补成一项，避免下拉显示「全部」而列表其实仍在过滤 |
+| 固定枚举 | 隐患状态与库存状态页签是固定几档，用 `isAllowedShareValue()` 校验，非法值直接忽略（不能凭空造出页签） |
+| 精简模式 | 二级库精简模式下没有库存状态页签，既不分享该参数，也忽略外部传入值 |
 
 ### 界面外观（明 / 暗）
 
