@@ -1,6 +1,12 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
+const {
+  buildSharePath,
+  isAllowedShareValue,
+  readShareParams,
+  withSharedOption,
+} = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
@@ -10,6 +16,9 @@ const Toast = toastModule.default || toastModule;
 const PAGE_SIZE = 15;
 // 整改状态是后端枚举的固定三档，选项直接内置（与网页端筛选项一致）。
 const HAZARD_STATUSES = ['待整改', '整改受阻', '已整改'];
+// 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'status', 'rectifyPerson'];
+const PAGE_ROUTE = '/pages/hazards/hazards';
 
 Page(withTheme({
   data: {
@@ -31,8 +40,10 @@ Page(withTheme({
     i18n: getMessages(),
   },
 
-  async onLoad() {
+  async onLoad(options = {}) {
     setNavigationBarTitle('hazardsTitle');
+    // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（下拉项要靠 options 才能解析出文案）。
+    const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const app = getApp();
       const session = await app.globalData.authPromise;
@@ -40,13 +51,17 @@ Page(withTheme({
         return;
       }
       if (session.requires_profile) {
-        const redirect = buildRedirectQuery('/pages/hazards/hazards');
+        // 带上分享参数回跳，未注册用户绑定后仍落在同一份筛选结果上。
+        const redirect = buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared));
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
       await app.globalData.featureSettingsPromise;
       this.setData({ canWrite: canWriteHazards() });
-      await this.loadFilterOptions();
+      await this.loadFilterOptions(shared);
+      // 整改状态是固定三档：非法值不能凭空补进枚举，直接忽略，避免列表按不存在的状态过滤。
+      if (!isAllowedShareValue(shared.status, HAZARD_STATUSES)) delete shared.status;
+      if (Object.keys(shared).length) this.setData(shared);
       await this.loadHazards(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -108,7 +123,7 @@ Page(withTheme({
     void this.loadHazards(true);
   },
 
-  async loadFilterOptions() {
+  async loadFilterOptions(shared = {}) {
     // 整改员工是自由文本，选项来自库中已有值；加载失败不阻塞列表。
     let rectifyPersons = [];
     try {
@@ -127,10 +142,14 @@ Page(withTheme({
         { label: t('allHazardStatuses'), value: '' },
         ...HAZARD_STATUSES.map((value) => ({ label: value, value })),
       ],
-      rectifyPersonOptions: [
-        { label: t('allRectifyPersons'), value: '' },
-        ...rectifyPersons.map((value) => ({ label: value, value })),
-      ],
+      // 整改人是自由文本：分享值可能已不在候选里，补进选项以免下拉与列表不一致。
+      rectifyPersonOptions: withSharedOption(
+        [
+          { label: t('allRectifyPersons'), value: '' },
+          ...rectifyPersons.map((value) => ({ label: value, value })),
+        ],
+        shared.rectifyPerson,
+      ),
     });
   },
 
@@ -194,7 +213,16 @@ Page(withTheme({
     });
   },
 
+  /** 分享路径：把当前搜索词与两个筛选值一起带出去。 */
+  sharePath() {
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      status: this.data.status,
+      rectifyPerson: this.data.rectifyPerson,
+    });
+  },
+
   onShareAppMessage() {
-    return { title: t('shareHazards'), path: '/pages/hazards/hazards' };
+    return { title: t('shareHazards'), path: this.sharePath() };
   },
 }));

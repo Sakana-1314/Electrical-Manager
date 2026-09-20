@@ -1,9 +1,14 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
+const { buildSharePath, readShareParams, withSharedOption } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
+
+// 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'actualDemandPerson', 'subitemNo'];
+const PAGE_ROUTE = '/pages/purchase-plans/purchase-plans';
 
 function decoratePlan(item) {
   return {
@@ -33,19 +38,24 @@ Page(withTheme({
     i18n: getMessages(),
   },
 
-  async onLoad() {
+  async onLoad(options = {}) {
     setNavigationBarTitle('purchasePlansTitle');
+    // 分享链接带来的搜索 / 筛选：先解析出来，等筛选项加载完再回填——
+    // 下拉项要靠 options 才能把当前值解析成文案，早于选项写入会显示成「全部××」。
+    const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
       if (session.registration_disabled) return;
       if (session.requires_profile) {
-        const redirect = buildRedirectQuery('/pages/purchase-plans/purchase-plans');
+        // 带上分享参数回跳，未注册用户绑定后仍落在同一份筛选结果上。
+        const redirect = buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared));
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
       const displayName = session.user?.display_name || '';
-      await this.loadFilterOptions(displayName);
+      await this.loadFilterOptions(displayName, shared);
+      if (Object.keys(shared).length) this.setData(shared);
       await this.loadPlans(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -97,7 +107,7 @@ Page(withTheme({
     void this.loadPlans(true);
   },
 
-  async loadFilterOptions(displayName) {
+  async loadFilterOptions(displayName, shared = {}) {
     let persons = [];
     let subitemNos = [];
     try {
@@ -120,17 +130,25 @@ Page(withTheme({
     }
     const currentUserSuffix = t('currentUserSuffix');
     this.setData({
-      actualDemandPersonOptions: [
-        { label: t('allActualDemandPersons'), value: '' },
-        ...persons.map((value) => ({
-          label: value === displayName ? `${value}${currentUserSuffix}` : value,
-          value,
-        })),
-      ],
-      subitemNoOptions: [
-        { label: t('allSubitemNos'), value: '' },
-        ...subitemNos.map((value) => ({ label: value, value })),
-      ],
+      // 分享带来的筛选值可能已不在选项里（如那人名下已无在途计划）：
+      // 补进选项，避免下拉显示「全部」而列表其实还在按该值过滤。
+      actualDemandPersonOptions: withSharedOption(
+        [
+          { label: t('allActualDemandPersons'), value: '' },
+          ...persons.map((value) => ({
+            label: value === displayName ? `${value}${currentUserSuffix}` : value,
+            value,
+          })),
+        ],
+        shared.actualDemandPerson,
+      ),
+      subitemNoOptions: withSharedOption(
+        [
+          { label: t('allSubitemNos'), value: '' },
+          ...subitemNos.map((value) => ({ label: value, value })),
+        ],
+        shared.subitemNo,
+      ),
     });
   },
 
@@ -172,10 +190,19 @@ Page(withTheme({
     });
   },
 
+  /** 分享路径：把当前搜索词与两个筛选值一起带出去。 */
+  sharePath() {
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      actualDemandPerson: this.data.actualDemandPerson,
+      subitemNo: this.data.subitemNo,
+    });
+  },
+
   onShareAppMessage() {
     return {
       title: t('sharePurchasePlans'),
-      path: '/pages/purchase-plans/purchase-plans',
+      path: this.sharePath(),
     };
   },
 
