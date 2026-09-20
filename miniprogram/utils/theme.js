@@ -108,7 +108,7 @@ function normalizeTheme(value) {
   return value === THEME_DARK ? THEME_DARK : THEME_LIGHT;
 }
 
-/** 当前档位的展示文案（下拉菜单收起时显示在右侧）。 */
+/** 当前档位的展示文案（外观选择器收起时显示在右侧）。 */
 function themeLabelOf(mode) {
   return t(THEME_LABEL_KEYS[normalizeThemeMode(mode)]);
 }
@@ -119,7 +119,7 @@ function themePageData() {
   return { themeMode: mode, theme, themeClass, themeLabel: themeLabelOf(mode) };
 }
 
-/** 外观下拉菜单的选项（文案走 i18n，与全站语言一致）。 */
+/** 外观选择器（t-picker）的选项（文案走 i18n，与全站语言一致）。 */
 function getAppearanceOptions() {
   return THEME_MODE_OPTIONS.map((value) => ({ value, label: t(THEME_LABEL_KEYS[value]) }));
 }

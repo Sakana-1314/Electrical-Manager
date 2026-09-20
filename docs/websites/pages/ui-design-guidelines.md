@@ -78,7 +78,7 @@
 | 项 | 要求 |
 | --- | --- |
 | 档位与存储 | 同样三档 `auto`（跟随系统，默认）/ `light` / `dark`，档位存本机 storage `miniProgramThemeMode`，不落库、不产生请求 |
-| 入口 | 首页「个人信息」弹窗里的「外观」下拉菜单（收起态显示当前档位，展开后用 `t-radio-group` 列出三档），不另加切换入口 |
+| 入口 | 首页「个人信息」弹窗里的「外观」一行（收起态显示当前档位），点击后弹出 `t-picker` + `t-picker-item` 滚轮选择器（`options` 传三档、`value` 传 `[当前档位]` 以定位当前项），确认才写入本机偏好；不另加切换入口 |
 | 落地 | 浅色令牌定义在 `app.wxss` 的 `page`，深色同名覆盖在 `.theme-dark`（由 `themeClass` 加到各页面根节点）；`page, .theme-dark` 把 TDesign 的 `--td-*` 桥接到 `--app-*` |
 | 深色层次 | 深色邻接色阶至少留出可辨差异（页面底 → 卡片/弹窗 → 控件），不靠描边单独撑层次；`--app-bg` / `--app-surface` / `--app-surface-soft` 三级递增 |
 | 原生外观 | `app.json` 的 `darkmode` + `themeLocation` 让窗口与导航栏跟随系统；显式档由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正 |

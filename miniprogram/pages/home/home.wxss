@@ -307,12 +307,6 @@
   color: var(--app-brand-icon);
 }
 
-.appearance-options {
-  padding: 4rpx 22rpx;
-  border-radius: 20rpx;
-  background: var(--app-surface-soft);
-}
-
 .user-profile-records {
   display: flex;
   align-items: center;
