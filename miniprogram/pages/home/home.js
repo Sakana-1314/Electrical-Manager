@@ -11,7 +11,7 @@ const {
 } = require('../../utils/project');
 const { apiBaseUrl } = require('../../config/index');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
-const { getAppearanceOptions, setThemeMode, withTheme } = require('../../utils/theme');
+const { getAppearanceOptions, readThemeMode, setThemeMode, withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 const SHARE_IMAGE_URL = `${apiBaseUrl.replace(/\/api\/v1\/?$/, '')}/logo.png`;
@@ -33,19 +33,23 @@ Page(withTheme({
     featureReady: false,
     liteMode: false,
     userProfileVisible: false,
-    appearanceExpanded: false,
+    // 界面外观：与「当前项目」同一套交互，走 t-picker 滚轮选择器（确认后才写入本机偏好）。
+    appearancePickerVisible: false,
+    // 外观选项同样是组件约定的 `{ label, value }`，value 为档位（auto / light / dark）；
+    // value 是「每列选中值」数组，初值取本机已存档位以正确定位当前项。
+    themeOptions: getAppearanceOptions(),
+    themePickerValue: [readThemeMode()],
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
     projectPickerVisible: false,
     // 选项用组件约定的 `{ label, value }`（t-picker-item 以 value 作 wx:key），value 即项目 id。
     projectOptions: [],
     projectPickerValue: [],
-    // 选择器从「个人信息」弹窗里打开：弹窗本身是 z-index 11500 的 t-popup，
+    // 两个选择器都从「个人信息」弹窗里打开：弹窗本身是 z-index 11500 的 t-popup，
     // 这里把选择器面板与其遮罩都抬到弹窗之上（仍低于 Toast 的 12001），避免面板被弹窗压住。
-    projectPickerPopupProps: { zIndex: 11700, overlayProps: { zIndex: 11600 } },
+    pickerPopupProps: { zIndex: 11700, overlayProps: { zIndex: 11600 } },
     currentProjectId: 0,
     currentProjectLabel: t('projectNotSelected'),
-    themeOptions: getAppearanceOptions(),
     miniProgramUpdatedAt: buildUploadTime || t('unknown'),
     i18n: getMessages(),
   },
@@ -195,16 +199,37 @@ Page(withTheme({
 
   onUserProfileVisibleChange(event) {
     const visible = event.detail.visible;
-    // 关闭弹窗时收起外观下拉与项目选择器，下次打开恢复收起状态。
+    // 关闭弹窗时收起两个选择器，下次打开恢复收起状态。
     this.setData(
       visible
         ? { userProfileVisible: true }
-        : { userProfileVisible: false, appearanceExpanded: false, projectPickerVisible: false },
+        : { userProfileVisible: false, appearancePickerVisible: false, projectPickerVisible: false },
     );
   },
 
-  toggleAppearance() {
-    this.setData({ appearanceExpanded: !this.data.appearanceExpanded });
+  /** 打开外观选择器：三档固定存在，直接弹出并定位到当前档位。 */
+  openAppearancePicker() {
+    this.setData({
+      appearancePickerVisible: true,
+      themePickerValue: [this.data.themeMode],
+    });
+  },
+
+  closeAppearancePicker() {
+    this.setData({ appearancePickerVisible: false });
+  },
+
+  /** 点遮罩或自动收起也会走 visible-change，必须同步回 data，否则下次点开不再弹出。 */
+  onAppearancePickerVisibleChange(event) {
+    this.setData({ appearancePickerVisible: event.detail.visible });
+  },
+
+  /** 确认档位：写入本机偏好并立即应用（取消不改动）。 */
+  onAppearancePickerConfirm(event) {
+    const [mode] = event.detail.value || [];
+    this.setData({ appearancePickerVisible: false });
+    if (!mode) return;
+    setThemeMode(this, mode);
   },
 
   /** 打开项目选择器：没有可选项目时只提示，不弹空选择器。 */
@@ -239,16 +264,10 @@ Page(withTheme({
     switchProject(projectId);
   },
 
-  onThemeModeChange(event) {
-    setThemeMode(this, event.detail.value);
-    // 选完即收起，展开态只用于选择过程。
-    this.setData({ appearanceExpanded: false });
-  },
-
   openRecords() {
     this.setData({
       userProfileVisible: false,
-      appearanceExpanded: false,
+      appearancePickerVisible: false,
       projectPickerVisible: false,
     });
     wx.navigateTo({ url: '/pages/records/records' });

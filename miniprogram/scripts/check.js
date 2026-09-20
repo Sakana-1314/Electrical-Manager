@@ -302,24 +302,50 @@ if (themedPage.data.i18n === undefined) {
   delete global.wx;
 }
 
-// 首页外观入口是一个下拉菜单：收起时显示当前档位，展开后列出三档。
+// 首页外观入口是一个滚轮选择器：收起时显示当前档位，弹出后列出三档（与项目切换同一套交互）。
 {
   const homeScript = read('pages/home/home.js');
-  for (const snippet of ['toggleAppearance', 'appearanceExpanded', 'onThemeModeChange']) {
+  for (const snippet of [
+    'appearancePickerVisible',
+    'themePickerValue',
+    'openAppearancePicker',
+    'onAppearancePickerConfirm',
+    'onAppearancePickerVisibleChange',
+  ]) {
     if (!homeScript.includes(snippet)) {
-      throw new Error(`pages/home/home.js must wire the appearance dropdown: ${snippet}`);
+      throw new Error(`pages/home/home.js must wire the appearance picker: ${snippet}`);
     }
   }
+  if (homeScript.includes('appearanceExpanded') || homeScript.includes('toggleAppearance')) {
+    throw new Error('The appearance switcher must not keep the hand-rolled expandable list.');
+  }
   const homeMarkup = read('pages/home/home.wxml');
-  for (const snippet of ['{{themeLabel}}', 'appearanceExpanded', 't-radio-group']) {
+  for (const snippet of [
+    '{{themeLabel}}',
+    'openAppearancePicker',
+    'onAppearancePickerConfirm',
+    'bind:visible-change="onAppearancePickerVisibleChange"',
+    'options="{{themeOptions}}"',
+  ]) {
     if (!homeMarkup.includes(snippet)) {
-      throw new Error(`pages/home/home.wxml must render the appearance dropdown: ${snippet}`);
+      throw new Error(`pages/home/home.wxml must render the appearance picker: ${snippet}`);
     }
+  }
+  if (homeMarkup.includes('appearanceExpanded') || homeMarkup.includes('t-radio-group')) {
+    throw new Error('The appearance switcher must use t-picker, not an inline radio group.');
   }
   const homeConfig = JSON.parse(read('pages/home/home.json'));
   const components = Object.values(homeConfig.usingComponents || {});
-  if (!components.includes('tdesign-miniprogram/radio-group/radio-group')) {
-    throw new Error('pages/home/home.json must register t-radio-group for the appearance dropdown.');
+  for (const component of [
+    'tdesign-miniprogram/picker/picker',
+    'tdesign-miniprogram/picker-item/picker-item',
+  ]) {
+    if (!components.includes(component)) {
+      throw new Error(`pages/home/home.json must register ${component} for the appearance picker.`);
+    }
+  }
+  if (components.includes('tdesign-miniprogram/radio-group/radio-group')) {
+    throw new Error('pages/home/home.json must not keep t-radio-group after the appearance picker.');
   }
 }
 
@@ -333,7 +359,7 @@ if (themedPage.data.i18n === undefined) {
     'takeProjectSwitchNotice',
     'projectPickerVisible',
     'projectPickerValue',
-    'projectPickerPopupProps',
+    'pickerPopupProps',
     'openProjectPicker',
     'onProjectPickerConfirm',
     'onProjectPickerVisibleChange',
@@ -349,9 +375,9 @@ if (themedPage.data.i18n === undefined) {
     'openProjectPicker',
     'onProjectPickerConfirm',
     'bind:visible-change="onProjectPickerVisibleChange"',
-    'popup-props="{{projectPickerPopupProps}}"',
-    '<t-picker',
-    '<t-picker-item',
+    'popup-props="{{pickerPopupProps}}"',
+    'visible="{{projectPickerVisible}}"',
+    'options="{{projectOptions}}"',
   ]) {
     if (!homeMarkup.includes(snippet)) {
       throw new Error(`pages/home/home.wxml must render the current project picker: ${snippet}`);
