@@ -107,7 +107,7 @@ flowchart TD
     R["数据生命周期"]
     R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
     R --> U["没有 updated_by 列"]
-    R --> S["业务表没有软删除列：删除一律物理删除（唯一例外是 file_object.deleted_at，附件的软删标记）"]
+    R --> S["业务表没有软删除列：删除一律物理删除（唯一例外是 file_object.deleted_at，附件的软删标记：保留 7 天后第一个凌晨 2 点复查清除）"]
     R --> D["ON DELETE CASCADE：库存余额、补库策略、九张图片关联表随主表一并删除"]
 ```
 
@@ -424,7 +424,7 @@ erDiagram
 | `file_object` | `width` | INT | 否 | 无 | 图片宽度 |
 | `file_object` | `height` | INT | 否 | 无 | 图片高度 |
 | `file_object` | `sha256` | VARCHAR(64) | 否 | 无 | 内容哈希（非唯一索引） |
-| `file_object` | `deleted_at` | DATETIME(6) | 是 | NULL | 软删除时间；非空表示等待次日凌晨 2 点复查引用后物理清除 |
+| `file_object` | `deleted_at` | DATETIME(6) | 是 | NULL | 软删除时间；非空表示待删除：保留 7 个完整自然日，到期后的第一个凌晨 2 点复查引用仍无引用才物理清除（保留期内可撤销） |
 | `file_object` | *索引 / 外键* | — | — | — | 索引 `pk_file_object(id)`、`ix_file_object_sha256(sha256)`、`ix_file_object_deleted_at(deleted_at)`；外键：无（由各图片关联表引用本表） |
 
 </TabsContent>
@@ -860,7 +860,7 @@ flowchart LR
 | --- | --- |
 | JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 MySQL `JSON` 类型，不建额外索引 |
 | 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，ORM 侧另有 `default=""` / `server_default=""`；`file_object.mime_type` 同样只在 ORM 侧有 `default="image/png"`（`test_init_sql.py` 不校验默认值） |
-| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，次日凌晨复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
+| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
 
 
 ### 种子数据

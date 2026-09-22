@@ -571,13 +571,13 @@ class AttachmentRead(ReadModel):
     created_at: UtcDateTime
     # 被引用次数 = 四张图片关联表中指向本文件的记录数之和；为 0 才允许删除。
     reference_count: int
-    # 非空表示已提交删除、等待次日凌晨 2 点复查引用后物理清除。
+    # 非空表示已提交删除：保留 7 个完整自然日，到期后的第一个凌晨 2 点复查引用后才物理清除。
     deleted_at: UtcDateTime | None = None
     file_exists: bool = True
 
 
 class AttachmentDeleteRead(ReadModel):
-    """软删除回执：真正物理删除要等次日凌晨 2 点的引用复查。"""
+    """软删除回执：真正物理删除要等保留期满后的第一个凌晨 2 点（`purge_after`）的引用复查。"""
 
     id: FileId
     deleted_at: UtcDateTime
@@ -585,14 +585,14 @@ class AttachmentDeleteRead(ReadModel):
 
 
 class AttachmentBulkDeleteRead(ReadModel):
-    """批量软删除未引用附件的回执：真正物理删除仍要等次日凌晨 2 点的引用复查。"""
+    """批量软删除未引用附件的回执：物理删除仍要等 `purge_after` 那次引用复查。"""
 
     deleted_count: int
     purge_after: UtcDateTime
 
 
 class AttachmentCleanupRead(ReadModel):
-    """凌晨 2 点引用复查的清理结果（仅供后台任务内部使用，不对外暴露接口）。"""
+    """凌晨 2 点引用复查的清理结果（仅清除保留期满的；仅供后台任务内部使用，不对外暴露接口）。"""
 
     scanned: int
     purged_file_ids: list[FileId]

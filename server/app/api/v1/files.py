@@ -118,8 +118,9 @@ async def delete_unreferenced_attachments(
 ) -> AttachmentBulkDeleteRead:
     """把当前所有未被引用的附件批量标记为待删除。
 
-    只做软删除：数据库记录与磁盘文件都保留，次日凌晨 2 点的定时任务复查引用后
-    才真正物理清除（复查发现新增引用则自动撤销删除）。不提供手动物理删除入口。
+    只做软删除：数据库记录与磁盘文件都保留，保留 7 个完整自然日后的第一个凌晨 2 点，
+    定时任务复查引用后才真正物理清除（复查发现新增引用则自动撤销删除；保留期内可随时撤销）。
+    不提供手动物理删除入口。
     """
     return await file_service.soft_delete_unreferenced(session)
 
@@ -177,5 +178,5 @@ async def read_image(
     summary="删除图片",
 )
 async def remove(file_id: FileId, session: DbSession, user: FileWriter) -> AttachmentDeleteRead:
-    """软删除：被引用次数为 0 才允许；真正清除要等次日凌晨 2 点的引用复查。"""
+    """软删除：被引用次数为 0 才允许；真正清除要等保留期满后第一个凌晨 2 点的引用复查。"""
     return await file_service.soft_delete_image(session, file_id)

@@ -60,6 +60,8 @@ MANAGED_FILE_NAME = re.compile(
 )
 # 附件删除的物理清除时刻（北京时间凌晨 2 点），与 attachment_cleanup_service 的后台任务一致。
 ATTACHMENT_PURGE_HOUR = 2
+# 软删除后的保留期：完整 7 个自然日，给「删错了」留出可撤销的窗口。
+ATTACHMENT_RETENTION_DAYS = 7
 # 所有可能引用 file_object 的图片关联表。新增引用表时必须同步这里，
 # 否则附件管理会低估「被引用次数」并误删在用图片。
 REFERENCE_MODELS: tuple[type[Any], ...] = (
@@ -91,6 +93,19 @@ def _reference_count_expression() -> ColumnElement[int]:
     for part in parts[1:]:
         expression = expression + part
     return expression
+
+
+def attachment_purge_after(deleted_at: datetime) -> datetime:
+    """软删除后的物理清除时刻：保留期满后的第一个凌晨 2 点（北京时间）。
+
+    规则：保留 `ATTACHMENT_RETENTION_DAYS` 个完整自然日，到期那一刻之后的第一个 2 点由
+    `attachment_cleanup_service` 的定时任务复查引用并清除（`deleted_at` 恰好落在 2 点整时
+    当天 2 点即算到期，因此用含边界的 `inclusive`）。纯函数便于单测；返回 UTC（aware）。
+    """
+    deadline = utc_aware(deleted_at).astimezone(SHANGHAI) + timedelta(
+        days=ATTACHMENT_RETENTION_DAYS
+    )
+    return next_local_hour(deadline, ATTACHMENT_PURGE_HOUR, inclusive=True).astimezone(UTC)
 
 
 @dataclass
@@ -237,7 +252,7 @@ async def save_image(session: AsyncSession, upload: UploadFile) -> FileObjectRea
 
 async def get_image(session: AsyncSession, file_id: str) -> tuple[FileObject, Path]:
     item = await session.get(FileObject, file_id)
-    # 已软删除（等待凌晨 2 点物理清除）的图片不再对外提供，避免刚删掉又能在业务里打开。
+    # 已软删除（保留期内等待凌晨清理）的图片不再对外提供，避免刚删掉又能在业务里打开。
     if item is None or item.deleted_at is not None:
         raise not_found("图片")
     path = file_path(file_id)
@@ -327,23 +342,27 @@ async def list_attachments(
 async def soft_delete_image(session: AsyncSession, file_id: str) -> AttachmentDeleteRead:
     """软删除：仅当被引用次数为 0 时允许，落 `deleted_at` 但不删文件。
 
-    真正物理删除由次日凌晨 2 点的引用复查完成（见 attachment_cleanup_service）。
+    保留 `ATTACHMENT_RETENTION_DAYS` 个完整自然日（期间可撤销删除），到期后的第一个凌晨 2 点
+    才由引用复查物理清除（见 attachment_cleanup_service）。
     """
     item = await session.get(FileObject, file_id)
     if item is None:
         raise not_found("图片")
     if item.deleted_at is not None:
-        raise AppError("FILE_ALREADY_DELETED", "图片已提交删除，等待凌晨 2 点清理", status_code=409)
+        raise AppError(
+            "FILE_ALREADY_DELETED",
+            f"图片已提交删除，保留 {ATTACHMENT_RETENTION_DAYS} 天后由凌晨清理任务清除",
+            status_code=409,
+        )
     if await count_references(session, file_id) > 0:
         raise AppError("FILE_IN_USE", "图片已被业务引用，不能删除", status_code=409)
     deleted_at = utcnow()
     item.deleted_at = deleted_at
     await session.commit()
-    purge_after = next_local_hour(datetime.now(SHANGHAI), ATTACHMENT_PURGE_HOUR).astimezone(UTC)
     return AttachmentDeleteRead(
         id=file_id,
         deleted_at=utc_aware(deleted_at),
-        purge_after=purge_after,
+        purge_after=attachment_purge_after(deleted_at),
     )
 
 
@@ -351,7 +370,7 @@ async def soft_delete_unreferenced(session: AsyncSession) -> AttachmentBulkDelet
     """批量软删除：把所有「在用且被引用次数为 0」的附件一次性标记为待删除。
 
     引用条件直接写在 UPDATE 的 WHERE 里（不先查后改），避免两次操作之间被新引用插进来；
-    这里只落 `deleted_at`，物理删除仍由次日凌晨 2 点的引用复查执行。
+    这里只落 `deleted_at`，物理删除仍由保留期满后的凌晨 2 点引用复查执行。
     """
     deleted_at = utcnow()
     result = await session.execute(
@@ -360,10 +379,9 @@ async def soft_delete_unreferenced(session: AsyncSession) -> AttachmentBulkDelet
         .values(deleted_at=deleted_at)
     )
     await session.commit()
-    purge_after = next_local_hour(datetime.now(SHANGHAI), ATTACHMENT_PURGE_HOUR).astimezone(UTC)
     return AttachmentBulkDeleteRead(
         deleted_count=int(result.rowcount or 0),
-        purge_after=purge_after,
+        purge_after=attachment_purge_after(deleted_at),
     )
 
 
@@ -381,11 +399,13 @@ async def restore_image(session: AsyncSession, file_id: str) -> None:
 async def purge_deleted_attachments(
     session: AsyncSession, *, batch_size: int = 200
 ) -> AttachmentCleanupRead:
-    """引用复查：扫描全库待删除附件，确认无引用才物理删除数据库行与磁盘文件。
+    """引用复查：扫描全库待删除附件，确认无引用**且保留期满**才物理删除数据库行与磁盘文件。
 
-    - 复查发现又被引用（软删除后被重新挂到业务上）→ 撤销删除，保留文件与记录；
-    - 复查仍无引用 → 删除数据库行并删除磁盘文件。
+    - 复查发现又被引用（软删除后被重新挂到业务上）→ 撤销删除，保留文件与记录（不必等到保留期满）；
+    - 复查仍无引用但保留期未满（`attachment_purge_after` 还没到）→ 原样保留，等下一个凌晨 2 点的任务；
+    - 复查仍无引用且已到 `attachment_purge_after`（提交删除的完整 7 天后的第一个 2 点）→ 物理清除。
     """
+    now = datetime.now(UTC)
     candidates = list(
         (
             await session.scalars(
@@ -403,6 +423,9 @@ async def purge_deleted_attachments(
         if await count_references(session, item.id) > 0:
             item.deleted_at = None
             restored_ids.append(item.id)
+            continue
+        if item.deleted_at is None or attachment_purge_after(item.deleted_at) > now:
+            # 还在保留期内：留给后面的定时任务，不在本轮清除
             continue
         purged_ids.append(item.id)
         await session.delete(item)

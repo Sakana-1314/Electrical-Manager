@@ -1995,8 +1995,9 @@ export interface paths {
          * 删除未引用附件
          * @description 把当前所有未被引用的附件批量标记为待删除。
          *
-         *     只做软删除：数据库记录与磁盘文件都保留，次日凌晨 2 点的定时任务复查引用后
-         *     才真正物理清除（复查发现新增引用则自动撤销删除）。不提供手动物理删除入口。
+         *     只做软删除：数据库记录与磁盘文件都保留，保留 7 个完整自然日后的第一个凌晨 2 点，
+         *     定时任务复查引用后才真正物理清除（复查发现新增引用则自动撤销删除；保留期内可随时撤销）。
+         *     不提供手动物理删除入口。
          */
         post: operations["delete_unreferenced_attachments_api_v1_files_images_attachments_delete_unreferenced_post"];
         delete?: never;
@@ -2035,7 +2036,7 @@ export interface paths {
         post?: never;
         /**
          * 删除图片
-         * @description 软删除：被引用次数为 0 才允许；真正清除要等次日凌晨 2 点的引用复查。
+         * @description 软删除：被引用次数为 0 才允许；真正清除要等保留期满后第一个凌晨 2 点的引用复查。
          */
         delete: operations["remove_api_v1_files_images__file_id__delete"];
         options?: never;
@@ -2730,10 +2731,10 @@ export interface components {
         };
         /**
          * AttachmentBulkDeleteRead
-         * @description 批量软删除未引用附件的回执：真正物理删除仍要等次日凌晨 2 点的引用复查。
+         * @description 批量软删除未引用附件的回执：物理删除仍要等 `purge_after` 那次引用复查。
          * @example {
          *       "deleted_count": 81,
-         *       "purge_after": "2026-09-15T02:00:00+08:00"
+         *       "purge_after": "2026-09-21T02:00:00+08:00"
          *     }
          */
         AttachmentBulkDeleteRead: {
@@ -2747,11 +2748,11 @@ export interface components {
         };
         /**
          * AttachmentDeleteRead
-         * @description 软删除回执：真正物理删除要等次日凌晨 2 点的引用复查。
+         * @description 软删除回执：真正物理删除要等保留期满后的第一个凌晨 2 点（`purge_after`）的引用复查。
          * @example {
          *       "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
          *       "deleted_at": "2026-09-13T10:20:00+08:00",
-         *       "purge_after": "2026-09-14T02:00:00+08:00"
+         *       "purge_after": "2026-09-21T02:00:00+08:00"
          *     }
          */
         AttachmentDeleteRead: {
@@ -33463,7 +33464,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "deleted_count": 81,
-                     *       "purge_after": "2026-09-15T02:00:00+08:00"
+                     *       "purge_after": "2026-09-21T02:00:00+08:00"
                      *     }
                      */
                     "application/json": components["schemas"]["AttachmentBulkDeleteRead"];
@@ -33807,7 +33808,7 @@ export interface operations {
                      * @example {
                      *       "id": "37c333f3-fbfe-79fa-8568-0af0db99be20",
                      *       "deleted_at": "2026-09-13T10:20:00+08:00",
-                     *       "purge_after": "2026-09-14T02:00:00+08:00"
+                     *       "purge_after": "2026-09-21T02:00:00+08:00"
                      *     }
                      */
                     "application/json": components["schemas"]["AttachmentDeleteRead"];

@@ -29,6 +29,33 @@ def test_purge_schedule_helpers_agree() -> None:
     target = next_local_hour(now, 2)
     assert target == datetime(2026, 8, 11, 2, 0, 0, tzinfo=shanghai)
     assert seconds_until_local_hour(now, 2) == (target - now).total_seconds()
+    # inclusive：刚好落在整点上时取当下这一天，不顺延
+    at_two = datetime(2026, 8, 10, 2, 0, 0, tzinfo=shanghai)
+    assert next_local_hour(at_two, 2) == datetime(2026, 8, 11, 2, 0, 0, tzinfo=shanghai)
+    assert next_local_hour(at_two, 2, inclusive=True) == at_two
+
+
+def test_attachment_purge_after_is_first_two_am_after_seven_full_days() -> None:
+    """清除时刻 = 提交删除的完整 7 天后的第一个凌晨 2 点（北京时间）。"""
+    shanghai = timezone(timedelta(hours=8))
+    assert file_service.ATTACHMENT_RETENTION_DAYS == 7
+    # 下午提交：7 天后同一时刻（09-29 14:30）已过当天 2 点，顺延到 09-30 02:00
+    assert file_service.attachment_purge_after(
+        datetime(2026, 9, 22, 14, 30, 0, tzinfo=shanghai)
+    ) == datetime(2026, 9, 30, 2, 0, 0, tzinfo=shanghai)
+    # 凌晨 2 点前提交：7 天后同一时刻（09-22 01:30）仍在当天 2 点前，当天 02:00 即到期
+    assert file_service.attachment_purge_after(
+        datetime(2026, 9, 15, 1, 30, 0, tzinfo=shanghai)
+    ) == datetime(2026, 9, 22, 2, 0, 0, tzinfo=shanghai)
+    # 正好落在 2 点整：当天 2 点即算到期（含边界），不再多留一天
+    assert file_service.attachment_purge_after(
+        datetime(2026, 9, 15, 2, 0, 0, tzinfo=shanghai)
+    ) == datetime(2026, 9, 22, 2, 0, 0, tzinfo=shanghai)
+    # 入参兼容 UTC：同一时刻换时区表示，结果一致
+    utc_deleted_at = datetime(2026, 9, 22, 6, 30, 0, tzinfo=timezone.utc)
+    assert file_service.attachment_purge_after(utc_deleted_at) == datetime(
+        2026, 9, 30, 2, 0, 0, tzinfo=shanghai
+    )
 
 
 @pytest.mark.asyncio
