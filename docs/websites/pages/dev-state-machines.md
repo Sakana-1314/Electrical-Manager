@@ -31,6 +31,7 @@ flowchart LR
 | `MiniProgramStockStatus` | `normal` / `out_of_stock` / `low_stock` | 计算得出，不落库 | 小程序库存标签 |
 | `MiniProgramFeatureMode` | `disabled` / `query_only` / `read_write` | 存在 `system_setting.setting_value` JSON | 6 个小程序功能页各自一档（库存、华星总库存、申购计划、申购记录、物料编码库、隐患管理） |
 | `SecondaryWarehouseMode` | `full` / `lite` | 同上 | 二级库运行模式 |
+| `WebFeatureVisibility` | 8 个布尔主 tab 开关（`dashboard` / `memos` / `warehouse` / `huaxing_inventory` / `procurement` / `hazards` / `ledger` / `work`） | 同上（`ai_search_config.web_features`） | 后台侧栏主 tab 可见性；系统管理固定显示，不参与开关；全关归一到全显示 |
 | `WebhookPlatform` | `FEISHU` / `DINGTALK` | ENUM 同名 | 推送渠道 |
 | `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `webhook_channel.subscribed_events` JSON 存**值**（点号形式） |
 | `WebhookDeliveryStatus` / `ExcelImportJobStatus` / `ExcelExportJobStatus` | 前者 `PENDING` / `SENDING` / `SUCCEEDED` / `FAILED`，后两者 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` | ENUM 同名 | 投递队列 / 异步任务 |

@@ -3,6 +3,7 @@ import type { Permission } from '@/types/navigation'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { useSettingsStore } from '@/stores/settings'
+import { resolveLandingRouteName } from '@/utils/navigation'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -33,6 +34,18 @@ const FULL_WAREHOUSE_ROUTES = new Set([
   'operation-detail',
 ])
 
+/**
+ * 落地页：当前可见的第一个主 tab（高级设置的「后台可见功能」可关闭主 tab）。
+ * 工作台被关掉后不能还往 `/dashboard` 跳，否则用户一进来就落在侧栏里没有入口的页面；
+ * 可见性只影响渲染，不做路由拦截，被关闭的页面仍可直达。
+ */
+function landingRoute() {
+  const settings = useSettingsStore()
+  return {
+    name: resolveLandingRouteName(settings.webFeatures, { isLiteMode: settings.isLiteMode }),
+  }
+}
+
 const router = createRouter({
   // import.meta.env.BASE_URL 即 vite 的 base（默认 '/'，子路径部署时为该前缀），
   // 路由随之生成正确前缀，代码里无需硬编码部署路径。
@@ -47,7 +60,7 @@ const router = createRouter({
     {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
-      redirect: '/dashboard',
+      redirect: () => landingRoute(),
       children: [
         {
           path: 'dashboard',
@@ -278,11 +291,11 @@ router.beforeEach(async (to) => {
   document.title = `${pageTitle || '系统'} - HXNI 电气无忧`
   if (!to.meta.public && !auth.isAuthenticated)
     return { name: 'login', query: { redirect: to.fullPath } }
-  if (to.name === 'login' && auth.isAuthenticated) return { name: 'dashboard' }
+  if (to.name === 'login' && auth.isAuthenticated) return landingRoute()
   // 业务请求都要带 X-Project-Id：进入受保护页面前先确保当前项目已解析出来
   // （拉取失败保持未加载，不拦导航，本次由后端按 PROJECT_REQUIRED / PROJECT_NOT_FOUND 提示）
   if (!to.meta.public) await useProjectStore().ensureLoaded()
-  if (to.meta.permission && !auth.can(to.meta.permission)) return { name: 'dashboard' }
+  if (to.meta.permission && !auth.can(to.meta.permission)) return landingRoute()
   // 二级库精简模式下，完整模式仓库路由不可访问，统一重定向到精简视图。
   if (useSettingsStore().isLiteMode && to.name && FULL_WAREHOUSE_ROUTES.has(String(to.name))) {
     return { name: 'warehouse-lite' }

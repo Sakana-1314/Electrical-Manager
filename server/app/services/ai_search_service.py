@@ -26,6 +26,7 @@ from app.schemas import (
     AiSearchSettingsUpdate,
     AiSearchTestRequest,
     MiniProgramFeaturesRead,
+    WebFeatureVisibility,
 )
 from app.services.common import fernet, log_event, split_or_search_terms, utc_aware, utcnow
 
@@ -66,6 +67,7 @@ class AiSearchConfig:
     hazards_mode: MiniProgramFeatureMode
     ledger_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
+    web_features: WebFeatureVisibility
     updated_at: datetime | None
     version: int
 
@@ -111,6 +113,7 @@ def _payload(config: AiSearchConfig) -> dict[str, object]:
         "hazards_mode": config.hazards_mode,
         "ledger_mode": config.ledger_mode,
         "secondary_warehouse_mode": config.secondary_warehouse_mode,
+        "web_features": config.web_features.model_dump(),
     }
 
 
@@ -139,6 +142,29 @@ def _mini_program_code_env(value: object) -> MiniProgramCodeEnv:
         return MiniProgramCodeEnv(value)
     except ValueError:
         return MiniProgramCodeEnv.RELEASE
+
+
+def _all_visible_web_features() -> WebFeatureVisibility:
+    return WebFeatureVisibility()
+
+
+def _web_features(value: object) -> WebFeatureVisibility:
+    """解析后台主 tab 可见性。
+
+    规则（与前端 `utils/navigation.ts` 同口径）：
+    - 只认 `WebFeatureVisibility` 声明过的键，未知键忽略（新增/回滚版本互不影响）；
+    - 缺失、非布尔或不认识的键都按 `True`（显示）处理；
+    - 全部为 `False` 视为无效配置，归一到全部显示，避免把侧栏关空。
+    """
+    flags = _all_visible_web_features()
+    if isinstance(value, dict):
+        known = type(flags).model_fields
+        for key, raw in value.items():
+            if key in known and isinstance(raw, bool):
+                setattr(flags, key, raw)
+    if not any(flags.model_dump().values()):
+        return _all_visible_web_features()
+    return flags
 
 
 def _mini_program_code_app_id(value: object) -> str:
@@ -205,6 +231,7 @@ def _config_from_data(
         secondary_warehouse_mode=_secondary_warehouse_mode(
             data.get("secondary_warehouse_mode")
         ),
+        web_features=_web_features(data.get("web_features")),
         updated_at=updated_at,
         version=version,
     )
@@ -255,6 +282,7 @@ def setting_read(setting: AiSearchConfig | None) -> AiSearchSettingsRead:
             hazards_mode=MiniProgramFeatureMode.READ_WRITE,
             ledger_mode=MiniProgramFeatureMode.QUERY_ONLY,
             secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
+            web_features=_all_visible_web_features(),
             updated_at=None,
             version=0,
         )
@@ -279,6 +307,7 @@ def setting_read(setting: AiSearchConfig | None) -> AiSearchSettingsRead:
         hazards_mode=setting.hazards_mode,
         ledger_mode=setting.ledger_mode,
         secondary_warehouse_mode=setting.secondary_warehouse_mode,
+        web_features=setting.web_features,
         updated_at=setting.updated_at,
         version=setting.version,
     )
@@ -308,6 +337,12 @@ async def update_setting(
 
     new_version = actual_version + 1
     now = utcnow()
+    # 缺省（None）表示保持现状：只改其它字段的调用方不会把后台可见性重置成全显示。
+    web_features = _web_features(
+        data.web_features.model_dump()
+        if data.web_features is not None
+        else (current.web_features.model_dump() if current else None)
+    )
     after_data = {
         "endpoint": data.endpoint.rstrip("/"),
         "api_key_encrypted": api_key_encrypted,
@@ -326,6 +361,7 @@ async def update_setting(
         "hazards_mode": data.hazards_mode,
         "ledger_mode": data.ledger_mode,
         "secondary_warehouse_mode": data.secondary_warehouse_mode,
+        "web_features": web_features.model_dump(),
     }
     await log_event(
         session,
@@ -371,6 +407,7 @@ async def update_setting(
         hazards_mode=data.hazards_mode,
         ledger_mode=data.ledger_mode,
         secondary_warehouse_mode=data.secondary_warehouse_mode,
+        web_features=web_features,
         updated_at=utc_aware(now),
         version=new_version,
     )
@@ -416,6 +453,7 @@ async def get_mini_program_features(session: AsyncSession) -> MiniProgramFeature
             hazards_mode=MiniProgramFeatureMode.READ_WRITE,
             ledger_mode=MiniProgramFeatureMode.QUERY_ONLY,
             secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
+            web_features=_all_visible_web_features(),
         )
     return MiniProgramFeaturesRead(
         inventory_mode=setting.inventory_mode,
@@ -426,6 +464,7 @@ async def get_mini_program_features(session: AsyncSession) -> MiniProgramFeature
         hazards_mode=setting.hazards_mode,
         ledger_mode=setting.ledger_mode,
         secondary_warehouse_mode=setting.secondary_warehouse_mode,
+        web_features=setting.web_features,
     )
 
 
@@ -782,6 +821,7 @@ async def test_search_value(data: AiSearchTestRequest, value: str) -> str | None
         hazards_mode=MiniProgramFeatureMode.READ_WRITE,
         ledger_mode=MiniProgramFeatureMode.QUERY_ONLY,
         secondary_warehouse_mode=SecondaryWarehouseMode.FULL,
+        web_features=_all_visible_web_features(),
         updated_at=None,
         version=0,
     )

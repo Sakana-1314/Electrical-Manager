@@ -71,6 +71,38 @@ class GlmAiClient:
         return None
 
 
+# 后台主 tab 可见性的默认值：8 个主 tab 全显示（系统管理不参与开关）。
+ALL_WEB_FEATURES_VISIBLE: dict[str, bool] = {
+    "dashboard": True,
+    "memos": True,
+    "warehouse": True,
+    "huaxing_inventory": True,
+    "procurement": True,
+    "hazards": True,
+    "ledger": True,
+    "work": True,
+}
+
+
+async def _put_settings(
+    client: AsyncClient, admin: dict[str, str], payload: dict[str, Any]
+) -> dict[str, Any]:
+    """按当前版本号提交高级设置（校验失败直接抛出，便于用例断言）。"""
+    current = await client.get("/api/v1/ai-search/settings", headers=admin)
+    assert current.status_code == 200, current.text
+    body: dict[str, Any] = {
+        "enabled": False,
+        "endpoint": "",
+        "api_key": "",
+        "model": "",
+        "version": current.json()["version"],
+    }
+    body.update(payload)
+    saved = await client.put("/api/v1/ai-search/settings", headers=admin, json=body)
+    assert saved.status_code == 200, saved.text
+    return saved.json()
+
+
 @pytest.mark.asyncio
 async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypted_at_rest(
     client: AsyncClient,
@@ -122,6 +154,7 @@ async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypte
         "hazards_mode": "read_write",
         "ledger_mode": "query_only",
         "secondary_warehouse_mode": "full",
+        "web_features": ALL_WEB_FEATURES_VISIBLE,
         "updated_at": saved.json()["updated_at"],
         "version": 1,
     }
@@ -319,6 +352,8 @@ async def test_setting_migrates_from_event_log_to_system_setting_table(
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["endpoint"] == "https://legacy.test/v1"
     assert loaded.json()["api_key"] == "legacy-key"
+    # 旧配置没有 web_features：回落全部可见，不能把主 tab 藏起来
+    assert loaded.json()["web_features"] == ALL_WEB_FEATURES_VISIBLE
     legacy_version = loaded.json()["version"]
 
     saved = await client.put(
@@ -343,9 +378,86 @@ async def test_setting_migrates_from_event_log_to_system_setting_table(
         assert row is not None
         assert row.setting_value["endpoint"] == "https://new.test/v1"
         assert row.setting_value["api_key_encrypted"] != "new-key"
+        assert row.setting_value["web_features"] == ALL_WEB_FEATURES_VISIBLE
         assert row.version == legacy_version + 1
 
     reloaded = await client.get("/api/v1/ai-search/settings", headers=admin)
     assert reloaded.status_code == 200, reloaded.text
     assert reloaded.json()["endpoint"] == "https://new.test/v1"
     assert reloaded.json()["api_key"] == "new-key"
+
+
+@pytest.mark.asyncio
+async def test_web_feature_visibility_round_trips_to_public_features(
+    client: AsyncClient,
+) -> None:
+    """后台主 tab 可见性：保存后高级设置与公开功能开关读到同一份值，事件日志留痕。"""
+    admin = await auth_headers(client, "admin")
+    # 未配置时默认全部可见（缺字段按可见处理）
+    features = await client.get("/api/v1/system-settings/mini-program-features")
+    assert features.status_code == 200, features.text
+    assert features.json()["web_features"] == ALL_WEB_FEATURES_VISIBLE
+
+    hidden = {**ALL_WEB_FEATURES_VISIBLE, "work": False, "memos": False}
+    saved = await _put_settings(client, admin, {"web_features": hidden})
+    assert saved["web_features"] == hidden
+
+    loaded = await client.get("/api/v1/ai-search/settings", headers=admin)
+    assert loaded.json()["web_features"] == hidden
+    features = await client.get("/api/v1/system-settings/mini-program-features")
+    assert features.json()["web_features"] == hidden
+
+    async with project_session() as session:
+        row = await session.get(SystemSetting, "ai_search_config")
+        assert row is not None
+        assert row.setting_value["web_features"] == hidden
+        event = await session.scalar(
+            select(BusinessEventLog)
+            .where(BusinessEventLog.action == "AI_SEARCH_CONFIG_UPDATED")
+            .order_by(BusinessEventLog.id.desc())
+            .limit(1)
+        )
+        assert event is not None and event.after_data is not None
+        assert event.after_data["web_features"] == hidden
+
+
+@pytest.mark.asyncio
+async def test_web_feature_visibility_keeps_current_value_when_omitted(
+    client: AsyncClient,
+) -> None:
+    """省略 web_features（MCP / 第三方只改其它字段）时保持现状，不被重置成全显示。"""
+    admin = await auth_headers(client, "admin")
+    hidden = {**ALL_WEB_FEATURES_VISIBLE, "ledger": False}
+    await _put_settings(client, admin, {"web_features": hidden})
+
+    saved = await _put_settings(client, admin, {"image_acceleration_server_url": "http://img.test"})
+    assert saved["image_acceleration_server_url"] == "http://img.test"
+    assert saved["web_features"] == hidden
+
+    loaded = await client.get("/api/v1/ai-search/settings", headers=admin)
+    assert loaded.json()["web_features"] == hidden
+
+
+@pytest.mark.asyncio
+async def test_web_feature_visibility_all_hidden_falls_back_to_all_visible(
+    client: AsyncClient,
+) -> None:
+    """全部隐藏等于把侧栏关空：服务端归一到全部显示，读回的开关也不会是空侧栏状态。"""
+    admin = await auth_headers(client, "admin")
+    saved = await _put_settings(
+        client,
+        admin,
+        {"web_features": dict.fromkeys(ALL_WEB_FEATURES_VISIBLE, False)},
+    )
+    assert saved["web_features"] == ALL_WEB_FEATURES_VISIBLE
+
+    features = await client.get("/api/v1/system-settings/mini-program-features")
+    assert features.json()["web_features"] == ALL_WEB_FEATURES_VISIBLE
+
+    # 未知键（回滚 / 灰度版本）被忽略，不影响已知开关
+    saved = await _put_settings(
+        client,
+        admin,
+        {"web_features": {**ALL_WEB_FEATURES_VISIBLE, "future_tab": False, "work": False}},
+    )
+    assert saved["web_features"] == {**ALL_WEB_FEATURES_VISIBLE, "work": False}
