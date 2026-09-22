@@ -37,10 +37,15 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def next_local_hour(now: datetime, hour: int) -> datetime:
-    """下一个「当地 hour 点整」的时间点。纯函数便于单测；`now` 需带时区。"""
+def next_local_hour(now: datetime, hour: int, *, inclusive: bool = False) -> datetime:
+    """下一个「当地 hour 点整」的时间点。纯函数便于单测；`now` 需带时区。
+
+    `inclusive=True` 表示「不早于 now 的第一个 hour 点」：刚好落在整点上时取当下这一天，
+    不再顺延一天（附件保留期的到期判定需要这个含边界的口径）。
+    """
     target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
-    if now >= target:
+    passed = now > target if inclusive else now >= target
+    if passed:
         target += timedelta(days=1)
     return target
 

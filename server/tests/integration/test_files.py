@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import io
-from datetime import date
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -10,8 +10,10 @@ from PIL import Image
 from sqlalchemy import func, select
 
 from app.core.config import settings
+from app.core.constants import SHANGHAI
 from app.models import FileObject, PurchaseRequest, PurchaseRequestLine, PurchaseRequestLineImage
-from app.services import attachment_cleanup_service
+from app.services import attachment_cleanup_service, file_service
+from app.services.common import utcnow
 from tests.conftest import auth_headers, project_session
 
 
@@ -277,7 +279,7 @@ async def test_attachment_list_requires_super_admin(client: AsyncClient) -> None
 
 @pytest.mark.asyncio
 async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> None:
-    """未被引用的图片：删除只是软删除，数据库行与磁盘文件都保留到凌晨 2 点复查。"""
+    """未被引用的图片：删除只是软删除，数据库行与磁盘文件保留到保留期满后的第一个凌晨 2 点。"""
     headers = await auth_headers(client, "warehouse")
     admin_headers = await auth_headers(client, "admin")
     file_id = await upload_png(client, headers, name="soft.png", color="blue")
@@ -287,13 +289,28 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
     body = removed.json()
     assert body["id"] == file_id
     assert body["deleted_at"] is not None
-    assert body["purge_after"] is not None
+    # 回执给出的清除时刻 = 提交删除的完整 7 天后的第一个凌晨 2 点（北京时间）
+    purge_after = datetime.fromisoformat(body["purge_after"])
+    deleted_at = datetime.fromisoformat(body["deleted_at"])
+    assert purge_after == file_service.attachment_purge_after(deleted_at)
+    assert purge_after.astimezone(SHANGHAI).hour == file_service.ATTACHMENT_PURGE_HOUR
+    assert purge_after >= deleted_at + timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS)
+    assert purge_after < deleted_at + timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
 
     # 记录与文件都还在，只是打上了删除标记。
     async with project_session() as session:
         item = await session.get(FileObject, file_id)
     assert item is not None
     assert item.deleted_at is not None
+    assert (settings.upload_dir / f"{file_id}.png").is_file()
+
+    # 保留期内跑清理任务：复查过但没有到期的，原样保留（不物理清除）。
+    kept = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert kept.scanned == 1
+    assert kept.purged_file_ids == []
+    assert kept.restored_file_ids == []
+    async with project_session() as session:
+        assert await session.get(FileObject, file_id) is not None
     assert (settings.upload_dir / f"{file_id}.png").is_file()
 
     # 软删除后不再对外提供读取。
@@ -310,6 +327,39 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
         "/api/v1/files/images/attachments?status=deleted", headers=admin_headers
     )
     assert [item["id"] for item in deleted.json()["items"]] == [file_id]
+
+
+@pytest.mark.asyncio
+async def test_purge_only_after_retention_period(client: AsyncClient) -> None:
+    """保留期满（提交删除的完整 7 天后的第一个凌晨 2 点）才由复查任务物理清除。"""
+    headers = await auth_headers(client, "warehouse")
+    file_id = await upload_png(client, headers, name="retention.png", color="gray")
+
+    removed = await client.delete(f"/api/v1/files/images/{file_id}", headers=headers)
+    assert removed.status_code == 200, removed.text
+
+    # 保留期未满（刚过 6 天）：不清除。
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+        assert item is not None
+        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS - 1)
+        await session.commit()
+    result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert result.purged_file_ids == []
+    assert (settings.upload_dir / f"{file_id}.png").is_file()
+
+    # 保留期满（超过 7 天）：物理清除数据库行与磁盘文件。
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+        assert item is not None
+        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+        await session.commit()
+    result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert result.purged_file_ids == [file_id]
+    assert result.purged_file_names == [f"{file_id}.png"]
+    async with project_session() as session:
+        assert await session.get(FileObject, file_id) is None
+    assert not (settings.upload_dir / f"{file_id}.png").exists()
 
 
 @pytest.mark.asyncio
@@ -353,7 +403,7 @@ async def test_soft_deleted_image_is_not_reused_by_upload_dedup(client: AsyncCli
 
 @pytest.mark.asyncio
 async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient) -> None:
-    """凌晨复查：无引用的待删除附件被物理清除；被重新引用的撤销删除。"""
+    """凌晨复查：保留期满且无引用的待删除附件被物理清除；被重新引用的当场撤销删除。"""
     headers = await auth_headers(client, "warehouse")
     orphan_id = await upload_png(client, headers, name="purge.png", color="brown")
     rescued_id = await upload_png(client, headers, name="rescue.png", color="black")
@@ -375,11 +425,27 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
     )
     assert linked.status_code == 201, linked.text
 
+    # 保留期内先跑一次：无引用的那张也要继续留着（只复查，不清除）。
+    kept = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert kept.scanned == 2
+    assert kept.purged_file_ids == []
+    assert kept.restored_file_ids == [rescued_id]
+    async with project_session() as session:
+        assert await session.get(FileObject, orphan_id) is not None
+    assert (settings.upload_dir / f"{orphan_id}.png").is_file()
+
+    # 被引用的那张已撤销删除，所以只剩一张候选；把它放到保留期外再复查 → 物理清除。
+    async with project_session() as session:
+        item = await session.get(FileObject, orphan_id)
+        assert item is not None
+        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+        await session.commit()
+
     result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
-    assert result.scanned == 2
+    assert result.scanned == 1
     assert result.purged_file_ids == [orphan_id]
     assert result.purged_file_names == [f"{orphan_id}.png"]
-    assert result.restored_file_ids == [rescued_id]
+    assert result.restored_file_ids == []
 
     async with project_session() as session:
         assert await session.get(FileObject, orphan_id) is None
@@ -448,7 +514,20 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
     )
     assert again.json()["deleted_count"] == 0
 
-    # 物理删除仍只由凌晨 2 点的复查任务执行。
+    # 保留期内跑复查任务：只复查、不清除（批量删除同样受 7 天保留期约束）。
+    result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    assert result.purged_file_ids == []
+    async with project_session() as session:
+        for file_id in free_ids:
+            assert await session.get(FileObject, file_id) is not None
+
+    # 物理删除仍只由保留期满后的凌晨 2 点复查任务执行：把删除时间改到保留期外再跑一次。
+    async with project_session() as session:
+        for file_id in free_ids:
+            item = await session.get(FileObject, file_id)
+            assert item is not None
+            item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+        await session.commit()
     result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
     assert sorted(result.purged_file_ids) == sorted(free_ids)
     async with project_session() as session:

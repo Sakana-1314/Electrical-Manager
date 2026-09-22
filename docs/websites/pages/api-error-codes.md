@@ -106,7 +106,7 @@
 | `FILE_MISSING` | 400 | 图片文件不存在（记录在库但磁盘缺失） | `file_service` |
 | `INVALID_IMAGE_TYPE` | 400 | 仅支持 JPEG、PNG 或 WebP 图片 | `file_service` |
 | `IMAGE_TOO_LARGE` | 413 | 单张图片超过 10 MB | `file_service` |
-| `FILE_ALREADY_DELETED` | 409 | 图片已提交删除，等待凌晨 2 点清理 | `file_service` |
+| `FILE_ALREADY_DELETED` | 409 | 图片已提交删除，保留 7 天后由凌晨清理任务清除 | `file_service` |
 
 ## 表格导入
 

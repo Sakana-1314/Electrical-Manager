@@ -81,8 +81,9 @@ function confirmDelete(row: Attachment) {
     title: '删除附件',
     content:
       `「${row.original_name}」当前被引用 0 次，可以删除。` +
-      '删除后立即从业务中隐藏，但数据和文件会保留到次日凌晨 2 点：' +
-      '系统扫描全库确认仍无新增引用，才真正删除数据库记录与磁盘文件（期间可撤销删除）。',
+      '删除后立即从业务中隐藏，但数据和文件会保留 7 个完整自然日，' +
+      '到保留期满后的第一个凌晨 2 点，系统扫描全库确认仍无新增引用，' +
+      '才真正删除数据库记录与磁盘文件（保留期内可随时撤销删除）。',
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -92,7 +93,7 @@ function confirmDelete(row: Attachment) {
         message.success(
           result.purge_after
             ? `已提交删除，将于 ${formatShanghaiTime(result.purge_after)} 复查后清除`
-            : '已提交删除，等待凌晨 2 点复查后清除',
+            : '已提交删除，保留期内可撤销',
         )
         await load()
       } catch (error) {
@@ -124,8 +125,8 @@ function deleteUnreferenced() {
     title: '删除未引用附件',
     content:
       '将把所有「被引用次数为 0」的图片一次性标记为待删除，被业务引用的图片不受影响。' +
-      '这只是软删除：图片会立即从业务中隐藏，但数据库记录与磁盘文件会保留到次日凌晨 2 点——' +
-      '系统复查全库确认仍无新增引用，才真正删除（期间可撤销删除）。',
+      '这只是软删除：图片会立即从业务中隐藏，但数据库记录与磁盘文件会保留 7 个完整自然日——' +
+      '到保留期满后的第一个凌晨 2 点，系统复查全库确认仍无新增引用才真正删除（保留期内可撤销删除）。',
     positiveText: '删除',
     negativeText: '取消',
     onPositiveClick: async () => {

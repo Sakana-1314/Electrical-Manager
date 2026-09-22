@@ -1776,12 +1776,13 @@ def _build_schema_examples() -> dict[str, Any]:
         },
         "AttachmentDeleteRead": {
             "id": _file_id(952),
+            # 保留期 = 完整 7 个自然日：09-13 10:20 提交删除 → 09-20 10:20 到期 → 第一个 2 点是 09-21 02:00
             "deleted_at": "2026-09-13T10:20:00+08:00",
-            "purge_after": "2026-09-14T02:00:00+08:00",
+            "purge_after": "2026-09-21T02:00:00+08:00",
         },
         "AttachmentBulkDeleteRead": {
             "deleted_count": 81,
-            "purge_after": "2026-09-15T02:00:00+08:00",
+            "purge_after": "2026-09-21T02:00:00+08:00",
         },
         "Page_AttachmentRead_": _page(
             [
