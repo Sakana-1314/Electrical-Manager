@@ -30,6 +30,7 @@ flowchart LR
 | --- | --- | --- |
 | 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
 | 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting.secondary_warehouse_mode`，影响路由、菜单与写接口 |
+| 后台可见功能 | `WebFeatureVisibility` | 管理端侧栏主 tab 的可见性开关（工作台 / 备忘录 / 二级库 / 华星总库存 / 申购管理 / 隐患管理 / 台账管理 / 工作管理）：落在 `system_setting` 的 `ai_search_config.web_features`（JSON），只影响侧栏渲染与落地页推导，不拦路由与接口；系统管理固定显示，不参与开关 |
 | 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
 | 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放 `inventory_service.replay_materials`；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
 | 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
@@ -155,7 +156,7 @@ erDiagram
 | --- | --- |
 | `project` | 项目自身就是隔离维度 |
 | `user`、`mini_program_user`、`mini_program_identity` | 用户与身份绑定属用户管理 |
-| `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、AI 搜索配置、Webhook 渠道与订阅） |
+| `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、后台主 tab 可见性、AI 搜索配置、Webhook 渠道与订阅） |
 | `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
 | `file_object` | 全局附件池：按 `sha256` 全局去重、引用计数跨项目统计 |

@@ -37,6 +37,8 @@ export type AiSearchSettings = components['schemas']['AiSearchSettingsRead']
 export type AiSearchStatus = components['schemas']['AiSearchStatusRead']
 export type AiSearchTestRequest = components['schemas']['AiSearchTestRequest']
 export type MiniProgramFeatures = components['schemas']['MiniProgramFeaturesRead']
+/* 后台侧栏主 tab 可见性（高级设置里的开关）：字段与 utils/navigation.ts 的 NAV_FEATURES 一一对应 */
+export type WebFeatureVisibility = components['schemas']['WebFeatureVisibility']
 export type ImageAccelerationSettings = components['schemas']['ImageAccelerationSettingsRead']
 /* 项目（多项目数据隔离）：业务数据都挂在项目下，右上角切换当前项目。 */
 export type Project = components['schemas']['ProjectRead']
@@ -185,6 +187,8 @@ export interface AiSearchSettingsWrite {
   ledger_mode: MiniProgramFeatureMode
   hazards_mode: MiniProgramFeatureMode
   secondary_warehouse_mode: SecondaryWarehouseMode
+  /** 后台主 tab 可见性：高级设置按主 tab 开关侧栏入口（系统管理固定显示，不在字段里） */
+  web_features: WebFeatureVisibility
   version: number
 }
 

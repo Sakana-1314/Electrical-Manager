@@ -1,20 +1,8 @@
 <script setup lang="ts">
 import { computed, h, ref, type Component as VueComponent } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
-import {
-  BusinessOutline,
-  CalendarOutline,
-  CartOutline,
-  CubeOutline,
-  DocumentTextOutline,
-  GridOutline,
-  LibraryOutline,
-  LogOutOutline,
-  MenuOutline,
-  SettingsOutline,
-  WarningOutline,
-} from '@vicons/ionicons5'
+import { LogOutOutline, MenuOutline } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
@@ -22,6 +10,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useThemeStore } from '@/stores/theme'
 import { roleLabels } from '@/types/navigation'
 import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
+import { buildMainMenu } from '@/layouts/mainMenu'
 import {
   buildProjectMenuSubmenu,
   isProjectMenuKey,
@@ -46,95 +35,17 @@ const closeDrawer = () => {
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
 /**
- * 导航项：一级项给 icon，二级项不给——侧栏折叠时只显示一级图标，
- * 二级项图标永远看不到，加了只是多余噪音（展开态也靠缩进区分层级）。
+ * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
+ * 一级项按权限、二级库模式与「后台可见功能」开关过滤，系统管理始终显示。
  */
-const link = (label: string, name: string, icon?: VueComponent): MenuOption => ({
-  label: () => h(RouterLink, { to: { name }, onClick: closeDrawer }, { default: () => label }),
-  key: name,
-  ...(icon ? { icon: renderIcon(icon) } : {}),
-})
-
-const menuOptions = computed<MenuOption[]>(() => {
-  const items: MenuOption[] = [
-    link('工作台', 'dashboard', GridOutline),
-    link('备忘录', 'memos', DocumentTextOutline),
-  ]
-  if (settings.isLiteMode) {
-    // 精简模式：二级库只有一级 tab（Excel 导入 + 只读查询），与华星总库存同层级。
-    items.push(link('二级库', 'warehouse-lite', CubeOutline))
-  } else {
-    items.push({
-      label: '二级库',
-      key: 'warehouse-group',
-      icon: renderIcon(CubeOutline),
-      children: [
-        link('库存查询', 'stock'),
-        link('物资档案', 'stock-materials'),
-        link('操作记录', 'operations'),
-        ...(auth.can('warehouse:write') ? [link('入库', 'inbound'), link('出库', 'outbound')] : []),
-      ],
-    })
-  }
-  items.push(link('华星总库存', 'hua-xing-stock', BusinessOutline))
-  items.push({
-    label: '申购管理',
-    key: 'procurement-group',
-    icon: renderIcon(CartOutline),
-    children: [
-      link('申购计划', 'purchase-materials'),
-      link('周期性计划', 'purchase-plan-templates'),
-      link('未编码物资', 'uncoded-materials'),
-      link('物料编码库', 'material-code-library'),
-      link('申购记录', 'purchase-records'),
-    ],
-  })
-  // 隐患管理：读取对所有登录用户开放，因此菜单不做权限过滤（写操作在页面内按权限隐藏）。
-  items.push({
-    label: '隐患管理',
-    key: 'hazard-group',
-    icon: renderIcon(WarningOutline),
-    children: [
-      link('隐患管理', 'hazard-records'),
-      link('隐患类型', 'hazard-types'),
-      link('责任单位', 'hazard-units'),
-    ],
-  })
-  // 台账管理：同样读取开放，菜单不做权限过滤；第一个子 tab 是台账总览。
-  items.push({
-    label: '台账管理',
-    key: 'ledger-group',
-    icon: renderIcon(LibraryOutline),
-    children: [link('台账总览', 'ledger-items'), link('标签管理', 'ledger-tags')],
-  })
-  // 工作管理：三个子 tab 都是读取开放（写操作在页面内按 work:write 隐藏）。
-  items.push({
-    label: '工作管理',
-    key: 'work-group',
-    icon: renderIcon(CalendarOutline),
-    children: [
-      link('工作总览', 'work-overview'),
-      link('任务视图', 'work-tasks'),
-      link('人员视图', 'work-workers'),
-    ],
-  })
-  if (auth.can('settings:write'))
-    items.push({
-      label: '系统管理',
-      key: 'settings-group',
-      icon: renderIcon(SettingsOutline),
-      children: [
-        link('管理端用户', 'users'),
-        link('小程序用户', 'mini-program-users'),
-        link('项目管理', 'projects'),
-        link('附件管理', 'attachments'),
-        link('高级设置', 'advanced-settings'),
-        link('分享链接', 'share-links'),
-        link('关于', 'about'),
-      ],
-    })
-  return items
-})
+const menuOptions = computed<MenuOption[]>(() =>
+  buildMainMenu({
+    isLiteMode: settings.isLiteMode,
+    can: (permission) => auth.can(permission),
+    isFeatureVisible: (key) => settings.isFeatureVisible(key),
+    onNavigate: closeDrawer,
+  }),
+)
 
 function logout() {
   auth.logout()

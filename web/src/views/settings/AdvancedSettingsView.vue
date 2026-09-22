@@ -5,9 +5,11 @@ import { aiSearchApi } from '@/api/aiSearch'
 import { systemSettingsApi } from '@/api/systemSettings'
 import LoadingMask from '@/components/LoadingMask.vue'
 import { inventoryModeOptionsFor } from '@/utils/settings'
+import { ALL_NAV_FEATURES_VISIBLE, NAV_FEATURES } from '@/utils/navigation'
 import type {
   MiniProgramFeatureMode,
   SecondaryWarehouseMode,
+  WebFeatureVisibility,
   WebhookEventType,
   WebhookPlatform,
 } from '@/api/generated'
@@ -72,8 +74,14 @@ const form = reactive({
   ledger_mode: 'query_only' as MiniProgramFeatureMode,
   hazards_mode: 'read_write' as MiniProgramFeatureMode,
   secondary_warehouse_mode: 'full' as SecondaryWarehouseMode,
+  // 后台可见功能：按主 tab 开关侧栏入口（系统管理不在列表里，始终显示）
+  web_features: { ...ALL_NAV_FEATURES_VISIBLE } as WebFeatureVisibility,
   version: 0,
 })
+// 全部主 tab 都关掉等于把侧栏关空：本地先拦一次（服务端读/写也会归一到全部显示）。
+const allWebFeaturesHidden = computed(() =>
+  NAV_FEATURES.every((feature) => !form.web_features[feature.key]),
+)
 // 精简模式下二级库不支持「可读写」：归一化 inventory_mode，避免下拉选中值不在选项内。
 function normalizeInventoryMode() {
   if (form.secondary_warehouse_mode === 'lite' && form.inventory_mode === 'read_write') {
@@ -145,6 +153,10 @@ async function save() {
     message.error('请填写端点、模型和 API Key')
     return
   }
+  if (allWebFeaturesHidden.value) {
+    message.error('至少保留一个可见的主 tab')
+    return
+  }
   for (const platform of webhookPlatforms) {
     const channel = webhookForms[platform]
     if (channel.enabled && !channel.webhook_url.trim()) {
@@ -176,6 +188,7 @@ async function save() {
       ledger_mode: form.ledger_mode,
       hazards_mode: form.hazards_mode,
       secondary_warehouse_mode: form.secondary_warehouse_mode,
+      web_features: { ...form.web_features },
       version: form.version,
     })
     Object.assign(form, data)
@@ -340,7 +353,21 @@ onMounted(load)
                 :options="secondaryWarehouseModeOptions"
               />
             </n-form-item>
+            <n-form-item label="可见功能">
+              <div class="visibility-grid">
+                <div v-for="feature in NAV_FEATURES" :key="feature.key" class="switch-control">
+                  <n-switch v-model:value="form.web_features[feature.key]" />
+                  <span :class="{ 'visibility-off': !form.web_features[feature.key] }">
+                    {{ feature.label }}
+                  </span>
+                </div>
+              </div>
+            </n-form-item>
           </n-form>
+          <p class="feature-hint">
+            关闭即从侧栏隐藏该主 tab（内部页面不单独开关）；系统管理固定显示。
+            隐藏只移除侧栏入口，页面仍可用链接直接访问，后端接口不受影响。至少保留一个可见的主 tab。
+          </p>
         </div>
 
         <div class="feature-group">
@@ -557,6 +584,25 @@ onMounted(load)
   color: var(--color-text-strong);
   font-size: 14px;
   font-weight: 600;
+}
+
+/* 后台可见功能：8 个主 tab 开关排成两列，避免长列表把卡片撑高 */
+.visibility-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+}
+
+.visibility-off {
+  color: var(--color-text-muted);
+}
+
+.feature-hint {
+  margin: 4px 0 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 :deep(.n-card-header) {

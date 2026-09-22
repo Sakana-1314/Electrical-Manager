@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 43 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 46 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -76,6 +76,7 @@ web/src/
 ├── api/client.ts           axios 实例、拦截器、AppError
 ├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 顶栏用户菜单（外观二级菜单）
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
+├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限、二级库模式与「后台可见功能」开关过滤（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
@@ -121,7 +122,7 @@ web/src/
 | `/work/overview` | `work-overview` | `views/work/WorkOverviewView.vue`（`keepAlive`） | 需登录 | 工作总览：一行 = 日期 + 任务 + 时段（全天 / 上午 / 下午）并列出当天参与人员；日期区间（必填、≤92 天，`WorkRangePicker` 快捷档）/ 任务 / 参与人员 / 关键字筛选、分页与列显隐、URL 同步；点行打开记录弹窗（无写权限为只读详情） |
 | `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 任务视图：半日格时间线（一行一个任务，色块 = 该任务的一段工作并显示参与人员），点色块编辑记录、行尾编辑任务 / 排活、点任务名看该任务的时间段明细；任务 CRUD 按 `work:write` 隐藏 |
 | `/work/workers` | `work-workers` | `views/work/WorkWorkersView.vue`（`keepAlive`） | 需登录 | 人员视图：半日格时间线（一行一个人，色块 = 该人干的任务，按任务固定配色），姓名由工作记录的参与人员派生并按拼音排序；点色块编辑记录、行尾给该人排活 |
-| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、图片加速、Webhook |
+| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、后台可见功能、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
@@ -130,7 +131,7 @@ web/src/
 | `/settings/about` | `about` | `views/settings/AboutView.vue` | `settings:write` | 版本信息与构建时间（`versionApi.get()`） |
 | `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `settings:write` | 分享链接列表/改列/改期/撤回 |
 | `/share/:token` | `share` | `views/public/ShareView.vue` | 无（公开 `meta.public`） | 匿名分享预览（按配置列渲染） |
-| `/:pathMatch(.*)*` | — | `views/NotFoundView.vue` | 无（公开 `meta.public`） | 404 页面 |
+| `/:pathMatch(.*)*` | — | `views/NotFoundView.vue` | 无（公开 `meta.public`） | 404 页面，「返回首页」按落地页推导（当前可见的第一个主 tab） |
 
 路由守卫 `router.beforeEach`（`async` 函数，顺序即执行顺序）：
 
@@ -139,15 +140,21 @@ web/src/
 | 1 | 设置标题：`` document.title = `${to.meta.parent ? `${to.meta.parent} / ` : ''}${to.meta.title || '系统'} - HXNI 电气无忧` `` |
 | 2 | 非 `public` 且 `auth.isAuthenticated` 为 false → `{ name: 'login', query: { redirect: to.fullPath } }` |
 | 3 | 非 `public` 时先 `await useProjectStore().ensureLoaded()`（拉取项目列表失败不拦导航） |
-| 4 | 目标是 `login` 但已登录 → `{ name: 'dashboard' }` |
-| 5 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → `{ name: 'dashboard' }` |
+| 4 | 目标是 `login` 但已登录 → 落地页（见下） |
+| 5 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → 落地页（见下） |
 | 6 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`stock-material-detail`、`inbound`、`outbound`、`stock`、`operations`、`operation-detail`）→ `{ name: 'warehouse-lite' }` |
+
+**落地页**：`/`、登录成功（`LoginView`，无 `?redirect=` 时）与上面第 4、5 条都落到「当前可见的第一个主 tab」——
+由 `utils/navigation.ts` 的 `resolveLandingRouteName(settings.webFeatures, { isLiteMode })` 推导（二级库在精简模式下落到 `warehouse-lite`），
+默认 `dashboard`；全部主 tab 都不可见时回落 `dashboard`。工作台被后台可见功能关掉后不会再把用户扔进一个侧栏里没有入口的页面。
+
 
 | 项 | 实现 | 位置 |
 | --- | --- | --- |
 | 是否已登录 | `isAuthenticated` = `token && user` 同时存在 | `stores/auth.ts` |
 | 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 7 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`LEDGER_ADMIN` `ledger:write`+`read`；`WORK_ADMIN` `work:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
-| 无权限时 | 静默重定向到工作台；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
+| 无权限时 | 静默重定向到落地页（当前可见的第一个主 tab，默认工作台）；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
+| 后台可见功能 | 高级设置里的「后台可见功能」开关按**主 tab** 关闭侧栏一级入口（`isFeatureVisible()`）：只影响侧栏与落地页推导，**不拦路由、不拦接口**，被隐藏的页面仍可用链接直达；系统管理不参与开关（始终显示），分组内部子项不单独开关 | `utils/navigation.ts`、`layouts/mainMenu.ts`、`stores/settings.ts` |
 | keep-alive | `meta.keepAlive` 只在 8 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`、`work-overview`、`work-tasks`、`work-workers`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
 `web/src/stores/` 下只有 4 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
@@ -156,7 +163,7 @@ web/src/
 | --- | --- | --- | --- | --- | --- |
 | `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与角色权限判断 |
 | `stores/project.ts`（`useProjectStore`） | `projects: Project[]`、`currentProjectId: number \| null`（初值读本地 `current_project_id`）、`loaded: boolean` | `enabledProjects`、`currentProject` | `ensureLoaded()`（首次导航前拉 `projectApi.list()`，失败不抛出）、`select(id)`（写本地并 `location.reload()`）、`clear()`、`fetchProjects()` | `localStorage` key `current_project_id`；已存项目被停用/删除时回退默认项目 | 当前项目：由 `web/src/api/client.ts` 注入 `X-Project-Id`，顶栏菜单与 MCP 链接共用 |
-| `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'`，`loaded` 置 true 后不再重复请求） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式，供路由守卫与侧边菜单在首次导航前同步读取 |
+| `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`webFeatures: WebFeatureVisibility`（初值全部可见）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'` + 全部可见）、`isFeatureVisible(key)`（主 tab 是否可见，缺字段/全关按可见处理） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式与后台可见功能，供路由守卫、落地页与侧边菜单在首次导航前同步读取 |
 | `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
 `main.ts` 在 `app.mount('#app')` 之前 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
 
@@ -216,7 +223,7 @@ web/src/
 | `secondaryWarehouse.ts` | `/secondary-warehouse*` | 精简二级库列表、Excel 导入任务与最近导入 |
 | `dictionaries.ts` | `/users*`、`/mini-program-users*` | 管理端用户 CRUD 与接口令牌重置、小程序用户查询/更新/删除/合并 |
 | `projects.ts` | `/projects*` | 项目列表、新增、编辑（名称/启停）与删除 |
-| `systemSettings.ts` | `/system-settings/*` | 图片加速配置、小程序功能开关、Webhook 渠道读取/更新/测试 |
+| `systemSettings.ts` | `/system-settings/*` | 图片加速配置、功能开关（小程序档位 + 后台主 tab 可见性，启动时拉取一次）、Webhook 渠道读取/更新/测试 |
 | `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展、状态、配置读取/更新/测试 |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
@@ -285,6 +292,7 @@ web/src/
 | `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
+| `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（8 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；系统管理不参与）、`ALL_NAV_FEATURES_VISIBLE`、`visibleNavFeatureKeys(flags)`（缺字段按可见、全关回落全可见）、`isNavFeatureVisible(flags, key)`、`resolveLandingRouteName(flags, { isLiteMode })`（落地页推导） |
 | `settings.ts` | `inventoryModeOptionsFor(secondaryWarehouseMode)`：精简模式下不提供「可读写」选项 |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
@@ -303,7 +311,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `auth.can()`、`settings.isLiteMode` 动态拼装：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理），顶栏含用户信息与下拉（「外观」二级菜单：悬浮父项向左展开自动/浅色/深色三档；随后「项目：<当前项目名>」二级菜单，由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新；分隔线之后是「退出登录」，调 `auth.logout()` + 跳 `login`；顶栏不放独立的明暗切换图标）；`layouts/projectMenu.ts` 另外导出 `PROJECT_MENU_KEY`、`PROJECT_NONE_KEY`（无可用项目时的占位项）等固定 key。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：`n-layout` + 侧边菜单（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()`、`settings.isLiteMode` 与「后台可见功能」开关 `settings.isFeatureVisible()` 过滤：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；被关闭的主 tab 整个分组不渲染，系统管理始终显示），顶栏含用户信息与下拉（「外观」二级菜单：悬浮父项向左展开自动/浅色/深色三档；随后「项目：<当前项目名>」二级菜单，由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新；分隔线之后是「退出登录」，调 `auth.logout()` + 跳 `login`；顶栏不放独立的明暗切换图标）；`layouts/projectMenu.ts` 另外导出 `PROJECT_MENU_KEY`、`PROJECT_NONE_KEY`（无可用项目时的占位项）等固定 key。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions`，可见性一处生效）。
 
 
 

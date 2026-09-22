@@ -319,6 +319,27 @@ class MiniProgramProfileUpdate(RequestModel):
     ]
 
 
+class WebFeatureVisibility(BaseModel):
+    """管理端（后台）侧栏主 tab 的可见性开关：`False` 表示该主 tab 从侧栏隐藏。
+
+    约定：
+    - **系统管理不在本列表**：它始终显示，保证高级设置本身永远能从侧栏进入；
+    - 只影响管理端侧栏渲染，后端数据接口不做对应鉴权：隐藏的页面仍可用链接直达；
+    - 字段缺省即显示，新增主 tab 时在服务端与前端 `web/src/utils/navigation.ts` 两处同步登记；
+    - 全为 `False` 视为无效配置，读/写时归一到全部显示（避免把侧栏关空）。
+    """
+
+    # 刻意继承 BaseModel（不是 RequestModel）：多传未知键不报错，便于版本回滚与灰度。
+    dashboard: bool = True
+    memos: bool = True
+    warehouse: bool = True
+    huaxing_inventory: bool = True
+    procurement: bool = True
+    hazards: bool = True
+    ledger: bool = True
+    work: bool = True
+
+
 class AiSearchSettingsRead(ReadModel):
     endpoint: str
     api_key: str
@@ -338,6 +359,7 @@ class AiSearchSettingsRead(ReadModel):
     hazards_mode: MiniProgramFeatureMode
     ledger_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
+    web_features: WebFeatureVisibility
     updated_at: datetime | None = None
     version: int
 
@@ -360,6 +382,8 @@ class AiSearchSettingsUpdate(RequestModel):
     hazards_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.READ_WRITE
     ledger_mode: MiniProgramFeatureMode = MiniProgramFeatureMode.QUERY_ONLY
     secondary_warehouse_mode: SecondaryWarehouseMode = SecondaryWarehouseMode.FULL
+    # 后台主 tab 可见性：缺省（None）表示「保持现状」，避免只改其它字段的调用方把开关重置成全显示。
+    web_features: WebFeatureVisibility | None = None
     version: int = Field(ge=0)
 
     @field_validator("endpoint")
@@ -444,6 +468,12 @@ class ImageAccelerationSettingsRead(BaseModel):
 
 
 class MiniProgramFeaturesRead(BaseModel):
+    """公开功能开关：小程序端档位 + 后台主 tab 可见性。
+
+    前端在启动时（mount 前）拉取一次，供侧栏菜单与路由落地页同步读取；
+    小程序端只读它认识的 `*_mode` / `secondary_warehouse_mode`，多出的 `web_features` 会被忽略。
+    """
+
     inventory_mode: MiniProgramFeatureMode
     huaxing_inventory_mode: MiniProgramFeatureMode
     purchase_plans_mode: MiniProgramFeatureMode
@@ -452,6 +482,7 @@ class MiniProgramFeaturesRead(BaseModel):
     hazards_mode: MiniProgramFeatureMode
     ledger_mode: MiniProgramFeatureMode
     secondary_warehouse_mode: SecondaryWarehouseMode
+    web_features: WebFeatureVisibility
 
 
 class AiSearchExpandRequest(RequestModel):

@@ -148,7 +148,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 小程序功能配置 */
+        /** 功能开关配置 */
         get: operations["mini_program_features_api_v1_system_settings_mini_program_features_get"];
         put?: never;
         post?: never;
@@ -2522,6 +2522,16 @@ export interface components {
          *       "hazards_mode": "read_write",
          *       "ledger_mode": "query_only",
          *       "secondary_warehouse_mode": "full",
+         *       "web_features": {
+         *         "dashboard": true,
+         *         "memos": true,
+         *         "warehouse": true,
+         *         "huaxing_inventory": true,
+         *         "procurement": true,
+         *         "hazards": true,
+         *         "ledger": true,
+         *         "work": true
+         *       },
          *       "updated_at": "2026-09-13T10:30:00+08:00",
          *       "version": 3
          *     }
@@ -2554,6 +2564,7 @@ export interface components {
             hazards_mode: components["schemas"]["MiniProgramFeatureMode"];
             ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
+            web_features: components["schemas"]["WebFeatureVisibility"];
             /** Updated At */
             updated_at?: string | null;
             /** Version */
@@ -2579,6 +2590,16 @@ export interface components {
          *       "hazards_mode": "read_write",
          *       "ledger_mode": "query_only",
          *       "secondary_warehouse_mode": "full",
+         *       "web_features": {
+         *         "dashboard": true,
+         *         "memos": true,
+         *         "warehouse": true,
+         *         "huaxing_inventory": true,
+         *         "procurement": true,
+         *         "hazards": true,
+         *         "ledger": true,
+         *         "work": true
+         *       },
          *       "version": 3
          *     }
          */
@@ -2641,6 +2662,7 @@ export interface components {
             ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             /** @default full */
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
+            web_features?: components["schemas"]["WebFeatureVisibility"] | null;
             /** Version */
             version: number;
         };
@@ -4244,6 +4266,10 @@ export interface components {
         MiniProgramFeatureMode: "disabled" | "query_only" | "read_write";
         /**
          * MiniProgramFeaturesRead
+         * @description 公开功能开关：小程序端档位 + 后台主 tab 可见性。
+         *
+         *     前端在启动时（mount 前）拉取一次，供侧栏菜单与路由落地页同步读取；
+         *     小程序端只读它认识的 `*_mode` / `secondary_warehouse_mode`，多出的 `web_features` 会被忽略。
          * @example {
          *       "inventory_mode": "read_write",
          *       "huaxing_inventory_mode": "query_only",
@@ -4252,7 +4278,17 @@ export interface components {
          *       "material_codes_mode": "query_only",
          *       "hazards_mode": "read_write",
          *       "ledger_mode": "query_only",
-         *       "secondary_warehouse_mode": "full"
+         *       "secondary_warehouse_mode": "full",
+         *       "web_features": {
+         *         "dashboard": true,
+         *         "memos": true,
+         *         "warehouse": true,
+         *         "huaxing_inventory": true,
+         *         "procurement": true,
+         *         "hazards": true,
+         *         "ledger": true,
+         *         "work": true
+         *       }
          *     }
          */
         MiniProgramFeaturesRead: {
@@ -4264,6 +4300,7 @@ export interface components {
             hazards_mode: components["schemas"]["MiniProgramFeatureMode"];
             ledger_mode: components["schemas"]["MiniProgramFeatureMode"];
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
+            web_features: components["schemas"]["WebFeatureVisibility"];
         };
         /**
          * MiniProgramHazardCreate
@@ -12019,6 +12056,68 @@ export interface components {
             build_time?: string | null;
         };
         /**
+         * WebFeatureVisibility
+         * @description 管理端（后台）侧栏主 tab 的可见性开关：`False` 表示该主 tab 从侧栏隐藏。
+         *
+         *     约定：
+         *     - **系统管理不在本列表**：它始终显示，保证高级设置本身永远能从侧栏进入；
+         *     - 只影响管理端侧栏渲染，后端数据接口不做对应鉴权：隐藏的页面仍可用链接直达；
+         *     - 字段缺省即显示，新增主 tab 时在服务端与前端 `web/src/utils/navigation.ts` 两处同步登记；
+         *     - 全为 `False` 视为无效配置，读/写时归一到全部显示（避免把侧栏关空）。
+         * @example {
+         *       "dashboard": true,
+         *       "memos": true,
+         *       "warehouse": true,
+         *       "huaxing_inventory": true,
+         *       "procurement": true,
+         *       "hazards": true,
+         *       "ledger": true,
+         *       "work": true
+         *     }
+         */
+        WebFeatureVisibility: {
+            /**
+             * Dashboard
+             * @default true
+             */
+            dashboard: boolean;
+            /**
+             * Memos
+             * @default true
+             */
+            memos: boolean;
+            /**
+             * Warehouse
+             * @default true
+             */
+            warehouse: boolean;
+            /**
+             * Huaxing Inventory
+             * @default true
+             */
+            huaxing_inventory: boolean;
+            /**
+             * Procurement
+             * @default true
+             */
+            procurement: boolean;
+            /**
+             * Hazards
+             * @default true
+             */
+            hazards: boolean;
+            /**
+             * Ledger
+             * @default true
+             */
+            ledger: boolean;
+            /**
+             * Work
+             * @default true
+             */
+            work: boolean;
+        };
+        /**
          * WebhookChannelRead
          * @example {
          *       "platform": "FEISHU",
@@ -13192,6 +13291,16 @@ export interface operations {
                      *       "hazards_mode": "read_write",
                      *       "ledger_mode": "query_only",
                      *       "secondary_warehouse_mode": "full",
+                     *       "web_features": {
+                     *         "dashboard": true,
+                     *         "memos": true,
+                     *         "warehouse": true,
+                     *         "huaxing_inventory": true,
+                     *         "procurement": true,
+                     *         "hazards": true,
+                     *         "ledger": true,
+                     *         "work": true
+                     *       },
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3
                      *     }
@@ -13328,6 +13437,16 @@ export interface operations {
                      *       "hazards_mode": "read_write",
                      *       "ledger_mode": "query_only",
                      *       "secondary_warehouse_mode": "full",
+                     *       "web_features": {
+                     *         "dashboard": true,
+                     *         "memos": true,
+                     *         "warehouse": true,
+                     *         "huaxing_inventory": true,
+                     *         "procurement": true,
+                     *         "hazards": true,
+                     *         "ledger": true,
+                     *         "work": true
+                     *       },
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3
                      *     }
@@ -13671,7 +13790,17 @@ export interface operations {
                      *       "material_codes_mode": "query_only",
                      *       "hazards_mode": "read_write",
                      *       "ledger_mode": "query_only",
-                     *       "secondary_warehouse_mode": "full"
+                     *       "secondary_warehouse_mode": "full",
+                     *       "web_features": {
+                     *         "dashboard": true,
+                     *         "memos": true,
+                     *         "warehouse": true,
+                     *         "huaxing_inventory": true,
+                     *         "procurement": true,
+                     *         "hazards": true,
+                     *         "ledger": true,
+                     *         "work": true
+                     *       }
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramFeaturesRead"];

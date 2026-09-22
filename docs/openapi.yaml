@@ -431,6 +431,15 @@ paths:
                 hazards_mode: read_write
                 ledger_mode: query_only
                 secondary_warehouse_mode: full
+                web_features:
+                  dashboard: true
+                  memos: true
+                  warehouse: true
+                  huaxing_inventory: true
+                  procurement: true
+                  hazards: true
+                  ledger: true
+                  work: true
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
         '400':
@@ -530,6 +539,15 @@ paths:
                 hazards_mode: read_write
                 ledger_mode: query_only
                 secondary_warehouse_mode: full
+                web_features:
+                  dashboard: true
+                  memos: true
+                  warehouse: true
+                  huaxing_inventory: true
+                  procurement: true
+                  hazards: true
+                  ledger: true
+                  work: true
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
         '400':
@@ -744,7 +762,7 @@ paths:
     get:
       tags:
       - 系统设置
-      summary: 小程序功能配置
+      summary: 功能开关配置
       operationId: mini_program_features_api_v1_system_settings_mini_program_features_get
       responses:
         '200':
@@ -762,6 +780,15 @@ paths:
                 hazards_mode: read_write
                 ledger_mode: query_only
                 secondary_warehouse_mode: full
+                web_features:
+                  dashboard: true
+                  memos: true
+                  warehouse: true
+                  huaxing_inventory: true
+                  procurement: true
+                  hazards: true
+                  ledger: true
+                  work: true
         '400':
           description: 业务校验失败
           content:
@@ -22673,6 +22700,8 @@ components:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
+        web_features:
+          $ref: '#/components/schemas/WebFeatureVisibility'
         updated_at:
           anyOf:
           - type: string
@@ -22702,6 +22731,7 @@ components:
       - hazards_mode
       - ledger_mode
       - secondary_warehouse_mode
+      - web_features
       - version
       title: AiSearchSettingsRead
       examples:
@@ -22725,6 +22755,15 @@ components:
         hazards_mode: read_write
         ledger_mode: query_only
         secondary_warehouse_mode: full
+        web_features:
+          dashboard: true
+          memos: true
+          warehouse: true
+          huaxing_inventory: true
+          procurement: true
+          hazards: true
+          ledger: true
+          work: true
         updated_at: '2026-09-13T10:30:00+08:00'
         version: 3
     AiSearchSettingsUpdate:
@@ -22793,6 +22832,10 @@ components:
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
           default: full
+        web_features:
+          anyOf:
+          - $ref: '#/components/schemas/WebFeatureVisibility'
+          - type: 'null'
         version:
           type: integer
           minimum: 0.0
@@ -22820,6 +22863,15 @@ components:
         hazards_mode: read_write
         ledger_mode: query_only
         secondary_warehouse_mode: full
+        web_features:
+          dashboard: true
+          memos: true
+          warehouse: true
+          huaxing_inventory: true
+          procurement: true
+          hazards: true
+          ledger: true
+          work: true
         version: 3
     AiSearchStatusRead:
       properties:
@@ -25217,6 +25269,8 @@ components:
           $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
+        web_features:
+          $ref: '#/components/schemas/WebFeatureVisibility'
       type: object
       required:
       - inventory_mode
@@ -25227,7 +25281,14 @@ components:
       - hazards_mode
       - ledger_mode
       - secondary_warehouse_mode
+      - web_features
       title: MiniProgramFeaturesRead
+      description: '公开功能开关：小程序端档位 + 后台主 tab 可见性。
+
+
+        前端在启动时（mount 前）拉取一次，供侧栏菜单与路由落地页同步读取；
+
+        小程序端只读它认识的 `*_mode` / `secondary_warehouse_mode`，多出的 `web_features` 会被忽略。'
       examples:
       - inventory_mode: read_write
         huaxing_inventory_mode: query_only
@@ -25237,6 +25298,15 @@ components:
         hazards_mode: read_write
         ledger_mode: query_only
         secondary_warehouse_mode: full
+        web_features:
+          dashboard: true
+          memos: true
+          warehouse: true
+          huaxing_inventory: true
+          procurement: true
+          hazards: true
+          ledger: true
+          work: true
     MiniProgramHazardCreate:
       properties:
         inspection_area:
@@ -34280,6 +34350,63 @@ components:
         version: 1.0.0
         commit: 9d21f4c
         build_time: '2026-09-13T09:00:00+08:00'
+    WebFeatureVisibility:
+      properties:
+        dashboard:
+          type: boolean
+          title: Dashboard
+          default: true
+        memos:
+          type: boolean
+          title: Memos
+          default: true
+        warehouse:
+          type: boolean
+          title: Warehouse
+          default: true
+        huaxing_inventory:
+          type: boolean
+          title: Huaxing Inventory
+          default: true
+        procurement:
+          type: boolean
+          title: Procurement
+          default: true
+        hazards:
+          type: boolean
+          title: Hazards
+          default: true
+        ledger:
+          type: boolean
+          title: Ledger
+          default: true
+        work:
+          type: boolean
+          title: Work
+          default: true
+      type: object
+      title: WebFeatureVisibility
+      description: '管理端（后台）侧栏主 tab 的可见性开关：`False` 表示该主 tab 从侧栏隐藏。
+
+
+        约定：
+
+        - **系统管理不在本列表**：它始终显示，保证高级设置本身永远能从侧栏进入；
+
+        - 只影响管理端侧栏渲染，后端数据接口不做对应鉴权：隐藏的页面仍可用链接直达；
+
+        - 字段缺省即显示，新增主 tab 时在服务端与前端 `web/src/utils/navigation.ts` 两处同步登记；
+
+        - 全为 `False` 视为无效配置，读/写时归一到全部显示（避免把侧栏关空）。'
+      examples:
+      - dashboard: true
+        memos: true
+        warehouse: true
+        huaxing_inventory: true
+        procurement: true
+        hazards: true
+        ledger: true
+        work: true
     WebhookChannelRead:
       properties:
         platform:

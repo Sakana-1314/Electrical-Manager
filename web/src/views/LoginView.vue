@@ -3,11 +3,14 @@ import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, type FormInst, type FormRules } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
+import { useSettingsStore } from '@/stores/settings'
+import { resolveLandingRouteName } from '@/utils/navigation'
 import { LOGO_URL } from '@/constants/branding'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const message = useMessage()
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
@@ -22,7 +25,16 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(model)
-    await router.replace(String(route.query.redirect || '/dashboard'))
+    // 没有回跳目标时落到「当前可见的第一个主 tab」（工作台可能已被后台可见功能关闭）
+    await router.replace(
+      route.query.redirect
+        ? String(route.query.redirect)
+        : {
+            name: resolveLandingRouteName(settings.webFeatures, {
+              isLiteMode: settings.isLiteMode,
+            }),
+          },
+    )
   } catch (error) {
     message.error(error instanceof Error ? error.message : '登录失败')
   } finally {

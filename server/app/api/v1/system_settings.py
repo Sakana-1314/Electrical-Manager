@@ -30,11 +30,13 @@ async def image_acceleration_settings(session: DbSession) -> ImageAccelerationSe
 @router.get(
     "/mini-program-features",
     response_model=MiniProgramFeaturesRead,
-    summary="小程序功能配置",
+    summary="功能开关配置",
 )
 async def mini_program_features(session: DbSession) -> MiniProgramFeaturesRead:
-    # 公开配置端点：仅返回各小程序功能开关（禁用/仅查询/可读写），泄露价值低。
-    # 开关只用于小程序前端拦截展示与跳转，后端数据接口不做对应鉴权（见 README）。
+    # 公开配置端点：下发小程序功能档位（禁用/仅查询/可读写）与后台主 tab 可见性，泄露价值低。
+    # 前端在 mount 前拉取一次：菜单与路由落地页都按它渲染。
+    # 开关只用于前端拦截展示与跳转，后端数据接口不做对应鉴权（见 README）；
+    # 后台可见性同理——隐藏的主 tab 仍可用链接直达，系统管理不参与开关。
     return await ai_search_service.get_mini_program_features(session)
 
 
