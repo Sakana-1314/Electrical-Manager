@@ -348,56 +348,6 @@ onMounted(load)
         </n-form>
       </n-card>
 
-      <n-card class="settings-card feature-status-card" title="功能状态" :bordered="false">
-        <div class="feature-group">
-          <div class="feature-group-title">后台</div>
-          <n-form label-placement="left" label-width="132">
-            <n-form-item label="二级库运行模式">
-              <n-select
-                v-model:value="form.secondary_warehouse_mode"
-                :options="secondaryWarehouseModeOptions"
-              />
-            </n-form-item>
-            <n-form-item v-for="feature in NAV_FEATURES" :key="feature.key" :label="feature.label">
-              <n-select
-                v-model:value="form.web_features[feature.key]"
-                :options="webFeatureVisibilityOptions"
-              />
-            </n-form-item>
-          </n-form>
-        </div>
-
-        <div class="feature-group">
-          <div class="feature-group-title">小程序端</div>
-          <n-form label-placement="left" label-width="132">
-            <n-form-item label="二级库库存">
-              <n-select v-model:value="form.inventory_mode" :options="inventoryModeOptions" />
-            </n-form-item>
-            <n-form-item label="华星总库存">
-              <n-select
-                v-model:value="form.huaxing_inventory_mode"
-                :options="readOnlyModeOptions"
-              />
-            </n-form-item>
-            <n-form-item label="申购计划">
-              <n-select v-model:value="form.purchase_plans_mode" :options="readOnlyModeOptions" />
-            </n-form-item>
-            <n-form-item label="申购记录">
-              <n-select v-model:value="form.purchase_records_mode" :options="readOnlyModeOptions" />
-            </n-form-item>
-            <n-form-item label="物料编码">
-              <n-select v-model:value="form.material_codes_mode" :options="readOnlyModeOptions" />
-            </n-form-item>
-            <n-form-item label="台账查看">
-              <n-select v-model:value="form.ledger_mode" :options="readOnlyModeOptions" />
-            </n-form-item>
-            <n-form-item label="隐患管理">
-              <n-select v-model:value="form.hazards_mode" :options="hazardsModeOptions" />
-            </n-form-item>
-          </n-form>
-        </div>
-      </n-card>
-
       <n-card class="settings-card image-card" title="图片加速" :bordered="false">
         <n-form label-placement="top">
           <n-form-item label="加速服务器地址">
@@ -408,6 +358,65 @@ onMounted(load)
             />
           </n-form-item>
         </n-form>
+      </n-card>
+
+      <n-card class="settings-card feature-status-card" title="功能状态" :bordered="false">
+        <div class="feature-groups">
+          <div class="feature-group">
+            <div class="feature-group-title">后台</div>
+            <n-form label-placement="left" label-width="132">
+              <n-form-item label="二级库运行模式">
+                <n-select
+                  v-model:value="form.secondary_warehouse_mode"
+                  :options="secondaryWarehouseModeOptions"
+                />
+              </n-form-item>
+              <n-form-item
+                v-for="feature in NAV_FEATURES"
+                :key="feature.key"
+                :label="feature.label"
+              >
+                <n-select
+                  v-model:value="form.web_features[feature.key]"
+                  :options="webFeatureVisibilityOptions"
+                />
+              </n-form-item>
+            </n-form>
+          </div>
+
+          <div class="feature-group">
+            <div class="feature-group-title">小程序端</div>
+            <n-form label-placement="left" label-width="132">
+              <n-form-item label="二级库库存">
+                <n-select v-model:value="form.inventory_mode" :options="inventoryModeOptions" />
+              </n-form-item>
+              <n-form-item label="华星总库存">
+                <n-select
+                  v-model:value="form.huaxing_inventory_mode"
+                  :options="readOnlyModeOptions"
+                />
+              </n-form-item>
+              <n-form-item label="申购计划">
+                <n-select v-model:value="form.purchase_plans_mode" :options="readOnlyModeOptions" />
+              </n-form-item>
+              <n-form-item label="申购记录">
+                <n-select
+                  v-model:value="form.purchase_records_mode"
+                  :options="readOnlyModeOptions"
+                />
+              </n-form-item>
+              <n-form-item label="物料编码">
+                <n-select v-model:value="form.material_codes_mode" :options="readOnlyModeOptions" />
+              </n-form-item>
+              <n-form-item label="台账查看">
+                <n-select v-model:value="form.ledger_mode" :options="readOnlyModeOptions" />
+              </n-form-item>
+              <n-form-item label="隐患管理">
+                <n-select v-model:value="form.hazards_mode" :options="hazardsModeOptions" />
+              </n-form-item>
+            </n-form>
+          </div>
+        </div>
       </n-card>
 
       <n-card class="settings-card webhook-card" title="Webhook 事件推送" :bordered="false">
@@ -499,8 +508,24 @@ onMounted(load)
   grid-row: span 2;
 }
 
+/* 功能状态：后台 + 小程序端两组并排，卡片横跨整行——否则一列长条能到十几行高 */
+.feature-status-card {
+  grid-column: 1 / -1;
+}
+
 .webhook-card {
   grid-column: 1 / -1;
+}
+
+.feature-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+
+.feature-group + .feature-group {
+  padding-left: 22px;
+  border-left: 1px solid var(--color-border-subtle);
 }
 
 .webhook-platforms {
@@ -570,12 +595,6 @@ onMounted(load)
   padding-bottom: 4px;
 }
 
-.feature-group + .feature-group {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
 .feature-group-title {
   margin-bottom: 8px;
   color: var(--color-text-strong);
@@ -602,6 +621,19 @@ onMounted(load)
 
   .model-card {
     grid-row: auto;
+  }
+
+  /* 窄屏：功能状态的两组改回上下排，分隔线由左侧改到顶部 */
+  .feature-groups {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-group + .feature-group {
+    margin-top: 18px;
+    padding-top: 16px;
+    padding-left: 0;
+    border-top: 1px solid var(--color-border-subtle);
+    border-left: 0;
   }
 
   .webhook-platforms {
