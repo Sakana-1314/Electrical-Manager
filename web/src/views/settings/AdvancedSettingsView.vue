@@ -48,6 +48,11 @@ const secondaryWarehouseModeOptions: Array<{ label: string; value: SecondaryWare
   { label: '完整模式', value: 'full' },
   { label: '精简模式', value: 'lite' },
 ]
+// 后台主 tab 的可见性：与小程序档位同一套下拉框写法（显示 / 隐藏），不用开关。
+const webFeatureVisibilityOptions: Array<{ label: string; value: boolean }> = [
+  { label: '显示', value: true },
+  { label: '隐藏', value: false },
+]
 // 精简模式下小程序端「二级库库存」仅提供 禁用/仅查询（不支持出入库）。
 const inventoryModeOptions = computed<Array<{ label: string; value: MiniProgramFeatureMode }>>(() =>
   inventoryModeOptionsFor(form.secondary_warehouse_mode).map((value) => ({
@@ -74,11 +79,11 @@ const form = reactive({
   ledger_mode: 'query_only' as MiniProgramFeatureMode,
   hazards_mode: 'read_write' as MiniProgramFeatureMode,
   secondary_warehouse_mode: 'full' as SecondaryWarehouseMode,
-  // 后台可见功能：按主 tab 开关侧栏入口（系统管理不在列表里，始终显示）
+  // 后台可见功能：主 tab 逐个选「显示 / 隐藏」（系统管理不在列表里，始终显示）
   web_features: { ...ALL_NAV_FEATURES_VISIBLE } as WebFeatureVisibility,
   version: 0,
 })
-// 全部主 tab 都关掉等于把侧栏关空：本地先拦一次（服务端读/写也会归一到全部显示）。
+// 全部主 tab 都隐藏等于把侧栏关空：本地先拦一次（服务端读/写也会归一到全部显示）。
 const allWebFeaturesHidden = computed(() =>
   NAV_FEATURES.every((feature) => !form.web_features[feature.key]),
 )
@@ -353,21 +358,13 @@ onMounted(load)
                 :options="secondaryWarehouseModeOptions"
               />
             </n-form-item>
-            <n-form-item label="可见功能">
-              <div class="visibility-grid">
-                <div v-for="feature in NAV_FEATURES" :key="feature.key" class="switch-control">
-                  <n-switch v-model:value="form.web_features[feature.key]" />
-                  <span :class="{ 'visibility-off': !form.web_features[feature.key] }">
-                    {{ feature.label }}
-                  </span>
-                </div>
-              </div>
+            <n-form-item v-for="feature in NAV_FEATURES" :key="feature.key" :label="feature.label">
+              <n-select
+                v-model:value="form.web_features[feature.key]"
+                :options="webFeatureVisibilityOptions"
+              />
             </n-form-item>
           </n-form>
-          <p class="feature-hint">
-            关闭即从侧栏隐藏该主 tab（内部页面不单独开关）；系统管理固定显示。
-            隐藏只移除侧栏入口，页面仍可用链接直接访问，后端接口不受影响。至少保留一个可见的主 tab。
-          </p>
         </div>
 
         <div class="feature-group">
@@ -584,25 +581,6 @@ onMounted(load)
   color: var(--color-text-strong);
   font-size: 14px;
   font-weight: 600;
-}
-
-/* 后台可见功能：8 个主 tab 开关排成两列，避免长列表把卡片撑高 */
-.visibility-grid {
-  display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 18px;
-}
-
-.visibility-off {
-  color: var(--color-text-muted);
-}
-
-.feature-hint {
-  margin: 4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.7;
 }
 
 :deep(.n-card-header) {

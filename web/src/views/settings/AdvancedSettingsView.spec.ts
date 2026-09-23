@@ -1,4 +1,4 @@
-import { flushPromises, mount, type DOMWrapper, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import {
   NButton,
   NCard,
@@ -107,12 +107,45 @@ async function mountView(data: AiSearchSettings = settings()): Promise<VueWrappe
   return wrapper
 }
 
-/** 「后台 → 可见功能」里的开关（不含模型服务、小程序与 Webhook 的开关，按 NAV_FEATURES 顺序）。 */
-function visibilitySwitches(view: VueWrapper): DOMWrapper<Element>[] {
-  return view.findAll('.visibility-grid .n-switch')
+/**
+ * 「后台」分组里某个主 tab 的可见性下拉框：按 `n-form-item` 的 label 定位，
+ * 与页面渲染结构一致（label 就是主 tab 名称）。
+ */
+function visibilitySelect(
+  view: VueWrapper,
+  label: string,
+): VueWrapper<InstanceType<typeof NSelect>> {
+  const item = view
+    .findAllComponents(NFormItem)
+    .find((formItem) => String(formItem.props('label')) === label)
+  expect(item, `未找到「${label}」的可见性下拉框`).toBeTruthy()
+  const select = item!.findComponent(NSelect)
+  expect(select.exists()).toBe(true)
+  return select
 }
 
-const isOn = (element: DOMWrapper<Element>) => element.classes().includes('n-switch--active')
+/** 某个主 tab 下拉框里当前显示的文字（「显示」/「隐藏」）。 */
+function visibleLabel(view: VueWrapper, label: string): string {
+  return visibilitySelect(view, label).text().trim()
+}
+
+/** 某个主 tab 当前是否选中「显示」。 */
+function isVisible(view: VueWrapper, label: string): boolean {
+  return visibleLabel(view, label) === '显示'
+}
+
+/**
+ * 改某个主 tab 的可见性。
+ *
+ * jsdom 里展开 naive-ui 下拉面板要跑 vueuc 虚拟列表（依赖 `window.matchMedia`），所以这里不进面板
+ * 点选项，而是直接触发 `v-model:value` 对应的 `update:value` 事件。选项本身（显示 / 隐藏）
+ * 在同组第一条用例里按 `options` 断言。
+ */
+async function chooseVisibility(view: VueWrapper, label: string, visible: boolean) {
+  // 等价于在面板里选中该选项：`v-model:value` 绑定走的就是 `update:value` 事件
+  visibilitySelect(view, label).vm.$emit('update:value', visible)
+  await flushPromises()
+}
 
 /** 保存成功后组件会 setTimeout 600ms 刷新整页；拦掉这一个定时器，其余定时器保持原样。 */
 function stubReloadTimer() {
@@ -145,23 +178,29 @@ afterEach(() => {
 })
 
 describe('AdvancedSettingsView 后台可见功能', () => {
-  it('按主 tab 渲染开关，且不含系统管理', async () => {
+  it('每个主 tab 一个「显示 / 隐藏」下拉框，且不含系统管理', async () => {
     const view = await mountView()
 
-    const switches = visibilitySwitches(view)
-    expect(switches).toHaveLength(NAV_FEATURES.length)
-    const grid = view.find('.visibility-grid').text()
-    for (const feature of NAV_FEATURES) expect(grid).toContain(feature.label)
-    // 系统管理固定显示，不参与开关（只在侧栏渲染，不出现在开关组里）
-    expect(grid).not.toContain('系统管理')
-    for (const item of switches) expect(isOn(item)).toBe(true)
+    for (const feature of NAV_FEATURES) {
+      const select = visibilitySelect(view, feature.label)
+      expect(select.props('options')).toEqual([
+        { label: '显示', value: true },
+        { label: '隐藏', value: false },
+      ])
+      expect(select.text().trim()).toBe('显示')
+    }
+    // 系统管理固定显示，不参与可见性配置（不是开关，也不出现在下拉框列表里）
+    const labels = view
+      .findAllComponents(NFormItem)
+      .map((formItem) => String(formItem.props('label')))
+    expect(labels).not.toContain('系统管理')
+    expect(labels).not.toContain('可见功能')
   })
 
   it('保存时把 web_features 与其它配置一并提交', async () => {
     const reloadTimer = stubReloadTimer()
     const view = await mountView()
-    const work = NAV_FEATURES.findIndex((feature) => feature.key === 'work')
-    await visibilitySwitches(view)[work].trigger('click')
+    await chooseVisibility(view, '工作管理', false)
     await clickSave(view)
 
     expect(aiSearchApi.updateSettings).toHaveBeenCalledTimes(1)
@@ -172,26 +211,25 @@ describe('AdvancedSettingsView 后台可见功能', () => {
     reloadTimer.mockRestore()
   })
 
-  it('全部关闭时给出提示且不发保存请求', async () => {
+  it('全部选隐藏时给出提示且不发保存请求', async () => {
     const view = await mountView()
-    for (const item of visibilitySwitches(view)) await item.trigger('click')
+    for (const feature of NAV_FEATURES) {
+      await chooseVisibility(view, feature.label, false)
+    }
     await clickSave(view)
 
     expect(aiSearchApi.updateSettings).not.toHaveBeenCalled()
     expect(document.body.textContent).toContain('至少保留一个可见的主 tab')
   })
 
-  it('读取到的已隐藏配置会回显在开关上', async () => {
+  it('读取到的已隐藏配置会回显在下拉框上', async () => {
     const view = await mountView(
       settings({ web_features: { ...ALL_NAV_FEATURES_VISIBLE, memos: false, ledger: false } }),
     )
 
-    const switches = visibilitySwitches(view)
-    expect(switches.filter((item) => !isOn(item))).toHaveLength(2)
-    const memos = NAV_FEATURES.findIndex((feature) => feature.key === 'memos')
-    const ledger = NAV_FEATURES.findIndex((feature) => feature.key === 'ledger')
-    expect(isOn(switches[memos])).toBe(false)
-    expect(isOn(switches[ledger])).toBe(false)
-    expect(isOn(switches[0])).toBe(true)
+    expect(isVisible(view, '备忘录')).toBe(false)
+    expect(isVisible(view, '台账管理')).toBe(false)
+    expect(isVisible(view, '工作台')).toBe(true)
+    expect(isVisible(view, '工作管理')).toBe(true)
   })
 })
