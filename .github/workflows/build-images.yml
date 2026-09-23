@@ -22,8 +22,11 @@ permissions:
   packages: write
 
 concurrency:
+  # 发布引用（main / 标签）不取消进行中的运行：被取消的 check 会永久把该提交算作失败
+  # （statusCheckRollup=FAILURE，提交列表和仓库首页显示红叉），而被顶掉的运行并不代表代码有问题。
+  # 非发布引用（功能分支 / PR）继续取消旧运行，避免连续 push 反复占用 CI。
   group: docker-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
 env:
   # 镜像：ghcr.io/<owner 小写>/electrical-manager:<component>，owner 由 GITHUB_REPOSITORY_OWNER 推导。
