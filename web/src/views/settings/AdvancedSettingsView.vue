@@ -349,7 +349,7 @@ onMounted(load)
       </n-card>
 
       <n-card class="settings-card image-card" title="图片加速" :bordered="false">
-        <n-form label-placement="top">
+        <n-form label-placement="left" label-width="132">
           <n-form-item label="加速服务器地址">
             <n-input
               v-model:value="form.image_acceleration_server_url"
@@ -504,8 +504,13 @@ onMounted(load)
   box-shadow: 0 10px 28px rgb(30 64 175 / 5%);
 }
 
-.model-card {
-  grid-row: span 2;
+/* 图片加速：单行配置独占整行（自己不跨列，也不去凑别的高度） */
+.image-card {
+  grid-column: 1 / -1;
+}
+
+.image-card :deep(.n-input) {
+  max-width: 520px;
 }
 
 /* 功能状态：后台 + 小程序端两组并排，卡片横跨整行——否则一列长条能到十几行高 */
@@ -617,10 +622,6 @@ onMounted(load)
 @media (max-width: 900px) {
   .settings-grid {
     grid-template-columns: 1fr;
-  }
-
-  .model-card {
-    grid-row: auto;
   }
 
   /* 窄屏：功能状态的两组改回上下排，分隔线由左侧改到顶部 */
