@@ -154,7 +154,7 @@ web/src/
 | 是否已登录 | `isAuthenticated` = `token && user` 同时存在 | `stores/auth.ts` |
 | 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 7 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`LEDGER_ADMIN` `ledger:write`+`read`；`WORK_ADMIN` `work:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
 | 无权限时 | 静默重定向到落地页（当前可见的第一个主 tab，默认工作台）；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
-| 后台可见功能 | 高级设置里的「后台可见功能」开关按**主 tab** 关闭侧栏一级入口（`isFeatureVisible()`）：只影响侧栏与落地页推导，**不拦路由、不拦接口**，被隐藏的页面仍可用链接直达；系统管理不参与开关（始终显示），分组内部子项不单独开关 | `utils/navigation.ts`、`layouts/mainMenu.ts`、`stores/settings.ts` |
+| 后台可见功能 | 高级设置「功能状态 → 后台」里按**主 tab** 用下拉框选「显示 / 隐藏」（与小程序端档位同一套 `n-select` 写法），隐藏的项由 `isFeatureVisible()` 挡在侧栏外：只影响侧栏与落地页推导，**不拦路由、不拦接口**，被隐藏的页面仍可用链接直达；系统管理不参与该配置（始终显示），分组内部子项不单独配置 | `utils/navigation.ts`、`layouts/mainMenu.ts`、`stores/settings.ts` |
 | keep-alive | `meta.keepAlive` 只在 8 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`、`work-overview`、`work-tasks`、`work-workers`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
 `web/src/stores/` 下只有 4 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
