@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import io
+import random
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
@@ -15,6 +17,17 @@ from app.models import FileObject, PurchaseRequest, PurchaseRequestLine, Purchas
 from app.services import attachment_cleanup_service, file_service
 from app.services.common import utcnow
 from tests.conftest import auth_headers, project_session
+
+# 免重复上传的阈值是 1MB：测试里调小阈值，用几十 KB 的等价图片覆盖同一条链路。
+SMALL_DEDUP_THRESHOLD = 8 * 1024
+
+
+def noisy_png(width: int = 96, height: int = 96) -> bytes:
+    """确定性噪声图：压缩不掉，字节数稳定，用来造「大于阈值」的图片。"""
+    pixels = random.Random(20260913).randbytes(width * height * 3)
+    source = io.BytesIO()
+    Image.frombytes("RGB", (width, height), pixels).save(source, format="PNG")
+    return source.getvalue()
 
 
 async def upload_png(
@@ -33,6 +46,28 @@ async def upload_png(
     )
     assert response.status_code == 201, response.text
     return str(response.json()["id"])
+
+
+async def upload_bytes(
+    client: AsyncClient, headers: dict[str, str], raw: bytes, *, name: str = "big.png"
+) -> str:
+    response = await client.post(
+        "/api/v1/files/images",
+        headers=headers,
+        files={"file": (name, raw, "image/png")},
+    )
+    assert response.status_code == 201, response.text
+    return str(response.json()["id"])
+
+
+async def digest_check(
+    client: AsyncClient, headers: dict[str, str], *, sha256: str, size_bytes: int
+):
+    return await client.post(
+        "/api/v1/files/images/dedup-check",
+        headers=headers,
+        json={"sha256": sha256, "size_bytes": size_bytes},
+    )
 
 
 @pytest.mark.asyncio
@@ -545,3 +580,168 @@ async def test_manual_physical_purge_endpoint_is_gone(client: AsyncClient) -> No
     # 未匹配路由按全局约定重映射为 400 + ROUTE_NOT_FOUND（项目不对外 404）。
     assert response.status_code == 400
     assert response.json()["code"] == "ROUTE_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_large_upload_records_source_fingerprint_for_dedup(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """大于阈值的图片：记原始字节摘要 + 中间片段窗口摘要，且磁盘上仍只有重编码后的 PNG。"""
+    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
+    headers = await auth_headers(client, "warehouse")
+    raw = noisy_png()
+    file_id = await upload_bytes(client, headers, raw)
+
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+    assert item is not None
+    assert item.source_sha256 == hashlib.sha256(raw).hexdigest()
+    probes = item.source_probes
+    assert probes is not None
+    assert probes["size"] == len(raw)
+    windows = probes["windows"]
+    assert len(windows) == 3
+    assert len({window["offset"] for window in windows}) == 3
+    for window in windows:
+        offset, length = window["offset"], window["length"]
+        assert len(raw) // 4 <= offset
+        assert offset + length <= len(raw) - len(raw) // 4
+        assert window["sha256"] == hashlib.sha256(raw[offset : offset + length]).hexdigest()
+    # 只留摘要不留原文：磁盘上只有一张重编码的 PNG
+    assert [path.name for path in settings.upload_dir.iterdir()] == [f"{file_id}.png"]
+
+
+@pytest.mark.asyncio
+async def test_small_upload_records_no_fingerprint(client: AsyncClient) -> None:
+    """不超过 1MB 的图片：不记挑战材料，永远不参与前端查重。"""
+    headers = await auth_headers(client, "warehouse")
+    file_id = await upload_png(client, headers, name="tiny.png", color="olive")
+
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+    assert item is not None
+    assert item.source_sha256 is None
+    assert item.source_probes is None
+
+
+@pytest.mark.asyncio
+async def test_dedup_check_returns_reusable_file_and_middle_slice(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """摘要命中：返回可复用文件 + 一段中间片段的挑战材料（客户端据此本地二次校验）。"""
+    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
+    headers = await auth_headers(client, "warehouse")
+    raw = noisy_png()
+    file_id = await upload_bytes(client, headers, raw)
+    digest = hashlib.sha256(raw).hexdigest()
+
+    response = await digest_check(client, headers, sha256=digest, size_bytes=len(raw))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["matched"] is True
+    assert body["file"]["id"] == file_id
+    assert body["file"]["mime_type"] == "image/png"
+    offset, length = body["offset"], body["length"]
+    # 窗口长度取「64 KiB」与「文件 1/4」中较小者（测试里阈值调小，图片不到 4×64 KiB）
+    assert length == min(file_service.PROBE_WINDOW_BYTES, len(raw) // 4)
+    assert len(raw) // 4 <= offset
+    assert offset + length <= len(raw) - len(raw) // 4
+    assert body["slice_sha256"] == hashlib.sha256(raw[offset : offset + length]).hexdigest()
+
+    # 服务端是「随机挑一个已记录的窗口」：把它固定成最后一个窗口，结果必须与之完全一致
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+    assert item is not None and item.source_probes is not None
+    last = item.source_probes["windows"][-1]
+    monkeypatch.setattr(file_service.secrets, "choice", lambda candidates: candidates[-1])
+    again = await digest_check(client, headers, sha256=digest.upper(), size_bytes=len(raw))
+    assert again.status_code == 200, again.text
+    assert again.json()["offset"] == last["offset"]
+    assert again.json()["length"] == last["length"]
+    assert again.json()["slice_sha256"] == last["sha256"]
+
+
+@pytest.mark.asyncio
+async def test_dedup_check_misses_unknown_digest_or_size(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """摘要不存在、字节数对不上：都算未命中（客户端退回正常上传），不报错也不返回 404。"""
+    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
+    headers = await auth_headers(client, "warehouse")
+    raw = noisy_png()
+    await upload_bytes(client, headers, raw)
+    digest = hashlib.sha256(raw).hexdigest()
+
+    unknown = await digest_check(client, headers, sha256="0" * 64, size_bytes=len(raw))
+    assert unknown.status_code == 200, unknown.text
+    assert unknown.json() == {
+        "matched": False,
+        "file": None,
+        "offset": None,
+        "length": None,
+        "slice_sha256": None,
+    }
+
+    wrong_size = await digest_check(client, headers, sha256=digest, size_bytes=len(raw) + 1)
+    assert wrong_size.status_code == 200, wrong_size.text
+    assert wrong_size.json()["matched"] is False
+
+
+@pytest.mark.asyncio
+async def test_dedup_check_skips_deleted_or_missing_files(
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """已软删除、磁盘文件缺失的行都不能复用（复用回去的图片会打不开）。"""
+    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
+    headers = await auth_headers(client, "warehouse")
+
+    deleted_raw = noisy_png()
+    deleted_id = await upload_bytes(client, headers, deleted_raw, name="deleted.png")
+    removed = await client.delete(f"/api/v1/files/images/{deleted_id}", headers=headers)
+    assert removed.status_code == 200, removed.text
+    soft_deleted = await digest_check(
+        client, headers, sha256=hashlib.sha256(deleted_raw).hexdigest(), size_bytes=len(deleted_raw)
+    )
+    assert soft_deleted.status_code == 200, soft_deleted.text
+    assert soft_deleted.json()["matched"] is False
+
+    other_raw = noisy_png(width=80, height=80)
+    missing_id = await upload_bytes(client, headers, other_raw, name="missing.png")
+    (settings.upload_dir / f"{missing_id}.png").unlink()
+    missing = await digest_check(
+        client, headers, sha256=hashlib.sha256(other_raw).hexdigest(), size_bytes=len(other_raw)
+    )
+    assert missing.status_code == 200, missing.text
+    assert missing.json()["matched"] is False
+
+
+@pytest.mark.asyncio
+async def test_dedup_check_requires_image_writer(client: AsyncClient) -> None:
+    """查重与上传同权限：未认证 401，只读角色 403。"""
+    payload = {"sha256": "a" * 64, "size_bytes": 1024}
+
+    anonymous = await client.post("/api/v1/files/images/dedup-check", json=payload)
+    assert anonymous.status_code == 401
+
+    readonly = await auth_headers(client, "readonly")
+    forbidden = await client.post(
+        "/api/v1/files/images/dedup-check", headers=readonly, json=payload
+    )
+    assert forbidden.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_dedup_check_validates_payload(client: AsyncClient) -> None:
+    """摘要必须是 64 位十六进制、字节数必须为 1..10MB。"""
+    headers = await auth_headers(client, "warehouse")
+
+    for payload in (
+        {"sha256": "not-a-digest", "size_bytes": 1024},
+        {"sha256": "a" * 64, "size_bytes": 0},
+        {"sha256": "a" * 64, "size_bytes": settings.max_image_bytes + 1},
+    ):
+        response = await client.post(
+            "/api/v1/files/images/dedup-check", headers=headers, json=payload
+        )
+        assert response.status_code == 422, response.text
+        assert response.json()["code"] == "VALIDATION_ERROR"

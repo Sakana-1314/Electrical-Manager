@@ -1944,6 +1944,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/images/dedup-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 图片摘要查重
+         * @description 前端在上传前提交原始文件摘要（>1MB 的图片）。
+         *
+         *     命中已有附件时返回可复用的文件与一段**随机中间片段**的摘要：客户端对本地同位置字节算出
+         *     同样的摘要即证明自己确实持有该文件，可直接复用、免去重复上传；未命中（或不满足条件）返回
+         *     `matched=false`，客户端走正常上传。此处不保存任何服务端状态，也不校验客户端是否真的比对通过
+         *     ——附件池本就跨项目共享，接口只提供挑战材料。
+         */
+        post: operations["check_image_digest_api_v1_files_images_dedup_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/images/orphans": {
         parameters: {
             query?: never;
@@ -3737,6 +3762,51 @@ export interface components {
         ImageAccelerationSettingsRead: {
             /** Image Acceleration Server Url */
             image_acceleration_server_url: string;
+        };
+        /**
+         * ImageDigestCheckRequest
+         * @description 网页端提交的原始文件摘要（重编码前的原文件字节）与字节数。
+         * @example {
+         *       "sha256": "8f14e45fceea167a5a36dedd4bea2543dbfe8c1e6a7b3f2c9d0e5a41b7c2d8f6",
+         *       "size_bytes": 1572864
+         *     }
+         */
+        ImageDigestCheckRequest: {
+            /** Sha256 */
+            sha256: string;
+            /** Size Bytes */
+            size_bytes: number;
+        };
+        /**
+         * ImageDigestMatchRead
+         * @description 摘要查重结果：命中时给出可复用的文件与一段中间片段的挑战材料。
+         *
+         *     `matched=false`（未命中）是正常业务分支，其余字段为 null，客户端直接走正常上传。
+         * @example {
+         *       "matched": true,
+         *       "file": {
+         *         "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+         *         "original_name": "交流接触器-CJX2-2510-正面.jpg",
+         *         "mime_type": "image/jpeg",
+         *         "size_bytes": 486912,
+         *         "width": 1600,
+         *         "height": 1200
+         *       },
+         *       "offset": 655360,
+         *       "length": 65536,
+         *       "slice_sha256": "c2b7a1d4e6f8093b5d2c7e1a4f6b8d0e3c5a7b9d1f2e4c6a8b0d2f4e6c8a1b3d"
+         *     }
+         */
+        ImageDigestMatchRead: {
+            /** Matched */
+            matched: boolean;
+            file?: components["schemas"]["FileObjectRead"] | null;
+            /** Offset */
+            offset?: number | null;
+            /** Length */
+            length?: number | null;
+            /** Slice Sha256 */
+            slice_sha256?: string | null;
         };
         /**
          * InventoryBalanceRead
@@ -32968,6 +33038,131 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["FileObjectRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    check_image_digest_api_v1_files_images_dedup_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImageDigestCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "matched": true,
+                     *       "file": {
+                     *         "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+                     *         "original_name": "交流接触器-CJX2-2510-正面.jpg",
+                     *         "mime_type": "image/jpeg",
+                     *         "size_bytes": 486912,
+                     *         "width": 1600,
+                     *         "height": 1200
+                     *       },
+                     *       "offset": 655360,
+                     *       "length": 65536,
+                     *       "slice_sha256": "c2b7a1d4e6f8093b5d2c7e1a4f6b8d0e3c5a7b9d1f2e4c6a8b0d2f4e6c8a1b3d"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ImageDigestMatchRead"];
                 };
             };
             /** @description 业务校验失败 */

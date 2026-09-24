@@ -5,6 +5,7 @@ import hashlib
 import io
 import logging
 import re
+import secrets
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -54,6 +55,14 @@ from app.services.common import (
 
 ACCEPTED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 PREVIEW_MIME_TYPE = "image/webp"
+# 前端「本地摘要校验、命中免上传」的阈值：只对大于 1MB 的图片记挑战材料并允许查重，
+# 与 web/src/utils/image.ts 的 dedupMinBytes 一一对应。
+DEDUP_MIN_BYTES = 1024 * 1024
+# 二次校验的窗口大小与取窗位置：窗口都开在文件的中间一半，避开编码器头部固定字段。
+PROBE_WINDOW_BYTES = 64 * 1024
+PROBE_FRACTIONS = (0.25, 0.5, 0.75)
+# 摘要命中时最多取几条候选来随机挑选（正常情况下同一份原始字节只有一行）。
+MATCH_CANDIDATE_LIMIT = 5
 logger = logging.getLogger(__name__)
 MANAGED_FILE_NAME = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$"
@@ -122,6 +131,89 @@ def file_path(file_id: str) -> Path:
     return settings.upload_dir / f"{file_id}.png"
 
 
+@dataclass(frozen=True)
+class SourceFingerprint:
+    """原始上传字节的指纹（重编码前的原文件），供前端「先比对摘要、命中免上传」使用。"""
+
+    sha256: str
+    probes: dict[str, Any]
+
+
+def _probe_windows(raw: bytes) -> dict[str, Any] | None:
+    """中间片段挑战材料：{"size": 原始字节数, "windows": [{offset, length, sha256}, …]}。
+
+    二次校验要求客户端对本地同位置字节算出同样的摘要，所以窗口位置与摘要必须来自**原始上传
+    字节**；但服务端不留原始副本，磁盘上始终只有重编码后的 PNG（见 `save_image`）。
+    不超过 `DEDUP_MIN_BYTES` 的文件返回 None：前端本来就不会为它们提交摘要。
+    """
+    size = len(raw)
+    if size <= DEDUP_MIN_BYTES:
+        return None
+    length = min(PROBE_WINDOW_BYTES, size // 4)
+    low = size // 4
+    high = size - size // 4
+    windows: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    for fraction in PROBE_FRACTIONS:
+        offset = min(max(int(size * fraction) - length // 2, low), high - length)
+        if offset < 0 or offset in seen:
+            continue
+        seen.add(offset)
+        windows.append(
+            {
+                "offset": offset,
+                "length": length,
+                "sha256": hashlib.sha256(raw[offset : offset + length]).hexdigest(),
+            }
+        )
+    return {"size": size, "windows": windows}
+
+
+def source_fingerprint(raw: bytes) -> SourceFingerprint | None:
+    """（原始字节摘要, 挑战材料）；不超过 `DEDUP_MIN_BYTES` 的返回 None。"""
+    probes = _probe_windows(raw)
+    if probes is None:
+        return None
+    return SourceFingerprint(sha256=hashlib.sha256(raw).hexdigest(), probes=probes)
+
+
+async def find_source_match(
+    session: AsyncSession, *, sha256: str, size_bytes: int
+) -> tuple[FileObject, dict[str, Any]] | None:
+    """按前端提交的原始字节摘要找可复用附件，并随机挑一个中间片段作为二次校验材料。
+
+    任一条件不满足都算未命中（调用方返回 `matched=false`，前端退回正常上传）：
+    摘要一致且未软删除、记过挑战材料、挑战材料里的原始字节数与前端声明一致、磁盘 PNG 还在
+    （否则复用回去的图片打不开）。
+    """
+    candidates = list(
+        (
+            await session.scalars(
+                select(FileObject)
+                .where(
+                    FileObject.source_sha256 == sha256.lower(),
+                    FileObject.source_probes.is_not(None),
+                    FileObject.deleted_at.is_(None),
+                )
+                .order_by(FileObject.created_at, FileObject.id)
+                .limit(MATCH_CANDIDATE_LIMIT)
+            )
+        ).all()
+    )
+    usable = [
+        item
+        for item in candidates
+        if (probes := item.source_probes or {}).get("size") == size_bytes
+        and probes.get("windows")
+        and file_path(item.id).is_file()
+    ]
+    if not usable:
+        return None
+    item = secrets.choice(usable)
+    probes = item.source_probes or {}
+    return item, secrets.choice(probes["windows"])
+
+
 @asynccontextmanager
 async def _digest_lock(digest: str) -> AsyncIterator[None]:
     with _digest_locks_guard:
@@ -187,6 +279,9 @@ async def save_image(session: AsyncSession, upload: UploadFile) -> FileObjectRea
 
     data = output.getvalue()
     digest = hashlib.sha256(data).hexdigest()
+    # 原始字节指纹在进摘要锁之前算好：只对 >1MB 的文件记录，用于前端免重复上传
+    # （见 source_fingerprint）。
+    fingerprint = source_fingerprint(raw)
     async with _digest_lock(digest):
         existing_items = list(
             (
@@ -237,6 +332,8 @@ async def save_image(session: AsyncSession, upload: UploadFile) -> FileObjectRea
             width=width,
             height=height,
             sha256=digest,
+            source_sha256=fingerprint.sha256 if fingerprint else None,
+            source_probes=fingerprint.probes if fingerprint else None,
         )
         session.add(item)
         try:

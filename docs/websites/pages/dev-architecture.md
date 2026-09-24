@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 46 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 48 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -230,7 +230,7 @@ web/src/
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
 | `ledger.ts` | `/ledger-items*`、`/ledger-tags*` | 台账记录 CRUD 与分层标签维护（含孤立 / 树标签筛选、标签多选） |
 | `work.ts` | `/work-tasks*`、`/work-records*`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | 任务与工作记录 CRUD、三个视图查询、参与人历史姓名（表单下拉辅助输入与筛选共用） |
-| `files.ts` | `/files/images*` | 图片上传与删除、附件列表、未引用附件软删除与撤销 |
+| `files.ts` | `/files/images*` | 图片上传与删除、上传前摘要查重（`dedup-check`）、附件列表、未引用附件软删除与撤销 |
 | `retry.ts` | —（axios 拦截器） | 弱网自动重试：可重放方法判定、退避与抖动（见下文「弱网自动重试」） |
 | `version.ts` | `/version` | 版本信息（关于页） |
 `web/src/utils/download.ts` 的 `exportDownloadUrl(fileUuid)` 直接拼导出文件下载地址（该端点不鉴权）。
@@ -286,7 +286,8 @@ web/src/
 | --- | --- |
 | `decimal.ts` | Decimal 字符串处理：**前端数量/库存全部用字符串而不是 number**，避免浮点误差与后端 `Decimal` 精度丢失。导出 `isDecimalString(value, decimalPlaces = 1, allowZero = false)`（正则 `^\d+(?:\.\d)?$` + 小数位/整数位上限 + 是否允许 0）、`decimalPlacesOf`、`normalizeDecimal`、`compareDecimal`、`subtractDecimal`，内部用 `BigInt` 对齐小数位比较与相减 |
 | `download.ts` | Blob/URL 下载、`exportDownloadUrl(fileUuid)`、解析 `Content-Disposition` 文件名、`downloadBlobWithDisposition` |
-| `image.ts` | 图片类型/大小校验（允许 `image/jpeg`/`png`/`webp`，上限 10MB）、`configureImageBaseUrl`、`imageUrl`、`imagePreviewUrl` |
+| `image.ts` | 图片类型/大小校验（允许 `image/jpeg`/`png`/`webp`，上限 10MB）、`configureImageBaseUrl`、`imageUrl`、`imagePreviewUrl`；免重复上传相关：`dedupMinBytes`（1MB 门槛）、`shouldCheckDuplicate(file)`、`matchesDedupSlice(file, slice)`（对本地同位置字节做二次校验） |
+| `sha256.ts` | 纯 JS SHA-256（局域网 HTTP 下没有 `crypto.subtle`）：`createSha256()` 增量哈希、`sha256Hex(bytes)`、`readBlobBytes(blob)`（优先 `Blob.arrayBuffer`，回退 `FileReader`）、`hashBlob(blob, { chunkSize, onProgress, shouldAbort })` 分块哈希并在块间让出主线程 |
 | `memoDrafts.ts` | 备忘录未保存草稿的 IndexedDB 暂存：按 `${userId}:${memoId}` 隔离，不可用时静默降级为无操作，另有 `hasPendingDraft` |
 | `memoFontSize.ts` | 备忘录编辑区字号偏好（`localStorage` key `memos.font-size`，档位 `14/16/18/20/24`，默认 16px）：`MEMO_FONT_SIZE_OPTIONS`、`normalizeMemoFontSize`、`readMemoFontSize`、`writeMemoFontSize`；非法 / 越界值回落默认且不写回脏值，存储不可用时静默降级 |
 | `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
