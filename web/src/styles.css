@@ -586,7 +586,7 @@ a {
   /* ============ 移动端弹窗（preset="card"）============
    * 手机屏幕上弹窗贴边、底部按钮折行会把内容压成一条（实测 390×844 下页脚高 138px、
    * 排成 3 行，长表单的页脚甚至整条落到视口外）。这里统一三件事：
-   * 1) 四周留 12px 余地，弹窗最高只到视口内，页脚永远留在屏幕里；
+   * 1) 四周留出余地（左右 18px、上下 144px），弹窗最高只到视口内，页脚永远留在屏幕里；
    * 2) 只保留内容区一层滚动——Naive 的 n-scrollbar 行内上限与隐患弹窗 .modal-body 的上限
    *    在手机端让位，避免内外两层各滚一次；
    * 3) 底部按钮缩小尺寸与字号后排成一行：按钮组按内容宽度不换行，极窄时由页脚横向滑动
@@ -594,17 +594,30 @@ a {
    * 直接作用于 Naive 生成的 .n-card.n-modal，页面不写断点、不加局部样式。
    * .n-dialog（确认弹窗）与 n-image 预览不走 .n-card，因此不受影响。
    * 少数 !important 只用于压过组件库写在元素上的行内样式（n-space 的行内 flex-flow: wrap、
-   * n-scrollbar 的行内 max-height），普通选择器无法覆盖。 */
+   * n-scrollbar 的行内 max-height），普通选择器无法覆盖。
+   *
+   * 注意：限高值由「上下留白之和」推导（144 + 144 = 288），改留白必须同步改这里，
+   * 否则弹窗会溢出视口、底部按钮重新跑到屏幕外。 */
   .n-modal-scroll-content:has(> .n-card.n-modal) {
-    padding: 12px;
+    padding: 144px 18px;
   }
   .n-card.n-modal {
-    max-height: calc(100vh - 24px);
-    max-height: calc(100dvh - 24px);
+    max-height: calc(100vh - 288px);
+    max-height: calc(100dvh - 288px);
+    /* 部分弹窗写死了 width / max-width（如 width: min(960px, 92vw)、calc(100vw - 32px)），
+       在窄屏上可能比「视口减去左右留白」还宽，flex 项默认 min-width: auto 又拒绝收缩，
+       结果卡片溢出、左右留白变成一侧大一侧小。归零后卡片收缩到可用宽度，两侧各留 18px。 */
+    min-width: 0;
   }
   .n-card.n-modal > .n-card-content {
     min-height: 0;
     overflow-y: auto;
+  }
+  /* 卡片是 flex 纵向容器，限高后各子项默认一起收缩：页脚会被压到 10~20px（按钮反而溢出卡片
+     下沿 8~18px）。标题行与页脚保持自然高度，收缩量全部由可滚动的内容区承担。 */
+  .n-card.n-modal > .n-card-header,
+  .n-card.n-modal > .n-card__footer {
+    flex: none;
   }
   .n-card.n-modal .n-scrollbar {
     max-height: none !important;
