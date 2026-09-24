@@ -247,7 +247,7 @@ web/src/
 | `ExportLoadingOverlay.vue` | 全屏「正在生成 Excel，请稍候…」遮罩 | props：`show: boolean` |
 | `FilterExpandButton.vue` | 筛选区展开/收起按钮（`aria-expanded`） | props：`expanded: boolean`；emit：`update:expanded` |
 | `ImageThumbnails.vue` | 图片缩略图（最多显示 3 张 + 剩余数量），用 `imagePreviewUrl`/`imageUrl` | props：`images: FileObject[]` |
-| `ImageUploader.vue` | 图片上传（校验类型/大小、上传/删除、预览），并处理 ESC 只关一层预览的捕获逻辑 | props：`files: FileObject[]`、`disabled?`、`max?`（默认 9）；emit：`update:files` |
+| `ImageUploader.vue` | 图片上传（校验类型/大小、多选后本地排队、最多 2 个并发、逐项进度与失败重试、删除二次确认、预览），并处理 ESC 只关一层预览的捕获逻辑 | props：`files: FileObject[]`、`disabled?`、`max?`（默认 9）；emit：`update:files` |
 | `LoadingMask.vue` | 元素内局部加载遮罩（模糊宿主 + 居中 loading） | props：`show: boolean`、`text?: string` |
 | `MaterialCodeSelector.vue` | 物料编码库弹窗选择器，支持按编码/名称/型号检索分页 | props：`modelValue: string`、`defaultName?`、`defaultModelSpec?`、`disabled?`；emits：`update:modelValue`、`select: [MaterialCodeLibrary]` |
 | `MaterialSelector.vue` | 二级库物资下拉选择（支持关键词加载与排除已选） | props：`value: number \| null`、`disabled?`、`excludeIds?: number[]`；emits：`update:value`、`select: [StockMaterial?]` |
