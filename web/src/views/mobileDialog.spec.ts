@@ -30,14 +30,24 @@ describe('移动端弹窗样式接线', () => {
 
   it('手机端弹窗四周留白，且只作用于 preset="card" 弹窗', () => {
     expect(mobile).toContain(':has(> .n-card.n-modal)')
-    expect(mobile).toContain('padding: 12px')
+    // 左右 18px（12 的 1.5 倍）、上下 144px（12 的 12 倍）
+    expect(mobile).toContain('padding: 144px 18px')
   })
 
   it('手机端弹窗限高在视口内，页脚不会落到屏幕外', () => {
     expect(mobile).toContain('.n-card.n-modal {')
-    expect(mobile).toContain('max-height: calc(100vh - 24px)')
+    expect(mobile).toContain('max-height: calc(100vh - 288px)')
     // dvh 跟进手机浏览器地址栏收起/展开，必须给在 vh 之后
-    expect(mobile).toContain('max-height: calc(100dvh - 24px)')
+    expect(mobile).toContain('max-height: calc(100dvh - 288px)')
+  })
+
+  it('限高值与上下留白之和一致（改留白必须同步改限高，否则弹窗溢出）', () => {
+    const padding = mobile.match(/padding:\s*(\d+)px\s+(\d+)px/)
+    expect(padding, '未找到 padding: <上下>px <左右>px').not.toBeNull()
+
+    const cap = mobile.match(/max-height:\s*calc\(100dvh - (\d+)px\)/)
+    expect(cap, '未找到 max-height: calc(100dvh - <N>px)').not.toBeNull()
+    expect(Number(cap![1])).toBe(Number(padding![1]) * 2)
   })
 
   it('手机端只保留内容区一层滚动（内层上限让位）', () => {
@@ -46,6 +56,13 @@ describe('移动端弹窗样式接线', () => {
     expect(mobile).toContain('.n-card.n-modal .n-scrollbar {')
     expect(mobile).toContain('max-height: none !important')
     expect(mobile).toContain('.n-card.n-modal .modal-body {')
+  })
+
+  it('标题行与页脚不参与收缩（否则限高后页脚被压扁、按钮溢出卡片下沿）', () => {
+    // 卡片是 flex 纵向容器：不给页脚 flex: none，限高后它会被压到 10~20px，按钮反而被裁切
+    expect(mobile).toMatch(
+      /\.n-card\.n-modal > \.n-card-header,\s*\n\s*\.n-card\.n-modal > \.n-card__footer \{\s*\n\s*flex: none;/,
+    )
   })
 
   it('手机端底部按钮缩小尺寸与字号', () => {
