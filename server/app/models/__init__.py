@@ -336,6 +336,13 @@ class FileObject(AuditMixin, Base):
     width: Mapped[int] = mapped_column(Integer, nullable=False)
     height: Mapped[int] = mapped_column(Integer, nullable=False)
     sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # 原始上传字节（重编码成 PNG 之前）的 SHA-256：网页端「上传前先提交摘要比对、命中即免上传」
+    # 用它查找已有附件。老数据与不超过 1MB 的文件为空，空值表示该行不参与前端查重。
+    source_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # 中间片段二次校验的挑战材料：
+    # {"size": 原始字节数, "windows": [{"offset", "length", "sha256"}, …]}。
+    # 只留窗口摘要不留原文：客户端据此证明自己持有相同字节，服务端不必在磁盘上多存一份副本。
+    source_probes: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     # 软删除时间：非空表示已提交删除、保留 7 个完整自然日；到期后的第一个凌晨 2 点，
     # 引用复查确认仍无任何引用后才物理删除数据库行与磁盘文件
     # （见 attachment_cleanup_service 与 file_service.attachment_purge_after）。

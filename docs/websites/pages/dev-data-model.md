@@ -48,7 +48,7 @@ flowchart LR
 | 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅超级管理员可查询/打开已归档计划 |
 | 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
 | 编码库 / 华星总库存 | `material_code_library` / `huaxing_inventory` | 均为 Excel 全量替换导入：前者是公司编码参照表（用于编码存在性校验），后者是上游总库库存快照（仅查询） |
-| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
+| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
 | 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
@@ -424,8 +424,10 @@ erDiagram
 | `file_object` | `width` | INT | 否 | 无 | 图片宽度 |
 | `file_object` | `height` | INT | 否 | 无 | 图片高度 |
 | `file_object` | `sha256` | VARCHAR(64) | 否 | 无 | 内容哈希（非唯一索引） |
+| `file_object` | `source_sha256` | VARCHAR(64) | 是 | NULL | 原始上传字节（重编码成 PNG 之前）的 SHA-256，供网页端「先提交摘要比对、命中免上传」查找；老数据与不超过 1MB 的图片为空，空值表示不参与前端查重 |
+| `file_object` | `source_probes` | JSON | 是 | NULL | 中间片段挑战材料 `{"size": 原始字节数, "windows": [{"offset", "length", "sha256"}, …]}`：查重命中时服务端随机取一个窗口返回，客户端对本地同位置字节算出同样的摘要即证明持有相同文件；只留摘要不留原文 |
 | `file_object` | `deleted_at` | DATETIME(6) | 是 | NULL | 软删除时间；非空表示待删除：保留 7 个完整自然日，到期后的第一个凌晨 2 点复查引用仍无引用才物理清除（保留期内可撤销） |
-| `file_object` | *索引 / 外键* | — | — | — | 索引 `pk_file_object(id)`、`ix_file_object_sha256(sha256)`、`ix_file_object_deleted_at(deleted_at)`；外键：无（由各图片关联表引用本表） |
+| `file_object` | *索引 / 外键* | — | — | — | 索引 `pk_file_object(id)`、`ix_file_object_sha256(sha256)`、`ix_file_object_source_sha256(source_sha256)`、`ix_file_object_deleted_at(deleted_at)`；外键：无（由各图片关联表引用本表） |
 
 </TabsContent>
 

@@ -14,11 +14,14 @@ from app.schemas import (
     AttachmentRead,
     FileId,
     FileObjectRead,
+    ImageDigestCheckRequest,
+    ImageDigestMatchRead,
     OrphanFileCleanupRead,
     OrphanFileReportRead,
     Page,
 )
 from app.services import file_service
+from app.services.common import file_read
 
 # 附件一律在跨项目（system）上下文里处理：`file_object` 是全局附件池（按 sha256 全局去重），
 # 引用计数与清理统计必须覆盖全部项目，否则会把别的项目仍在引用的文件判成可清理。
@@ -52,6 +55,36 @@ FileWriter = Annotated[
 )
 async def upload(file: UploadFile, session: DbSession, user: FileWriter) -> FileObjectRead:
     return await file_service.save_image(session, file)
+
+
+@router.post(
+    "/dedup-check",
+    response_model=ImageDigestMatchRead,
+    summary="图片摘要查重",
+)
+async def check_image_digest(
+    payload: ImageDigestCheckRequest, session: DbSession, user: FileWriter
+) -> ImageDigestMatchRead:
+    """前端在上传前提交原始文件摘要（>1MB 的图片）。
+
+    命中已有附件时返回可复用的文件与一段**随机中间片段**的摘要：客户端对本地同位置字节算出
+    同样的摘要即证明自己确实持有该文件，可直接复用、免去重复上传；未命中（或不满足条件）返回
+    `matched=false`，客户端走正常上传。此处不保存任何服务端状态，也不校验客户端是否真的比对通过
+    ——附件池本就跨项目共享，接口只提供挑战材料。
+    """
+    match = await file_service.find_source_match(
+        session, sha256=payload.sha256, size_bytes=payload.size_bytes
+    )
+    if match is None:
+        return ImageDigestMatchRead(matched=False)
+    item, window = match
+    return ImageDigestMatchRead(
+        matched=True,
+        file=file_read(item),
+        offset=int(window["offset"]),
+        length=int(window["length"]),
+        slice_sha256=str(window["sha256"]),
+    )
 
 
 @router.get(
