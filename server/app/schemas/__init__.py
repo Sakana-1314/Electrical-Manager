@@ -17,6 +17,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.core.config import settings
 from app.domain.enums import (
     ExcelExportJobStatus,
     ExcelImportJobStatus,
@@ -536,6 +537,29 @@ class FileObjectRead(ReadModel):
     size_bytes: int
     width: int
     height: int
+
+
+DigestValue = Annotated[str, StringConstraints(pattern=r"^[0-9a-fA-F]{64}$")]
+
+
+class ImageDigestCheckRequest(RequestModel):
+    """网页端提交的原始文件摘要（重编码前的原文件字节）与字节数。"""
+
+    sha256: DigestValue
+    size_bytes: int = Field(gt=0, le=settings.max_image_bytes)
+
+
+class ImageDigestMatchRead(ReadModel):
+    """摘要查重结果：命中时给出可复用的文件与一段中间片段的挑战材料。
+
+    `matched=false`（未命中）是正常业务分支，其余字段为 null，客户端直接走正常上传。
+    """
+
+    matched: bool
+    file: FileObjectRead | None = None
+    offset: int | None = None
+    length: int | None = None
+    slice_sha256: str | None = None
 
 
 class OrphanFileRead(ReadModel):

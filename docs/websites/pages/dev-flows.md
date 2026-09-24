@@ -299,6 +299,33 @@ flowchart LR
 
 ### 图片上传与读取
 
+大于 1MB 的图片，网页端会先算本地摘要问一次「有没有同一份」，命中就用**中间片段摘要**做二次校验、直接复用（免去上传）：
+
+```mermaid
+sequenceDiagram
+    participant U as 浏览器
+    participant API as 图片接口
+    participant FS as 文件服务
+    participant DB as 文件表
+    U->>U: 大于 1MB：分块算原文件 SHA-256（纯 JS，块间让出主线程）
+    U->>API: POST /files/images/dedup-check（原始摘要 + 字节数）
+    API->>DB: 按 source_sha256 找在用附件（大小一致、磁盘文件在）
+    alt 命中
+        API-->>U: matched=true + file_id + 一个随机中间窗口（offset / length / 摘要）
+        U->>U: 对本地同位置字节算摘要比对
+        alt 校验通过
+            U->>U: 直接复用该图片，不再上传
+        else 对不上
+            U->>API: 退回正常上传
+        end
+    else 未命中 / 查重接口失败
+        API-->>U: matched=false
+        U->>API: 退回正常上传
+    end
+```
+
+正常上传（小程序与未命中查重的网页端都走这条）：
+
 ```mermaid
 sequenceDiagram
     participant U as 浏览器 / 小程序
@@ -315,7 +342,7 @@ sequenceDiagram
         FS->>FS: 补写文件并更新元数据后提交
         FS-->>U: 该记录
     else 全新图片
-        FS->>FS: 写磁盘文件
+        FS->>FS: 写磁盘文件（>1MB 时另记原始字节摘要与中间窗口摘要）
         FS->>DB: 插入文件记录并提交（独立事务，提交成功才返回）
         FS-->>U: 文件信息
     end

@@ -4,6 +4,7 @@ import type {
   AttachmentBulkDelete,
   AttachmentDelete,
   FileObject,
+  ImageDigestMatch,
   Page,
 } from './generated'
 
@@ -42,6 +43,14 @@ export const fileApi = {
   /** 删除图片：被引用次数为 0 才允许；后端只做软删除，保留 7 天后的第一个凌晨 2 点复查引用才物理清除。 */
   removeImage: (id: string) =>
     apiClient.delete<AttachmentDelete>(`/files/images/${id}`).then((r) => r.data),
+  /**
+   * 上传前查重：提交原始文件摘要（只对 >1MB 的图片调用）。
+   *
+   * 命中时返回可复用的文件与一段**随机中间片段**的挑战材料（`offset` / `length` / `slice_sha256`），
+   * 由前端本地对同位置字节二次校验；未命中返回 `matched: false`，调用方走正常上传。
+   */
+  checkImageDigest: (payload: { sha256: string; size_bytes: number }) =>
+    apiClient.post<ImageDigestMatch>('/files/images/dedup-check', payload).then((r) => r.data),
   listAttachments: (query: AttachmentListQuery = {}) =>
     apiClient
       .get<Page<Attachment>>('/files/images/attachments', { params: query })

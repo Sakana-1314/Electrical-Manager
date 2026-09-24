@@ -4,7 +4,14 @@ import { useDialog, useMessage } from 'naive-ui'
 import { markEventEffectPerformed } from 'naive-ui/es/_utils/event/index'
 import { fileApi } from '@/api/files'
 import type { FileObject } from '@/api/generated'
-import { imagePreviewUrl, imageUrl, validateImageSelection } from '@/utils/image'
+import {
+  imagePreviewUrl,
+  imageUrl,
+  matchesDedupSlice,
+  shouldCheckDuplicate,
+  validateImageSelection,
+} from '@/utils/image'
+import { hashBlob } from '@/utils/sha256'
 
 const props = withDefaults(
   defineProps<{ files: FileObject[]; disabled?: boolean; max?: number }>(),
@@ -16,39 +23,43 @@ const message = useMessage()
 const dialog = useDialog()
 
 /**
- * 同时上传的并发数。
+ * 同时处理的并发数。
  *
  * 不「全部一起传」：手机上选 9 张会同时开 9 个请求，互相抢带宽反而更慢，也看不清进度；
  * 也不串行（一张一张太慢）。固定 2 个并发、其余排队——每个文件有独立进度，失败只影响它自己。
+ * 摘要校验（>1MB 的图片）同样占额度：哈希在主线程上跑，一起算会互相抢时间片。
  */
 const UPLOAD_CONCURRENCY = 2
 
-type PendingStatus = 'queued' | 'uploading' | 'error'
+type PendingStatus = 'queued' | 'checking' | 'matching' | 'uploading' | 'error'
+
+/** 占并发额度的状态：排队等额度的 `queued` 不算。 */
+const OCCUPYING_STATUSES: PendingStatus[] = ['checking', 'matching', 'uploading']
 
 interface PendingUpload {
   key: string
   file: File
   name: string
-  /** 0~100；拿不到总长时保持 0（按「不确定进度」展示） */
+  /** 0~100；摘要校验阶段是哈希进度，上传阶段是上传进度；拿不到总长时保持 0（按「不确定进度」展示） */
   percent: number
   status: PendingStatus
   error?: string
   /** 本地预览地址（objectURL），移除或卸载时需 revoke */
   previewUrl?: string
   controller?: AbortController
+  /** 用户已移除该项 / 组件已卸载：异步流水线在每个 await 之后据此提前收尾 */
+  removed?: boolean
 }
 
 const pending = reactive<PendingUpload[]>([])
 let keySeed = 0
 
-const activeCount = computed(() => pending.filter((item) => item.status === 'uploading').length)
-const busy = computed(() =>
-  pending.some((item) => item.status === 'uploading' || item.status === 'queued'),
+const activeCount = computed(
+  () => pending.filter((item) => OCCUPYING_STATUSES.includes(item.status)).length,
 )
-/** 占用名额的项（排队 + 上传中）；失败项不占名额，用户可重试或移除。 */
-const occupyingCount = computed(
-  () => pending.filter((item) => item.status === 'queued' || item.status === 'uploading').length,
-)
+/** 占用名额的项（排队 + 摘要校验 + 上传中）；失败项不占名额，用户可重试或移除。 */
+const occupyingCount = computed(() => pending.filter((item) => item.status !== 'error').length)
+const busy = computed(() => occupyingCount.value > 0)
 const totalCount = computed(() => props.files.length + occupyingCount.value)
 
 // n-image 内置预览与 n-modal 的 ESC 监听都挂在 document bubble 阶段；预览关闭自身时不会标记事件，
@@ -62,8 +73,9 @@ function handleEscapeCapture(event: KeyboardEvent) {
 onMounted(() => document.addEventListener('keydown', handleEscapeCapture, true))
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscapeCapture, true)
-  // 卸载时中止在途请求并释放本地预览地址，避免内存泄漏
+  // 卸载时中止在途请求、停掉摘要校验并释放本地预览地址，避免内存泄漏
   for (const item of pending) {
+    item.removed = true
     item.controller?.abort()
     if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
   }
@@ -75,16 +87,75 @@ function dropPending(item: PendingUpload) {
   if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
 }
 
-/** 把上传成功的文件并入 files（按 id 去重）。 */
-function mergeUploaded(uploaded: FileObject) {
+/** 把上传成功（或复用命中）的文件并入 files（按 id 去重）。 */
+function mergeUploaded(uploaded: FileObject, reuseNotice?: string) {
   const merged = [...props.files, uploaded]
   const unique = Array.from(new Map(merged.map((file) => [file.id, file])).values())
-  if (unique.length < merged.length) message.info('已自动忽略重复图片')
+  if (unique.length < merged.length) {
+    message.info('已自动忽略重复图片')
+  } else if (reuseNotice) {
+    message.info(reuseNotice)
+  }
   emit('update:files', unique)
+}
+
+/**
+ * 上传前查重：算原始文件摘要 → 问服务端有没有同一份 → 用返回的中间片段做本地二次校验。
+ *
+ * 任何一步不成立（未命中、摘要对不上、接口异常、用户中途移除）都返回 null，调用方退回正常上传：
+ * 查重只是省流量，不该让上传失败。
+ */
+async function tryReuseExisting(item: PendingUpload): Promise<FileObject | null> {
+  item.status = 'checking'
+  item.percent = 0
+  let digest: string | null = null
+  try {
+    digest = await hashBlob(item.file, {
+      onProgress: (percent) => {
+        item.percent = percent
+      },
+      shouldAbort: () => item.removed === true,
+    })
+  } catch (error) {
+    // 读不到文件内容（文件被移走 / 权限变化）：交给上传接口去报错
+    console.warn('图片摘要计算失败，改为直接上传', error)
+    return null
+  }
+  if (!digest || item.removed) return null
+
+  item.status = 'matching'
+  try {
+    const match = await fileApi.checkImageDigest({
+      sha256: digest,
+      size_bytes: item.file.size,
+    })
+    if (!match.matched || !match.file) return null
+    if (!(await matchesDedupSlice(item.file, match))) return null
+    return match.file
+  } catch (error) {
+    console.warn('图片摘要查重失败，改为直接上传', error)
+    return null
+  }
+}
+
+/** 单个文件的完整流水线：>1MB 先查重（命中即免上传），否则正常上传。 */
+async function runPipeline(item: PendingUpload) {
+  if (shouldCheckDuplicate(item.file)) {
+    const reused = await tryReuseExisting(item)
+    if (item.removed) return
+    if (reused) {
+      dropPending(item)
+      mergeUploaded(reused, '检测到服务器上已存在相同图片，已直接复用、免于重复上传')
+      return
+    }
+  }
+  await runUpload(item)
 }
 
 async function runUpload(item: PendingUpload) {
   item.error = undefined
+  item.percent = 0
+  item.status = 'uploading'
   item.controller = new AbortController()
   try {
     const uploaded = await fileApi.uploadImage(
@@ -98,8 +169,7 @@ async function runUpload(item: PendingUpload) {
     mergeUploaded(uploaded)
   } catch (error) {
     // 用户主动移除（中止请求）不算失败
-    if (item.controller.signal.aborted) {
-      item.status = 'queued'
+    if (item.removed || item.controller?.signal.aborted) {
       return
     }
     item.percent = 0
@@ -111,17 +181,17 @@ async function runUpload(item: PendingUpload) {
   }
 }
 
-/** 从队列补足并发额度。先同步置为 uploading，避免同一项被重复取出。 */
+/** 从队列补足并发额度。先同步占住额度（置为 checking），避免同一项被重复取出。 */
 function pump() {
   while (activeCount.value < UPLOAD_CONCURRENCY) {
     const next = pending.find((item) => item.status === 'queued')
     if (!next) return
-    next.status = 'uploading'
-    void runUpload(next)
+    next.status = 'checking'
+    void runPipeline(next)
   }
 }
 
-/** 选中（或粘贴）若干文件后入队并启动上传。 */
+/** 选中（或粘贴）若干文件后入队并启动处理。 */
 function enqueue(selected: File[]) {
   if (!selected.length || props.disabled) return
   const validationError = validateImageSelection(totalCount.value, selected, props.max)
@@ -150,8 +220,9 @@ function retry(item: PendingUpload) {
   pump()
 }
 
-/** 移除排队中 / 上传中 / 失败项；上传中的先中止请求。 */
+/** 移除排队中 / 摘要校验中 / 上传中 / 失败项；在途请求先中止，摘要校验靠 `removed` 标记停掉。 */
 function removePending(item: PendingUpload) {
+  item.removed = true
   item.controller?.abort()
   dropPending(item)
   pump()
@@ -159,6 +230,10 @@ function removePending(item: PendingUpload) {
 
 function statusText(item: PendingUpload) {
   if (item.status === 'queued') return '排队中'
+  if (item.status === 'checking') {
+    return item.percent > 0 ? `计算摘要 ${item.percent}%` : '计算摘要'
+  }
+  if (item.status === 'matching') return '比对已有图片…'
   if (item.status === 'uploading') return item.percent > 0 ? `上传中 ${item.percent}%` : '上传中'
   return item.error || '上传失败'
 }
@@ -242,7 +317,7 @@ async function remove(file: FileObject) {
           >×</n-button
         >
       </div>
-      <!-- 排队 / 上传中 / 失败：与已上传图片同一条流，各显示自己的进度 -->
+      <!-- 排队 / 摘要校验 / 上传中 / 失败：与已上传图片同一条流，各显示自己的进度 -->
       <div v-for="item in pending" :key="item.key" class="upload-item" :class="`is-${item.status}`">
         <div
           class="upload-thumb"
@@ -256,7 +331,7 @@ async function remove(file: FileObject) {
             :aria-valuenow="item.percent"
             aria-valuemin="0"
             aria-valuemax="100"
-            :aria-label="`${item.name} 上传进度`"
+            :aria-label="`${item.name} 处理进度`"
           >
             <div class="upload-progress-fill" :style="{ width: `${item.percent}%` }" />
           </div>
@@ -289,7 +364,7 @@ async function remove(file: FileObject) {
         @click="input?.click()"
       >
         <span class="plus">+</span>
-        <span v-if="activeCount > 0">上传中 {{ activeCount }}</span>
+        <span v-if="activeCount > 0">处理中 {{ activeCount }}</span>
         <span v-else-if="busy">排队中</span>
         <span v-else>添加图片</span>
       </button>
@@ -304,7 +379,7 @@ async function remove(file: FileObject) {
     </div>
     <p class="image-hint">
       JPG / PNG / WebP · 单张不超过 10 MB · 最多 {{ max }} 张 · 支持 Ctrl+V 粘贴 · 可多选，最多
-      {{ UPLOAD_CONCURRENCY }} 张同时上传
+      {{ UPLOAD_CONCURRENCY }} 张同时上传 · 超过 1 MB 的图片先比对摘要，重复的免上传
     </p>
   </div>
 </template>

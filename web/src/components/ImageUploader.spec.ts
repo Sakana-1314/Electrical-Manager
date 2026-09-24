@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import { fileApi } from '@/api/files'
 import type { FileObject } from '@/api/generated'
+import { dedupMinBytes } from '@/utils/image'
+import { sha256Hex } from '@/utils/sha256'
 import ImageUploader from './ImageUploader.vue'
 
 const message = {
@@ -21,6 +23,7 @@ vi.mock('@/api/files', () => ({
   fileApi: {
     uploadImage: vi.fn(),
     removeImage: vi.fn(),
+    checkImageDigest: vi.fn(),
   },
 }))
 
@@ -31,6 +34,13 @@ const uploadedFile: FileObject = {
   size_bytes: 4,
   width: 10,
   height: 10,
+}
+
+/** 大于 1MB 的图片：只有这类文件才走「先摘要查重」的路径。 */
+function bigFile(): { bytes: Uint8Array; file: File } {
+  const bytes = new Uint8Array(dedupMinBytes + 1)
+  for (let index = 0; index < bytes.length; index += 1) bytes[index] = (index * 13) % 256
+  return { bytes, file: new File([bytes], 'big.png', { type: 'image/png' }) }
 }
 
 function pasteEvent(file: File | null): ClipboardEvent {
@@ -198,5 +208,131 @@ describe('ImageUploader', () => {
 
     expect(fileApi.removeImage).toHaveBeenCalledWith(uploadedFile.id)
     expect(target.emitted('update:files')).toEqual([[[]]])
+  })
+})
+
+describe('ImageUploader 摘要查重（>1MB 免重复上传）', () => {
+  it('命中且本地二次校验通过：不重复上传，直接用已有图片', async () => {
+    const { bytes, file } = bigFile()
+    const slice = { offset: 4096, length: 1024 }
+    vi.mocked(fileApi.checkImageDigest).mockResolvedValue({
+      matched: true,
+      file: uploadedFile,
+      offset: slice.offset,
+      length: slice.length,
+      slice_sha256: sha256Hex(bytes.subarray(slice.offset, slice.offset + slice.length)),
+    })
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [file])
+    // 摘要校验要跨「分块读取 + 让出主线程 + 一次接口往返」，等状态收敛再断言
+    await vi.waitFor(() => expect(target.emitted('update:files')).toBeDefined())
+
+    expect(fileApi.checkImageDigest).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(fileApi.checkImageDigest).mock.calls[0][0]).toEqual({
+      sha256: sha256Hex(bytes),
+      size_bytes: file.size,
+    })
+    expect(fileApi.uploadImage).not.toHaveBeenCalled()
+    expect(target.emitted('update:files')).toEqual([[[uploadedFile]]])
+    expect(message.info).toHaveBeenCalledWith(
+      '检测到服务器上已存在相同图片，已直接复用、免于重复上传',
+    )
+    expect(target.findAll('.upload-item')).toHaveLength(0)
+  })
+
+  it('校验期间显示「比对已有图片…」', async () => {
+    const { file } = bigFile()
+    let resolveMatch: ((value: unknown) => void) | undefined
+    vi.mocked(fileApi.checkImageDigest).mockImplementation(
+      () => new Promise((resolve) => (resolveMatch = resolve)) as never,
+    )
+    vi.mocked(fileApi.uploadImage).mockResolvedValue(uploadedFile)
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [file])
+    await vi.waitFor(() => expect(target.find('.upload-status').text()).toBe('比对已有图片…'))
+
+    // 未命中时退回正常上传
+    resolveMatch?.({ matched: false, file: null, offset: null, length: null, slice_sha256: null })
+    await vi.waitFor(() => expect(fileApi.uploadImage).toHaveBeenCalledTimes(1))
+  })
+
+  it('命中但本地摘要对不上：退回正常上传', async () => {
+    const { file } = bigFile()
+    vi.mocked(fileApi.checkImageDigest).mockResolvedValue({
+      matched: true,
+      file: uploadedFile,
+      offset: 0,
+      length: 1024,
+      slice_sha256: 'b'.repeat(64),
+    })
+    vi.mocked(fileApi.uploadImage).mockResolvedValue(uploadedFile)
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [file])
+    await vi.waitFor(() => expect(fileApi.uploadImage).toHaveBeenCalledTimes(1))
+
+    expect(fileApi.checkImageDigest).toHaveBeenCalledTimes(1)
+    expect(target.emitted('update:files')).toEqual([[[uploadedFile]]])
+  })
+
+  it('查重接口异常：静默降级为正常上传', async () => {
+    const { file } = bigFile()
+    vi.mocked(fileApi.checkImageDigest).mockRejectedValue(new Error('查重失败'))
+    vi.mocked(fileApi.uploadImage).mockResolvedValue(uploadedFile)
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [file])
+    await vi.waitFor(() => expect(fileApi.uploadImage).toHaveBeenCalledTimes(1))
+
+    expect(target.emitted('update:files')).toEqual([[[uploadedFile]]])
+    expect(warn).toHaveBeenCalled()
+  })
+
+  it('不超过 1MB 的图片不查重，直接上传', async () => {
+    vi.mocked(fileApi.uploadImage).mockResolvedValue(uploadedFile)
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+    const file = new File([new Uint8Array(dedupMinBytes)], 'small.png', { type: 'image/png' })
+
+    await selectFiles(target, [file])
+    await flushPromises()
+
+    expect(fileApi.checkImageDigest).not.toHaveBeenCalled()
+    expect(fileApi.uploadImage).toHaveBeenCalledTimes(1)
+  })
+
+  it('比对中移除该项：不再上传，也不抛出复用结果', async () => {
+    const { bytes, file } = bigFile()
+    let resolveMatch: ((value: unknown) => void) | undefined
+    vi.mocked(fileApi.checkImageDigest).mockImplementation(
+      () => new Promise((resolve) => (resolveMatch = resolve)) as never,
+    )
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [file])
+    await flushPromises()
+    await target.find('.upload-btn--danger').trigger('click')
+    await flushPromises()
+    expect(target.findAll('.upload-item')).toHaveLength(0)
+
+    resolveMatch?.({
+      matched: true,
+      file: uploadedFile,
+      offset: 0,
+      length: 1024,
+      slice_sha256: sha256Hex(bytes.subarray(0, 1024)),
+    })
+    await flushPromises()
+
+    expect(fileApi.uploadImage).not.toHaveBeenCalled()
+    expect(target.emitted('update:files')).toBeUndefined()
   })
 })

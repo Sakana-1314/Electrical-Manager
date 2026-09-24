@@ -611,6 +611,12 @@ def _file_id(seed: int | str) -> str:
     return f"{digest[:8]}-{digest[8:12]}-7{digest[13:16]}-8{digest[17:20]}-{digest[20:32]}"
 
 
+# 免重复上传示例：1.5 MiB 原文件的 SHA-256 与命中后返回的中间片段（窗口 64 KiB，落在中间一半）
+_IMAGE_SOURCE_BYTES = 1572864
+_IMAGE_SOURCE_SHA256 = "8f14e45fceea167a5a36dedd4bea2543dbfe8c1e6a7b3f2c9d0e5a41b7c2d8f6"
+_IMAGE_SLICE_SHA256 = "c2b7a1d4e6f8093b5d2c7e1a4f6b8d0e3c5a7b9d1f2e4c6a8b0d2f4e6c8a1b3d"
+
+
 def _file_row(seed: int, original_name: str, size_bytes: int = 486912) -> dict[str, Any]:
     return {
         "id": _file_id(seed),
@@ -1144,6 +1150,18 @@ def _build_schema_examples() -> dict[str, Any]:
         "Page_MiniProgramUserRead_": _page(_MINI_PROGRAM_USER_ROWS),
         # —— 二级库物资与库存 ——
         "FileObjectRead": _file_row(1, "交流接触器-CJX2-2510-正面.jpg", 486912),
+        # 前端免重复上传：1.5 MiB 的原文件（重编码后的 PNG 仍是 486912 字节）与命中后的挑战片段
+        "ImageDigestCheckRequest": {
+            "sha256": _IMAGE_SOURCE_SHA256,
+            "size_bytes": _IMAGE_SOURCE_BYTES,
+        },
+        "ImageDigestMatchRead": {
+            "matched": True,
+            "file": _file_row(1, "交流接触器-CJX2-2510-正面.jpg", 486912),
+            "offset": 655360,
+            "length": 65536,
+            "slice_sha256": _IMAGE_SLICE_SHA256,
+        },
         "StockMaterialRead": material,
         "StockMaterialCreate": {
             "name": "塑壳断路器",
