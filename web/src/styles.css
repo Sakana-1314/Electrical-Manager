@@ -582,6 +582,85 @@ a {
   .detail-toolbar {
     gap: 10px 12px;
   }
+
+  /* ============ 移动端弹窗（preset="card"）============
+   * 手机屏幕上弹窗贴边、底部按钮折行会把内容压成一条（实测 390×844 下页脚高 138px、
+   * 排成 3 行，长表单的页脚甚至整条落到视口外）。这里统一三件事：
+   * 1) 四周留 12px 余地，弹窗最高只到视口内，页脚永远留在屏幕里；
+   * 2) 只保留内容区一层滚动——Naive 的 n-scrollbar 行内上限与隐患弹窗 .modal-body 的上限
+   *    在手机端让位，避免内外两层各滚一次；
+   * 3) 底部按钮缩小尺寸与字号后排成一行：按钮组按内容宽度不换行，极窄时由页脚横向滑动
+   *    承接（与上面 .page-actions 的既有约定一致）。
+   * 直接作用于 Naive 生成的 .n-card.n-modal，页面不写断点、不加局部样式。
+   * .n-dialog（确认弹窗）与 n-image 预览不走 .n-card，因此不受影响。
+   * 少数 !important 只用于压过组件库写在元素上的行内样式（n-space 的行内 flex-flow: wrap、
+   * n-scrollbar 的行内 max-height），普通选择器无法覆盖。 */
+  .n-modal-scroll-content:has(> .n-card.n-modal) {
+    padding: 12px;
+  }
+  .n-card.n-modal {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+  .n-card.n-modal > .n-card-content {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .n-card.n-modal .n-scrollbar {
+    max-height: none !important;
+  }
+  .n-card.n-modal .modal-body {
+    max-height: none;
+  }
+  .n-card.n-modal > .n-card__footer {
+    padding: 0 12px 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .n-card.n-modal > .n-card__footer::-webkit-scrollbar {
+    display: none;
+  }
+  .n-card.n-modal > .n-card__footer .n-button {
+    height: 28px;
+    flex: none;
+    padding: 0 6px;
+    font-size: 12px;
+  }
+  .n-card.n-modal > .n-card__footer .n-button .n-button__content {
+    font-size: 12px;
+  }
+  .n-card.n-modal > .n-card__footer .n-space,
+  .n-card.n-modal > .n-card__footer .modal-footer {
+    flex-wrap: nowrap !important;
+    min-width: 0;
+    gap: 4px 6px !important;
+  }
+  .n-card.n-modal > .n-card__footer .n-space > *,
+  .n-card.n-modal > .n-card__footer .modal-footer > * {
+    flex: none;
+    min-width: 0;
+  }
+}
+
+/* 小屏（≤360px）再压一档：五个按钮也能排成一行，不靠横向滑动。必须排在 ≤768px 之后，
+   两个断点同时命中时由后者覆盖。 */
+@media (max-width: 360px) {
+  .n-card.n-modal > .n-card__footer {
+    padding: 0 8px 8px;
+  }
+  .n-card.n-modal > .n-card__footer .n-button {
+    height: 26px;
+    padding: 0 4px;
+    font-size: 11px;
+  }
+  .n-card.n-modal > .n-card__footer .n-button .n-button__content {
+    font-size: 11px;
+  }
+  .n-card.n-modal > .n-card__footer .n-space,
+  .n-card.n-modal > .n-card__footer .modal-footer {
+    gap: 3px 4px !important;
+  }
 }
 
 @media (max-width: 480px) {
