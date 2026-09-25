@@ -32,7 +32,7 @@ import {
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
-import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
+import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
 import { formatShanghaiTime } from '@/utils/time'
 import { routeQueryString } from '@/utils/routeQuery'
 
@@ -200,6 +200,8 @@ type TemplateColumnKey =
 const availableColumns: Array<{
   key: TemplateColumnKey
   label: string
+  /** 不在列表与列显隐里出现的列（如并入「数量」的计量单位）。 */
+  hidden?: boolean
   column: DataTableBaseColumn<PurchasePlanTemplate>
 }> = [
   {
@@ -264,17 +266,21 @@ const availableColumns: Array<{
   },
   {
     key: 'planned_qty',
-    label: '计划数量',
+    label: '数量',
+    // 列表把「计划数量 + 计量单位」合成一列展示（如「12 个」）：单看数量没有参照。
+    // 列键仍是 planned_qty（后端排序白名单以此为准）。
     column: {
-      title: '计划数量',
+      title: '数量',
       key: 'planned_qty',
-      width: tableColumnWidths.quantity,
-      render: (row) => renderTwoLineText(row.planned_qty, '-'),
+      width: tableColumnWidths.quantityWithUnit,
+      render: (row) => renderQuantityWithUnit(row.planned_qty, row.unit_name, '-'),
     },
   },
   {
     key: 'unit_name',
     label: '计量单位',
+    // 列表不单独显示（并入上面的「数量」）。
+    hidden: true,
     column: {
       title: '计量单位',
       key: 'unit_name',
@@ -353,11 +359,13 @@ const availableColumns: Array<{
     },
   },
 ]
-const visibleColumnKeys = ref<TemplateColumnKey[]>(availableColumns.map((item) => item.key))
-const fieldOptions = availableColumns.map((item) => ({ label: item.label, value: item.key }))
+/** 列表里真正可显示 / 可勾选的列（hidden 的并入其它列，不出现）。 */
+const displayColumns = availableColumns.filter((item) => !item.hidden)
+const visibleColumnKeys = ref<TemplateColumnKey[]>(displayColumns.map((item) => item.key))
+const fieldOptions = displayColumns.map((item) => ({ label: item.label, value: item.key }))
 const columns = computed<DataTableColumns<PurchasePlanTemplate>>(() =>
   preventTableColumnCompression(
-    availableColumns
+    displayColumns
       .filter((item) => visibleColumnKeys.value.includes(item.key))
       .map((item) => item.column),
   ),

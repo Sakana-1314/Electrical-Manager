@@ -22,3 +22,20 @@ export function renderMaterialCode(value: string | null | undefined): VNode {
   if (value) return renderTwoLineText(value)
   return h(NTag, { type: 'warning', size: 'small' }, { default: () => '暂无编码' })
 }
+
+/**
+ * 「数量」列：把数量与计量单位合成一格展示（如「12 个」）。
+ *
+ * 计划数量与计量单位在库里是两列、导出也仍是两列，但列表里单看数量没有参照，
+ * 因此列表统一合成一列展示；单位缺失时只显示数量，数量缺失时显示 `fallback`。
+ */
+export function renderQuantityWithUnit(
+  value: string | number | null | undefined,
+  unit: string | null | undefined,
+  fallback = '\\',
+): VNode {
+  const quantity = value === null || value === undefined || value === '' ? '' : String(value)
+  if (!quantity) return renderTwoLineText(null, fallback)
+  const text = `${quantity}${unit ?? ''}`
+  return renderTwoLineText(text)
+}

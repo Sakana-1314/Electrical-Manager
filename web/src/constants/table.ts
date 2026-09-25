@@ -3,6 +3,8 @@ import type { DataTableColumns } from 'naive-ui'
 export const tableColumnWidths = {
   unit: 80,
   quantity: 110,
+  /** 「数量 + 单位」合并列（如「12 个」）：比单独的数量列宽一点，又比两列之和窄。 */
+  quantityWithUnit: 132,
   date: 112,
   datetime: 172,
   status: 104,

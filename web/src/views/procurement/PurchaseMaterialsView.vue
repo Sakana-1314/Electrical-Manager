@@ -44,6 +44,7 @@ import {
 import {
   defaultPurchaseOrderNo,
   getLastPurchaseResponsible,
+  mergeExportColumns,
   rememberPurchaseResponsible,
 } from '@/utils/purchase'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
@@ -62,7 +63,7 @@ import { useExportJob } from '@/composables/useExportJob'
 import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
-import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
+import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -398,6 +399,8 @@ type PlanColumnKey =
 const availableColumns: Array<{
   key: PlanColumnKey
   label: string
+  /** 只用于导出、不在列表与列显隐里出现的列（如并入「数量」的计量单位）。 */
+  hidden?: boolean
   column: DataTableBaseColumn<PurchaseMaterial>
 }> = [
   {
@@ -472,12 +475,22 @@ const availableColumns: Array<{
   },
   {
     key: 'planned_qty',
-    label: '计划数量',
-    column: { title: '计划数量', key: 'planned_qty', width: tableColumnWidths.quantity },
+    label: '数量',
+    // 列表把「计划数量 + 计量单位」合成一列展示（如「12 个」）：单看数量没有参照。
+    // 列键仍是 planned_qty（后端排序白名单、分享链接已存列键都以它为准）；
+    // 导出仍按「计划数量」「计量单位」两列走，见 mergeExportColumns。
+    column: {
+      title: '数量',
+      key: 'planned_qty',
+      width: tableColumnWidths.quantityWithUnit,
+      render: (row) => renderQuantityWithUnit(row.planned_qty, row.unit_name),
+    },
   },
   {
     key: 'unit_name',
     label: '计量单位',
+    // 列表不单独显示（并入上面的「数量」），但保留定义：导出仍按两列走。
+    hidden: true,
     column: {
       title: '计量单位',
       key: 'unit_name',
@@ -536,8 +549,10 @@ const availableColumns: Array<{
     },
   },
 ]
-const visibleColumnKeys = ref<PlanColumnKey[]>(availableColumns.map((item) => item.key))
-const fieldOptions = availableColumns.map((item) => ({ label: item.label, value: item.key }))
+/** 列表里真正可显示 / 可勾选的列（hidden 的只服务导出，不出现）。 */
+const displayColumns = availableColumns.filter((item) => !item.hidden)
+const visibleColumnKeys = ref<PlanColumnKey[]>(displayColumns.map((item) => item.key))
+const fieldOptions = displayColumns.map((item) => ({ label: item.label, value: item.key }))
 const columns = computed<DataTableColumns<PurchaseMaterial>>(() => {
   const sortBy = filters.sort_by
   const sortOrder = filters.sort_order
@@ -546,7 +561,7 @@ const columns = computed<DataTableColumns<PurchaseMaterial>>(() => {
       type: 'selection',
       disabled: () => !auth.can('purchase:write'),
     },
-    ...availableColumns
+    ...displayColumns
       .filter((item) => visibleColumnKeys.value.includes(item.key))
       .map((item) => ({
         ...item.column,
@@ -644,9 +659,12 @@ async function aiQuery() {
   }
 }
 async function exportResults() {
-  const exportColumns = availableColumns
-    .filter((item) => visibleColumnKeys.value.includes(item.key))
-    .map((item) => item.key)
+  // 导出仍按「计划数量」「计量单位」两列走：列表里合成了一列「数量」，
+  // 但导出沿用后端模板的列键与顺序，不能因为显示合并而少给下游一列。
+  const exportColumns = mergeExportColumns(
+    visibleColumnKeys.value,
+    availableColumns.map((item) => item.key),
+  )
   if (!exportColumns.length) {
     message.warning('请至少显示一个字段')
     return
