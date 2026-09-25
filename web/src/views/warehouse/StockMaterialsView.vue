@@ -102,6 +102,8 @@ async function closeDetail() {
 function openCreate() {
   materialId.value = null
   showModal.value = true
+  // 新建不是「打开某条详情」：清掉可能残留的 ?detail=，避免刷新后又弹回上一条
+  void router.replace({ query: { ...route.query, detail: undefined } })
 }
 
 function toggled(value: boolean) {
