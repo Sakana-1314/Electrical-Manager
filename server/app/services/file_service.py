@@ -348,9 +348,14 @@ async def save_image(session: AsyncSession, upload: UploadFile) -> FileObjectRea
 
 
 async def get_image(session: AsyncSession, file_id: str) -> tuple[FileObject, Path]:
+    """读取图片（含待删除但仍在保留期内的）。
+
+    软删除只表示「已提交删除、从业务中隐藏」，磁盘文件与记录都还在保留期内，附件管理页需要
+    展示待删除附件的预览图才能判断要不要撤销删除，因此这里不再拦截 `deleted_at`。
+    真正不可读只有两种情况：记录不存在，或文件已被物理清除（保留期满后的凌晨任务）。
+    """
     item = await session.get(FileObject, file_id)
-    # 已软删除（保留期内等待凌晨清理）的图片不再对外提供，避免刚删掉又能在业务里打开。
-    if item is None or item.deleted_at is not None:
+    if item is None:
         raise not_found("图片")
     path = file_path(file_id)
     if not path.is_file():

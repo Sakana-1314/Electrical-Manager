@@ -348,8 +348,13 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
         assert await session.get(FileObject, file_id) is not None
     assert (settings.upload_dir / f"{file_id}.png").is_file()
 
-    # 软删除后不再对外提供读取。
-    assert (await client.get(f"/api/v1/files/images/{file_id}")).status_code == 400
+    # 待删除（保留期内）仍可读取：附件管理页要展示预览图才能判断是否撤销删除。
+    readable = await client.get(f"/api/v1/files/images/{file_id}")
+    assert readable.status_code == 200, readable.text
+    assert readable.content.startswith(b"\x89PNG\r\n\x1a\n")
+    preview = await client.get(f"/api/v1/files/images/{file_id}", params={"size": 16})
+    assert preview.status_code == 200, preview.text
+    assert preview.headers["content-type"].startswith("image/webp")
     # 重复删除被拒绝。
     again = await client.delete(f"/api/v1/files/images/{file_id}", headers=headers)
     assert again.status_code == 409
@@ -395,6 +400,11 @@ async def test_purge_only_after_retention_period(client: AsyncClient) -> None:
     async with project_session() as session:
         assert await session.get(FileObject, file_id) is None
     assert not (settings.upload_dir / f"{file_id}.png").exists()
+
+    # 物理清除后就不再可读（记录已不存在 → NOT_FOUND）。
+    gone = await client.get(f"/api/v1/files/images/{file_id}")
+    assert gone.status_code == 400
+    assert gone.json()["code"] == "NOT_FOUND"
 
 
 @pytest.mark.asyncio
