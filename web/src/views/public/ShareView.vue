@@ -90,7 +90,7 @@ const planColumnDefs: ShareColumnDef[] = [
   },
   {
     key: 'planned_qty',
-    title: '计划数量',
+    title: '数量',
     width: 110,
     align: 'right',
     render: (row) => renderQuantity(row.planned_qty, row.unit_name),

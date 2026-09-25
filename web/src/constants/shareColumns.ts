@@ -16,7 +16,7 @@ export const SHARE_PLAN_COLUMNS: ShareColumnOption[] = [
   { key: 'demand_department', label: '需求部门' },
   { key: 'name', label: '名称' },
   { key: 'model_spec', label: '型号规格' },
-  { key: 'planned_qty', label: '计划数量' },
+  { key: 'planned_qty', label: '数量' },
   { key: 'actual_demand_person', label: '提报员工' },
   { key: 'purchase_responsible', label: '实际需求人' },
   { key: 'subitem_no', label: '子项号' },
