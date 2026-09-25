@@ -156,9 +156,7 @@ const columns = preventTableColumnCompression<Attachment>([
     key: 'preview',
     width: 84,
     render: (row) => {
-      if (row.deleted_at != null) {
-        return h('span', { class: 'muted' }, '待删除')
-      }
+      // 待删除（保留期内）同样展示缩略图：文件还在磁盘上、读取接口也可用，看得到才好判断要不要撤销删除。
       if (!row.file_exists) {
         return h('span', { class: 'warning-text' }, '文件缺失')
       }
@@ -168,7 +166,10 @@ const columns = preventTableColumnCompression<Attachment>([
         objectFit: 'cover',
         width: 56,
         height: 56,
-        style: 'border-radius:8px;overflow:hidden',
+        style:
+          row.deleted_at == null
+            ? 'border-radius:8px;overflow:hidden'
+            : 'border-radius:8px;overflow:hidden;opacity:.55',
       })
     },
   },

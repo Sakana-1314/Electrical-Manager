@@ -188,6 +188,8 @@ async def read_image(
     # 图片匿名读取是刻意设计：前端 <img>/小程序 image 直接加载，无法携带 Authorization 头。
     # 安全性依赖 file_id 为 UUIDv7（不可猜解）+ 仅返回系统上传的图片。若需更强保护，
     # 应改为签名/短时效 URL 而非强制鉴权（会破坏图片加载）。
+    # 待删除（软删除、保留期内）的图片同样可读：附件管理页要展示预览图才能判断是否撤销删除；
+    # 保留期满被物理清除后，磁盘文件不存在，自然返回 FILE_MISSING。
     item, path = await file_service.get_image(session, file_id)
     headers = {"Cache-Control": CACHE_CONTROL}
     if size is not None:
