@@ -214,6 +214,25 @@ describe('StockMaterialFormModal', () => {
     expect(onSaved).toHaveBeenCalledTimes(1)
   })
 
+  it('右上角 × 走同一条关闭路径（干净直接关，有改动先确认）', async () => {
+    wrapper = await mountModal({ show: true, materialId: 9 })
+
+    // 组件库的关闭按钮由 @close 接管：clean 时必须真的关闭
+    const closeButton = document.querySelector<HTMLElement>('.n-card-header__close')
+    expect(closeButton).not.toBeNull()
+    closeButton!.click()
+    await nextTick()
+    await flushPromises()
+    expect(document.querySelector('.n-dialog')).toBeNull()
+
+    // 有改动时同样先弹确认，不直接关
+    await setInputValue(wrapper, '塑壳断路器', '改过了')
+    closeButton!.click()
+    await nextTick()
+    await flushPromises()
+    expect(document.querySelector('.n-dialog')).not.toBeNull()
+  })
+
   it('遮罩点击在无修改时直接关闭，有修改时先二次确认', async () => {
     wrapper = await mountModal({ show: true, materialId: 9 })
     const nModal = modal(wrapper).findComponent(NModal)
