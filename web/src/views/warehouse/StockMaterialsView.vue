@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { h, reactive, ref } from 'vue'
-import { NButton, NTag, useDialog, useMessage, type FormInst, type FormRules } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { h, ref, watch } from 'vue'
+import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
+import { useRoute, useRouter } from 'vue-router'
 import { inventoryApi } from '@/api/inventory'
-import type { FileObject, StockMaterial, StockMaterialWrite } from '@/api/generated'
+import type { StockMaterial } from '@/api/generated'
 import { useAuthStore } from '@/stores/auth'
-import ImageUploader from '@/components/ImageUploader.vue'
-import QuantityInput from '@/components/QuantityInput.vue'
-import { isDecimalString } from '@/utils/decimal'
+import StockMaterialFormModal from '@/components/StockMaterialFormModal.vue'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import { usePagedTable } from '@/composables/usePagedTable'
+import { routeQueryString } from '@/utils/routeQuery'
 import {
   getTableScrollX,
   preventTableColumnCompression,
@@ -17,6 +16,7 @@ import {
 } from '@/constants/table'
 
 const router = useRouter()
+const route = useRoute()
 const message = useMessage()
 const dialog = useDialog()
 const auth = useAuthStore()
@@ -47,33 +47,79 @@ const {
     routeName: 'stock-materials',
     fromQuery: (route) => ({ keyword: String(route.query.keyword || '') }),
     toQuery: (f) => ({ keyword: f.keyword.trim() || undefined }),
+    // 详情弹窗的 id 不属于筛选状态，翻页/筛选/重新激活时都必须留在 URL 里
+    preservedQueryKeys: ['detail'],
   },
 })
+
+// 详情弹窗：materialId 为 null 即新建
 const showModal = ref(false)
-const saving = ref(false)
+const materialId = ref<number | null>(null)
 const deletingId = ref<number | null>(null)
-const editing = ref<StockMaterial | null>(null)
-const formRef = ref<FormInst | null>(null)
-const images = ref<FileObject[]>([])
-const form = reactive<StockMaterialWrite>({
-  name: '',
-  name_id: '',
-  alias: '',
-  model_spec: '',
-  unit_name: '',
-  remark: '',
-  image_ids: [],
-})
-const policy = reactive({
-  minimum_qty: '0',
-  enabled: true,
-  version: undefined as number | undefined,
-})
-const rules: FormRules = {
-  name: { required: true, message: '请输入物资名称' },
-  model_spec: { required: true, message: '请输入型号规格；无型号时填写“无”' },
-  unit_name: { required: true, message: '请输入计量单位' },
+
+function confirmDelete(row: StockMaterial) {
+  dialog.warning({
+    draggable: true,
+    title: '确认删除物资档案',
+    content: `确定删除“${row.name}（${row.model_spec}）”吗？删除后无法恢复。`,
+    positiveText: '确认删除',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      deletingId.value = row.id
+      try {
+        await inventoryApi.deleteMaterial(row.id, row.version)
+        message.success('物资档案已删除')
+        // 防空页回退由 usePagedTable 的 rollbackEmptyPage 处理（删掉末页最后一条后自动退页）
+        await load()
+      } catch (error) {
+        message.error(error instanceof Error ? error.message : '删除失败')
+        return false
+      } finally {
+        deletingId.value = null
+      }
+      return true
+    },
+  })
 }
+
+/** 打开详情并把它写进 URL，刷新 / 新标签页 / 收藏都能回到同一条记录。 */
+async function openDetail(id: number) {
+  materialId.value = id
+  showModal.value = true
+  if (routeQueryString(route.query.detail) !== String(id)) {
+    await router.replace({ query: { ...route.query, detail: String(id) } })
+  }
+}
+
+async function closeDetail() {
+  showModal.value = false
+  materialId.value = null
+  if (routeQueryString(route.query.detail)) {
+    await router.replace({ query: { ...route.query, detail: undefined } })
+  }
+}
+
+function openCreate() {
+  materialId.value = null
+  showModal.value = true
+}
+
+function toggled(value: boolean) {
+  showModal.value = value
+  if (!value) void closeDetail()
+}
+
+// URL → 弹窗的唯一入口：用 watch 而不是 onMounted，keepAlive / 同页导航都能生效
+watch(
+  () => routeQueryString(route.query.detail),
+  (raw) => {
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    if (showModal.value && materialId.value === id) return
+    void openDetail(id)
+  },
+  { immediate: true },
+)
 
 const columns = preventTableColumnCompression<StockMaterial>([
   {
@@ -110,9 +156,19 @@ const columns = preventTableColumnCompression<StockMaterial>([
     key: 'actions',
     width: 170,
     render: (row) => {
-      if (!auth.can('warehouse:write')) return '—'
+      if (!auth.can('warehouse:write')) {
+        return h(
+          NButton,
+          { size: 'small', onClick: () => void openDetail(row.id) },
+          { default: () => '详情' },
+        )
+      }
       const actions = [
-        h(NButton, { size: 'small', onClick: () => openEdit(row) }, { default: () => '编辑' }),
+        h(
+          NButton,
+          { size: 'small', onClick: () => void openDetail(row.id) },
+          { default: () => '编辑' },
+        ),
       ]
       if (!row.has_operation_records) {
         actions.push(
@@ -135,117 +191,12 @@ const columns = preventTableColumnCompression<StockMaterial>([
 ])
 const tableScrollX = getTableScrollX(columns)
 
-function resetForm() {
-  Object.assign(form, {
-    name: '',
-    name_id: '',
-    alias: '',
-    model_spec: '',
-    unit_name: '',
-    remark: '',
-    image_ids: [],
-    version: undefined,
-  })
-  Object.assign(policy, { minimum_qty: '0', enabled: true, version: undefined })
-  images.value = []
-  editing.value = null
-}
-
-function openCreate() {
-  resetForm()
-  showModal.value = true
-}
-
-function openEdit(row: StockMaterial) {
-  editing.value = row
-  Object.assign(form, {
-    name: row.name,
-    name_id: row.name_id || '',
-    alias: row.alias || '',
-    model_spec: row.model_spec,
-    unit_name: row.unit_name,
-    remark: row.remark || '',
-    image_ids: row.images.map((image) => image.id),
-    version: row.version,
-  })
-  Object.assign(policy, {
-    minimum_qty: row.replenishment_policy?.minimum_qty ?? '0',
-    enabled: row.replenishment_policy?.enabled ?? true,
-    version: row.replenishment_policy?.version,
-  })
-  images.value = [...row.images]
-  showModal.value = true
-}
-
-async function save() {
-  await formRef.value?.validate()
-  if (!isDecimalString(policy.minimum_qty, 1, true)) {
-    message.error('最低库存必须为非负数，且最多 1 位小数')
-    return
-  }
-  saving.value = true
-  try {
-    form.image_ids = images.value.map((image) => image.id)
-    const payload = {
-      ...form,
-      name: form.name.trim(),
-      name_id: form.name_id?.trim() || undefined,
-      alias: form.alias?.trim() || undefined,
-      model_spec: form.model_spec.trim(),
-      unit_name: form.unit_name.trim(),
-      remark: form.remark?.trim() || undefined,
-    }
-    const saved = editing.value
-      ? await inventoryApi.updateMaterial(editing.value.id, payload)
-      : await inventoryApi.createMaterial(payload)
-    await inventoryApi.savePolicy(saved.id, {
-      minimum_qty: policy.minimum_qty,
-      enabled: policy.enabled,
-      version: policy.version,
-    })
-    message.success('保存成功')
-    showModal.value = false
-    await load()
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
-function confirmDelete(row: StockMaterial) {
-  dialog.warning({
-    draggable: true,
-    title: '确认删除物资档案',
-    content: `确定删除“${row.name}（${row.model_spec}）”吗？删除后无法恢复。`,
-    positiveText: '确认删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      deletingId.value = row.id
-      try {
-        await inventoryApi.deleteMaterial(row.id, row.version)
-        message.success('物资档案已删除')
-        // 防空页回退由 usePagedTable 的 rollbackEmptyPage 处理（删掉末页最后一条后自动退页）
-        await load()
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : '删除失败')
-        return false
-      } finally {
-        deletingId.value = null
-      }
-      return true
-    },
-  })
-}
-
 function rowProps(row: StockMaterial) {
   return {
     style: 'cursor: pointer',
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
-      if (!rowClickGuard.shouldIgnore(event)) {
-        void router.push({ name: 'stock-material-detail', params: { id: row.id } })
-      }
+      if (!rowClickGuard.shouldIgnore(event)) void openDetail(row.id)
     },
   }
 }
@@ -310,54 +261,12 @@ function rowProps(row: StockMaterial) {
       </div>
     </n-card>
 
-    <n-modal
-      v-model:show="showModal"
-      preset="card"
-      draggable
-      :title="editing ? '编辑二级库物资' : '新建二级库物资'"
-      style="width: min(720px, calc(100vw - 24px))"
-      :mask-closable="false"
-    >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
-        <div class="form-grid">
-          <n-form-item label="物资名称" path="name">
-            <n-input v-model:value="form.name" maxlength="128" />
-          </n-form-item>
-          <n-form-item label="型号规格" path="model_spec">
-            <n-input
-              v-model:value="form.model_spec"
-              maxlength="255"
-              placeholder="无型号时填写“无”"
-            />
-          </n-form-item>
-          <n-form-item label="计量单位" path="unit_name">
-            <n-input v-model:value="form.unit_name" maxlength="32" placeholder="可任意填写" />
-          </n-form-item>
-        </div>
-        <n-divider title-placement="left">低库存预警</n-divider>
-        <div class="form-grid policy-grid">
-          <n-form-item label="最低库存">
-            <QuantityInput v-model:value="policy.minimum_qty" />
-          </n-form-item>
-          <n-form-item label="预警状态">
-            <div class="switch-field">
-              <n-switch v-model:value="policy.enabled" />
-              <span>{{ policy.enabled ? '已启用' : '已停用' }}</span>
-            </div>
-          </n-form-item>
-        </div>
-        <n-form-item label="备注">
-          <n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count />
-        </n-form-item>
-        <n-form-item label="图片附件"><ImageUploader v-model:files="images" /></n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" :loading="saving" @click="save">保存</n-button>
-        </n-space>
-      </template>
-    </n-modal>
+    <StockMaterialFormModal
+      :show="showModal"
+      :material-id="materialId"
+      @update:show="toggled"
+      @saved="load"
+    />
   </div>
 </template>
 
@@ -377,22 +286,5 @@ function rowProps(row: StockMaterial) {
 .filter-actions {
   justify-content: flex-end;
   margin-top: 20px;
-}
-
-.switch-field {
-  display: flex;
-  min-height: 34px;
-  align-items: center;
-  gap: 10px;
-}
-
-.policy-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (max-width: 760px) {
-  .policy-grid {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
