@@ -171,6 +171,7 @@
 | 列宽 | 统一引用 `web/src/constants/table.ts`，见下表 |
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
 | 压缩控制 | 每列同时设 `width` 与相同 `minWidth`；`scroll-x` 按实际列宽计算，超宽时横向滚动，不靠等比压缩牺牲名称/型号列 |
+| 移动端占满卡片 | 移动端（≤768px）**含表格**的数据卡片内容区 `padding: 0`，让表格四边直接占满卡片；屏幕留白（`.app-content` 左右 14px）与卡片圆角、边框保持不变，桌面端维持原样。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 12px 内边距。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器 |
 | 普通表格 | `n-table` 必须放进 `table-scroll` 容器，并设符合字段数量的最小宽度 |
 
 | 内容类型 | 列宽 |
@@ -340,6 +341,7 @@
 - [ ] 列表页标题下没有可删除的重复说明
 - [ ] 卡片复用全局圆角、边框、阴影
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
+- [ ] 移动端表格卡片内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`
 - [ ] 移动端弹窗四周留白、内部单层滑动、底部按钮排成一行；矮视口（手机横屏）与窄屏都要能看见底部按钮（由 `styles.css` 断点规则统一提供，页面未加局部样式）
