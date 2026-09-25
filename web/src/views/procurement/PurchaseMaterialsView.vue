@@ -785,6 +785,8 @@ function openCreate() {
   images.value = []
   createPlanDate.value = Date.now()
   createAdvancedSections.value = []
+  // 新建也要刷新脏基准：否则会拿上一条计划的基准去比，刚打开就判成「有未保存修改」
+  editBaseline.value = editSnapshot()
   show.value = true
 }
 function openEdit(row: PurchaseMaterial) {
