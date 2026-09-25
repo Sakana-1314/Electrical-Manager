@@ -487,7 +487,7 @@ flowchart LR
 | 二级库物资建档与安全库存 | 物资表单保存、安全库存设置 | `stock_material`、`stock_material_image`、`stock_balance`、`stock_replenishment_policy` |
 | 周期性计划一键生成 | 模板一键生成 | `purchase_plan_template`（读） → `purchase_material`（写，计划日期取生成当天） |
 | 小程序扫码与出库 | 扫物资码、库存查询、扫码出库 | `stock_material`、`stock_balance`、`stock_operation(_line)` |
-| 小程序码生成 | 物资详情生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
+| 小程序码生成 | 物资详情弹窗生成小程序码（重定向到带物资标识的入口） | 无（微信接口 + 内存缓存） |
 | 物料编码存在性校验 | 计划补录编码时校验 | `material_code_library` |
 | 隐患登记与整改闭环 | 网页端登记/编辑、小程序登记与整改跟进 | `hazard`、`hazard_before_image`、`hazard_after_image`（字典表 `hazard_unit`、`hazard_type`） |
 | 台账登记与标签维护 | 标签管理页维护标签树、台账总览页新增/编辑台账记录 | `ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image` |

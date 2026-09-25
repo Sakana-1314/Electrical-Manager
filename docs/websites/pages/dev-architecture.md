@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 48 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 57 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -98,22 +98,22 @@ web/src/
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 顶栏用户菜单 |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：汇总卡片（`inventoryApi.summary` + `hazardApi.stats`）与低库存提醒表格 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
-| `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表/新增编辑、补库策略、小程序码 |
-| `/warehouse/materials/:id` | `stock-material-detail` | `views/warehouse/StockMaterialDetailView.vue` | 需登录 | 物资详情（图片、出入库记录、策略） |
+| `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表；行点击/编辑/新建都打开 `StockMaterialFormModal`（详情、档案与补库策略、出库小程序码、删除） |
+| `/warehouse/materials/:id` | — | 无组件，`redirect` 到 `stock-materials` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该物资的详情弹窗 |
 | `/warehouse/inbound` | `inbound` | `views/warehouse/OperationEditorView.vue`（`props: { operationType: 'INBOUND' }`） | `warehouse:write` | 入库登记（行编辑与校验） |
 | `/warehouse/outbound` | `outbound` | `views/warehouse/OperationEditorView.vue`（`props: { operationType: 'OUTBOUND' }`） | `warehouse:write` | 出库登记（行编辑与校验） |
 | `/warehouse/stock` | `stock` | `views/warehouse/StockView.vue` | 需登录 | 库存查询（余额/低库存）、生成补库草稿 |
 | `/warehouse/hua-xing-stock` | `hua-xing-stock` | `views/warehouse/HuaXingStockView.vue` | 需登录 | 华星总库存查询 + Excel 导入（`useImportJob`/`useImportConfirm`） |
 | `/warehouse/lite` | `warehouse-lite` | `views/warehouse/SecondaryWarehouseLiteView.vue` | 需登录 | 精简二级库：Excel 导入 + 只读查询 |
-| `/warehouse/operations` | `operations` | `views/warehouse/OperationsView.vue` | 需登录 | 流水列表（筛选/详情/冲减入口） |
-| `/warehouse/operations/:id` | `operation-detail` | `views/warehouse/OperationDetailView.vue` | 需登录 | 流水详情与修改、冲减 |
-| `/procurement/materials` | `purchase-materials` | `views/procurement/PurchaseMaterialsView.vue`（`keepAlive`） | 需登录 | 计划列表：筛选/排序/批量更新/批量转记录/导出、列显隐与 URL 同步 |
-| `/procurement/materials/:id` | `purchase-material-detail` | `views/procurement/PurchaseMaterialDetailView.vue` | 需登录 | 计划详情与编辑 |
+| `/warehouse/operations` | `operations` | `views/warehouse/OperationsView.vue` | 需登录 | 流水列表；行点击/流水号/「详情」都打开 `OperationDetailModal`（单据信息、物资明细、修改、反向冲销） |
+| `/warehouse/operations/:id` | — | 无组件，`redirect` 到 `operations` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该流水的详情弹窗 |
+| `/procurement/materials` | `purchase-materials` | `views/procurement/PurchaseMaterialsView.vue`（`keepAlive`） | 需登录 | 计划列表：筛选/排序/批量更新/批量转记录/导出、列显隐与 URL 同步；行点击打开计划详情弹窗（编辑、单条转记录、删除、在新页面打开） |
+| `/procurement/materials/:id` | — | 无组件，`redirect` 到 `purchase-materials` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该计划的详情弹窗 |
 | `/procurement/purchase-plan-templates` | `purchase-plan-templates` | `views/procurement/PurchasePlanTemplatesView.vue`（`keepAlive`） | 需登录 | 模板列表/编辑/生成申购计划 |
 | `/procurement/uncoded-materials` | `uncoded-materials` | `views/procurement/UncodedMaterialsView.vue` | 需登录 | 未编码物资（`coded: false`）批量编码与导出 |
 | `/procurement/material-code-library` | `material-code-library` | `views/procurement/MaterialCodeLibraryView.vue` | 需登录 | 编码库列表 + Excel 导入 |
-| `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出 |
-| `/procurement/records/:id` | `purchase-record-detail` | `views/procurement/PurchaseRequestDetailView.vue` | 需登录 | 记录详情与编辑（含图片） |
+| `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出；行点击打开记录详情弹窗（编辑、转为申购计划、再次申购、在新页面打开） |
+| `/procurement/records/:id` | — | 无组件，`redirect` 到 `purchase-records` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该记录的详情弹窗 |
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
@@ -142,7 +142,7 @@ web/src/
 | 3 | 非 `public` 时先 `await useProjectStore().ensureLoaded()`（拉取项目列表失败不拦导航） |
 | 4 | 目标是 `login` 但已登录 → 落地页（见下） |
 | 5 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → 落地页（见下） |
-| 6 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`stock-material-detail`、`inbound`、`outbound`、`stock`、`operations`、`operation-detail`）→ `{ name: 'warehouse-lite' }` |
+| 6 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`inbound`、`outbound`、`stock`、`operations`）→ `{ name: 'warehouse-lite' }`；旧详情路径的 `redirect` 先解析成列表路由，因此同样会被这条守卫接管 |
 
 **落地页**：`/`、登录成功（`LoginView`，无 `?redirect=` 时）与上面第 4、5 条都落到「当前可见的第一个主 tab」——
 由 `utils/navigation.ts` 的 `resolveLandingRouteName(settings.webFeatures, { isLiteMode })` 推导（二级库在精简模式下落到 `warehouse-lite`），
@@ -238,7 +238,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 24 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 26 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -252,6 +252,8 @@ web/src/
 | `MaterialCodeSelector.vue` | 物料编码库弹窗选择器，支持按编码/名称/型号检索分页 | props：`modelValue: string`、`defaultName?`、`defaultModelSpec?`、`disabled?`；emits：`update:modelValue`、`select: [MaterialCodeLibrary]` |
 | `MaterialSelector.vue` | 二级库物资下拉选择（支持关键词加载与排除已选） | props：`value: number \| null`、`disabled?`、`excludeIds?: number[]`；emits：`update:value`、`select: [StockMaterial?]` |
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
+| `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
+| `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
 | `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按名称/型号检索历史记录表格） | props：`show: boolean`、`initialName?`；emit：`update:show` |
 | `QuantityInput.vue` | 数量输入框：正则限制 1 位小数，用 `isDecimalString` / `compareDecimal` 校验并显示 error/success 状态 | props：`value: string`、`decimalPlaces?`（默认 1）、`max?`、`disabled?`、`placeholder?`；emit：`update:value` |
 | `ReverseOperationDialog.vue` | 出入库流水冲减弹窗（按行填写冲减数量，`reversed` 回传操作 id） | props：`show: boolean`、`operation: StockOperation \| null`；emits：`update:show`、`reversed: [id: number]` |
@@ -267,15 +269,16 @@ web/src/
 | `WorkTaskFormModal.vue` | 任务新增 / 编辑弹窗（名称 / 状态 / 计划起止 / 工作内容 / 备注 / 图片，删除入口在页脚） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `WorkRecordFormModal.vue` | 工作记录新增 / 编辑弹窗（任务可搜索下拉、起止日期 + 上午 / 下午、参与人员可输入新姓名、备注；`readonly` 时变成只读详情） | props：`show`、`recordId?`、`presetTaskId?`、`presetDate?`、`presetParticipants?`、`readonly?`；emits：`update:show`、`saved` |
 ### Composable 清单
-`web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
+`web/src/composables/` 下 7 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
-| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 19 个列表页（仓库 5、申购 5、设置 5、隐患 3、台账 1） |
+| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL（`preservedQueryKeys` 声明要原样保留的非筛选参数，如详情弹窗的 `detail`，从当前 `route.query` 实时读） | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 19 个列表页（仓库 5、申购 5、设置 5、隐患 3、台账 1） |
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
 | `useImplicitAiSearch.ts` | 隐式 AI 搜索：用户显式展开关键词优先，源输入变化时自动清除展开值 | `searchName`、`applyExpandedName(value)`、`clearExpandedName()` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
+| `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 4 个详情弹窗（物资 / 流水 / 计划 / 记录） |
 | `useShiftWheelHorizontalScroll.ts` | 在表格滚动容器上支持 Shift+滚轮横向滚动 | 无返回值（内部挂/卸 `wheel` 监听，`passive: false`） | 申购 3 个列表页 |
 
 

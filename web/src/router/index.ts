@@ -26,12 +26,10 @@ declare module 'vue-router' {
 /** 完整模式二级库的路由：精简模式下统一重定向到精简视图 */
 const FULL_WAREHOUSE_ROUTES = new Set([
   'stock-materials',
-  'stock-material-detail',
   'inbound',
   'outbound',
   'stock',
   'operations',
-  'operation-detail',
 ])
 
 /**
@@ -81,10 +79,12 @@ const router = createRouter({
           meta: { title: '物资档案', parent: '二级库' },
         },
         {
+          // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
           path: 'warehouse/materials/:id',
-          name: 'stock-material-detail',
-          component: () => import('@/views/warehouse/StockMaterialDetailView.vue'),
-          meta: { title: '物资详情', parent: '物资档案' },
+          redirect: (to) => ({
+            name: 'stock-materials',
+            query: { detail: String(to.params.id) },
+          }),
         },
         {
           path: 'warehouse/inbound',
@@ -125,10 +125,12 @@ const router = createRouter({
           meta: { title: '操作记录', parent: '二级库' },
         },
         {
+          // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
           path: 'warehouse/operations/:id',
-          name: 'operation-detail',
-          component: () => import('@/views/warehouse/OperationDetailView.vue'),
-          meta: { title: '流水详情', parent: '操作记录' },
+          redirect: (to) => ({
+            name: 'operations',
+            query: { detail: String(to.params.id) },
+          }),
         },
         {
           path: 'procurement/materials',
@@ -137,10 +139,12 @@ const router = createRouter({
           meta: { title: '申购计划', parent: '申购管理', keepAlive: true },
         },
         {
+          // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
           path: 'procurement/materials/:id',
-          name: 'purchase-material-detail',
-          component: () => import('@/views/procurement/PurchaseMaterialDetailView.vue'),
-          meta: { title: '申购计划详情', parent: '申购计划' },
+          redirect: (to) => ({
+            name: 'purchase-materials',
+            query: { detail: String(to.params.id) },
+          }),
         },
         {
           path: 'procurement/purchase-plan-templates',
@@ -167,10 +171,12 @@ const router = createRouter({
           meta: { title: '申购记录', parent: '申购管理', keepAlive: true },
         },
         {
+          // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
           path: 'procurement/records/:id',
-          name: 'purchase-record-detail',
-          component: () => import('@/views/procurement/PurchaseRequestDetailView.vue'),
-          meta: { title: '申购记录详情', parent: '申购记录' },
+          redirect: (to) => ({
+            name: 'purchase-records',
+            query: { detail: String(to.params.id) },
+          }),
         },
         {
           path: 'hazards',
