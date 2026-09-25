@@ -234,6 +234,8 @@ a {
   color: var(--color-text-muted);
   font-size: 13px;
 }
+/* 这条规则用的是 naive-ui 不产出的 BEM 写法（真实类名是单短横线的 .n-card-content），
+   因此从未生效；保留原样不动，避免顺带改变桌面端上内边距（桌面端本次要求维持不变）。 */
 .data-card .n-card__content {
   padding-top: 18px;
 }
@@ -582,7 +584,20 @@ a {
   .detail-toolbar {
     gap: 10px 12px;
   }
-
+  /* 移动端：含表格的数据卡片内边距全部归零，让表格四边直接占满卡片。
+     Naive 的内边距作用在内容区 `.n-card-content` 上（注意是单短横线：`.n-card__content`
+     是 BEM 写法，naive-ui 2.x 实际不产出这个类），归零即让表格贴住卡片四边；
+     屏幕留白（.app-content 的左右 14px）保留，卡片自身仍是圆角卡片。
+     只命中「卡片里确实有表格」的情况（:has(.n-data-table)）：.data-card 也被「关于」页与
+     台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，那些页面的内边距保持原样。
+     分页条补回左右内边距，避免贴着卡片下沿与左右边缘。 */
+  .data-card:has(.n-data-table) > .n-card-content {
+    padding: 0;
+  }
+  .data-card:has(.n-data-table) .pagination-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }
 
 /* ============ 移动端 / 矮视口弹窗（preset="card"）============
