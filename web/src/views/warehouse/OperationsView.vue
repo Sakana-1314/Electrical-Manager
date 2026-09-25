@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { h, ref } from 'vue'
+import { h, ref, watch } from 'vue'
 import { NButton, NTag, useMessage } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { StockOperation } from '@/api/generated'
 import { inventoryApi } from '@/api/inventory'
 import {
@@ -11,10 +11,13 @@ import {
 } from '@/constants/table'
 import { formatShanghaiTime } from '@/utils/time'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
+import { routeQueryString } from '@/utils/routeQuery'
 import { usePagedTable } from '@/composables/usePagedTable'
 import FilterExpandButton from '@/components/FilterExpandButton.vue'
+import OperationDetailModal from '@/components/OperationDetailModal.vue'
 
 const router = useRouter()
+const route = useRoute()
 const message = useMessage()
 const rowClickGuard = createTableRowClickGuard()
 const filterExpanded = ref(false)
@@ -34,6 +37,7 @@ const {
   pageSize,
   loading,
   filters,
+  load,
   query,
   changePage,
   changePageSize,
@@ -64,8 +68,53 @@ const {
       operation_type: f.operation_type || undefined,
       material_name: f.material_name.trim() || undefined,
     }),
+    // 详情弹窗的 id 不属于筛选状态，翻页/筛选时都必须留在 URL 里
+    preservedQueryKeys: ['detail'],
   },
 })
+
+// 流水详情弹窗（原 /warehouse/operations/:id 详情页）
+const showDetail = ref(false)
+const detailId = ref<number | null>(null)
+
+async function openDetail(id: number) {
+  detailId.value = id
+  showDetail.value = true
+  if (routeQueryString(route.query.detail) !== String(id)) {
+    await router.replace({ query: { ...route.query, detail: String(id) } })
+  }
+}
+
+async function closeDetail() {
+  showDetail.value = false
+  detailId.value = null
+  if (routeQueryString(route.query.detail)) {
+    await router.replace({ query: { ...route.query, detail: undefined } })
+  }
+}
+
+function onDetailShow(value: boolean) {
+  showDetail.value = value
+  if (!value) void closeDetail()
+}
+
+// 冲销成功：刷新列表，并把弹窗切到新生成的冲销流水（等价于原来跳转冲销流水详情）
+async function onReversed(id: number) {
+  await load()
+  await openDetail(id)
+}
+
+// URL → 弹窗的唯一入口：用 watch 而不是 onMounted，同页导航（入库/出库提交后跳转）也能生效
+watch(
+  () => routeQueryString(route.query.detail),
+  (raw) => {
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    if (showDetail.value && detailId.value === id) return
+    void openDetail(id)
+  },
+  { immediate: true },
+)
 const columns = preventTableColumnCompression<StockOperation>([
   {
     title: '流水号',
@@ -77,7 +126,7 @@ const columns = preventTableColumnCompression<StockOperation>([
         {
           text: true,
           type: 'primary',
-          onClick: () => router.push({ name: 'operation-detail', params: { id: row.id } }),
+          onClick: () => void openDetail(row.id),
         },
         { default: () => row.operation_no },
       ),
@@ -121,7 +170,7 @@ const columns = preventTableColumnCompression<StockOperation>([
         NButton,
         {
           size: 'small',
-          onClick: () => router.push({ name: 'operation-detail', params: { id: row.id } }),
+          onClick: () => void openDetail(row.id),
         },
         { default: () => '详情' },
       ),
@@ -134,9 +183,7 @@ function rowProps(row: StockOperation) {
     style: 'cursor: pointer',
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
-      if (!rowClickGuard.shouldIgnore(event)) {
-        void router.push({ name: 'operation-detail', params: { id: row.id } })
-      }
+      if (!rowClickGuard.shouldIgnore(event)) void openDetail(row.id)
     },
   }
 }
@@ -228,6 +275,14 @@ function rowProps(row: StockOperation) {
         />
       </div>
     </n-card>
+
+    <OperationDetailModal
+      :show="showDetail"
+      :operation-id="detailId"
+      @update:show="onDetailShow"
+      @saved="load"
+      @reversed="onReversed"
+    />
   </div>
 </template>
 
