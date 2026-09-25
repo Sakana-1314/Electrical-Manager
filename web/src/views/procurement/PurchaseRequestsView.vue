@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from 'vue'
+import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import {
   NTag,
   useDialog,
@@ -7,7 +7,7 @@ import {
   type DataTableBaseColumn,
   type DataTableColumns,
 } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type {
   FileObject,
   PurchaseRecord,
@@ -41,6 +41,7 @@ import { downloadFromUrl, exportDownloadUrl } from '@/utils/download'
 import { routeQueryString } from '@/utils/routeQuery'
 import { useExportJob } from '@/composables/useExportJob'
 import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
+import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
@@ -48,6 +49,7 @@ import { useAuthStore } from '@/stores/auth'
 import { purchaseCategoryOptions } from '@/constants/purchase'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const message = useMessage()
 const dialog = useDialog()
@@ -180,6 +182,8 @@ const {
       sort_by: f.sort_by || undefined,
       sort_order: f.sort_order || undefined,
     }),
+    // 详情弹窗的 id 不属于筛选状态，翻页/筛选/keepAlive 重新激活时都必须留在 URL 里
+    preservedQueryKeys: ['detail'],
   },
 })
 const { searchName, applyExpandedName, clearExpandedName } = useImplicitAiSearch(() => filters.name)
@@ -204,9 +208,10 @@ const { running: resultExporting, run: runResultExport } =
     start: procurementApi.exportRecordResults,
     poll: procurementApi.excelExportJob,
   })
-// 单条编辑弹窗（点击行打开，与申购计划一致）
+// 单条详情弹窗（点击行打开，与申购计划一致）；详情 id 写成 URL 的 ?detail=
 const showEdit = ref(false)
 const editing = ref<PurchaseRecord | null>(null)
+const detailId = ref<number | null>(null)
 const editSaving = ref(false)
 const editAdvancedSections = ref<string[]>([])
 const editPlanDate = ref<number | null>(null)
@@ -659,16 +664,16 @@ function rowProps(row: PurchaseRecord) {
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
       if (rowClickGuard.shouldIgnore(event)) return
-      // Ctrl/Meta+点击在新标签页打开详情页
+      // Ctrl/Meta+点击在新标签页打开详情（列表页 + ?detail=）
       if (event.ctrlKey || event.metaKey) {
         const href = router.resolve({
-          name: 'purchase-record-detail',
-          params: { id: String(row.line_id) },
+          name: 'purchase-records',
+          query: { detail: String(row.line_id) },
         }).href
         window.open(href, '_blank')
         return
       }
-      // 点击行直接打开编辑弹窗（与申购计划一致）
+      // 点击行直接打开详情弹窗（与申购计划一致）
       openEditRecord(row)
     },
   }
@@ -810,17 +815,91 @@ function syncEditForm(value: PurchaseRecord) {
 
 function openEditRecord(row: PurchaseRecord) {
   editing.value = row
+  detailId.value = row.line_id
+  void syncDetailQuery(row.line_id)
   syncEditForm(row)
   editAdvancedSections.value = []
+  editBaseline.value = editSnapshot()
   showEdit.value = true
 }
+
+/** 把当前打开的详情 id 写进 URL（`?detail=`），刷新 / 新标签页 / 收藏都能回到同一条记录。 */
+async function syncDetailQuery(id: number | null) {
+  const current = routeQueryString(route.query.detail)
+  const next = id === null ? undefined : String(id)
+  if (current === (next ?? '')) return
+  await router.replace({ query: { ...route.query, detail: next } })
+}
+
+/**
+ * 未保存修改的脏判定：与打开时的快照比对（`watch(deep)` 会被 `syncEditForm` 回填的
+ * 刷新时序误判成用户改动）。
+ */
+const editBaseline = ref('')
+function editSnapshot(): string {
+  return JSON.stringify({
+    form: { ...editForm },
+    plan_date: editPlanDate.value,
+    purchase_date: editPurchaseDate.value,
+    consolidation_date: editConsolidationDate.value,
+    sailing_date: editSailingDate.value,
+    contract_sign_date: editContractSignDate.value,
+    image_ids: editImages.value.map((image) => image.id),
+  })
+}
+function isEditDirty(): boolean {
+  return editBaseline.value !== '' && editSnapshot() !== editBaseline.value
+}
+
+function closeDetail() {
+  showEdit.value = false
+  editing.value = null
+  detailId.value = null
+  void syncDetailQuery(null)
+}
+
+const { requestClose: requestCloseDetail } = useMaskCloseGuard({
+  isDirty: () => isEditDirty(),
+  close: () => closeDetail(),
+})
+
+/** `@close` 必须返回 false，否则 naive-ui 自己会把 show 置 false，拦不住「继续编辑」。 */
+function handleCloseClick(): false {
+  requestCloseDetail()
+  return false
+}
+
+/** 按 id 打开详情弹窗（旧详情页链接、转为计划/再次申购跳转等都用它）。 */
+async function openDetailById(lineId: number) {
+  detailId.value = lineId
+  try {
+    const record = await procurementApi.record(lineId)
+    openEditRecord(record)
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '申购记录加载失败')
+    closeDetail()
+  }
+}
+
+// URL → 弹窗的唯一入口：用 watch 而不是 onMounted，keepAlive / 同页导航都能生效
+watch(
+  () => routeQueryString(route.query.detail),
+  (raw) => {
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    if (showEdit.value && detailId.value === id) return
+    void openDetailById(id)
+  },
+  { immediate: true },
+)
 
 function openRecordInNewPage() {
   const target = editing.value
   if (!target) return
+  // 详情页已移除：新标签页打开列表页并由 ?detail= 自动弹开同一条记录的详情弹窗
   const href = router.resolve({
-    name: 'purchase-record-detail',
-    params: { id: String(target.line_id) },
+    name: 'purchase-records',
+    query: { detail: String(target.line_id) },
   }).href
   window.open(href, '_blank')
 }
@@ -844,10 +923,10 @@ async function restoreToPlan() {
   try {
     const plan = await procurementApi.restoreRecordToPlan(target.line_id, target.version)
     message.success('已转为申购计划')
-    showEdit.value = false
-    editing.value = null
+    closeDetail()
     await load()
-    void router.push({ name: 'purchase-material-detail', params: { id: plan.id } })
+    // 计划详情同样已是弹窗：跳到计划列表并由 ?detail= 打开新计划
+    void router.push({ name: 'purchase-materials', query: { detail: String(plan.id) } })
   } catch (error) {
     message.error(error instanceof Error ? error.message : '转为申购计划失败')
   } finally {
@@ -912,7 +991,10 @@ async function submitReapply() {
     })
     message.success('已创建新的申购计划')
     showReapply.value = false
-    void router.push({ name: 'purchase-material-detail', params: { id: created.id } })
+    // 记录列表是 keepAlive 页：离开前先把详情弹窗关掉，回来时不会停在旧记录上
+    closeDetail()
+    // 计划详情同样已是弹窗：跳到计划列表并由 ?detail= 打开新计划
+    void router.push({ name: 'purchase-materials', query: { detail: String(created.id) } })
   } catch (error) {
     message.error(error instanceof Error ? error.message : '再次申购失败')
   } finally {
@@ -964,8 +1046,7 @@ async function saveEditRecord() {
       image_ids: editImages.value.map((image) => image.id),
     })
     message.success('申购记录已保存')
-    showEdit.value = false
-    editing.value = null
+    closeDetail()
     await load()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败')
@@ -1542,9 +1623,14 @@ onMounted(() => {
       v-model:show="showEdit"
       preset="card"
       draggable
-      :title="editing ? '编辑申购记录' : '申购记录'"
+      data-detail-modal
+      title="申购记录详情"
       style="width: 760px; max-width: calc(100vw - 32px)"
       :mask-closable="false"
+      :close-on-esc="false"
+      @mask-click="requestCloseDetail"
+      @esc="requestCloseDetail"
+      @close="handleCloseClick"
     >
       <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
         <n-form label-placement="top">
@@ -1740,7 +1826,7 @@ onMounted(() => {
           </n-space>
           <span v-else></span>
           <n-space justify="end">
-            <n-button @click="showEdit = false">取消</n-button>
+            <n-button @click="requestCloseDetail">取消</n-button>
             <n-button type="primary" :loading="editSaving" @click="saveEditRecord">保存</n-button>
           </n-space>
         </n-space>

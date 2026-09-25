@@ -119,7 +119,8 @@ function rowProps(row: PurchaseMaterial) {
         content: `确认打开“${row.name}”对应的申购计划详情吗？`,
         positiveText: '打开',
         negativeText: '取消',
-        onPositiveClick: () => router.push(`/procurement/materials/${row.id}`),
+        onPositiveClick: () =>
+          router.push({ name: 'purchase-materials', query: { detail: String(row.id) } }),
       })
     },
   }

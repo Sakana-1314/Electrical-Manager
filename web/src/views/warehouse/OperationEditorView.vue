@@ -57,7 +57,8 @@ async function submit() {
         ? await inventoryApi.inbound(payload)
         : await inventoryApi.outbound(payload)
     message.success(`${title.value}成功：${result.operation_no}`)
-    await router.replace(`/warehouse/operations/${result.id}`)
+    // 流水详情已改为弹窗：跳到操作记录列表并由 ?detail= 打开这条流水
+    await router.replace({ name: 'operations', query: { detail: String(result.id) } })
   } catch (e) {
     requestId.value = null
     message.error(e instanceof Error ? e.message : '提交失败')
