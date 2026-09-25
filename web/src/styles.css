@@ -598,12 +598,19 @@ a {
   /* 移动端：含表格的数据卡片内边距全部归零，让表格四边直接占满卡片。
      Naive 的内边距作用在内容区 `.n-card-content` 上（注意是单短横线：`.n-card__content`
      是 BEM 写法，naive-ui 2.x 实际不产出这个类），归零即让表格贴住卡片四边；
-     屏幕留白（.app-content 的左右 14px）保留，卡片自身仍是圆角卡片。
+     屏幕留白（.app-content 的左右 14px）保留。
      只命中「卡片里确实有表格」的情况（:has(.n-data-table)）：.data-card 也被「关于」页与
      台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，那些页面的内边距保持原样。
      分页条补回左右内边距，避免贴着卡片下沿与左右边缘。 */
   .data-card:has(.n-data-table) > .n-card-content {
     padding: 0;
+  }
+  /* padding 归零后表头（灰底）与行背景直接顶到卡片四角，而卡片默认 overflow: visible
+     不裁剪子元素，圆角就被方形背景"盖"掉了（表现为四角变直角）。让卡片裁剪内容即可恢复
+     圆角；卡片本身圆角仍是 --radius-card，边框不受影响。
+     注意不要写成 overflow: auto/scroll——那会给卡片再套一层滚动条。 */
+  .data-card:has(.n-data-table) {
+    overflow: hidden;
   }
   .data-card:has(.n-data-table) .pagination-bar {
     padding-left: 12px;
