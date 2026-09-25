@@ -377,10 +377,6 @@ async function remove(file: FileObject) {
         @change="choose"
       />
     </div>
-    <p class="image-hint">
-      JPG / PNG / WebP · 单张不超过 10 MB · 最多 {{ max }} 张 · 支持 Ctrl+V 粘贴 · 可多选，最多
-      {{ UPLOAD_CONCURRENCY }} 张同时上传 · 超过 1 MB 的图片先比对摘要，重复的免上传
-    </p>
   </div>
 </template>
 
@@ -539,11 +535,5 @@ async function remove(file: FileObject) {
 .plus {
   font-size: 28px;
   line-height: 1;
-}
-.image-hint {
-  margin: 7px 2px 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.6;
 }
 </style>
