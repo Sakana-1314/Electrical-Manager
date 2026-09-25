@@ -171,7 +171,7 @@
 | 列宽 | 统一引用 `web/src/constants/table.ts`，见下表 |
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
 | 压缩控制 | 每列同时设 `width` 与相同 `minWidth`；`scroll-x` 按实际列宽计算，超宽时横向滚动，不靠等比压缩牺牲名称/型号列 |
-| 移动端占满卡片 | 移动端（≤768px）**含表格**的数据卡片内容区 `padding: 0`，让表格四边直接占满卡片；屏幕留白（`.app-content` 左右 14px）与卡片圆角、边框保持不变，桌面端维持原样。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 12px 内边距。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器 |
+| 移动端占满卡片 | 移动端（≤768px）**含表格**的数据卡片内容区 `padding: 0`，让表格四边直接占满卡片；屏幕留白（`.app-content` 左右 14px）保持不变，桌面端维持原样。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 12px 内边距。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
 | 普通表格 | `n-table` 必须放进 `table-scroll` 容器，并设符合字段数量的最小宽度 |
 
 | 内容类型 | 列宽 |

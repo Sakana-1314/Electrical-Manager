@@ -68,6 +68,18 @@ describe('移动端表格卡片的接线', () => {
     )
   })
 
+  it('卡片裁剪内容，保证内边距归零后四角圆角不被方形背景盖掉', () => {
+    // padding 归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 overflow: visible
+    // 不裁剪子元素，圆角就被"盖"成直角（实测过）。必须让卡片裁剪内容。
+    expect(mobile).toMatch(/\.data-card:has\(\.n-data-table\) \{\s*\n\s*overflow: hidden;/)
+    // 不能用 auto/scroll：那会给卡片再套一层滚动条（表格自己已有横向滚动）
+    const rule = mobile.match(/\.data-card:has\(\.n-data-table\) \{[^}]*\}/)?.[0] ?? ''
+    expect(rule).not.toContain('overflow: auto')
+    expect(rule).not.toContain('overflow: scroll')
+    // 圆角本身仍由全局 --radius-card 提供，断言这条 token 还在
+    expect(styles).toContain('--radius-card: 14px')
+  })
+
   it('规则落在 ≤768px 断点内，桌面端不受影响', () => {
     const ruleIndex = styles.indexOf(RULE)
     const blockStart = styles.indexOf('@media (max-width: 768px) {')
