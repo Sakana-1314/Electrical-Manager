@@ -120,6 +120,19 @@ describe('ImageUploader', () => {
     expect(message.warning).toHaveBeenCalledWith('剪贴板中没有可粘贴的图片')
   })
 
+  it('不渲染格式/大小/数量的小字描述，只靠选择框限定扩展名', () => {
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    // 小字提示行已移除：格式由 accept 限定，超量/超大在选中后拦截
+    expect(target.find('.image-hint').exists()).toBe(false)
+    expect(target.text()).not.toContain('Ctrl+V')
+    expect(target.text()).not.toContain('10 MB')
+    expect(target.find('input[type="file"]').attributes('accept')).toBe(
+      'image/jpeg,image/png,image/webp',
+    )
+  })
+
   it('最多同时上传 2 个，其余排队（不一次性全部发出）', async () => {
     const resolvers: Array<(value: FileObject) => void> = []
     vi.mocked(fileApi.uploadImage).mockImplementation(
