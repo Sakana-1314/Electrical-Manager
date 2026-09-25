@@ -48,11 +48,11 @@ describe('移动端弹窗样式接线', () => {
     expect(dialog).toContain('padding: var(--dialog-pad-y) 18px')
   })
 
-  it('上下留白上限 144px，且在矮视口里自适应收窄', () => {
-    // 固定 144px 会在矮视口（如手机横屏 844×390、667×375）里把卡片压到 87px，
-    // 页脚放不下就被挤出卡片、按钮看不见，所以必须是 min() + 保底高度。
+  it('上下留白上限 72px，且在矮视口里自适应收窄', () => {
+    // 固定 72px 会吃掉 144px；极矮视口（如 320×480）里必须给卡片留下 260px 可用高度，
+    // 所以是 min() + 保底高度，而不是写死像素。
     expect(dialog).toContain(
-      '--dialog-pad-y: min(144px, max(0px, (var(--dialog-avail) - 260px) / 2))',
+      '--dialog-pad-y: min(72px, max(0px, (var(--dialog-avail) - 260px) / 2))',
     )
   })
 
@@ -90,6 +90,14 @@ describe('移动端弹窗样式接线', () => {
     expect(dialog).toContain('.n-card.n-modal > .n-card__footer .n-space')
     expect(dialog).toContain('.n-card.n-modal > .n-card__footer .modal-footer')
     expect(dialog).toContain('flex: none')
+  })
+
+  it('页脚按钮上方留出间距，且极窄屏覆盖时不会把它重置为 0', () => {
+    // 页脚上边距 14px：按钮不再紧贴内容区（声明前可能有注释，故不逐字锚定换行）
+    expect(dialog).toMatch(/\.n-card\.n-modal > \.n-card__footer \{[^}]*padding: 14px 12px 8px;/)
+    // ≤360px 只收窄左右留白，上边距必须保持同值；写成 `padding: 0 8px 8px` 会静默清零
+    expect(small).toMatch(/\.n-card\.n-modal > \.n-card__footer \{[^}]*padding: 14px 8px 8px;/)
+    expect(small).not.toContain('padding: 0 8px 8px')
   })
 
   it('极窄屏再压一档，并排在弹窗规则之后（否则被覆盖）', () => {
