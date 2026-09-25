@@ -548,21 +548,32 @@ a {
     min-width: 0;
     max-width: 100%;
     align-items: center;
-    justify-content: flex-end;
+    /* 必须是 flex-start：用 flex-end 时溢出堆在**左端**，而横向滚动只能滚到右端，
+       左端超出的按钮会永久停在屏幕外（实测 320~480px 下「导出」「批量修改」被切掉，
+       且 scrollWidth == clientWidth 根本滚不动）。改成 flex-start 后溢出只往右走，可滚动。 */
+    justify-content: flex-start;
   }
-  /* n-space 的内联样式是 flex-wrap: nowrap，这里只需让按钮本体不换行并压缩尺寸；
-     内容区按钮在窄屏必要时横向滑动，避免挤出屏幕或压成两行 */
-  /* 按钮组按内容宽度排成一行（不压缩），必要时由外层横向滑动承接 */
+  /* 按钮组按内容宽度排成一行（不压缩），宽度不够时由本行的横向滑动承接 */
   .page-actions > *,
   .detail-toolbar > .n-space {
     flex: none;
     min-width: 0;
+  }
+  /* 让行内按钮组按内容宽度占位：flex 子项设了 flex: none 后仍可能被压缩到容器宽度，
+     那样 scrollWidth 会等于 clientWidth、没有可滚动区间（实测就是滚不动的原因）。
+     这里用 width: max-content 把真实宽度撑出来，交给父级滚动。 */
+  .page-actions > .n-space,
+  .detail-toolbar > .n-space {
+    width: max-content;
+    max-width: none;
   }
   .page-actions,
   .detail-toolbar {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
+    /* 旧版 iOS 需要显式声明才能触摸横向滑动 */
+    -webkit-overflow-scrolling: touch;
   }
   .page-actions::-webkit-scrollbar,
   .detail-toolbar::-webkit-scrollbar {
