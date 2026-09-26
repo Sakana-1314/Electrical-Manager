@@ -1671,7 +1671,7 @@ onBeforeUnmount(() => {
                 :bordered="false"
                 size="small"
               >
-                编码未收录，仍可保存
+                编码未收录
               </n-tag>
             </div>
           </n-form-item>
