@@ -64,7 +64,7 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 57 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 58 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
 ## 前端目录结构
 ```text
 web/src/
@@ -107,12 +107,12 @@ web/src/
 | `/warehouse/lite` | `warehouse-lite` | `views/warehouse/SecondaryWarehouseLiteView.vue` | 需登录 | 精简二级库：Excel 导入 + 只读查询 |
 | `/warehouse/operations` | `operations` | `views/warehouse/OperationsView.vue` | 需登录 | 流水列表；行点击/流水号/「详情」都打开 `OperationDetailModal`（单据信息、物资明细、修改、反向冲销） |
 | `/warehouse/operations/:id` | — | 无组件，`redirect` 到 `operations` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该流水的详情弹窗 |
-| `/procurement/materials` | `purchase-materials` | `views/procurement/PurchaseMaterialsView.vue`（`keepAlive`） | 需登录 | 计划列表：筛选/排序/批量更新/批量转记录/导出、列显隐与 URL 同步；行点击打开计划详情弹窗（编辑、单条转记录、删除、在新页面打开） |
+| `/procurement/materials` | `purchase-materials` | `views/procurement/PurchaseMaterialsView.vue`（`keepAlive`） | 需登录 | 计划列表：筛选/排序/批量更新/批量转记录/导出、列显隐与 URL 同步；行点击打开计划详情弹窗（编辑、单条转入申购记录、删除、在新页面打开），单条转入成功后跳记录列表并打开新记录的详情弹窗 |
 | `/procurement/materials/:id` | — | 无组件，`redirect` 到 `purchase-materials` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该计划的详情弹窗 |
 | `/procurement/purchase-plan-templates` | `purchase-plan-templates` | `views/procurement/PurchasePlanTemplatesView.vue`（`keepAlive`） | 需登录 | 模板列表/编辑/生成申购计划 |
 | `/procurement/uncoded-materials` | `uncoded-materials` | `views/procurement/UncodedMaterialsView.vue` | 需登录 | 未编码物资（`coded: false`）批量编码与导出 |
 | `/procurement/material-code-library` | `material-code-library` | `views/procurement/MaterialCodeLibraryView.vue` | 需登录 | 编码库列表 + Excel 导入 |
-| `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/恢复为计划/分享/导出；行点击打开记录详情弹窗（编辑、转为申购计划、再次申购、在新页面打开） |
+| `/procurement/records` | `purchase-records` | `views/procurement/PurchaseRequestsView.vue`（`keepAlive`） | 需登录 | 记录列表：批量更新/分享/导出；行点击打开记录详情弹窗（编辑、恢复为计划、再次申购、在新页面打开）；「转为申购计划」成功后跳计划列表并打开重建计划的详情弹窗 |
 | `/procurement/records/:id` | — | 无组件，`redirect` 到 `purchase-records` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该记录的详情弹窗 |
 | `/hazards` | `hazard-records` | `views/hazard/HazardRecordsView.vue`（`keepAlive`） | 需登录 | 隐患台账：筛选（类型/状态/等级/单位/整改员工/区域/关键字/日期）/分页/列显隐与 URL 同步、整行点击编辑弹窗、逾期标记 |
 | `/hazard-types` | `hazard-types` | `views/hazard/HazardTypesView.vue` | 需登录 | 隐患类型：两级横向树（大类在左、小类在右，连线由 `vue3-tree-org` 绘制），大类可折叠，点小类编辑 |

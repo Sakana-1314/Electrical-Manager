@@ -76,6 +76,8 @@ const filterExpanded = ref(false)
 const EMPTY_DEMAND_PERSON_FILTER = '__empty_actual_demand_person__'
 const EMPTY_SUBITEM_FILTER = '__empty_subitem_no__'
 const canViewArchivedPlans = computed(() => auth.user?.role === 'SUPER_ADMIN')
+/** 详情弹窗的写权限：无写权限时字段禁用、页脚只留「取消」（与原详情页一致）。 */
+const canWrite = computed(() => auth.can('purchase:write'))
 const statusFilterOptions = computed(() =>
   purchasePlanStatusOptions.filter(
     (option) => canViewArchivedPlans.value || option.value !== '已归档',
@@ -851,6 +853,10 @@ async function openDetailById(id: number) {
 watch(
   () => routeQueryString(route.query.detail),
   (raw) => {
+    // 本页是 keepAlive 页：跳去申购记录（转入成功后、记录「转为申购计划」跳回来）时本页只是被
+    // 停用，watcher 仍会跑。必须只认自己这条路由，否则会拿对方的 id 去查自己的数据，
+    // 并把对方刚写进的 `?detail=` 改写成自己的 id（两条列表来回打架）。
+    if (route.name !== 'purchase-materials') return
     const id = Number(raw)
     if (!Number.isInteger(id) || id <= 0) return
     if (show.value && detailId.value === id) return
@@ -973,7 +979,7 @@ async function moveToRecord() {
   }
   moving.value = true
   try {
-    await procurementApi.movePlanToRecord(target.id, {
+    const record = await procurementApi.movePlanToRecord(target.id, {
       purchase_order_no: moveForm.purchase_order_no.trim() || null,
       trace_no: moveForm.trace_no.trim() || null,
       contract_no: moveForm.contract_no.trim() || null,
@@ -995,7 +1001,8 @@ async function moveToRecord() {
     showMove.value = false
     closeDetail()
     await Promise.all([load(), loadFilterOptions()])
-    await router.push({ name: 'purchase-records' })
+    // 原详情页转入后直接落到新记录的详情；记录详情同样是弹窗，因此跳记录列表并由 ?detail= 打开它
+    await router.push({ name: 'purchase-records', query: { detail: String(record.line_id) } })
   } catch (error) {
     message.error(error instanceof Error ? error.message : '转入失败')
   } finally {
@@ -1251,7 +1258,7 @@ onBeforeUnmount(() => {
       <div class="page-actions">
         <n-space>
           <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
-          <template v-if="auth.can('purchase:write')">
+          <template v-if="canWrite">
             <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
               批量修改（{{ selectedPlans.length }}）
             </n-button>
@@ -1627,7 +1634,13 @@ onBeforeUnmount(() => {
       @esc="requestCloseDetail"
       @close="handleCloseClick"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+      <n-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-placement="top"
+        :disabled="!canWrite"
+      >
         <div class="form-grid">
           <n-form-item label="需求日期" required>
             <n-date-picker v-model:value="createPlanDate" type="date" class="full-width" />
@@ -1638,6 +1651,7 @@ onBeforeUnmount(() => {
                 :model-value="form.material_code || ''"
                 :default-name="form.name"
                 :default-model-spec="form.model_spec"
+                :disabled="!canWrite"
                 @update:model-value="form.material_code = $event"
                 @select="applyMaterialCode"
               />
@@ -1679,6 +1693,7 @@ onBeforeUnmount(() => {
               <QuantityInput
                 v-model:value="form.planned_qty"
                 :decimal-places="1"
+                :disabled="!canWrite"
                 class="quantity-input"
               />
               <n-input
@@ -1734,6 +1749,7 @@ onBeforeUnmount(() => {
               <n-form-item label="关联二级库物资">
                 <MaterialSelector
                   :value="form.stock_material_id ?? null"
+                  :disabled="!canWrite"
                   @update:value="form.stock_material_id = $event ?? undefined"
                 />
               </n-form-item>
@@ -1743,15 +1759,16 @@ onBeforeUnmount(() => {
         <n-form-item label="备注"
           ><n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count
         /></n-form-item>
-        <n-form-item label="图片附件"><ImageUploader v-model:files="images" /></n-form-item></n-form
+        <n-form-item label="图片附件"
+          ><ImageUploader v-model:files="images" :disabled="!canWrite" /></n-form-item></n-form
       ><template #footer
         ><n-space justify="space-between"
           ><template v-if="editing"
-            ><n-space justify="start"
+            ><n-space justify="start" align="center"
               ><span v-if="editing.updated_at" class="muted"
                 >最后更新：{{ formatShanghaiTime(editing.updated_at) }}</span
               ><n-button
-                v-if="auth.can('purchase:write')"
+                v-if="canWrite"
                 type="error"
                 ghost
                 :loading="deleting"
@@ -1759,7 +1776,7 @@ onBeforeUnmount(() => {
                 @click="confirmDelete"
                 >删除</n-button
               ><n-button
-                v-if="editing.material_code && !editing.moved_to_record"
+                v-if="canWrite && editing.material_code && !editing.moved_to_record"
                 type="primary"
                 secondary
                 @click="openMove"
@@ -1771,7 +1788,9 @@ onBeforeUnmount(() => {
           ><span v-else></span
           ><n-space justify="end"
             ><n-button @click="requestCloseDetail">取消</n-button
-            ><n-button type="primary" :loading="saving" @click="save">保存</n-button></n-space
+            ><n-button v-if="canWrite" type="primary" :loading="saving" @click="save"
+              >保存</n-button
+            ></n-space
           ></n-space
         ></template
       ></n-modal

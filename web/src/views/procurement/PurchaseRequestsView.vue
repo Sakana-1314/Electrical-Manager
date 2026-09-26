@@ -36,7 +36,7 @@ import {
   tableColumnWidths,
 } from '@/constants/table'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
-import { dateToTimestamp, formatDate, toShanghaiDate } from '@/utils/time'
+import { dateToTimestamp, formatDate, formatShanghaiTime, toShanghaiDate } from '@/utils/time'
 import { downloadFromUrl, exportDownloadUrl } from '@/utils/download'
 import { routeQueryString } from '@/utils/routeQuery'
 import { useExportJob } from '@/composables/useExportJob'
@@ -54,6 +54,8 @@ const auth = useAuthStore()
 const message = useMessage()
 const dialog = useDialog()
 const rowClickGuard = createTableRowClickGuard()
+/** 详情弹窗的写权限：无写权限时字段禁用、页脚只留「取消」（与原详情页一致）。 */
+const canWrite = computed(() => auth.can('purchase:write'))
 const filterExpanded = ref(false)
 const EMPTY_STATUS_FILTER = '__empty_status__'
 const EMPTY_SUBITEM_FILTER = '__empty_subitem_no__'
@@ -885,6 +887,10 @@ async function openDetailById(lineId: number) {
 watch(
   () => routeQueryString(route.query.detail),
   (raw) => {
+    // 本页是 keepAlive 页：跳去申购计划（「转为申购计划」成功后）时本页只是被停用，watcher 仍会
+    // 跑。必须只认自己这条路由，否则会拿计划的 id 去查申购记录（两个 id 空间独立、极易命中别人），
+    // 并把计划列表刚写进的 `?detail=` 改写成记录 id。
+    if (route.name !== 'purchase-records') return
     const id = Number(raw)
     if (!Number.isInteger(id) || id <= 0) return
     if (showEdit.value && detailId.value === id) return
@@ -1210,11 +1216,7 @@ onMounted(() => {
       </div>
       <div class="page-actions">
         <n-space align="center">
-          <n-button
-            v-if="auth.can('purchase:write')"
-            :disabled="!selectedRecords.length"
-            @click="openBatchEdit"
-          >
+          <n-button v-if="canWrite" :disabled="!selectedRecords.length" @click="openBatchEdit">
             批量修改（{{ selectedRecords.length }}）
           </n-button>
           <n-tag :bordered="false" round type="info">共 {{ total }} 条记录</n-tag>
@@ -1633,7 +1635,7 @@ onMounted(() => {
       @close="handleCloseClick"
     >
       <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
-        <n-form label-placement="top">
+        <n-form label-placement="top" :disabled="!canWrite">
           <div class="form-grid">
             <n-form-item label="需求日期" required>
               <n-date-picker v-model:value="editPlanDate" type="date" class="full-width" />
@@ -1678,6 +1680,7 @@ onMounted(() => {
                 <QuantityInput
                   v-model:value="editForm.purchase_qty"
                   :decimal-places="1"
+                  :disabled="!canWrite"
                   class="quantity-input"
                 />
                 <n-input
@@ -1768,6 +1771,7 @@ onMounted(() => {
                 <n-form-item label="关联二级库物资">
                   <MaterialSelector
                     :value="editForm.stock_material_id ?? null"
+                    :disabled="!canWrite"
                     @update:value="editForm.stock_material_id = $event ?? undefined"
                   />
                 </n-form-item>
@@ -1793,26 +1797,25 @@ onMounted(() => {
             </n-form-item>
           </div>
           <n-form-item label="图片附件">
-            <ImageUploader v-model:files="editImages" />
+            <ImageUploader v-model:files="editImages" :disabled="!canWrite" />
           </n-form-item>
         </n-form>
       </n-scrollbar>
       <template #footer>
         <n-space justify="space-between">
-          <n-space v-if="editing" justify="start">
+          <n-space v-if="editing" justify="start" align="center">
+            <span v-if="editing.updated_at" class="muted"
+              >最后更新：{{ formatShanghaiTime(editing.updated_at) }}</span
+            >
             <n-button
-              v-if="auth.can('purchase:write')"
+              v-if="canWrite"
               type="primary"
               secondary
               :loading="restoring"
               @click="confirmRestorePlan"
               >转为申购计划</n-button
             >
-            <n-button
-              v-if="auth.can('purchase:write')"
-              type="primary"
-              secondary
-              @click="openReapply"
+            <n-button v-if="canWrite" type="primary" secondary @click="openReapply"
               >再次申购</n-button
             >
             <n-button
@@ -1827,7 +1830,9 @@ onMounted(() => {
           <span v-else></span>
           <n-space justify="end">
             <n-button @click="requestCloseDetail">取消</n-button>
-            <n-button type="primary" :loading="editSaving" @click="saveEditRecord">保存</n-button>
+            <n-button v-if="canWrite" type="primary" :loading="editSaving" @click="saveEditRecord">
+              保存
+            </n-button>
           </n-space>
         </n-space>
       </template>
