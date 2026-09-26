@@ -305,7 +305,9 @@ describe('申购计划详情弹窗 →「转入申购记录」（原详情页能
     const { router } = await openPlanDetail()
 
     expect(bodyText()).toContain('申购计划详情')
-    expect(bodyText()).toContain('最后更新')
+    // 最后更新时间已移到标题右侧、不再带「最后更新：」前缀
+    expect(bodyText()).toContain('2026/09/25 10:00:00')
+    expect(bodyText()).not.toContain('最后更新')
 
     await clickButton('转入申购记录')
     // 转入弹窗：原详情页的那张表单（申购单号 / 状态 / 申购日期 / 记录备注都在）
@@ -357,6 +359,8 @@ describe('申购计划详情弹窗 →「转入申购记录」（原详情页能
     expect(labels).not.toContain('删除')
     expect(labels).not.toContain('转入申购记录')
     expect(labels).toContain('取消')
+    // 只读正是看详情的主要场景：更新时间不能因为无写权限就不显示
+    expect(bodyText()).toContain('2026/09/25 10:00:00')
   })
 })
 
@@ -366,12 +370,14 @@ describe('申购记录详情弹窗 →「转为申购计划」（原详情页能
     return { router: await mountList(PurchaseRequestsView, '/procurement/records?detail=7', role) }
   }
 
-  it('弹窗里有「转为申购计划」与最后更新摘要，确认后调接口并落到新计划的详情弹窗', async () => {
+  it('弹窗里有「转为申购计划」与右上角更新时间，确认后调接口并落到新计划的详情弹窗', async () => {
     api.restoreRecordToPlan.mockResolvedValue(plan({ id: 99 }))
     const { router } = await openRecordDetail()
 
     expect(bodyText()).toContain('申购记录详情')
-    expect(bodyText()).toContain('最后更新')
+    // 最后更新时间已移到标题右侧、不再带「最后更新：」前缀
+    expect(bodyText()).toContain('2026/09/26 10:00:00')
+    expect(bodyText()).not.toContain('最后更新')
     expect(buttonLabels()).toContain('转为申购计划')
 
     await clickButton('转为申购计划')
@@ -411,5 +417,7 @@ describe('申购记录详情弹窗 →「转为申购计划」（原详情页能
     expect(labels).not.toContain('转为申购计划')
     expect(labels).not.toContain('再次申购')
     expect(labels).toContain('取消')
+    // 只读正是看详情的主要场景：更新时间不能因为无写权限就不显示
+    expect(bodyText()).toContain('2026/09/26 10:00:00')
   })
 })

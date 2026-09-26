@@ -1636,6 +1636,10 @@ onBeforeUnmount(() => {
       @esc="requestCloseDetail"
       @close="handleCloseClick"
     >
+      <!-- 最后更新时间放标题右侧：不占页脚空间，也不与左侧的操作按钮挤在一行 -->
+      <template v-if="editing?.updated_at" #header-extra>
+        <span class="card-header-time">{{ formatShanghaiTime(editing.updated_at) }}</span>
+      </template>
       <n-form
         ref="formRef"
         :model="form"
@@ -1770,8 +1774,6 @@ onBeforeUnmount(() => {
         ><n-space justify="space-between"
           ><template v-if="editing"
             ><n-space justify="start" align="center"
-              ><span v-if="editing.updated_at" class="muted"
-                >最后更新：{{ formatShanghaiTime(editing.updated_at) }}</span
               ><n-button
                 v-if="canWrite"
                 type="error"

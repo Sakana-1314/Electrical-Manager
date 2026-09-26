@@ -304,6 +304,10 @@ watch(
     @esc="requestClose"
     @close="handleCloseClick"
   >
+    <!-- 最后更新时间放标题右侧：不占页脚空间，也不与左侧的状态标签 / 删除按钮挤在一行 -->
+    <template v-if="isEdit && material" #header-extra>
+      <span class="card-header-time">{{ formatShanghaiTime(material.updated_at) }}</span>
+    </template>
     <LoadingMask :show="loading" text="加载中…" />
     <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" :disabled="!canWrite">
       <div class="form-grid">
@@ -388,7 +392,6 @@ watch(
       <n-space justify="space-between" align="center">
         <n-space align="center">
           <template v-if="isEdit && material">
-            <span class="muted">最后更新：{{ formatShanghaiTime(material.updated_at) }}</span>
             <n-tag size="small" :type="material.has_operation_records ? 'default' : 'success'">
               {{ material.has_operation_records ? '已有操作记录' : '暂无操作记录' }}
             </n-tag>
