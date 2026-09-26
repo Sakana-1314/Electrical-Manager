@@ -53,6 +53,8 @@ const canWrite = computed(() => auth.can('warehouse:write'))
 const material = ref<StockMaterial | null>(null)
 const balance = ref<InventoryBalance | null>(null)
 const images = ref<FileObject[]>([])
+/** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
+const imagesUploading = ref(false)
 const miniProgramCodeUrl = ref('')
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
@@ -375,7 +377,11 @@ watch(
         </div>
       </n-form-item>
       <n-form-item label="图片附件" class="wide-form-item attachment-form-item">
-        <ImageUploader v-model:files="images" :disabled="!canWrite" />
+        <ImageUploader
+          v-model:files="images"
+          v-model:busy="imagesUploading"
+          :disabled="!canWrite"
+        />
       </n-form-item>
     </n-form>
     <template #footer>
@@ -403,7 +409,13 @@ watch(
             <n-button secondary @click="goOutbound">出库</n-button>
           </template>
           <n-button @click="requestClose">取消</n-button>
-          <n-button v-if="canWrite" type="primary" :loading="saving" @click="save">
+          <n-button
+            v-if="canWrite"
+            type="primary"
+            :loading="saving"
+            :disabled="imagesUploading"
+            @click="save"
+          >
             {{ isEdit ? '保存修改' : '创建' }}
           </n-button>
         </n-space>

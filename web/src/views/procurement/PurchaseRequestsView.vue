@@ -222,6 +222,8 @@ const editConsolidationDate = ref<number | null>(null)
 const editSailingDate = ref<number | null>(null)
 const editContractSignDate = ref<number | null>(null)
 const editImages = ref<FileObject[]>([])
+/** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
+const editImagesUploading = ref(false)
 const editForm = reactive<PurchaseRecordWrite>({
   plan_date: '',
   material_code: '',
@@ -1797,7 +1799,11 @@ onMounted(() => {
             </n-form-item>
           </div>
           <n-form-item label="图片附件">
-            <ImageUploader v-model:files="editImages" :disabled="!canWrite" />
+            <ImageUploader
+              v-model:files="editImages"
+              v-model:busy="editImagesUploading"
+              :disabled="!canWrite"
+            />
           </n-form-item>
         </n-form>
       </n-scrollbar>
@@ -1830,7 +1836,13 @@ onMounted(() => {
           <span v-else></span>
           <n-space justify="end">
             <n-button @click="requestCloseDetail">取消</n-button>
-            <n-button v-if="canWrite" type="primary" :loading="editSaving" @click="saveEditRecord">
+            <n-button
+              v-if="canWrite"
+              type="primary"
+              :loading="editSaving"
+              :disabled="editImagesUploading"
+              @click="saveEditRecord"
+            >
               保存
             </n-button>
           </n-space>

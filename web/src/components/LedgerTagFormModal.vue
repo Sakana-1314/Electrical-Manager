@@ -50,6 +50,8 @@ const formRef = ref<FormInst | null>(null)
 const saving = ref(false)
 const deleting = ref(false)
 const images = ref<FileObject[]>([])
+/** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
+const imagesUploading = ref(false)
 /** 弹窗自己加载全量标签：页面可能正按「孤立 / 树标签」筛选，筛选后的局部列表不能当上级候选。 */
 const allTags = ref<LedgerTag[]>([])
 const loadingParent = ref(false)
@@ -199,7 +201,7 @@ function confirmDelete(): void {
         />
       </n-form-item>
       <n-form-item label="图片附件">
-        <ImageUploader v-model:files="images" />
+        <ImageUploader v-model:files="images" v-model:busy="imagesUploading" />
       </n-form-item>
     </n-form>
     <template #footer>
@@ -211,7 +213,13 @@ function confirmDelete(): void {
         </div>
         <div class="modal-footer-right">
           <n-button @click="close">取消</n-button>
-          <n-button type="primary" :loading="saving" @click="handleSubmit">保存</n-button>
+          <n-button
+            type="primary"
+            :loading="saving"
+            :disabled="imagesUploading"
+            @click="handleSubmit"
+            >保存</n-button
+          >
         </div>
       </div>
     </template>

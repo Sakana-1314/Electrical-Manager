@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useDialog, useMessage } from 'naive-ui'
 import { markEventEffectPerformed } from 'naive-ui/es/_utils/event/index'
 import { fileApi } from '@/api/files'
@@ -13,11 +13,18 @@ import {
 } from '@/utils/image'
 import { hashBlob } from '@/utils/sha256'
 
+/**
+ * `busy` 只为接住 `v-model:busy` 传进来的 prop（本组件是唯一写方，不用回读）：
+ * 不声明的话它会作为普通 attr 透传到根 div 上，渲染出多余的 `busy="false"`。
+ */
 const props = withDefaults(
-  defineProps<{ files: FileObject[]; disabled?: boolean; max?: number }>(),
+  defineProps<{ files: FileObject[]; disabled?: boolean; max?: number; busy?: boolean }>(),
   { max: 9 },
 )
-const emit = defineEmits<{ 'update:files': [files: FileObject[]] }>()
+const emit = defineEmits<{
+  'update:files': [files: FileObject[]]
+  'update:busy': [busy: boolean]
+}>()
 const input = ref<HTMLInputElement | null>(null)
 const message = useMessage()
 const dialog = useDialog()
@@ -59,8 +66,34 @@ const activeCount = computed(
 )
 /** 占用名额的项（排队 + 摘要校验 + 上传中）；失败项不占名额，用户可重试或移除。 */
 const occupyingCount = computed(() => pending.filter((item) => item.status !== 'error').length)
-const busy = computed(() => occupyingCount.value > 0)
+/** 还留着待处理项（含排队等额度）：队列没清空就不算处理完。 */
+const hasPending = computed(() => occupyingCount.value > 0)
 const totalCount = computed(() => props.files.length + occupyingCount.value)
+
+/**
+ * 进度展示上限：只到 99%，真正完成时该项直接从列表消失。
+ *
+ * 不能显示 100% 的原因：`onUploadProgress` 的 100% 只代表请求体发完，服务端还要解码重编码、
+ * 算摘要、写盘、落库，这段时间进度条停在 100% 会让用户以为已经完成、界面像卡死；
+ * 摘要校验阶段同理（100% 之后还要跨一次「比对已有图片…」的接口往返）。
+ */
+const PROGRESS_DISPLAY_MAX = 99
+
+function displayPercent(item: PendingUpload): number {
+  return Math.min(PROGRESS_DISPLAY_MAX, item.percent)
+}
+
+/**
+ * 队列非空（含排队）时把 busy 抛给父级（`v-model:busy`），父级据此禁用保存按钮：
+ * 否则用户可能在图片还没上传完时就提交，`image_ids` 会漏掉在途的图片。
+ *
+ * 已失败的项不算「在途」（它是终态，用户可自行重试或移除），不阻塞保存；
+ * 同一表单里多个上传组件要各绑一个 ref，再由父级求或，不能共用一个 ref。
+ *
+ * 组件卸载时补发一次 false：弹窗内容被销毁后父级的 busy 引用不会再被本组件更新，
+ * 若留在 true，重开弹窗时保存按钮会一直是灰的。
+ */
+watch(hasPending, (value) => emit('update:busy', value))
 
 // n-image 内置预览与 n-modal 的 ESC 监听都挂在 document bubble 阶段；预览关闭自身时不会标记事件，
 // 导致按一次 ESC 预览和弹窗同时关闭。这里用 capture 阶段监听，在预览打开时把 ESC 标记为已被内层消费，
@@ -79,6 +112,8 @@ onBeforeUnmount(() => {
     item.controller?.abort()
     if (item.previewUrl) URL.revokeObjectURL(item.previewUrl)
   }
+  // 弹窗内容销毁后父级的 busy 引用不会再被本组件更新，补发一次 false 以免重开弹窗时保存按钮一直禁用
+  emit('update:busy', false)
 })
 
 function dropPending(item: PendingUpload) {
@@ -231,10 +266,14 @@ function removePending(item: PendingUpload) {
 function statusText(item: PendingUpload) {
   if (item.status === 'queued') return '排队中'
   if (item.status === 'checking') {
-    return item.percent > 0 ? `计算摘要 ${item.percent}%` : '计算摘要'
+    const percent = displayPercent(item)
+    return percent > 0 ? `计算摘要 ${percent}%` : '计算摘要'
   }
   if (item.status === 'matching') return '比对已有图片…'
-  if (item.status === 'uploading') return item.percent > 0 ? `上传中 ${item.percent}%` : '上传中'
+  if (item.status === 'uploading') {
+    const percent = displayPercent(item)
+    return percent > 0 ? `上传中 ${percent}%` : '上传中'
+  }
   return item.error || '上传失败'
 }
 
@@ -328,12 +367,12 @@ async function remove(file: FileObject) {
           <div
             class="upload-progress"
             role="progressbar"
-            :aria-valuenow="item.percent"
+            :aria-valuenow="displayPercent(item)"
             aria-valuemin="0"
             aria-valuemax="100"
             :aria-label="`${item.name} 处理进度`"
           >
-            <div class="upload-progress-fill" :style="{ width: `${item.percent}%` }" />
+            <div class="upload-progress-fill" :style="{ width: `${displayPercent(item)}%` }" />
           </div>
           <span class="upload-status">{{ statusText(item) }}</span>
         </div>
@@ -360,12 +399,11 @@ async function remove(file: FileObject) {
         v-if="!disabled && totalCount < max"
         type="button"
         class="upload-trigger"
-        :disabled="busy"
         @click="input?.click()"
       >
         <span class="plus">+</span>
         <span v-if="activeCount > 0">处理中 {{ activeCount }}</span>
-        <span v-else-if="busy">排队中</span>
+        <span v-else-if="hasPending">排队中</span>
         <span v-else>添加图片</span>
       </button>
       <input
@@ -527,10 +565,6 @@ async function remove(file: FileObject) {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
   color: var(--color-primary);
-}
-.upload-trigger:disabled {
-  cursor: wait;
-  opacity: 0.7;
 }
 .plus {
   font-size: 28px;

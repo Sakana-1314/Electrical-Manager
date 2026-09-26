@@ -58,6 +58,9 @@ const units = ref<HazardUnit[]>([])
 const types = ref<HazardType[]>([])
 const beforeImages = ref<FileObject[]>([])
 const afterImages = ref<FileObject[]>([])
+/** 整改前 / 后图片是否还有在途上传：任一在传就禁用保存，避免 `*_image_ids` 漏掉还没传完的图。 */
+const beforeImagesUploading = ref(false)
+const afterImagesUploading = ref(false)
 
 const form = reactive({
   inspectionArea: '华星现场',
@@ -403,12 +406,12 @@ function confirmDelete(): void {
           </n-grid-item>
           <n-grid-item :span="2">
             <n-form-item label="整改前图片附件">
-              <ImageUploader v-model:files="beforeImages" />
+              <ImageUploader v-model:files="beforeImages" v-model:busy="beforeImagesUploading" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item :span="2">
             <n-form-item label="整改后图片附件">
-              <ImageUploader v-model:files="afterImages" />
+              <ImageUploader v-model:files="afterImages" v-model:busy="afterImagesUploading" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item :span="2">
@@ -434,7 +437,13 @@ function confirmDelete(): void {
         </div>
         <div class="modal-footer-right">
           <n-button @click="close">取消</n-button>
-          <n-button type="primary" :loading="saving" @click="handleSubmit">保存</n-button>
+          <n-button
+            type="primary"
+            :loading="saving"
+            :disabled="beforeImagesUploading || afterImagesUploading"
+            @click="handleSubmit"
+            >保存</n-button
+          >
         </div>
       </div>
     </template>

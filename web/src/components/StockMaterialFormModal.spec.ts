@@ -14,9 +14,11 @@ import {
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick } from 'vue'
-import type { InventoryBalance, StockMaterial } from '@/api/generated'
+import type { FileObject, InventoryBalance, StockMaterial } from '@/api/generated'
+import { fileApi as fileApiUpload } from '@/api/files'
 import { inventoryApi } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
+import ImageUploader from './ImageUploader.vue'
 import StockMaterialFormModal from './StockMaterialFormModal.vue'
 
 vi.mock('@/api/inventory', () => ({
@@ -28,6 +30,14 @@ vi.mock('@/api/inventory', () => ({
     updateMaterial: vi.fn(),
     savePolicy: vi.fn(),
     deleteMaterial: vi.fn(),
+  },
+}))
+
+vi.mock('@/api/files', () => ({
+  fileApi: {
+    uploadImage: vi.fn(),
+    removeImage: vi.fn(),
+    checkImageDigest: vi.fn(),
   },
 }))
 
@@ -82,6 +92,8 @@ async function mountModal(props: {
   materialId?: number | null
   write?: boolean
   onSaved?: () => void
+  /** 不 stub 图片上传组件：用于验证「上传在途 → 保存按钮禁用」的真实联动。 */
+  realUploader?: boolean
 }): Promise<VueWrapper> {
   // auth store 在模块加载时就固化了 localStorage 快照，直接写 store 的 user 才生效
   useAuthStore().user = {
@@ -104,7 +116,11 @@ async function mountModal(props: {
     },
     global: {
       components: { NButton, NForm, NFormItem, NInput, NModal, NSpace, NSwitch, NTag },
-      stubs: { QuantityInput: true, ImageUploader: true, LoadingMask: true },
+      stubs: {
+        QuantityInput: true,
+        ImageUploader: props.realUploader ? false : true,
+        LoadingMask: true,
+      },
     },
   })
   await flushPromises()
@@ -252,5 +268,44 @@ describe('StockMaterialFormModal', () => {
     await flushPromises()
     expect(document.querySelector('.n-dialog')).not.toBeNull()
     expect(document.body.textContent).toContain('放弃未保存的修改？')
+  })
+
+  it('图片上传在途时保存按钮禁用，上传结束后恢复可点（组件级联动）', async () => {
+    const resolvers: Array<(value: FileObject) => void> = []
+    vi.mocked(fileApiUpload.uploadImage).mockImplementation(
+      () => new Promise<FileObject>((resolve) => resolvers.push(resolve)),
+    )
+    URL.createObjectURL = vi.fn(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn()
+    wrapper = await mountModal({ show: true, materialId: 9, realUploader: true })
+
+    const saveButton = findButton(wrapper, '保存修改')!
+    expect(saveButton.props('disabled')).not.toBe(true)
+
+    // 通过真实的 ImageUploader 注入一个文件并让它停留在上传中
+    const uploader = modal(wrapper).findComponent(ImageUploader)
+    const input = uploader.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'p.png', { type: 'image/png' })],
+      configurable: true,
+    })
+    await input.trigger('change')
+    await flushPromises()
+
+    expect(fileApiUpload.uploadImage).toHaveBeenCalledTimes(1)
+    expect(findButton(wrapper, '保存修改')!.props('disabled')).toBe(true)
+
+    // 上传结束：该项离开队列，保存按钮恢复可点
+    const uploaded: FileObject = {
+      id: '019uploaded',
+      original_name: 'p.png',
+      mime_type: 'image/png',
+      size_bytes: 1,
+      width: 10,
+      height: 10,
+    }
+    resolvers[0](uploaded)
+    await flushPromises()
+    expect(findButton(wrapper, '保存修改')!.props('disabled')).not.toBe(true)
   })
 })

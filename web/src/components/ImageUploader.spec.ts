@@ -180,6 +180,96 @@ describe('ImageUploader', () => {
     await flushPromises()
   })
 
+  it('进度最多只显示 99%，不显示 100%（请求体发完不等于图片已处理完）', async () => {
+    let reportProgress: ((percent: number) => void) | undefined
+    const resolvers: Array<(value: FileObject) => void> = []
+    vi.mocked(fileApi.uploadImage).mockImplementation((_file, onProgress) => {
+      reportProgress = onProgress
+      return new Promise<FileObject>((resolve) => resolvers.push(resolve))
+    })
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+
+    // 请求体发完：底层进度是 100，展示必须钳到 99，直到该项从列表消失才算完成
+    reportProgress?.(100)
+    await flushPromises()
+
+    expect(target.find('.upload-status').text()).toBe('上传中 99%')
+    expect(target.find('.upload-progress-fill').attributes('style')).toContain('width: 99%')
+    expect(target.find('.upload-progress').attributes('aria-valuenow')).toBe('99')
+
+    // 上传成功后该项直接消失，不会出现 100% 的中间态
+    resolvers[0](uploadedFile)
+    await flushPromises()
+    expect(target.findAll('.upload-item')).toHaveLength(0)
+  })
+
+  it('上传中仍可继续新增图片：添加按钮不禁用，点击照常打开选择框', async () => {
+    const resolvers: Array<(value: FileObject) => void> = []
+    vi.mocked(fileApi.uploadImage).mockImplementation(
+      () => new Promise<FileObject>((resolve) => resolvers.push(resolve)),
+    )
+    const wrapper = mountUploader()
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+
+    const trigger = target.find('.upload-trigger')
+    expect(trigger.attributes('disabled')).toBeUndefined()
+
+    const fileInput = target.find('input[type="file"]')
+    const openPicker = vi.spyOn(fileInput.element as HTMLInputElement, 'click')
+    await trigger.trigger('click')
+    expect(openPicker).toHaveBeenCalled()
+
+    resolvers[0](uploadedFile)
+    await flushPromises()
+  })
+
+  it('上传在途时把 busy 抛给父级（禁用保存），结束后复位', async () => {
+    const resolvers: Array<(value: FileObject) => void> = []
+    vi.mocked(fileApi.uploadImage).mockImplementation(
+      () => new Promise<FileObject>((resolve) => resolvers.push(resolve)),
+    )
+    const onBusy = vi.fn()
+    const wrapper = mountUploader([], { 'onUpdate:busy': onBusy })
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+    expect(onBusy).toHaveBeenLastCalledWith(true)
+
+    resolvers[0](uploadedFile)
+    await flushPromises()
+    expect(onBusy).toHaveBeenLastCalledWith(false)
+  })
+
+  it('失败的项不阻塞保存（busy 复位），用户可自行重试或移除', async () => {
+    vi.mocked(fileApi.uploadImage).mockRejectedValue(new Error('图片上传失败'))
+    const onBusy = vi.fn()
+    const wrapper = mountUploader([], { 'onUpdate:busy': onBusy })
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+
+    expect(target.find('.upload-status').text()).toBe('图片上传失败')
+    expect(onBusy).toHaveBeenLastCalledWith(false)
+  })
+
+  it('组件卸载时补发 busy=false，避免重开弹窗保存按钮一直禁用', async () => {
+    vi.mocked(fileApi.uploadImage).mockImplementation(() => new Promise<FileObject>(() => {}))
+    const onBusy = vi.fn()
+    const wrapper = mountUploader([], { 'onUpdate:busy': onBusy })
+    const target = uploaderOf(wrapper)
+
+    await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+    expect(onBusy).toHaveBeenLastCalledWith(true)
+
+    wrapper.unmount()
+    expect(onBusy).toHaveBeenLastCalledWith(false)
+  })
+
   it('失败的项可重试，成功后才并入 files', async () => {
     vi.mocked(fileApi.uploadImage)
       .mockRejectedValueOnce(new Error('图片上传失败'))
