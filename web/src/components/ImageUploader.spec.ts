@@ -270,6 +270,114 @@ describe('ImageUploader', () => {
     expect(onBusy).toHaveBeenLastCalledWith(false)
   })
 
+  describe('上传用时的统计与展示', () => {
+    /** 用时是每秒脉冲驱动的，用假时钟把时间「走」出来，断言才稳定。 */
+    function withFakeTimers() {
+      vi.useFakeTimers()
+      return () => vi.useRealTimers()
+    }
+
+    it('处理中每秒刷新「用时」，与进度同时展示', async () => {
+      const restore = withFakeTimers()
+      try {
+        vi.mocked(fileApi.uploadImage).mockImplementation(() => new Promise<FileObject>(() => {}))
+        const wrapper = mountUploader()
+        const target = uploaderOf(wrapper)
+
+        await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+        expect(target.find('.upload-elapsed').text()).toBe('用时 0秒')
+
+        await vi.advanceTimersByTimeAsync(3000)
+        expect(target.find('.upload-elapsed').text()).toBe('用时 3秒')
+        // 进度与用时并存，不是二选一
+        expect(target.find('.upload-status').text()).toBe('上传中')
+      } finally {
+        restore()
+      }
+    })
+
+    it('排队等待的时间不计入用时：排到自己才开始起算', async () => {
+      const restore = withFakeTimers()
+      try {
+        const resolvers: Array<(value: FileObject) => void> = []
+        vi.mocked(fileApi.uploadImage).mockImplementation(
+          () => new Promise<FileObject>((resolve) => resolvers.push(resolve)),
+        )
+        const wrapper = mountUploader()
+        const target = uploaderOf(wrapper)
+
+        // 并发上限 2：第 3 张排队，不应显示用时
+        await selectFiles(
+          target,
+          Array.from({ length: 3 }, (_, i) => new File(['x'], `p${i}.png`, { type: 'image/png' })),
+        )
+        const queued = target.findAll('.upload-item.is-queued')
+        expect(queued).toHaveLength(1)
+        expect(queued[0].find('.upload-elapsed').exists()).toBe(false)
+
+        // 先让时间走 5 秒（排队中），再放行一个让队尾补上并发额度
+        await vi.advanceTimersByTimeAsync(5000)
+        resolvers[0](uploadedFile)
+        await flushPromises()
+
+        // 补位开始后从 0 起算，不含前面排队等掉的 5 秒
+        const started = target.findAll('.upload-item.is-uploading')
+        expect(started).toHaveLength(2)
+        expect(started[started.length - 1].find('.upload-elapsed').text()).toBe('用时 0秒')
+      } finally {
+        restore()
+      }
+    })
+
+    it('失败的项冻结用时，重试后重新起算', async () => {
+      const restore = withFakeTimers()
+      try {
+        vi.mocked(fileApi.uploadImage)
+          .mockRejectedValueOnce(new Error('图片上传失败'))
+          .mockImplementation(() => new Promise<FileObject>(() => {}))
+        const wrapper = mountUploader()
+        const target = uploaderOf(wrapper)
+
+        await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+        // uploadImage 立即 reject，失败发生在同一刻，用时为 0
+        expect(target.find('.upload-status').text()).toBe('图片上传失败')
+        expect(target.find('.upload-elapsed').text()).toBe('用时 0秒')
+
+        // 冻结：时间继续走，失败项的用时不再变化
+        await vi.advanceTimersByTimeAsync(4000)
+        expect(target.find('.upload-elapsed').text()).toBe('用时 0秒')
+
+        // 重试：回到排队态不显示用时，排到自己后从 0 重新起算
+        const retryButton = [...target.findAll('.upload-btn')].find((b) =>
+          b.text().includes('重试'),
+        )
+        await retryButton!.trigger('click')
+        await flushPromises()
+        expect(target.findAll('.upload-elapsed')).toHaveLength(1)
+        expect(target.find('.upload-elapsed').text()).toBe('用时 0秒')
+      } finally {
+        restore()
+      }
+    })
+
+    it('上传完成后停表，不残留后台定时器', async () => {
+      const restore = withFakeTimers()
+      try {
+        vi.mocked(fileApi.uploadImage).mockResolvedValue(uploadedFile)
+        const wrapper = mountUploader()
+        const target = uploaderOf(wrapper)
+
+        await selectFiles(target, [new File(['x'], 'p.png', { type: 'image/png' })])
+        await flushPromises()
+
+        expect(target.findAll('.upload-item')).toHaveLength(0)
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        restore()
+      }
+    })
+  })
+
   it('失败的项可重试，成功后才并入 files', async () => {
     vi.mocked(fileApi.uploadImage)
       .mockRejectedValueOnce(new Error('图片上传失败'))

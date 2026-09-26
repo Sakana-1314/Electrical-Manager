@@ -12,6 +12,7 @@ import {
   validateImageSelection,
 } from '@/utils/image'
 import { hashBlob } from '@/utils/sha256'
+import { formatElapsed } from '@/utils/time'
 
 /**
  * `busy` 只为接住 `v-model:busy` 传进来的 prop（本组件是唯一写方，不用回读）：
@@ -56,6 +57,10 @@ interface PendingUpload {
   controller?: AbortController
   /** 用户已移除该项 / 组件已卸载：异步流水线在每个 await 之后据此提前收尾 */
   removed?: boolean
+  /** 开始处理的时刻（离开排队、真正轮到自己时记）：排队等待不计入「用时」 */
+  startedAt?: number
+  /** 结束时刻（失败时写一次，冻结耗时以便回头看这次到底花了多久） */
+  endedAt?: number
 }
 
 const pending = reactive<PendingUpload[]>([])
@@ -84,6 +89,41 @@ function displayPercent(item: PendingUpload): number {
 }
 
 /**
+ * 每秒重算一次「用时」，让界面上的秒数会走。
+ *
+ * 不用 `setInterval` 里直接改 `item.percent` 之类：耗时是 `Date.now() - startedAt` 算出来的，
+ * 这里只需要一个触发重渲染的脉冲，所以用一个每秒自增的 ref 记录「当前刻度」，
+ * `elapsedText()` 依赖它即可。只在真正有项在跑时才开表，队列清空立刻停，
+ * 免得多张图传完后还在后台空转。
+ */
+const elapsedTick = ref(0)
+let elapsedTimer: ReturnType<typeof setInterval> | undefined
+
+function startElapsedTicker() {
+  if (elapsedTimer !== undefined) return
+  elapsedTimer = setInterval(() => {
+    elapsedTick.value += 1
+  }, 1000)
+}
+
+function stopElapsedTicker() {
+  if (elapsedTimer === undefined) return
+  clearInterval(elapsedTimer)
+  elapsedTimer = undefined
+}
+
+/**
+ * 该项的用时文案：处理中按「现在 - 开始」实时走，已结束（失败）按「结束 - 开始」冻结。
+ * 返回 null 表示还没有用时可言（排队中），调用方据此不渲染。
+ */
+function elapsedText(item: PendingUpload): string | null {
+  if (item.startedAt === undefined) return null
+  // 读一下刻度，建立对 tick 的依赖，秒数才会每秒刷新
+  void elapsedTick.value
+  return formatElapsed((item.endedAt ?? Date.now()) - item.startedAt)
+}
+
+/**
  * 队列非空（含排队）时把 busy 抛给父级（`v-model:busy`），父级据此禁用保存按钮：
  * 否则用户可能在图片还没上传完时就提交，`image_ids` 会漏掉在途的图片。
  *
@@ -93,7 +133,11 @@ function displayPercent(item: PendingUpload): number {
  * 组件卸载时补发一次 false：弹窗内容被销毁后父级的 busy 引用不会再被本组件更新，
  * 若留在 true，重开弹窗时保存按钮会一直是灰的。
  */
-watch(hasPending, (value) => emit('update:busy', value))
+watch(hasPending, (value) => {
+  emit('update:busy', value)
+  // 队列空了就停表：没有在途项时秒数不再变化，没必要留着定时器空转
+  if (!value) stopElapsedTicker()
+})
 
 // n-image 内置预览与 n-modal 的 ESC 监听都挂在 document bubble 阶段；预览关闭自身时不会标记事件，
 // 导致按一次 ESC 预览和弹窗同时关闭。这里用 capture 阶段监听，在预览打开时把 ESC 标记为已被内层消费，
@@ -107,6 +151,7 @@ onMounted(() => document.addEventListener('keydown', handleEscapeCapture, true))
 onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscapeCapture, true)
   // 卸载时中止在途请求、停掉摘要校验并释放本地预览地址，避免内存泄漏
+  stopElapsedTicker()
   for (const item of pending) {
     item.removed = true
     item.controller?.abort()
@@ -209,6 +254,8 @@ async function runUpload(item: PendingUpload) {
     }
     item.percent = 0
     item.status = 'error'
+    // 冻结耗时：失败项留在列表里，用户回头能看到这次到底花了多久
+    item.endedAt = Date.now()
     item.error = error instanceof Error ? error.message : '图片上传失败'
   } finally {
     item.controller = undefined
@@ -222,6 +269,10 @@ function pump() {
     const next = pending.find((item) => item.status === 'queued')
     if (!next) return
     next.status = 'checking'
+    // 排到自己了才开始计时：排队等额度的时间不算这张图的用时
+    next.startedAt = Date.now()
+    next.endedAt = undefined
+    startElapsedTicker()
     void runPipeline(next)
   }
 }
@@ -252,6 +303,9 @@ function retry(item: PendingUpload) {
   item.percent = 0
   item.error = undefined
   item.status = 'queued'
+  // 清掉上一轮的计时：重新排队后要等排到自己才重新起算，不能显示上一次的耗时
+  item.startedAt = undefined
+  item.endedAt = undefined
   pump()
 }
 
@@ -375,6 +429,8 @@ async function remove(file: FileObject) {
             <div class="upload-progress-fill" :style="{ width: `${displayPercent(item)}%` }" />
           </div>
           <span class="upload-status">{{ statusText(item) }}</span>
+          <!-- 耗时与进度同时展示：进度条只说「传了多少」，用时才说明「还要等多久 / 是不是卡住了」 -->
+          <span v-if="elapsedText(item)" class="upload-elapsed">用时 {{ elapsedText(item) }}</span>
         </div>
         <div class="upload-actions">
           <button
@@ -510,6 +566,15 @@ async function remove(file: FileObject) {
   overflow: hidden;
   color: var(--color-text-muted);
   font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 用时数字每秒都在变：等宽数字避免整行左右抖动 */
+.upload-elapsed {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
