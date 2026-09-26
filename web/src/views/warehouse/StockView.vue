@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { h, reactive, ref } from 'vue'
+import { h, reactive, ref, watch } from 'vue'
 import { NButton, NTag, useMessage } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { inventoryApi } from '@/api/inventory'
 import type { InventoryBalance, ReplenishmentDraftWrite } from '@/api/generated'
 import { useAuthStore } from '@/stores/auth'
@@ -10,7 +10,9 @@ import { isDecimalString } from '@/utils/decimal'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import QuantityInput from '@/components/QuantityInput.vue'
 import FilterExpandButton from '@/components/FilterExpandButton.vue'
+import StockMaterialFormModal from '@/components/StockMaterialFormModal.vue'
 import { usePagedTable } from '@/composables/usePagedTable'
+import { routeQueryString } from '@/utils/routeQuery'
 import {
   getTableScrollX,
   preventTableColumnCompression,
@@ -18,6 +20,7 @@ import {
 } from '@/constants/table'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const message = useMessage()
 const rowClickGuard = createTableRowClickGuard()
@@ -26,6 +29,43 @@ const replenishing = ref(false)
 const loadingDefaults = ref(false)
 const filterExpanded = ref(false)
 const replenishmentRow = ref<InventoryBalance | null>(null)
+
+// 物资详情弹窗（原 /warehouse/materials/:id 详情页）
+const showMaterial = ref(false)
+const detailMaterialId = ref<number | null>(null)
+
+async function openMaterial(id: number) {
+  detailMaterialId.value = id
+  showMaterial.value = true
+  if (routeQueryString(route.query.detail) !== String(id)) {
+    await router.replace({ query: { ...route.query, detail: String(id) } })
+  }
+}
+
+async function closeMaterial() {
+  showMaterial.value = false
+  detailMaterialId.value = null
+  if (routeQueryString(route.query.detail)) {
+    await router.replace({ query: { ...route.query, detail: undefined } })
+  }
+}
+
+function onMaterialShow(value: boolean) {
+  showMaterial.value = value
+  if (!value) void closeMaterial()
+}
+
+// URL → 弹窗的唯一入口：用 watch 而不是 onMounted，同页导航（如补库跳转）也能生效
+watch(
+  () => routeQueryString(route.query.detail),
+  (raw) => {
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    if (showMaterial.value && detailMaterialId.value === id) return
+    void openMaterial(id)
+  },
+  { immediate: true },
+)
 const replenishmentForm = reactive<ReplenishmentDraftWrite>({
   planned_qty: '',
   demand_date: toShanghaiDate(Date.now()),
@@ -45,6 +85,7 @@ const {
   pageSize,
   loading,
   filters,
+  load,
   query,
   changePage,
   changePageSize,
@@ -77,6 +118,8 @@ const {
       min_qty: f.min_qty || undefined,
       max_qty: f.max_qty || undefined,
     }),
+    // 详情弹窗的 id 不属于筛选状态，翻页/筛选时都必须留在 URL 里
+    preservedQueryKeys: ['detail'],
   },
 })
 const columns = preventTableColumnCompression<InventoryBalance>([
@@ -117,7 +160,7 @@ const columns = preventTableColumnCompression<InventoryBalance>([
           NButton,
           {
             size: 'small',
-            onClick: () => router.push(`/warehouse/materials/${r.stock_material_id}`),
+            onClick: () => void openMaterial(r.stock_material_id),
           },
           { default: () => '详情' },
         ),
@@ -165,12 +208,7 @@ function rowProps(row: InventoryBalance) {
     style: 'cursor: pointer',
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
-      if (!rowClickGuard.shouldIgnore(event)) {
-        void router.push({
-          name: 'stock-material-detail',
-          params: { id: row.stock_material_id },
-        })
-      }
+      if (!rowClickGuard.shouldIgnore(event)) void openMaterial(row.stock_material_id)
     },
   }
 }
@@ -218,7 +256,11 @@ async function confirmReplenishment() {
     })
     message.success('已添加一条申购计划')
     showReplenishment.value = false
-    await router.push(`/procurement/materials/${result.resource_id}`)
+    // 补库会新增一条申购计划：跳到申购计划列表并由 ?detail= 打开它的详情弹窗
+    await router.push({
+      name: 'purchase-materials',
+      query: { detail: String(result.resource_id) },
+    })
   } catch (e) {
     message.error(e instanceof Error ? e.message : '发起失败')
   } finally {
@@ -365,6 +407,13 @@ async function confirmReplenishment() {
         </n-space>
       </template>
     </n-modal>
+
+    <StockMaterialFormModal
+      :show="showMaterial"
+      :material-id="detailMaterialId"
+      @update:show="onMaterialShow"
+      @saved="load"
+    />
   </div>
 </template>
 

@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * 页头 / 详情工具栏按钮排「一排放不下时横向滑动」的接线守卫。
+ * 页头按钮排「一排放不下时横向滑动」的接线守卫。
  *
  * 窄屏（≤768px）下按钮排不缩小、不换行，超出部分由本行横向滑动承接。这段规则靠
  * `styles.css` 里两条互相配合的声明，缺一就静默失效（实测过）：
@@ -13,6 +13,9 @@
  *
  * 这两条都不会报错，只会让「能滑动」变成「滑不动」，因此扫源码守住接线——与
  * `mobileDialog.spec.ts` / `mobileTableCard.spec.ts` 同一思路，纯读文件。
+ *
+ * 注：详情页已改为弹窗，曾经的 `.detail-toolbar`（详情页工具栏）随之删除；这里只守
+ * `.page-actions`（页头操作区）。
  */
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
@@ -43,22 +46,22 @@ describe('按钮排横向滑动的接线', () => {
   })
 
   it('行内按钮组按内容宽度占位，撑出可滚动区间', () => {
-    expect(mobile).toMatch(
-      /\.page-actions > \.n-space,\s*\n\s*\.detail-toolbar > \.n-space \{\s*\n\s*width: max-content;/,
-    )
+    expect(mobile).toMatch(/\.page-actions > \.n-space \{\s*\n\s*width: max-content;/)
   })
 
-  it('页头与详情工具栏都开启横向滑动并隐藏滚动条', () => {
-    expect(mobile).toMatch(/\.page-actions,\s*\n\s*\.detail-toolbar \{\s*\n\s*overflow-x: auto;/)
+  it('页头操作区开启横向滑动并隐藏滚动条', () => {
+    expect(mobile).toMatch(/\.page-actions \{\s*\n\s*overflow-x: auto;/)
     expect(mobile).toContain('scrollbar-width: none')
     // 旧版 iOS 触摸滑动
     expect(mobile).toContain('-webkit-overflow-scrolling: touch')
   })
 
   it('桌面端不受影响：这些声明只在 ≤768px 断点内', () => {
-    const ruleIndex = styles.indexOf('.page-actions,\n  .detail-toolbar {')
+    const ruleIndex = styles.indexOf('.page-actions {\n    overflow-x: auto;')
     const blockStart = styles.indexOf('@media (max-width: 768px) {')
     expect(ruleIndex).toBeGreaterThan(blockStart)
-    expect(mobile).toContain('.page-actions,\n  .detail-toolbar {')
+    expect(mobile).toContain('.page-actions {\n    overflow-x: auto;')
+    // 详情页已移除，不应再有详情工具栏的样式残留
+    expect(styles).not.toContain('.detail-toolbar')
   })
 })

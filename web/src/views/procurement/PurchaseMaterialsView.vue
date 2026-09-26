@@ -8,7 +8,7 @@ import {
   type FormInst,
   type FormRules,
 } from 'naive-ui'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type {
   FileObject,
   MaterialCodeLibrary,
@@ -56,16 +56,18 @@ import {
   purchaseUrgencyOptions,
   purchasePlanStatusOptions,
 } from '@/constants/purchase'
-import { dateToTimestamp, formatDate, toShanghaiDate } from '@/utils/time'
+import { dateToTimestamp, formatDate, formatShanghaiTime, toShanghaiDate } from '@/utils/time'
 import { downloadBlob, downloadFromUrl, exportDownloadUrl } from '@/utils/download'
 import { routeQueryString } from '@/utils/routeQuery'
 import { useExportJob } from '@/composables/useExportJob'
 import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
+import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const message = useMessage()
 const dialog = useDialog()
@@ -74,6 +76,8 @@ const filterExpanded = ref(false)
 const EMPTY_DEMAND_PERSON_FILTER = '__empty_actual_demand_person__'
 const EMPTY_SUBITEM_FILTER = '__empty_subitem_no__'
 const canViewArchivedPlans = computed(() => auth.user?.role === 'SUPER_ADMIN')
+/** 详情弹窗的写权限：无写权限时字段禁用、页脚只留「取消」（与原详情页一致）。 */
+const canWrite = computed(() => auth.can('purchase:write'))
 const statusFilterOptions = computed(() =>
   purchasePlanStatusOptions.filter(
     (option) => canViewArchivedPlans.value || option.value !== '已归档',
@@ -194,6 +198,8 @@ const {
       sort_by: f.sort_by || undefined,
       sort_order: f.sort_order || undefined,
     }),
+    // 详情弹窗的 id 不属于筛选状态，翻页/筛选/keepAlive 重新激活时都必须留在 URL 里
+    preservedQueryKeys: ['detail'],
   },
 })
 const { searchName, applyExpandedName, clearExpandedName } = useImplicitAiSearch(() => filters.name)
@@ -207,6 +213,8 @@ const { running: resultExporting, run: runResultExport } =
   })
 const show = ref(false)
 const editing = ref<PurchaseMaterial | null>(null)
+// 详情弹窗（原 /procurement/materials/:id 详情页）写成 URL 的 ?detail=<id>
+const detailId = ref<number | null>(null)
 const showBatch = ref(false)
 const showBatchEdit = ref(false)
 const saving = ref(false)
@@ -220,6 +228,8 @@ const tableAreaRef = ref<HTMLElement | null>(null)
 const isTableFullscreen = ref(false)
 const formRef = ref<FormInst | null>(null)
 const images = ref<FileObject[]>([])
+/** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
+const imagesUploading = ref(false)
 // 打开新建/编辑时由 openCreate（默认今天）/openEdit（取记录值）赋值，避免组件挂载即固定日期。
 const createPlanDate = ref<number | null>(null)
 const createAdvancedSections = ref<string[]>([])
@@ -290,6 +300,24 @@ const batchEditForm = reactive({
   usage: '',
   update_status: false,
   status: defaultPurchasePlanStatus as PurchasePlanStatus,
+})
+
+/** 单条「转入申购记录」（原详情页的能力，列表批量转入只处理多条）。 */
+const showMove = ref(false)
+const moving = ref(false)
+const moveForm = reactive({
+  purchase_order_no: defaultPurchaseOrderNo(),
+  trace_no: '',
+  contract_no: '',
+  vessel_no: '',
+  consolidation_date: null as number | null,
+  consolidation_port: '',
+  sailing_date: null as number | null,
+  contract_sign_date: null as number | null,
+  purchase_date: Date.now(),
+  salesperson: '',
+  status: '已申购',
+  record_remark: '',
 })
 const selectedPlans = computed(() => {
   const selected = new Set(checkedRowKeys.value.map(Number))
@@ -598,16 +626,16 @@ function rowProps(row: PurchaseMaterial) {
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
       if (rowClickGuard.shouldIgnore(event)) return
-      // Ctrl/Meta+点击在新标签页打开详情页
+      // Ctrl/Meta+点击在新标签页打开详情（列表页 + ?detail=）
       if (event.ctrlKey || event.metaKey) {
         const href = router.resolve({
-          name: 'purchase-material-detail',
-          params: { id: String(row.id) },
+          name: 'purchase-materials',
+          query: { detail: String(row.id) },
         }).href
         window.open(href, '_blank')
         return
       }
-      // 点击行直接打开编辑弹窗（与「新建」共用同一弹窗）
+      // 点击行直接打开详情弹窗（与「新建」共用同一弹窗）
       openEdit(row)
     },
   }
@@ -709,8 +737,36 @@ async function exportResults() {
     message.error(error instanceof Error ? error.message : '导出失败')
   }
 }
+/** 把当前打开的详情 id 写进 URL（`?detail=`），刷新 / 新标签页 / 收藏都能回到同一条计划。 */
+async function syncDetailQuery(id: number | null) {
+  const current = routeQueryString(route.query.detail)
+  const next = id === null ? undefined : String(id)
+  if (current === (next ?? '')) return
+  await router.replace({ query: { ...route.query, detail: next } })
+}
+
+const { requestClose: requestCloseDetail } = useMaskCloseGuard({
+  isDirty: () => isEditDirty(),
+  close: () => closeDetail(),
+})
+
+function closeDetail() {
+  show.value = false
+  editing.value = null
+  detailId.value = null
+  void syncDetailQuery(null)
+}
+
+/** `@close` 必须返回 false，否则 naive-ui 自己会把 show 置 false，拦不住「继续编辑」。 */
+function handleCloseClick(): false {
+  requestCloseDetail()
+  return false
+}
+
 function openCreate() {
   editing.value = null
+  detailId.value = null
+  void syncDetailQuery(null)
   Object.assign(form, {
     status: defaultPurchasePlanStatus,
     material_code: '',
@@ -733,10 +789,14 @@ function openCreate() {
   images.value = []
   createPlanDate.value = Date.now()
   createAdvancedSections.value = []
+  // 新建也要刷新脏基准：否则会拿上一条计划的基准去比，刚打开就判成「有未保存修改」
+  editBaseline.value = editSnapshot()
   show.value = true
 }
 function openEdit(row: PurchaseMaterial) {
   editing.value = row
+  detailId.value = row.id
+  void syncDetailQuery(row.id)
   Object.assign(form, {
     status: row.status,
     material_code: row.material_code || '',
@@ -759,8 +819,53 @@ function openEdit(row: PurchaseMaterial) {
   images.value = [...row.images]
   createPlanDate.value = dateToTimestamp(row.plan_date)
   createAdvancedSections.value = []
+  editBaseline.value = editSnapshot()
   show.value = true
 }
+
+/**
+ * 未保存修改的脏判定：与打开时的快照比对。用快照而不是 `watch(deep)`，
+ * 避免 `openEdit` 回填表单时被 watcher 的刷新时序误判成用户改动。
+ */
+const editBaseline = ref('')
+function editSnapshot(): string {
+  return JSON.stringify({
+    form: { ...form },
+    plan_date: createPlanDate.value,
+    image_ids: images.value.map((image) => image.id),
+  })
+}
+function isEditDirty(): boolean {
+  return editBaseline.value !== '' && editSnapshot() !== editBaseline.value
+}
+
+/** 按 id 打开详情弹窗（详情页来的深链、补库成功跳转等都用它）。 */
+async function openDetailById(id: number) {
+  detailId.value = id
+  try {
+    const plan = await procurementApi.material(id)
+    openEdit(plan)
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '申购计划加载失败')
+    closeDetail()
+  }
+}
+
+// URL → 弹窗的唯一入口：用 watch 而不是 onMounted，keepAlive / 同页导航都能生效
+watch(
+  () => routeQueryString(route.query.detail),
+  (raw) => {
+    // 本页是 keepAlive 页：跳去申购记录（转入成功后、记录「转为申购计划」跳回来）时本页只是被
+    // 停用，watcher 仍会跑。必须只认自己这条路由，否则会拿对方的 id 去查自己的数据，
+    // 并把对方刚写进的 `?detail=` 改写成自己的 id（两条列表来回打架）。
+    if (route.name !== 'purchase-materials') return
+    const id = Number(raw)
+    if (!Number.isInteger(id) || id <= 0) return
+    if (show.value && detailId.value === id) return
+    void openDetailById(id)
+  },
+  { immediate: true },
+)
 function applyMaterialCode(item: MaterialCodeLibrary) {
   form.material_code = item.material_code
   if (item.name?.trim()) form.name = item.name
@@ -790,8 +895,7 @@ async function save() {
       rememberPurchaseResponsible(form.purchase_responsible || '')
       message.success('申购计划已创建')
     }
-    show.value = false
-    editing.value = null
+    closeDetail()
     page.value = 1
     await Promise.all([load(), loadFilterOptions()])
   } catch (e) {
@@ -803,9 +907,10 @@ async function save() {
 function openInNewPage() {
   const target = editing.value
   if (!target) return
+  // 详情页已移除：新标签页打开列表页并由 ?detail= 自动弹开同一条计划的详情弹窗
   const href = router.resolve({
-    name: 'purchase-material-detail',
-    params: { id: String(target.id) },
+    name: 'purchase-materials',
+    query: { detail: String(target.id) },
   }).href
   window.open(href, '_blank')
 }
@@ -816,8 +921,7 @@ async function deletePlan() {
   try {
     await procurementApi.deleteMaterial(target.id, target.version)
     message.success('申购计划已删除')
-    show.value = false
-    editing.value = null
+    closeDetail()
     // 防空页：删除的是当前页最后一条且非第一页时回退一页
     if (items.value.length === 1 && page.value > 1) page.value -= 1
     await Promise.all([load(), loadFilterOptions()])
@@ -842,6 +946,70 @@ function confirmDelete() {
     negativeText: '取消',
     onPositiveClick: deletePlan,
   })
+}
+
+/** 打开单条转入申购记录弹窗（计划必须已有物料编码，且尚未转入）。 */
+function openMove() {
+  const target = editing.value
+  if (!target) return
+  if (!target.material_code) {
+    message.warning('该计划还没有物料编码，请先补充后再转入申购记录')
+    return
+  }
+  Object.assign(moveForm, {
+    purchase_order_no: defaultPurchaseOrderNo(),
+    trace_no: '',
+    contract_no: '',
+    vessel_no: '',
+    consolidation_date: null,
+    consolidation_port: '',
+    sailing_date: null,
+    contract_sign_date: null,
+    purchase_date: Date.now(),
+    salesperson: '',
+    status: '已申购',
+    record_remark: '',
+  })
+  showMove.value = true
+}
+
+async function moveToRecord() {
+  const target = editing.value
+  if (!target || !moveForm.purchase_date) {
+    message.error('请选择申购日期')
+    return
+  }
+  moving.value = true
+  try {
+    const record = await procurementApi.movePlanToRecord(target.id, {
+      purchase_order_no: moveForm.purchase_order_no.trim() || null,
+      trace_no: moveForm.trace_no.trim() || null,
+      contract_no: moveForm.contract_no.trim() || null,
+      vessel_no: moveForm.vessel_no.trim() || null,
+      consolidation_date: moveForm.consolidation_date
+        ? toShanghaiDate(moveForm.consolidation_date)
+        : undefined,
+      consolidation_port: moveForm.consolidation_port.trim() || null,
+      sailing_date: moveForm.sailing_date ? toShanghaiDate(moveForm.sailing_date) : undefined,
+      contract_sign_date: moveForm.contract_sign_date
+        ? toShanghaiDate(moveForm.contract_sign_date)
+        : undefined,
+      purchase_date: toShanghaiDate(moveForm.purchase_date),
+      salesperson: moveForm.salesperson.trim() || undefined,
+      status: moveForm.status.trim(),
+      record_remark: moveForm.record_remark.trim() || undefined,
+    })
+    message.success('已转入申购记录')
+    showMove.value = false
+    closeDetail()
+    await Promise.all([load(), loadFilterOptions()])
+    // 原详情页转入后直接落到新记录的详情；记录详情同样是弹窗，因此跳记录列表并由 ?detail= 打开它
+    await router.push({ name: 'purchase-records', query: { detail: String(record.line_id) } })
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '转入失败')
+  } finally {
+    moving.value = false
+  }
 }
 function openBatchMove() {
   if (!selectedPlans.value.length) {
@@ -1092,7 +1260,7 @@ onBeforeUnmount(() => {
       <div class="page-actions">
         <n-space>
           <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
-          <template v-if="auth.can('purchase:write')">
+          <template v-if="canWrite">
             <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
               批量修改（{{ selectedPlans.length }}）
             </n-button>
@@ -1459,11 +1627,22 @@ onBeforeUnmount(() => {
       v-model:show="show"
       preset="card"
       draggable
-      :title="editing ? '编辑申购计划' : '新建申购计划'"
+      data-detail-modal
+      :title="editing ? '申购计划详情' : '新建申购计划'"
       style="width: min(680px, calc(100vw - 24px))"
       :mask-closable="false"
+      :close-on-esc="false"
+      @mask-click="requestCloseDetail"
+      @esc="requestCloseDetail"
+      @close="handleCloseClick"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+      <n-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-placement="top"
+        :disabled="!canWrite"
+      >
         <div class="form-grid">
           <n-form-item label="需求日期" required>
             <n-date-picker v-model:value="createPlanDate" type="date" class="full-width" />
@@ -1474,6 +1653,7 @@ onBeforeUnmount(() => {
                 :model-value="form.material_code || ''"
                 :default-name="form.name"
                 :default-model-spec="form.model_spec"
+                :disabled="!canWrite"
                 @update:model-value="form.material_code = $event"
                 @select="applyMaterialCode"
               />
@@ -1491,7 +1671,7 @@ onBeforeUnmount(() => {
                 :bordered="false"
                 size="small"
               >
-                编码未收录，仍可保存
+                编码未收录
               </n-tag>
             </div>
           </n-form-item>
@@ -1515,6 +1695,7 @@ onBeforeUnmount(() => {
               <QuantityInput
                 v-model:value="form.planned_qty"
                 :decimal-places="1"
+                :disabled="!canWrite"
                 class="quantity-input"
               />
               <n-input
@@ -1570,6 +1751,7 @@ onBeforeUnmount(() => {
               <n-form-item label="关联二级库物资">
                 <MaterialSelector
                   :value="form.stock_material_id ?? null"
+                  :disabled="!canWrite"
                   @update:value="form.stock_material_id = $event ?? undefined"
                 />
               </n-form-item>
@@ -1579,31 +1761,136 @@ onBeforeUnmount(() => {
         <n-form-item label="备注"
           ><n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count
         /></n-form-item>
-        <n-form-item label="图片附件"><ImageUploader v-model:files="images" /></n-form-item></n-form
+        <n-form-item label="图片附件"
+          ><ImageUploader
+            v-model:files="images"
+            v-model:busy="imagesUploading"
+            :disabled="!canWrite" /></n-form-item></n-form
       ><template #footer
         ><n-space justify="space-between"
           ><template v-if="editing"
-            ><n-space justify="start"
+            ><n-space justify="start" align="center"
+              ><span v-if="editing.updated_at" class="muted"
+                >最后更新：{{ formatShanghaiTime(editing.updated_at) }}</span
               ><n-button
-                v-if="auth.can('purchase:write')"
+                v-if="canWrite"
                 type="error"
                 ghost
                 :loading="deleting"
                 :disabled="editing.moved_to_record"
                 @click="confirmDelete"
                 >删除</n-button
+              ><n-button
+                v-if="canWrite && editing.material_code && !editing.moved_to_record"
+                type="primary"
+                secondary
+                @click="openMove"
+                >转入申购记录</n-button
               ><n-button type="primary" secondary class="open-new-page-btn" @click="openInNewPage"
                 >在新页面打开</n-button
               ></n-space
             ></template
           ><span v-else></span
           ><n-space justify="end"
-            ><n-button @click="show = false">取消</n-button
-            ><n-button type="primary" :loading="saving" @click="save">保存</n-button></n-space
+            ><n-button @click="requestCloseDetail">取消</n-button
+            ><n-button
+              v-if="canWrite"
+              type="primary"
+              :loading="saving"
+              :disabled="imagesUploading"
+              @click="save"
+              >保存</n-button
+            ></n-space
           ></n-space
         ></template
       ></n-modal
     >
+    <n-modal
+      v-model:show="showMove"
+      preset="card"
+      draggable
+      title="转入申购记录"
+      style="width: min(560px, calc(100vw - 24px))"
+      :mask-closable="false"
+    >
+      <n-alert type="info" style="margin-bottom: 16px">
+        计划信息将带入申购记录，转入后仍可继续修改和整理。
+      </n-alert>
+      <n-form label-placement="top">
+        <div class="form-grid">
+          <n-form-item label="申购单号">
+            <n-input
+              v-model:value="moveForm.purchase_order_no"
+              maxlength="128"
+              placeholder="可留空"
+            />
+          </n-form-item>
+          <n-form-item label="追溯号">
+            <n-input v-model:value="moveForm.trace_no" maxlength="128" placeholder="可留空" />
+          </n-form-item>
+          <n-form-item label="合同号">
+            <n-input v-model:value="moveForm.contract_no" maxlength="128" placeholder="可留空" />
+          </n-form-item>
+          <n-form-item label="船号">
+            <n-input v-model:value="moveForm.vessel_no" maxlength="128" placeholder="可留空" />
+          </n-form-item>
+          <n-form-item label="集港日期">
+            <n-date-picker
+              v-model:value="moveForm.consolidation_date"
+              type="date"
+              class="full-width"
+              clearable
+            />
+          </n-form-item>
+          <n-form-item label="集港港口">
+            <n-input
+              v-model:value="moveForm.consolidation_port"
+              maxlength="128"
+              placeholder="可留空"
+            />
+          </n-form-item>
+          <n-form-item label="发船日期">
+            <n-date-picker
+              v-model:value="moveForm.sailing_date"
+              type="date"
+              class="full-width"
+              clearable
+            />
+          </n-form-item>
+          <n-form-item label="合同签订日期">
+            <n-date-picker
+              v-model:value="moveForm.contract_sign_date"
+              type="date"
+              class="full-width"
+              clearable
+            />
+          </n-form-item>
+          <n-form-item label="申购日期" required>
+            <n-date-picker v-model:value="moveForm.purchase_date" type="date" class="full-width" />
+          </n-form-item>
+          <n-form-item label="业务员">
+            <n-input v-model:value="moveForm.salesperson" maxlength="128" />
+          </n-form-item>
+          <n-form-item label="状态" required>
+            <n-input v-model:value="moveForm.status" maxlength="128" />
+          </n-form-item>
+        </div>
+        <n-form-item label="记录备注">
+          <n-input
+            v-model:value="moveForm.record_remark"
+            type="textarea"
+            maxlength="1000"
+            show-count
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showMove = false">取消</n-button>
+          <n-button type="primary" :loading="moving" @click="moveToRecord">确认转入</n-button>
+        </n-space>
+      </template>
+    </n-modal>
     <PurchaseRecordHistoryDialog v-model:show="showHistory" :initial-name="form.name" />
     <ShareLinkDialog
       v-model:show="showShare"

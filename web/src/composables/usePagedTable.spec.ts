@@ -214,6 +214,75 @@ describe('usePagedTable', () => {
     })
   })
 
+  it('preservedQueryKeys: 不属于筛选状态的参数（detail）在 syncRoute 后仍留在 URL', async () => {
+    type F = { name: string }
+    mocks.routeQuery = { detail: '7', name: '电机' }
+    const fetchMock = vi.fn().mockResolvedValue(pageOf([], 1, 20, 0))
+    const { filters, syncRoute } = usePagedTable<Item, F>({
+      fetch: (f, p) => fetchMock(f, p),
+      initialFilters: () => ({ name: '' }),
+      urlSync: {
+        routeName: 'purchase-materials',
+        fromQuery: (route) => ({ name: String(route.query.name || '') }),
+        toQuery: (f: F) => ({ name: f.name || undefined }),
+        preservedQueryKeys: ['detail'],
+      },
+      immediate: false,
+    })
+
+    filters.name = '水泵'
+    await syncRoute()
+    expect(mocks.replace).toHaveBeenCalledWith({
+      name: 'purchase-materials',
+      query: { name: '水泵', detail: '7' },
+    })
+  })
+
+  it('未配置 preservedQueryKeys 时行为与现状一致（不写出额外参数）', async () => {
+    type F = { name: string }
+    mocks.routeQuery = { detail: '7', name: '电机' }
+    const fetchMock = vi.fn().mockResolvedValue(pageOf([], 1, 20, 0))
+    const { syncRoute } = usePagedTable<Item, F>({
+      fetch: (f, p) => fetchMock(f, p),
+      initialFilters: () => ({ name: '' }),
+      urlSync: {
+        routeName: 'purchase-materials',
+        fromQuery: (route) => ({ name: String(route.query.name || '') }),
+        toQuery: (f: F) => ({ name: f.name || undefined }),
+      },
+      immediate: false,
+    })
+
+    await syncRoute()
+    expect(mocks.replace).toHaveBeenCalledWith({
+      name: 'purchase-materials',
+      query: { name: '电机' },
+    })
+  })
+
+  it('preservedQueryKeys 里 URL 上不存在的参数不会写进 query', async () => {
+    type F = { name: string }
+    mocks.routeQuery = { name: '电机' }
+    const fetchMock = vi.fn().mockResolvedValue(pageOf([], 1, 20, 0))
+    const { syncRoute } = usePagedTable<Item, F>({
+      fetch: (f, p) => fetchMock(f, p),
+      initialFilters: () => ({ name: '' }),
+      urlSync: {
+        routeName: 'purchase-materials',
+        fromQuery: (route) => ({ name: String(route.query.name || '') }),
+        toQuery: (f: F) => ({ name: f.name || undefined }),
+        preservedQueryKeys: ['detail'],
+      },
+      immediate: false,
+    })
+
+    await syncRoute()
+    expect(mocks.replace).toHaveBeenCalledWith({
+      name: 'purchase-materials',
+      query: { name: '电机' },
+    })
+  })
+
   it('fetch receives typed filters object for typed Query construction', async () => {
     type TypedF = { keyword?: string; min_qty?: string }
     const seen: Array<{ f: TypedF; p: PagedFetchParams }> = []

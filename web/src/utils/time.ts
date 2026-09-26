@@ -43,3 +43,19 @@ export const dateToTimestamp = (value?: string | null): number | null =>
   value ? new Date(`${value}T00:00:00+08:00`).getTime() : null
 
 export const formatDate = (value?: string): string => (value ? value.replace(/-/g, '/') : '—')
+
+/**
+ * 耗时展示（用于上传等有明确起止的过程）。
+ *
+ * 不足 1 分钟给「12秒」；超过 1 分钟给「1分05秒」，秒数补零让宽度稳定、读数不跳动；
+ * 超过 1 小时给「1小时05分」（上传超时上限 30 分钟，走到这一档基本只在异常场景）。
+ */
+export const formatElapsed = (ms: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  if (totalSeconds < 60) return `${totalSeconds}秒`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  if (minutes < 60) return `${minutes}分${String(seconds).padStart(2, '0')}秒`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}小时${String(minutes % 60).padStart(2, '0')}分`
+}

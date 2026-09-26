@@ -1,7 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+/**
+ * 出入库流水「详情 / 编辑 / 冲销」弹窗。
+ *
+ * 取代原来的 `OperationDetailView` 页面：操作记录列表点行、点「详情」、以及入库/出库提交成功
+ * 后的跳转都打开本弹窗。内容与原详情页一一对应——Hero 摘要（流水号 / 类型 / 发生时间 /
+ * 操作来源 / 操作人 / 明细项数）、单据信息（只读 `n-descriptions` 与编辑表单互斥）、物资明细
+ * （只读表格与行编辑器互斥）、修改影响提示与保存前的变化摘要确认、反向冲销入口。
+ *
+ * 关闭语义见 `useMaskCloseGuard`：编辑态有未保存修改时，点遮罩 / ESC / × 先二次确认。
+ */
+import { computed, reactive, ref, watch } from 'vue'
 import { useDialog, useMessage } from 'naive-ui'
-import { useRoute, useRouter } from 'vue-router'
 import type { OperationType, SourceType, StockOperation } from '@/api/generated'
 import { inventoryApi } from '@/api/inventory'
 import { useAuthStore } from '@/stores/auth'
@@ -11,17 +20,41 @@ import OperationLinesEditor, {
   type OperationLineModel,
 } from '@/components/OperationLinesEditor.vue'
 import ReverseOperationDialog from '@/components/ReverseOperationDialog.vue'
+import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { compareDecimal, isDecimalString, subtractDecimal } from '@/utils/decimal'
 
-const route = useRoute()
-const router = useRouter()
+const props = withDefaults(
+  defineProps<{
+    show: boolean
+    /** 要查看的流水 id；null 表示未指定（弹窗不加载） */
+    operationId?: number | null
+  }>(),
+  { operationId: null },
+)
+
+const emit = defineEmits<{
+  'update:show': [value: boolean]
+  /** 流水被修改 */
+  saved: []
+  /** 已被冲销，回传冲销后的新流水 id（列表据此切到新流水） */
+  reversed: [id: number]
+}>()
+
 const auth = useAuthStore()
 const message = useMessage()
 const dialog = useDialog()
+
+const showModel = computed({
+  get: () => props.show,
+  set: (value: boolean) => emit('update:show', value),
+})
+
 const operation = ref<StockOperation | null>(null)
-const loading = ref(true)
+const loading = ref(false)
 const editing = ref(false)
 const saving = ref(false)
+const canWrite = computed(() => auth.can('warehouse:write'))
+
 const sourceTypeLabels: Record<SourceType, string> = {
   MANUAL: '管理端手工录入',
   MINI_PROGRAM: '微信小程序出库',
@@ -52,6 +85,38 @@ const edit = reactive({
   lines: [] as OperationLineModel[],
 })
 
+/** 脏判定只针对编辑态：只读看详情时点遮罩应当直接关。 */
+function snapshot(): string {
+  return JSON.stringify({
+    operation_type: edit.operation_type,
+    occurred_at: edit.occurred_at,
+    business_reason: edit.business_reason,
+    receiver_unit: edit.receiver_unit,
+    receiver_name: edit.receiver_name,
+    subitem_no: edit.subitem_no,
+    source_type: edit.source_type,
+    lines: edit.lines.map((line) => [line.stock_material_id, line.quantity]),
+  })
+}
+const baseline = ref('')
+
+const { requestClose } = useMaskCloseGuard({
+  isDirty: () => editing.value && snapshot() !== baseline.value,
+  close: () => {
+    showModel.value = false
+  },
+})
+
+/** `@close` 必须返回 false，否则 naive-ui 自己会把 show 置 false，拦不住「继续编辑」。 */
+function handleCloseClick(): false {
+  requestClose()
+  return false
+}
+
+/**
+ * 行编辑器需要完整物资对象（选物资、显示型号单位），但流水行只带快照字段，
+ * 所以按 `stock_material_id` 逐个补齐——与原来详情页的做法一致。
+ */
 async function resetEditor(value: StockOperation) {
   const materials = await Promise.all(
     value.lines.map((line) => inventoryApi.material(line.stock_material_id)),
@@ -70,16 +135,25 @@ async function resetEditor(value: StockOperation) {
       material: materials[index],
     })),
   })
+  baseline.value = snapshot()
 }
+
 async function load() {
+  const id = props.operationId
+  if (id === null || id === undefined) return
   loading.value = true
   try {
-    operation.value = await inventoryApi.operation(Number(route.params.id))
-    await resetEditor(operation.value)
+    const value = await inventoryApi.operation(id)
+    operation.value = value
+    await resetEditor(value)
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '流水加载失败')
+    showModel.value = false
   } finally {
     loading.value = false
   }
 }
+
 function validationError(): string | null {
   if (edit.operation_type === 'OUTBOUND' && !edit.business_reason.trim()) return '用途必填'
   if (edit.operation_type === 'OUTBOUND' && !edit.receiver_name.trim()) return '领用人必填'
@@ -90,6 +164,7 @@ function validationError(): string | null {
     return '请完整填写物资和有效数量'
   return null
 }
+
 async function save() {
   if (!operation.value) return
   saving.value = true
@@ -114,12 +189,14 @@ async function save() {
     message.success('流水已修改，库存已重新计算')
     editing.value = false
     await load()
+    emit('saved')
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败')
   } finally {
     saving.value = false
   }
 }
+
 // 对比原流水行与新编辑行，产出受影响物资的数量变化摘要（含新增/删除的行）
 const editChanges = computed<string[]>(() => {
   const value = operation.value
@@ -169,147 +246,175 @@ function confirmSave() {
     onPositiveClick: save,
   })
 }
+
 function sourceTagType(sourceType: SourceType) {
   if (sourceType === 'MINI_PROGRAM') return 'info'
   if (sourceType === 'REVERSAL') return 'warning'
   if (sourceType === 'INITIALIZATION') return 'success'
   return 'default'
 }
+
 async function cancelEdit() {
   if (operation.value) await resetEditor(operation.value)
   editing.value = false
 }
+
+async function startEdit() {
+  if (operation.value) await resetEditor(operation.value)
+  editing.value = true
+}
+
 const showReverse = ref(false)
 function onReversed(id: number) {
-  void router.push(`/warehouse/operations/${id}`)
+  showModel.value = false
+  emit('reversed', id)
 }
+
 // 冲销流水本身不可再冲销；原流水还有剩余可冲数量时才显示冲销按钮
 const canReverse = computed(() => {
   const value = operation.value
   if (!value || value.is_reversed) return false
   return value.lines.some((line) => compareDecimal(line.remaining_qty, '0') > 0)
 })
-onMounted(load)
+
+watch(
+  () => [props.show, props.operationId] as const,
+  ([show]) => {
+    if (!show) {
+      editing.value = false
+      operation.value = null
+      return
+    }
+    void load()
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
-  <div v-if="operation" class="page">
+  <n-modal
+    v-model:show="showModel"
+    preset="card"
+    draggable
+    data-detail-modal
+    title="出入库流水详情"
+    style="width: min(960px, calc(100vw - 24px))"
+    :mask-closable="false"
+    :close-on-esc="false"
+    @mask-click="requestClose"
+    @esc="requestClose"
+    @close="handleCloseClick"
+  >
     <LoadingMask :show="loading" text="加载中…" />
-    <div class="detail-toolbar">
-      <n-button secondary @click="router.back()">← 返回操作记录</n-button>
-      <n-space v-if="auth.can('warehouse:write')">
-        <n-button secondary :disabled="!canReverse" @click="showReverse = true">反向冲销</n-button>
-        <n-button type="primary" @click="editing ? cancelEdit() : (editing = true)">{{
-          editing ? '取消编辑' : '编辑流水'
-        }}</n-button>
-      </n-space>
-    </div>
-
-    <n-card :bordered="false" class="operation-hero">
-      <div class="operation-hero-layout">
-        <div class="operation-hero-main">
-          <div class="operation-eyebrow">库存操作流水</div>
-          <div class="operation-title-row">
-            <h1>{{ operation.operation_no }}</h1>
-            <n-tag
-              round
-              size="large"
-              :type="operation.operation_type === 'INBOUND' ? 'success' : 'warning'"
-            >
-              {{ operation.operation_type === 'INBOUND' ? '入库' : '出库' }}
-            </n-tag>
-          </div>
-          <div class="operation-meta-row">
-            <span>发生时间</span>
-            <strong>{{ formatShanghaiTime(operation.occurred_at) }}</strong>
-            <span class="operation-meta-divider"></span>
-            <span>操作来源</span>
-            <n-tag :type="sourceTagType(operation.source_type)" size="small">
-              {{ sourceTypeLabels[operation.source_type] }}
-            </n-tag>
-            <template v-if="operation.mini_program_user_name">
+    <template v-if="operation">
+      <n-card :bordered="false" class="operation-hero">
+        <div class="operation-hero-layout">
+          <div class="operation-hero-main">
+            <div class="operation-eyebrow">库存操作流水</div>
+            <div class="operation-title-row">
+              <span class="operation-no">{{ operation.operation_no }}</span>
+              <n-tag
+                round
+                size="large"
+                :type="operation.operation_type === 'INBOUND' ? 'success' : 'warning'"
+              >
+                {{ operation.operation_type === 'INBOUND' ? '入库' : '出库' }}
+              </n-tag>
+            </div>
+            <div class="operation-meta-row">
+              <span>发生时间</span>
+              <strong>{{ formatShanghaiTime(operation.occurred_at) }}</strong>
               <span class="operation-meta-divider"></span>
-              <span>操作人</span>
-              <strong>{{ operation.mini_program_user_name }}</strong>
-            </template>
+              <span>操作来源</span>
+              <n-tag :type="sourceTagType(operation.source_type)" size="small">
+                {{ sourceTypeLabels[operation.source_type] }}
+              </n-tag>
+              <template v-if="operation.mini_program_user_name">
+                <span class="operation-meta-divider"></span>
+                <span>操作人</span>
+                <strong>{{ operation.mini_program_user_name }}</strong>
+              </template>
+            </div>
+          </div>
+          <div class="operation-line-count">
+            <span>物资明细</span>
+            <div>
+              <strong>{{ operation.lines.length }}</strong
+              ><small>项</small>
+            </div>
           </div>
         </div>
-        <div class="operation-line-count">
-          <span>物资明细</span>
-          <div>
-            <strong>{{ operation.lines.length }}</strong
-            ><small>项</small>
-          </div>
-        </div>
-      </div>
-    </n-card>
+      </n-card>
 
-    <n-alert v-if="editing" type="warning" title="修改影响提示"
-      >保存后，后端会按发生时间重放相关物资的全部流水；允许形成负库存。</n-alert
-    >
-    <n-card title="单据信息">
+      <n-alert v-if="editing" type="warning" title="修改影响提示" style="margin-top: 12px">
+        保存后，后端会按发生时间重放相关物资的全部流水；允许形成负库存。
+      </n-alert>
+
+      <n-divider title-placement="left">单据信息</n-divider>
       <n-form v-if="editing" label-placement="top">
         <div class="form-grid">
-          <n-form-item label="业务类型"
-            ><n-select
+          <n-form-item label="业务类型">
+            <n-select
               v-model:value="edit.operation_type"
               :options="[
                 { label: '入库', value: 'INBOUND' },
                 { label: '出库', value: 'OUTBOUND' },
               ]"
               :disabled="['MINI_PROGRAM', 'REVERSAL'].includes(operation.source_type)"
-          /></n-form-item>
-          <n-form-item label="发生时间"
-            ><n-date-picker v-model:value="edit.occurred_at" type="datetime" class="full-width"
-          /></n-form-item>
-          <n-form-item label="操作来源"
-            ><n-select
+            />
+          </n-form-item>
+          <n-form-item label="发生时间">
+            <n-date-picker v-model:value="edit.occurred_at" type="datetime" class="full-width" />
+          </n-form-item>
+          <n-form-item label="操作来源">
+            <n-select
               v-model:value="edit.source_type"
               :options="editableSourceTypeOptions"
               :disabled="['MINI_PROGRAM', 'REVERSAL'].includes(operation.source_type)"
-          /></n-form-item>
-          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="领用单位"
-            ><n-input v-model:value="edit.receiver_unit" maxlength="128"
-          /></n-form-item>
-          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="领用人" required
-            ><n-input v-model:value="edit.receiver_name" maxlength="64"
-          /></n-form-item>
-          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="子项号"
-            ><n-input v-model:value="edit.subitem_no" maxlength="64"
-          /></n-form-item>
+            />
+          </n-form-item>
+          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="领用单位">
+            <n-input v-model:value="edit.receiver_unit" maxlength="128" />
+          </n-form-item>
+          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="领用人" required>
+            <n-input v-model:value="edit.receiver_name" maxlength="64" />
+          </n-form-item>
+          <n-form-item v-if="edit.operation_type === 'OUTBOUND'" label="子项号">
+            <n-input v-model:value="edit.subitem_no" maxlength="64" />
+          </n-form-item>
         </div>
-        <n-form-item label="用途" :required="edit.operation_type === 'OUTBOUND'"
-          ><n-input v-model:value="edit.business_reason" maxlength="500"
-        /></n-form-item>
+        <n-form-item label="用途" :required="edit.operation_type === 'OUTBOUND'">
+          <n-input v-model:value="edit.business_reason" maxlength="500" />
+        </n-form-item>
       </n-form>
       <n-descriptions v-else :column="3">
-        <n-descriptions-item label="类型">{{
-          operation.operation_type === 'INBOUND' ? '入库' : '出库'
-        }}</n-descriptions-item>
+        <n-descriptions-item label="类型">
+          {{ operation.operation_type === 'INBOUND' ? '入库' : '出库' }}
+        </n-descriptions-item>
         <n-descriptions-item label="操作来源">
           {{ sourceTypeLabels[operation.source_type] }}
         </n-descriptions-item>
         <n-descriptions-item label="发生时间">
           {{ formatShanghaiTime(operation.occurred_at) }}
         </n-descriptions-item>
-        <n-descriptions-item label="用途" :span="2">{{
-          operation.business_reason || '—'
-        }}</n-descriptions-item>
-        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="领用单位">{{
-          operation.receiver_unit || '—'
-        }}</n-descriptions-item>
-        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="领用人">{{
-          operation.receiver_name || '—'
-        }}</n-descriptions-item>
-        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="子项号">{{
-          operation.subitem_no || '—'
-        }}</n-descriptions-item>
-        <n-descriptions-item label="请求幂等 ID" :span="2">{{
-          operation.client_request_id
-        }}</n-descriptions-item>
+        <n-descriptions-item label="用途" :span="2">
+          {{ operation.business_reason || '—' }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="领用单位">
+          {{ operation.receiver_unit || '—' }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="领用人">
+          {{ operation.receiver_name || '—' }}
+        </n-descriptions-item>
+        <n-descriptions-item v-if="operation.operation_type === 'OUTBOUND'" label="子项号">
+          {{ operation.subitem_no || '—' }}
+        </n-descriptions-item>
+        <n-descriptions-item label="请求幂等 ID" :span="2">
+          {{ operation.client_request_id }}
+        </n-descriptions-item>
       </n-descriptions>
-    </n-card>
-    <n-card title="物资明细">
+
+      <n-divider title-placement="left">物资明细</n-divider>
       <OperationLinesEditor v-if="editing" v-model:lines="edit.lines" :type="edit.operation_type" />
       <div v-else class="table-scroll" style="--table-min-width: 1000px">
         <n-table :bordered="false">
@@ -333,8 +438,9 @@ onMounted(load)
                   v-if="compareDecimal(line.remaining_qty, '0') <= 0"
                   type="success"
                   size="small"
-                  >已冲销</n-tag
                 >
+                  已冲销
+                </n-tag>
                 <span v-else>{{ line.remaining_qty }} {{ line.unit_name }}</span>
               </td>
               <td>{{ line.before_qty }}</td>
@@ -343,17 +449,37 @@ onMounted(load)
           </tbody>
         </n-table>
       </div>
-    </n-card>
-    <n-space v-if="editing" justify="end"
-      ><n-button @click="cancelEdit">取消</n-button
-      ><n-button type="primary" :loading="saving" @click="confirmSave">保存修改</n-button></n-space
-    >
-    <ReverseOperationDialog
-      v-model:show="showReverse"
-      :operation="operation"
-      @reversed="onReversed"
-    />
-  </div>
+    </template>
+    <template #footer>
+      <n-space justify="space-between" align="center">
+        <n-space v-if="canWrite && operation" justify="start">
+          <n-button secondary :disabled="!canReverse" @click="showReverse = true">
+            反向冲销
+          </n-button>
+          <n-button
+            :type="editing ? 'default' : 'primary'"
+            @click="editing ? cancelEdit() : startEdit()"
+          >
+            {{ editing ? '取消编辑' : '编辑流水' }}
+          </n-button>
+        </n-space>
+        <span v-else></span>
+        <n-space justify="end">
+          <n-button v-if="editing" @click="cancelEdit">取消</n-button>
+          <n-button v-if="editing" type="primary" :loading="saving" @click="confirmSave">
+            保存修改
+          </n-button>
+          <n-button v-else @click="requestClose">关闭</n-button>
+        </n-space>
+      </n-space>
+    </template>
+  </n-modal>
+
+  <ReverseOperationDialog
+    v-model:show="showReverse"
+    :operation="operation"
+    @reversed="onReversed"
+  />
 </template>
 
 <style scoped>
@@ -388,10 +514,10 @@ onMounted(load)
   margin-top: 8px;
 }
 
-.operation-title-row h1 {
-  margin: 0;
+.operation-no {
   color: var(--color-text-strong);
-  font-size: clamp(24px, 3vw, 34px);
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 600;
   line-height: 1.25;
 }
 

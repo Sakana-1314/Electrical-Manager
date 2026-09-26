@@ -1,6 +1,6 @@
 import { onActivated, onMounted, reactive, ref, type Ref } from 'vue'
 import { useRoute, useRouter, type RouteLocationNormalizedLoaded } from 'vue-router'
-import { compactRouteQuery, routeQueryPositiveInteger } from '@/utils/routeQuery'
+import { compactRouteQuery, routeQueryPositiveInteger, routeQueryString } from '@/utils/routeQuery'
 import type { Page } from '@/api/generated'
 
 /** 传给 fetch 的分页状态（由 composable 合成，调用方据此构造 typed query） */
@@ -17,6 +17,15 @@ export interface UsePagedTableUrlSync<F extends object> {
   toQuery: (filters: F) => Record<string, string | number | null | undefined>
   /** 首次挂载时从路由 query 恢复筛选状态 */
   fromQuery: (route: RouteLocationNormalizedLoaded) => F
+  /**
+   * 不属于筛选状态、但必须原样留在 URL 里的参数名（如详情弹窗的 `detail`）。
+   *
+   * `syncRoute` 是整体替换 query，不声明就会被翻页 / 筛选 / onActivated 重写冲掉。
+   * 这些值**每次从当前 `route.query` 实时读**而不是从本地 ref 推导：keepAlive 列表页被
+   * 重新导航进来（只触发 onActivated）时，从本地状态推导会把刚写进来的 `detail` 又抹掉。
+   * 不传时行为与现状完全一致。
+   */
+  preservedQueryKeys?: string[]
 }
 
 /** usePagedTable 选项 */
@@ -111,12 +120,19 @@ export function usePagedTable<T, F extends object>(
 
   async function syncRoute() {
     if (!urlSync || !router || !route) return
+    // 从当前 URL 实时读回要保留的参数（如详情弹窗的 detail）：不能用本地 ref，
+    // 否则 keepAlive 页面重新激活时会把刚导航进来的参数抹掉。
+    const preserved: Record<string, string | undefined> = {}
+    for (const key of urlSync.preservedQueryKeys ?? []) {
+      preserved[key] = routeQueryString(route.query[key]) || undefined
+    }
     await router.replace({
       name: urlSync.routeName,
       query: compactRouteQuery({
         page: page.value === 1 ? undefined : page.value,
         page_size: pageSize.value === defaultPageSize ? undefined : pageSize.value,
         ...urlSync.toQuery(filters),
+        ...preserved,
       }),
     })
   }

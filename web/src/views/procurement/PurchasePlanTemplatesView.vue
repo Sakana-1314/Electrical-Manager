@@ -144,6 +144,8 @@ const tableAreaRef = ref<HTMLElement | null>(null)
 const isTableFullscreen = ref(false)
 const formRef = ref<FormInst | null>(null)
 const images = ref<FileObject[]>([])
+/** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
+const imagesUploading = ref(false)
 const createAdvancedSections = ref<string[]>([])
 
 const form = reactive({
@@ -762,7 +764,9 @@ onBeforeUnmount(() => {
         <n-form-item label="备注"
           ><n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count
         /></n-form-item>
-        <n-form-item label="图片附件"><ImageUploader v-model:files="images" /></n-form-item>
+        <n-form-item label="图片附件"
+          ><ImageUploader v-model:files="images" v-model:busy="imagesUploading"
+        /></n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="space-between">
@@ -788,7 +792,9 @@ onBeforeUnmount(() => {
           </n-space>
           <n-space justify="end">
             <n-button @click="show = false">取消</n-button>
-            <n-button type="primary" :loading="saving" @click="save">保存</n-button>
+            <n-button type="primary" :loading="saving" :disabled="imagesUploading" @click="save"
+              >保存</n-button
+            >
           </n-space>
         </n-space>
       </template>

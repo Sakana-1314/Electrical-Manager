@@ -200,15 +200,6 @@ a {
 .page-header > .n-tag {
   margin-top: 3px;
 }
-.detail-toolbar {
-  display: flex;
-  min-height: 34px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  padding: 0 2px;
-}
 .page .n-card {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-card);
@@ -476,24 +467,14 @@ a {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 20px;
 }
-.detail-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: 18px;
-}
 /* ============ 响应式断点体系 ============
- * ≤1200px 平板/窄窗 · ≤992px 平板 · ≤768px 手机 · ≤480px 小手机
+ * ≤1200px 平板/窄窗 · ≤768px 手机 · ≤480px 小手机
+ * （原 ≤992px 一档只剩详情页的 .detail-grid，详情改为弹窗后该档已无规则，随之移除）
  * 桌面端（≥1200px）不命中任何断点，观感与改造前一致。
  * ======================================= */
 @media (max-width: 1200px) {
   .stat-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 992px) {
-  .detail-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -554,46 +535,36 @@ a {
     justify-content: flex-start;
   }
   /* 按钮组按内容宽度排成一行（不压缩），宽度不够时由本行的横向滑动承接 */
-  .page-actions > *,
-  .detail-toolbar > .n-space {
+  .page-actions > * {
     flex: none;
     min-width: 0;
   }
   /* 让行内按钮组按内容宽度占位：flex 子项设了 flex: none 后仍可能被压缩到容器宽度，
      那样 scrollWidth 会等于 clientWidth、没有可滚动区间（实测就是滚不动的原因）。
      这里用 width: max-content 把真实宽度撑出来，交给父级滚动。 */
-  .page-actions > .n-space,
-  .detail-toolbar > .n-space {
+  .page-actions > .n-space {
     width: max-content;
     max-width: none;
   }
-  .page-actions,
-  .detail-toolbar {
+  .page-actions {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     /* 旧版 iOS 需要显式声明才能触摸横向滑动 */
     -webkit-overflow-scrolling: touch;
   }
-  .page-actions::-webkit-scrollbar,
-  .detail-toolbar::-webkit-scrollbar {
+  .page-actions::-webkit-scrollbar {
     display: none;
   }
-  .page-header .n-button,
-  .detail-toolbar .n-button {
+  .page-header .n-button {
     flex: none;
     font-size: 13px;
   }
-  .page-header .n-button .n-button__content,
-  .detail-toolbar .n-button .n-button__content {
+  .page-header .n-button .n-button__content {
     font-size: 13px;
   }
-  .page-header .n-button.n-button--medium-type,
-  .detail-toolbar .n-button.n-button--medium-type {
+  .page-header .n-button.n-button--medium-type {
     --n-padding: 0 11px;
-  }
-  .detail-toolbar {
-    gap: 10px 12px;
   }
   /* 移动端：含表格的数据卡片内边距全部归零，让表格四边直接占满卡片。
      Naive 的内边距作用在内容区 `.n-card-content` 上（注意是单短横线：`.n-card__content`

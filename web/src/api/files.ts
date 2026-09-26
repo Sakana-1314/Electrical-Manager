@@ -17,6 +17,15 @@ export interface AttachmentListQuery {
   status?: 'active' | 'deleted' | 'all'
 }
 
+/**
+ * 图片上传的请求超时（30 分钟）。
+ *
+ * 不能用全局的 30s：单张最大 10MB，慢速上行（现场 4G、受限局域网）光传输就可能超过 30s，
+ * 而 axios/XHR 的 `timeout` 是**整个请求的总时长**，一旦超时请求已被中止，重传只能从头再来。
+ * 这里一次给足 30 分钟，把「传得慢」和「连接真的断了」区分开：后者由浏览器/系统自己报错。
+ */
+export const IMAGE_UPLOAD_TIMEOUT_MS = 30 * 60_000
+
 export const fileApi = {
   /**
    * 上传图片。
@@ -31,6 +40,8 @@ export const fileApi = {
     return apiClient
       .post<FileObject>('/files/images', form, {
         signal,
+        // 30 分钟：大图 + 慢上行不能按全局 30s 判定失败（见 IMAGE_UPLOAD_TIMEOUT_MS）
+        timeout: IMAGE_UPLOAD_TIMEOUT_MS,
         onUploadProgress: (event) => {
           if (!onProgress) return
           const total = event.total ?? 0
