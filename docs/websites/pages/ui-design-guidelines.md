@@ -235,11 +235,11 @@
 | 互转跳转 | 单条「申购计划 → 申购记录」与「申购记录 → 申购计划」都从详情弹窗发起，成功后跳对方列表并带上 `?detail=<新记录 / 新计划的 id>`，由对方列表自动打开详情弹窗（不再跳详情页） |
 | 字段保存 | 关联物资、选择单位等随整表保存，不为单个字段加独立保存或确认流程 |
 | 破坏性操作 | 不得与主要保存按钮同视觉权重 |
-| 遮罩关闭 | **点击弹窗外部即可关闭**。因此详情弹窗必须写 `:mask-closable="false"` + `:close-on-esc="false"`，再由 `@mask-click` / `@esc` / `@close` 统一调用 `useMaskCloseGuard`：无未保存修改时直接关，有修改时弹「放弃修改 / 继续编辑」二次确认。`@close` 的处理函数必须返回 `false`（否则组件库会抢先关闭，拦不住误触） |
+| 遮罩关闭 | **点击弹窗外部即可关闭**。因此详情弹窗必须写 `:mask-closable="false"` + `:close-on-esc="false"`（组件库的这两个开关会直接改 `show`、绕过确认），再由 `@mask-click` / `@esc` / `@close` 统一调用 `useMaskCloseGuard`：无未保存修改时直接关，有修改时弹「放弃修改 / 继续编辑」二次确认。`@close` 的处理函数必须返回 `false`（否则组件库会抢先关闭，拦不住误触）。只读看详情时脏判定应为 `false`，点遮罩直接关 |
 | 直达链接 | 打开时把 id 写进列表页 URL 的 `?detail=<id>`，刷新 / 收藏 / Ctrl+点击新标签都能直接回到该弹窗；关闭时清掉该参数。列表页需在 `usePagedTable` 的 `urlSync.preservedQueryKeys` 里声明 `'detail'`，否则翻页 / 筛选会把它冲掉 |
 | keepAlive 隔离 | URL → 弹窗的 watcher 必须判 `route.name` 是不是自己这条路由再处理：`keepAlive` 列表页跳走时只是被停用、watcher 仍会跑，否则会拿对方的 id 查自己的数据，并把对方刚写进的 `?detail=` 改写成自己的 id（申购计划 ⇄ 申购记录这两页最容易踩） |
 | 旧链接兼容 | 原来的 4 条详情路径保留为 `redirect` 到对应列表页 + `?detail=<id>`，老链接不会 404 |
-| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住 |
+| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「详情弹窗清单与 `data-detail-modal` 标记一一对应」「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；**新增详情弹窗必须同步接线并把文件加进该 spec 的清单**，否则漏接会静默失效。申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住；工作记录详情弹窗的关闭行为由 `web/src/components/WorkRecordFormModal.spec.ts` 守住 |
 
 > 历史：详情页曾用 `detail-toolbar`（返回入口）与 `detail-grid`（主信息 + 侧栏）两个全局类，
 > 现已随详情页一并删除；不要在新代码里引用这两个类名。

@@ -21,8 +21,22 @@ import { describe, expect, it } from 'vitest'
 const WEB_ROOT = process.cwd()
 const ROUTER_PATH = `${WEB_ROOT}/src/router/index.ts`
 
-/** 详情弹窗在模板上的统一标记（4 个弹窗都带）。 */
+/** 详情弹窗在模板上的统一标记。 */
 const MARKER = 'data-detail-modal'
+
+/**
+ * 全部详情弹窗（相对 `web/src` 的路径）。
+ *
+ * 逐个列出而不是只数数量：标记丢了或新详情弹窗漏接，数量断言可能照样通过
+ * （以前就漏了「工作记录详情」——它只是一个数量下限，少了它仍然 >= 4）。
+ */
+const DETAIL_MODAL_FILES = [
+  'components/StockMaterialFormModal.vue', // 二级库物资详情
+  'components/OperationDetailModal.vue', // 出入库流水详情
+  'components/WorkRecordFormModal.vue', // 工作记录详情
+  'views/procurement/PurchaseMaterialsView.vue', // 申购计划详情
+  'views/procurement/PurchaseRequestsView.vue', // 申购记录详情
+]
 
 /** 已移除的详情路由名与硬编码详情路径。 */
 const REMOVED_DETAIL_ROUTES = [
@@ -61,8 +75,17 @@ const files = [...vueFiles(`${WEB_ROOT}/src/views`), ...vueFiles(`${WEB_ROOT}/sr
 const detailModals = files.filter((file) => file.source.includes(MARKER))
 
 describe('详情弹窗的关闭接线', () => {
-  it('至少存在 4 个详情弹窗（物资 / 流水 / 计划 / 记录）', () => {
-    expect(detailModals.length).toBeGreaterThanOrEqual(4)
+  it('已知的详情弹窗都在，且都带统一标记', () => {
+    for (const relative of DETAIL_MODAL_FILES) {
+      const file = files.find((item) => item.path.endsWith(`/src/${relative}`))
+      expect(file, `未找到详情弹窗 ${relative}`).toBeDefined()
+      expect(file!.source, `${relative} 缺少 ${MARKER} 标记`).toContain(MARKER)
+    }
+  })
+
+  it('带标记的文件恰好就是已知清单（新增详情弹窗必须同步接线与清单）', () => {
+    const actual = detailModals.map((file) => file.path.replace(`${WEB_ROOT}/src/`, '')).sort()
+    expect(actual).toEqual([...DETAIL_MODAL_FILES].sort())
   })
 
   it('详情弹窗必须禁用 naive 自身的遮罩与 ESC 关闭，改由 requestClose 收口', () => {

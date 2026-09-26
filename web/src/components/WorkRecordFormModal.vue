@@ -28,6 +28,7 @@ import {
 } from 'naive-ui'
 import { workApi } from '@/api/work'
 import type { WorkHalfDay, WorkRecordWrite, WorkTask } from '@/api/generated'
+import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { dateToTimestamp, toShanghaiDate } from '@/utils/time'
 import { formatRecordRange, participantOptions, workHalfOptions } from '@/utils/work'
 
@@ -122,6 +123,8 @@ function todayDate(): string {
 async function prepare(): Promise<void> {
   loading.value = true
   resetForm()
+  // 重置后先记一次基线：加载期间用户若点遮罩，不该把「还没回填的空表单」当成他的改动
+  baseline.value = snapshot()
   try {
     const [taskPage, names] = await Promise.all([
       workApi.tasks({ page_size: 200 }),
@@ -145,6 +148,8 @@ async function prepare(): Promise<void> {
   } catch (error) {
     message.error(error instanceof Error ? error.message : '加载工作记录失败')
   } finally {
+    // 回填 / 重置都完成后才记基线：否则加载期间会把自己同步进来的值当成「用户改动」
+    baseline.value = snapshot()
     loading.value = false
   }
 }
@@ -158,6 +163,36 @@ watch(
 
 function close(): void {
   emit('update:show', false)
+}
+
+/** 脏判定用的表单快照：与打开时（回填 / 重置后）的基线比对。 */
+function snapshot(): string {
+  return JSON.stringify({
+    taskId: form.taskId,
+    startDate: form.startDate,
+    startHalf: form.startHalf,
+    endDate: form.endDate,
+    endHalf: form.endHalf,
+    participants: form.participants,
+    remark: form.remark,
+  })
+}
+const baseline = ref('')
+
+/**
+ * 详情弹窗统一关闭入口：点遮罩、按 ESC、点右上角 × 都走 `requestClose`。
+ *
+ * 脏判定只针对可写态：只读看详情（`readonly`）时点遮罩应当直接关，不该弹「放弃修改」。
+ */
+const { requestClose } = useMaskCloseGuard({
+  isDirty: () => !props.readonly && snapshot() !== baseline.value,
+  close,
+})
+
+/** `@close` 必须返回 false，否则 naive-ui 自己会把 show 置 false，拦不住「继续编辑」。 */
+function handleCloseClick(): false {
+  requestClose()
+  return false
 }
 
 /** 校验参与人人数与姓名长度：提交前先拦，避免只拿到 422。 */
@@ -279,10 +314,14 @@ const summary = computed(() => {
     :show="show"
     preset="card"
     draggable
+    data-detail-modal
     :title="readonly ? '工作记录详情' : isEdit ? '编辑工作记录' : '新增工作记录'"
     style="width: min(680px, calc(100vw - 24px))"
     :mask-closable="false"
-    @update:show="close"
+    :close-on-esc="false"
+    @mask-click="requestClose"
+    @esc="requestClose"
+    @close="handleCloseClick"
   >
     <p v-if="summary" class="record-summary">{{ summary }}</p>
     <n-form
