@@ -1,0 +1,1 @@
+import{u as i}from"./composables-UCEBnkFK.js";function n(e){const t=i();function r(){if(!e.isDirty()){e.close();return}t.warning({draggable:!0,title:e.title??"放弃未保存的修改？",content:e.content??"关闭后本次填写的内容不会保存。",positiveText:"放弃修改",negativeText:"继续编辑",onPositiveClick:()=>(e.close(),!0)})}return{requestClose:r}}export{n as u};
