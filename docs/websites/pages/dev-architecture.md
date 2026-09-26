@@ -192,7 +192,7 @@ web/src/
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
 - 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。已归一化的 `AppError` 会被后续拦截器直接透传，不会因重放被再次包装。
 - 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑；`web/src/utils/download.ts` 的 `filenameFromContentDisposition` / `downloadBlobWithDisposition` 已实现但当前无调用点，导出下载走 `exportDownloadUrl` 拼地址）。
-- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s。
+- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s；`files.uploadImage`（图片上传）为 30 分钟——单张最大 10MB，慢上行光传输就可能超过 30s，而 XHR 的 `timeout` 是请求总时长，超时即中止、重传只能从头再来，故一次给足时间，把「传得慢」与「连接真断了」区分开（后者由浏览器/系统报错）。
 #### 弱网自动重试（`web/src/api/retry.ts`）
 
 瞬时失败（断网、超时、连接被重置、网关抖动）自动重放，用户不必手点重试；策略与小程序同一套参数：
