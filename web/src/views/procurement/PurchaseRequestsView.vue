@@ -1636,6 +1636,10 @@ onMounted(() => {
       @esc="requestCloseDetail"
       @close="handleCloseClick"
     >
+      <!-- 最后更新时间放标题右侧：不占页脚空间，也不与左侧的操作按钮挤在一行 -->
+      <template v-if="editing?.updated_at" #header-extra>
+        <span class="card-header-time">{{ formatShanghaiTime(editing.updated_at) }}</span>
+      </template>
       <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
         <n-form label-placement="top" :disabled="!canWrite">
           <div class="form-grid">
@@ -1810,9 +1814,6 @@ onMounted(() => {
       <template #footer>
         <n-space justify="space-between">
           <n-space v-if="editing" justify="start" align="center">
-            <span v-if="editing.updated_at" class="muted"
-              >最后更新：{{ formatShanghaiTime(editing.updated_at) }}</span
-            >
             <n-button
               v-if="canWrite"
               type="primary"

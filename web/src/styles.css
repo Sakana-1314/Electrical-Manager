@@ -421,8 +421,20 @@ a {
 }
 .muted {
   color: var(--color-text-muted);
-  /* 次要说明文字（「最后更新：…」、开关说明、表格里的型号副行）比正文小一档 */
+  /* 次要说明文字（开关说明、表格里的型号副行等）比正文小一档 */
   font-size: 13px;
+}
+/**
+ * 详情弹窗标题右侧的「最后更新」时间（`#header-extra` 槽）。
+ *
+ * 单独一个类比 `.muted` 更小一档（13px → 12px）：它贴着 16px 的弹窗标题，
+ * 字号接近会显得和标题抢视线。不加 `white-space: nowrap`，窄屏放不下时
+ * 允许换行，避免把标题挤出可视区或压到关闭按钮上。
+ */
+.card-header-time {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 .danger-text {
   color: var(--color-danger);

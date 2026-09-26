@@ -189,7 +189,18 @@ describe('StockMaterialFormModal', () => {
     expect(text).toContain('建议申购数量')
     expect(text).toContain('出库小程序码')
     expect(text).toContain('已有操作记录')
-    expect(text).toContain('最后更新')
+  })
+
+  it('最后更新时间在标题右侧，且不带「最后更新：」前缀', async () => {
+    wrapper = await mountModal({ show: true, materialId: 9 })
+
+    // 弹窗 teleport 到 body，`.n-card-header__extra` 不在 wrapper 内，要从 document 查
+    const headerExtra = document.querySelector('.n-card-header__extra')
+    expect(headerExtra).not.toBeNull()
+    expect(headerExtra!.querySelector('.card-header-time')?.textContent).toBe('2026/02/01 10:00:00')
+    // 去掉前缀后只剩时间，正文里不该再出现「最后更新」
+    expect(headerExtra!.textContent).not.toContain('最后更新')
+    expect(document.body.textContent ?? '').not.toContain('最后更新')
   })
 
   it('新建模式不请求单条接口，直接给空表单', async () => {
