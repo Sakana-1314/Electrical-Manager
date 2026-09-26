@@ -1,0 +1,54 @@
+name: 前端单元测试
+
+# 前端单测（vitest + jsdom）：跑组件 / 组合式函数 / 工具函数与源码接线守卫。
+# 这些守卫是纯静态或 jsdom 断言（如「详情弹窗必须接线 requestClose」），
+# 不依赖真实后端，因此与后端接口测试分开、独立成一条快速流水线。
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-test.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-test.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  # 发布引用（main / 标签）不取消进行中的运行：被取消的 check 会永久把该提交算作失败
+  # （statusCheckRollup=FAILURE，提交列表和仓库首页显示红叉），而被顶掉的运行并不代表代码有问题。
+  # 非发布引用（功能分支 / PR）继续取消旧运行，避免连续 push 反复占用 CI。
+  group: web-test-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  test:
+    name: 前端单元测试（vitest）
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 配置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: 安装前端依赖
+        working-directory: web
+        run: npm ci
+
+      # 显式设成 test：Vue 的 exports 会按 NODE_ENV 选构建产物，production 会解析到
+      # vue.cjs.prod.js，而 prod 构建移除了 devtools hook——@vue/test-utils 的
+      # `wrapper.emitted()` 正靠它捕获自定义事件，会让所有断 emit 的用例静默失败。
+      # （vitest.config.ts 已兜底，这里再显式声明一次，让流水线意图自明。）
+      - name: 运行单元测试
+        working-directory: web
+        env:
+          NODE_ENV: test
+        run: npm run test
