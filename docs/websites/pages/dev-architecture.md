@@ -278,7 +278,7 @@ web/src/
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
 | `useImplicitAiSearch.ts` | 隐式 AI 搜索：用户显式展开关键词优先，源输入变化时自动清除展开值 | `searchName`、`applyExpandedName(value)`、`clearExpandedName()` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
-| `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 4 个详情弹窗（物资 / 流水 / 计划 / 记录） |
+| `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 5 个详情弹窗（物资 / 流水 / 工作记录 / 计划 / 记录） |
 | `useShiftWheelHorizontalScroll.ts` | 在表格滚动容器上支持 Shift+滚轮横向滚动 | 无返回值（内部挂/卸 `wheel` 监听，`passive: false`） | 申购 3 个列表页 |
 
 
