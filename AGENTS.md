@@ -25,7 +25,7 @@
 - `docs/openapi.yaml` — 接口契约；改后端接口时同步契约，并用 `npm run generate:api`（在 `web/` 目录）重新生成前端类型。
 - `docs/websites/pages/ui-design-guidelines.md` — UI 组件与样式约定。
 - `docs/websites/pages/api-conventions.md`（接口约定：错误响应与状态码规则）、`docs/websites/pages/api-error-codes.md`（全部错误码总表，改错误码必须同步，见 `server/tests/test_error_code_docs.py`）。
-- `.github/workflows/` — CI 流水线（契约一致性校验 / 接口测试 / 构建镜像 / 发布站点）。
+- `.github/workflows/` — CI 流水线（契约一致性校验 / 前端单测 / 后端接口测试 / 构建镜像 / 发布站点）。
 
 ## 项目站点（必须遵守）
 
@@ -158,7 +158,7 @@ PR 标题与 commit 标题一致（squash 后作为最终 commit 标题）。
 ### 4. 检查通过后才合并
 
 - 本地验证通过（见「验证命令」）。
-- `gh pr checks <编号> --watch` 等 CI 全部通过（含契约一致性校验、接口测试、构建镜像）。
+- `gh pr checks <编号> --watch` 等 CI 全部通过（含契约一致性校验、前端单测、后端接口测试、构建镜像）。
 - 自查 `gh pr diff <编号>` 确认改动只涉及本功能点。
 - 通过后合并：本仓库只允许 squash：
 

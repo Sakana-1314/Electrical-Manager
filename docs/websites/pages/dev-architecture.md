@@ -64,7 +64,10 @@ Electrical-Manager/
 | `npm run test` / `npm run test:watch` | `vitest run` / 监听模式单测 |
 | `npm run lint` / `npm run format` | `eslint . --max-warnings 0` / `prettier --write .` |
 | `npm run generate:api` | `openapi-typescript ../docs/openapi.yaml -o src/api/generated.raw.ts` |
-测试文件为 `*.spec.ts`，共 58 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。
+测试文件为 `*.spec.ts`，共 60 个；`web/vitest.config.ts` 中 `setupFiles: ['./src/test/setup.ts']`（仅 `afterEach(() => vi.restoreAllMocks())`）。CI 由 `.github/workflows/web-test.yml` 在 `web/**` 变更时跑 `npm run test`。
+
+> **`NODE_ENV` 必须是 `test`**：Vue 的 `package.json` exports 在 `require` 条件下按 `NODE_ENV` 选构建产物，`production` 会解析到 `vue.cjs.prod.js`，而 prod 构建**移除了 devtools hook**——`@vue/test-utils` 的 `wrapper.emitted()` 正是靠这个 hook 捕获自定义事件。外部若是 `NODE_ENV=production`（CI / 生产 shell / Docker），所有断 `emit` 的用例都会静默失败、看起来像代码 bug。`vitest.config.ts` 已在加载 Vue 前强制改回 `test`，因此本地与 CI 结果一致；改动该文件时不要去掉这行。
+
 ## 前端目录结构
 ```text
 web/src/
