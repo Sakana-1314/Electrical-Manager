@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from io import BytesIO
 from urllib.parse import unquote
 
@@ -11,8 +12,20 @@ from PIL import Image
 from sqlalchemy import select
 
 from app.core.config import settings
-from app.models import PurchaseMaterial, PurchaseRequest, PurchaseRequestLine
-from tests.conftest import auth_headers, await_export_job, create_stock, project_session
+from app.core.constants import SHANGHAI
+from app.models import (
+    HuaXingInventory,
+    PurchaseMaterial,
+    PurchaseRequest,
+    PurchaseRequestLine,
+)
+from tests.conftest import (
+    SECOND_PROJECT_ID,
+    auth_headers,
+    await_export_job,
+    create_stock,
+    project_session,
+)
 
 
 async def create_purchase_plan(
@@ -1755,7 +1768,7 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
         response.headers["content-disposition"]
     )
     sheet = load_workbook(BytesIO(response.content)).active
-    assert [sheet.cell(1, column).value for column in range(1, 16)] == [
+    assert [sheet.cell(1, column).value for column in range(1, 18)] == [
         "序号",
         "物料编码",
         "物料名称",
@@ -1767,6 +1780,8 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
         "用途",
         "库存量",
         "在途量",
+        "单价",
+        "总价",
         "到现场日期",
         "紧急程度",
         "备注",
@@ -1781,12 +1796,91 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
     assert sheet["G2"].value == "王工"
     assert sheet["H2"].value == "HXNI 检修维护部"
     assert sheet["I2"].value == "控制柜检修"
-    assert sheet["J2"].value in (None, "")
-    assert sheet["K2"].value in (None, "")
-    assert sheet["L2"].value.date() == date.today() + timedelta(days=80)
-    assert sheet["M2"].value == "正常"
-    assert sheet["N2"].value == "新计划"
-    assert sheet["O2"].value == "GX-99"
+    # 华星总库存与近 3 个月申购记录都没有该编码：两个数量都记 0
+    assert float(sheet["J2"].value) == 0
+    assert float(sheet["K2"].value) == 0
+    # 单价 / 总价暂时留空
+    assert sheet["L2"].value in (None, "")
+    assert sheet["M2"].value in (None, "")
+    assert sheet["N2"].value.date() == date.today() + timedelta(days=80)
+    assert sheet["O2"].value == "正常"
+    assert sheet["P2"].value == "新计划"
+    assert sheet["Q2"].value == "GX-99"
+
+
+@pytest.mark.asyncio
+async def test_purchase_approval_export_fills_stock_and_in_transit_by_material_code(
+    client: AsyncClient,
+) -> None:
+    """库存量取华星总库存、在途量取最近 3 个月申购记录，且都只按物料编码精准匹配。"""
+    headers = await auth_headers(client, "purchase")
+    code = "DQ-APP-Q1"
+    near_miss = "DQ-APP-Q10"  # 前缀相同的另一个编码：不得混入
+    today = datetime.now(SHANGHAI).date()
+
+    async with project_session() as session:
+        for material_code, quantity in ((code, "6"), (code, "3"), (near_miss, "100")):
+            session.add(
+                HuaXingInventory(
+                    material_code=material_code,
+                    name="接触器",
+                    quantity=Decimal(quantity),
+                    warehouse="P05综合仓",
+                )
+            )
+        await session.commit()
+
+    # 窗口内两笔（今天、60 天前）计入；窗口外一笔（120 天前）不计
+    for purchase_date, quantity in (
+        (today, "5"),
+        (today - timedelta(days=60), "2"),
+        (today - timedelta(days=120), "400"),
+    ):
+        record_plan = await create_purchase_plan(
+            client, headers, "在途记录物资", code=code, planned_qty=quantity
+        )
+        moved = await client.post(
+            f"/api/v1/purchase-materials/{record_plan['id']}/move-to-record",
+            headers=headers,
+            json={"purchase_date": purchase_date.isoformat(), "status": "已申购"},
+        )
+        assert moved.status_code == 200, moved.text
+
+    export_plan = await create_purchase_plan(
+        client, headers, "审批表数量物资", code=code, planned_qty="8"
+    )
+
+    # 另一个项目里的同编码库存与申购记录不得混入（项目隔离）
+    other_headers = {**headers, "X-Project-Id": str(SECOND_PROJECT_ID)}
+    async with project_session(SECOND_PROJECT_ID) as session:
+        session.add(
+            HuaXingInventory(material_code=code, name="接触器", quantity=Decimal("1000"))
+        )
+        await session.commit()
+    other_plan = await create_purchase_plan(
+        client, other_headers, "二期在途物资", code=code, planned_qty="1000"
+    )
+    other_moved = await client.post(
+        f"/api/v1/purchase-materials/{other_plan['id']}/move-to-record",
+        headers=other_headers,
+        json={"purchase_date": today.isoformat(), "status": "已申购"},
+    )
+    assert other_moved.status_code == 200, other_moved.text
+
+    response = await client.post(
+        "/api/v1/purchase-materials/export-purchase-approval",
+        headers=headers,
+        json={"material_ids": [export_plan["id"]]},
+    )
+
+    assert response.status_code == 200, response.text
+    sheet = load_workbook(BytesIO(response.content)).active
+    # 华星总库存 6 + 3：不含相近编码的 100，也不含别的项目的 1000
+    assert float(sheet["J2"].value) == 9
+    # 近 3 个月申购记录 5 + 2：不含 120 天前的 400，也不含别的项目的 1000
+    assert float(sheet["K2"].value) == 7
+    assert sheet["L2"].value in (None, "")
+    assert sheet["M2"].value in (None, "")
 
 
 @pytest.mark.asyncio
