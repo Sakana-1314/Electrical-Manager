@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import calendar
 from collections.abc import Callable
 from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID
 
 from sqlalchemy import func, or_, select, update
@@ -13,8 +15,10 @@ from app.core.errors import AppError, not_found
 from app.domain.enums import PurchasePlanStatus
 from app.models import (
     FileObject,
+    HuaXingInventory,
     PurchaseMaterial,
     PurchaseMaterialImage,
+    PurchaseRequest,
     PurchaseRequestLine,
     StockBalance,
     StockMaterial,
@@ -606,3 +610,78 @@ def validate_purchase_approval_export(materials: list[PurchaseMaterial]) -> None
             status_code=409,
             details={"missing_fields": missing_fields},
         )
+
+
+# 申购审批表「在途量」的统计窗口：以导出当天为基准往前 3 个自然月。
+IN_TRANSIT_WINDOW_MONTHS = 3
+
+
+def _months_before(anchor: date, months: int) -> date:
+    """anchor 往前退 n 个自然月的同一天；目标月没有该日时取该月最后一天。"""
+    month_index = anchor.month - 1 - months
+    year = anchor.year + month_index // 12
+    month = month_index % 12 + 1
+    return date(year, month, min(anchor.day, calendar.monthrange(year, month)[1]))
+
+
+def _as_quantity(value: object) -> Decimal:
+    return Decimal(str(value if value is not None else 0))
+
+
+async def purchase_approval_export_quantities(
+    session: AsyncSession,
+    materials: list[PurchaseMaterial],
+    *,
+    today: date | None = None,
+) -> dict[str, tuple[Decimal, Decimal]]:
+    """申购审批表的库存量 / 在途量，只按物料编码精准匹配。
+
+    - 库存量：华星总库存（`huaxing_inventory`）里同编码各行数量之和；
+    - 在途量：申购记录（`purchase_request_line`）中「申购日期」落在最近 3 个自然月内的
+      各行申购数量之和，申购日期取申购单（`purchase_request.purchase_date`）的头字段。
+
+    匹配为编码等值：不按名称 / 型号模糊匹配，也不做去空格、大小写等归一化。
+    返回 `{物料编码: (库存量, 在途量)}`；编码有值但库中无对应数据时记 0，
+    没有编码的计划不参与匹配（导出时该格留空）。
+    """
+    codes = {item.material_code for item in materials if item.material_code}
+    if not codes:
+        return {}
+
+    stock_rows = await session.execute(
+        select(
+            HuaXingInventory.material_code,
+            func.coalesce(func.sum(HuaXingInventory.quantity), 0),
+        )
+        .where(HuaXingInventory.material_code.in_(codes))
+        .group_by(HuaXingInventory.material_code)
+    )
+    # 编码有值就先记 0：库中没有对应数据时导出的是 0，而不是空。
+    quantities: dict[str, list[Decimal]] = {
+        str(code): [Decimal("0"), Decimal("0")] for code in codes
+    }
+    for code, total in stock_rows.all():
+        quantities[str(code)][0] = _as_quantity(total)
+
+    anchor = today or datetime.now(SHANGHAI).date()
+    in_transit_rows = await session.execute(
+        select(
+            PurchaseRequestLine.material_code_snapshot,
+            func.coalesce(func.sum(PurchaseRequestLine.purchase_qty), 0),
+        )
+        .join(
+            PurchaseRequest,
+            PurchaseRequestLine.purchase_request_id == PurchaseRequest.id,
+        )
+        .where(
+            PurchaseRequestLine.material_code_snapshot.in_(codes),
+            PurchaseRequest.purchase_date.is_not(None),
+            PurchaseRequest.purchase_date >= _months_before(anchor, IN_TRANSIT_WINDOW_MONTHS),
+            PurchaseRequest.purchase_date <= anchor,
+        )
+        .group_by(PurchaseRequestLine.material_code_snapshot)
+    )
+    for code, total in in_transit_rows.all():
+        quantities[str(code)][1] = _as_quantity(total)
+
+    return {code: (values[0], values[1]) for code, values in quantities.items()}

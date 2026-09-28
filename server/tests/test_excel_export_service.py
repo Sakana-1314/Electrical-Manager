@@ -49,7 +49,7 @@ def test_invalid_template_raises_readable_business_error(monkeypatch, tmp_path: 
     assert raised.value.code == "EXPORT_TEMPLATE_INVALID"
 
 
-def test_purchase_approval_template_renders_fifteen_columns() -> None:
+def test_purchase_approval_template_renders_seventeen_columns() -> None:
     content, filename = excel_export_service.render_excel(
         "purchase-approval.json",
         [
@@ -63,6 +63,8 @@ def test_purchase_approval_template_renders_fifteen_columns() -> None:
                 "purchase_responsible": "张三",
                 "department": "HXNI 检修维护部",
                 "usage": "检修备用",
+                "stock_qty": 12,
+                "in_transit_qty": 3,
                 "required_arrival_date": date(2026, 11, 15),
                 "urgency": "正常",
                 "remark": "备注",
@@ -73,7 +75,7 @@ def test_purchase_approval_template_renders_fifteen_columns() -> None:
 
     assert filename == f"采购申请（审批）_{date.today():%Y%m%d}.xlsx"
     sheet = load_workbook(BytesIO(content)).active
-    assert [sheet.cell(1, column).value for column in range(1, 16)] == [
+    assert [sheet.cell(1, column).value for column in range(1, 18)] == [
         "序号",
         "物料编码",
         "物料名称",
@@ -85,6 +87,8 @@ def test_purchase_approval_template_renders_fifteen_columns() -> None:
         "用途",
         "库存量",
         "在途量",
+        "单价",
+        "总价",
         "到现场日期",
         "紧急程度",
         "备注",
@@ -94,10 +98,13 @@ def test_purchase_approval_template_renders_fifteen_columns() -> None:
     assert sheet["B2"].value == "DQ-001"
     assert sheet["C2"].value == "接触器"
     assert sheet["H2"].value == "HXNI 检修维护部"
-    assert sheet["J2"].value in (None, "")
-    assert sheet["K2"].value in (None, "")
-    assert sheet["L2"].value.date() == date(2026, 11, 15)
-    assert sheet.auto_filter.ref == "A1:O2"
+    assert sheet["J2"].value == 12
+    assert sheet["K2"].value == 3
+    # 单价 / 总价暂时留空
+    assert sheet["L2"].value in (None, "")
+    assert sheet["M2"].value in (None, "")
+    assert sheet["N2"].value.date() == date(2026, 11, 15)
+    assert sheet.auto_filter.ref == "A1:Q2"
 
 
 def test_result_excel_uses_visible_columns_and_readable_layout() -> None:

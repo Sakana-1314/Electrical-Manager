@@ -403,24 +403,32 @@ async def export_purchase_approval(
         status=None if user.role == Role.SUPER_ADMIN else PurchasePlanStatus.NORMAL,
     )
     material_service.validate_purchase_approval_export(materials)
-    rows = [
-        {
-            "serial": index,
-            "material_code": item.material_code,
-            "name": item.name,
-            "model_spec": item.model_spec,
-            "planned_qty": item.planned_qty,
-            "unit_name": item.unit_name,
-            "purchase_responsible": item.purchase_responsible,
-            "department": "HXNI 检修维护部",
-            "usage": item.usage,
-            "required_arrival_date": date.today() + timedelta(days=80),
-            "urgency": item.urgency,
-            "remark": item.remark,
-            "subitem_no": item.subitem_no,
-        }
-        for index, item in enumerate(materials, start=1)
-    ]
+    # 库存量取华星总库存、在途量取最近 3 个月申购记录，均只按物料编码精准匹配；
+    # 单价 / 总价暂时留空（模板里两个列不绑定字段）。
+    quantities = await material_service.purchase_approval_export_quantities(session, materials)
+    rows = []
+    for index, item in enumerate(materials, start=1):
+        code = item.material_code
+        matched = quantities.get(code) if code else None
+        rows.append(
+            {
+                "serial": index,
+                "material_code": code,
+                "name": item.name,
+                "model_spec": item.model_spec,
+                "planned_qty": item.planned_qty,
+                "unit_name": item.unit_name,
+                "purchase_responsible": item.purchase_responsible,
+                "department": "HXNI 检修维护部",
+                "usage": item.usage,
+                "stock_qty": matched[0] if matched else None,
+                "in_transit_qty": matched[1] if matched else None,
+                "required_arrival_date": date.today() + timedelta(days=80),
+                "urgency": item.urgency,
+                "remark": item.remark,
+                "subitem_no": item.subitem_no,
+            }
+        )
     return excel_export_service.excel_response(
         *excel_export_service.render_excel("purchase-approval.json", rows)
     )

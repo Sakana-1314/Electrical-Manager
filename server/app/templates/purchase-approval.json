@@ -8,21 +8,23 @@
     "data_start_row": 2,
     "freeze_panes": "A2",
     "column_widths": {
-      "A": 6.0,
-      "B": 16.0,
-      "C": 24.0,
-      "D": 18.0,
-      "E": 11.0,
-      "F": 8.0,
-      "G": 14.0,
-      "H": 18.0,
-      "I": 26.0,
-      "J": 9.0,
-      "K": 9.0,
-      "L": 14.0,
-      "M": 11.0,
-      "N": 24.0,
-      "O": 16.0
+      "A": 9.0,
+      "B": 17.67,
+      "C": 15.5,
+      "D": 18.67,
+      "E": 9.67,
+      "F": 8.67,
+      "G": 13.33,
+      "H": 24.16,
+      "I": 16.84,
+      "J": 12.0,
+      "K": 12.0,
+      "L": 13.33,
+      "M": 13.33,
+      "N": 13.33,
+      "O": 11.5,
+      "P": 24.16,
+      "Q": 7.33
     }
   },
   "styles": {
@@ -63,16 +65,18 @@
     { "column": "G", "header": "实际需求人", "field": "purchase_responsible" },
     { "column": "H", "header": "使用部门", "field": "department" },
     { "column": "I", "header": "用途", "field": "usage" },
-    { "column": "J", "header": "库存量" },
-    { "column": "K", "header": "在途量" },
+    { "column": "J", "header": "库存量", "field": "stock_qty" },
+    { "column": "K", "header": "在途量", "field": "in_transit_qty" },
+    { "column": "L", "header": "单价" },
+    { "column": "M", "header": "总价" },
     {
-      "column": "L",
+      "column": "N",
       "header": "到现场日期",
       "field": "required_arrival_date",
       "style": "date"
     },
-    { "column": "M", "header": "紧急程度", "field": "urgency" },
-    { "column": "N", "header": "备注", "field": "remark" },
-    { "column": "O", "header": "子项号", "field": "subitem_no" }
+    { "column": "O", "header": "紧急程度", "field": "urgency" },
+    { "column": "P", "header": "备注", "field": "remark" },
+    { "column": "Q", "header": "子项号", "field": "subitem_no" }
   ]
 }
