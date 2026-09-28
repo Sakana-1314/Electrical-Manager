@@ -642,7 +642,7 @@ async def purchase_approval_export_quantities(
 
     匹配为编码等值：不按名称 / 型号模糊匹配，也不做去空格、大小写等归一化。
     返回 `{物料编码: (库存量, 在途量)}`；编码有值但库中无对应数据时记 0，
-    没有编码的计划不参与匹配（导出时该格留空）。
+    没有编码的计划不参与匹配（导出时两格都填 0，不留空）。
     """
     codes = {item.material_code for item in materials if item.material_code}
     if not codes:
