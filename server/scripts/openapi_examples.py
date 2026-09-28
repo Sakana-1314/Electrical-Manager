@@ -361,8 +361,8 @@ _PURCHASE_REQUESTS: list[dict[str, Any]] = [
         "date": "2026-08-20",
         "remark": "8 月低压电器备件整单申购",
         "lines": [
-            {"plan_no": "PLAN-20260805-001", "status": "已入库", "salesperson": "马晓东", "contract_sign_date": "2026-08-25"},
-            {"plan_no": "PLAN-20260805-002", "status": "部分入库", "salesperson": "马晓东", "contract_sign_date": "2026-08-25"},
+            {"plan_no": "PLAN-20260805-001", "status": "已入库", "salesperson": "马晓东", "contract_sign_date": "2026-08-25", "unit_price": "46.55"},
+            {"plan_no": "PLAN-20260805-002", "status": "部分入库", "salesperson": "马晓东", "contract_sign_date": "2026-08-25", "unit_price": "3.20"},
         ],
     },
     {
@@ -376,7 +376,7 @@ _PURCHASE_REQUESTS: list[dict[str, Any]] = [
         "date": "2026-09-02",
         "remark": "变频器专项采购",
         "lines": [
-            {"plan_no": "PLAN-20260812-001", "status": "已采购", "salesperson": "徐怀志", "contract_sign_date": "2026-09-04"},
+            {"plan_no": "PLAN-20260812-001", "status": "已采购", "salesperson": "徐怀志", "contract_sign_date": "2026-09-04", "unit_price": "2860.00"},
         ],
     },
     {
@@ -860,6 +860,7 @@ def _record_rows() -> list[dict[str, Any]]:
                     "consolidation_port": request["consolidation_port"],
                     "sailing_date": request["sailing_date"],
                     "contract_sign_date": line.get("contract_sign_date"),
+                    "unit_price": line.get("unit_price"),
                     "status": line["status"],
                     "material_code": plan["material_code"],
                     "category": plan["category"],
@@ -1373,6 +1374,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "status": "部分入库",
             "salesperson": "马晓东",
             "contract_sign_date": "2026-08-25",
+            "unit_price": "46.55",
         },
         "BatchUpdatePurchaseRecordsRequest": {
             "records": [{"line_id": record["line_id"], "version": record["version"]}],
@@ -1385,6 +1387,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "consolidation_port": record["consolidation_port"],
             "sailing_date": record["sailing_date"],
             "contract_sign_date": record["contract_sign_date"],
+            "unit_price": record["unit_price"],
             "purchase_date": record["purchase_date"],
             "actual_demand_person": record["actual_demand_person"],
             "purchase_responsible": record["purchase_responsible"],
@@ -2030,6 +2033,13 @@ def _build_schema_examples() -> dict[str, Any]:
             "remark": record["record_remark"],
             "purchase_date": record["purchase_date"],
             "salesperson": record["salesperson"],
+            "contract_no": record["contract_no"],
+            "vessel_no": record["vessel_no"],
+            "consolidation_date": record["consolidation_date"],
+            "consolidation_port": record["consolidation_port"],
+            "sailing_date": record["sailing_date"],
+            "contract_sign_date": record["contract_sign_date"],
+            "unit_price": record["unit_price"],
             "images": record["images"],
         },
         "Page_MiniProgramPurchaseRecordItemRead_": _page(
@@ -2055,6 +2065,13 @@ def _build_schema_examples() -> dict[str, Any]:
                     "remark": row["record_remark"],
                     "purchase_date": row["purchase_date"],
                     "salesperson": row["salesperson"],
+                    "contract_no": row["contract_no"],
+                    "vessel_no": row["vessel_no"],
+                    "consolidation_date": row["consolidation_date"],
+                    "consolidation_port": row["consolidation_port"],
+                    "sailing_date": row["sailing_date"],
+                    "contract_sign_date": row["contract_sign_date"],
+                    "unit_price": row["unit_price"],
                     "images": row["images"],
                 }
                 for row in _RECORD_ROWS
@@ -2095,6 +2112,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "consolidation_date": "2026-09-18",
             "sailing_date": "2026-09-23",
             "contract_sign_date": "2026-09-12",
+            "unit_price": "12.80",
             "status": "已采购",
         },
         "PurchaseRecordSyncOrderUpdateItem": {
@@ -2105,6 +2123,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "consolidation_date": "2026-09-18",
             "sailing_date": "2026-09-23",
             "contract_sign_date": "2026-09-12",
+            "unit_price": "12.80",
             "status": "已采购",
             "trace_no": "HX20260909001",
         },
@@ -2118,6 +2137,7 @@ def _build_schema_examples() -> dict[str, Any]:
                     "consolidation_date": "2026-09-18",
                     "sailing_date": "2026-09-23",
                     "contract_sign_date": "2026-09-12",
+                    "unit_price": "12.80",
                     "status": "已采购",
                     "trace_no": "HX20260909001",
                 }
@@ -2242,6 +2262,7 @@ def _record_update_fields(record: dict[str, Any]) -> dict[str, Any]:
         "consolidation_port": record["consolidation_port"],
         "sailing_date": record["sailing_date"],
         "contract_sign_date": record["contract_sign_date"],
+        "unit_price": record["unit_price"],
         "purchase_date": record["purchase_date"],
         "salesperson": record["salesperson"],
         "status": record["status"],

@@ -33,6 +33,7 @@ PURCHASE_RECORD_SORT_COLUMNS = {
     "sailing_date": PurchaseRequest.sailing_date,
     "trace_no": PurchaseRequestLine.trace_no,
     "contract_sign_date": PurchaseRequestLine.contract_sign_date,
+    "unit_price": PurchaseRequestLine.unit_price,
     "purchase_qty": PurchaseRequestLine.purchase_qty,
     "usage": PurchaseRequestLine.usage,
     "subitem_no": PurchaseRequestLine.subitem_no,
@@ -74,6 +75,8 @@ _SYNC_FIELD_CONDITIONS: dict[str, Any] = {
     "sailing_date": PurchaseRequest.sailing_date.is_(None),
     # 物资级字段（行表）：仅当该行未填写签订日期时才需要外部平台补全。
     "contract_sign_date": PurchaseRequestLine.contract_sign_date.is_(None),
+    # 单价同属物资级字段（行表）：仅当该行没有单价时才需要外部平台补全。
+    "unit_price": PurchaseRequestLine.unit_price.is_(None),
 }
 
 
@@ -257,6 +260,7 @@ async def search_purchase_records(
             PurchaseRequest.consolidation_port,
             cast(PurchaseRequest.sailing_date, String),
             cast(PurchaseRequestLine.contract_sign_date, String),
+            cast(PurchaseRequestLine.unit_price, String),
             PurchaseRequestLine.salesperson,
             PurchaseRequest.remark,
             PurchaseRequestLine.plan_no_snapshot,
@@ -291,6 +295,7 @@ async def search_purchase_records(
             "consolidation_port": PurchaseRequest.consolidation_port,
             "sailing_date": cast(PurchaseRequest.sailing_date, String),
             "contract_sign_date": cast(PurchaseRequestLine.contract_sign_date, String),
+            "unit_price": cast(PurchaseRequestLine.unit_price, String),
             "category": PurchaseRequestLine.category_snapshot,
             "material_code": PurchaseRequestLine.material_code_snapshot,
             "material_name": PurchaseRequestLine.material_name_snapshot,

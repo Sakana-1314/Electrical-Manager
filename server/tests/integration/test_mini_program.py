@@ -1038,6 +1038,14 @@ async def test_mini_program_purchase_records_search_status_and_pagination(
         "remark",
         "purchase_date",
         "salesperson",
+        # 采购 / 发运信息（同步脚本回写，小程序详情页展示）
+        "contract_no",
+        "vessel_no",
+        "consolidation_date",
+        "consolidation_port",
+        "sailing_date",
+        "contract_sign_date",
+        "unit_price",
         "images",
     }
     assert item["purchase_qty"] == "3"
@@ -1079,6 +1087,35 @@ async def test_mini_program_purchase_records_search_status_and_pagination(
     assert detail_body["remark"] == "申购记录测试"
     assert len(detail_body["images"]) == 1
     assert detail_body["images"][0]["id"] == file_id
+
+    # 采购 / 发运字段（同步脚本回写）在小程序详情里原样下发
+    synced = await client.post(
+        "/api/v1/purchase-record-sync/trace/ZS-2026-100",
+        headers=purchase_headers,
+        json={
+            "contract_no": "HT-MINI-1",
+            "vessel_no": "MV-MINI",
+            "consolidation_date": "2026-08-20",
+            "consolidation_port": "Morowali",
+            "sailing_date": "2026-08-25",
+            "contract_sign_date": "2026-08-18",
+            "unit_price": "46.55",
+        },
+    )
+    assert synced.status_code == 200, synced.text
+    synced_detail = await client.get(
+        f"/api/v1/mini-program/purchase-records/{record_a['line_id']}",
+        headers=mini_headers,
+    )
+    assert synced_detail.status_code == 200, synced_detail.text
+    synced_body = synced_detail.json()
+    assert synced_body["contract_no"] == "HT-MINI-1"
+    assert synced_body["vessel_no"] == "MV-MINI"
+    assert synced_body["consolidation_date"] == "2026-08-20"
+    assert synced_body["consolidation_port"] == "Morowali"
+    assert synced_body["sailing_date"] == "2026-08-25"
+    assert synced_body["contract_sign_date"] == "2026-08-18"
+    assert synced_body["unit_price"] == "46.55"
 
     # 不存在的 line_id → 400 + code=NOT_FOUND（本项目禁用 404）
     missing = await client.get(

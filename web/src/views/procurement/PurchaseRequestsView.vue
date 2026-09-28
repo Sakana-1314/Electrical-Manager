@@ -47,6 +47,7 @@ import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizo
 import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
 import { useAuthStore } from '@/stores/auth'
 import { purchaseCategoryOptions } from '@/constants/purchase'
+import { formatUnitPrice } from '@/utils/purchase'
 
 const router = useRouter()
 const route = useRoute()
@@ -221,6 +222,8 @@ const editPurchaseDate = ref<number | null>(null)
 const editConsolidationDate = ref<number | null>(null)
 const editSailingDate = ref<number | null>(null)
 const editContractSignDate = ref<number | null>(null)
+// 单价（元）：与日期字段同法用独立 ref，避免 n-input-number 的 number 与表单字符串模型互相污染。
+const editUnitPrice = ref<number | null>(null)
 const editImages = ref<FileObject[]>([])
 /** 图片附件是否还有在途上传：有则禁用保存，避免 `image_ids` 漏掉还没传完的图。 */
 const editImagesUploading = ref(false)
@@ -322,6 +325,8 @@ const batchEditForm = reactive({
   sailing_date: null as number | null,
   update_contract_sign_date: false,
   contract_sign_date: null as number | null,
+  update_unit_price: false,
+  unit_price: null as number | null,
   update_purchase_date: false,
   purchase_date: null as number | null,
   update_actual_demand_person: false,
@@ -358,6 +363,7 @@ type RecordColumnKey =
   | 'model_spec'
   | 'material_code'
   | 'purchase_qty'
+  | 'unit_price'
   | 'usage'
   | 'actual_demand_person'
   | 'purchase_responsible'
@@ -533,6 +539,16 @@ const availableColumns: Array<{
       key: 'purchase_qty',
       width: tableColumnWidths.quantity,
       render: (row) => renderTwoLineText(`${row.purchase_qty} ${row.unit_name}`),
+    },
+  },
+  {
+    key: 'unit_price',
+    label: '单价',
+    column: {
+      title: '单价',
+      key: 'unit_price',
+      width: tableColumnWidths.quantity,
+      render: (row) => renderTwoLineText(formatUnitPrice(row.unit_price)),
     },
   },
   {
@@ -814,6 +830,9 @@ function syncEditForm(value: PurchaseRecord) {
   editConsolidationDate.value = dateToTimestamp(value.consolidation_date)
   editSailingDate.value = dateToTimestamp(value.sailing_date)
   editContractSignDate.value = dateToTimestamp(value.contract_sign_date)
+  // 空单价（null/undefined/''）保持空输入框；只有真实数值才回填。
+  const unitPrice = value.unit_price ? Number(value.unit_price) : null
+  editUnitPrice.value = unitPrice !== null && Number.isFinite(unitPrice) ? unitPrice : null
   editImages.value = [...value.images]
 }
 
@@ -848,6 +867,7 @@ function editSnapshot(): string {
     consolidation_date: editConsolidationDate.value,
     sailing_date: editSailingDate.value,
     contract_sign_date: editContractSignDate.value,
+    unit_price: editUnitPrice.value,
     image_ids: editImages.value.map((image) => image.id),
   })
 }
@@ -1040,6 +1060,8 @@ async function saveEditRecord() {
       contract_sign_date: editContractSignDate.value
         ? toShanghaiDate(editContractSignDate.value)
         : undefined,
+      // 单价可留空：留空即清空该字段（后端 PATCH 是全量覆盖）。
+      unit_price: editUnitPrice.value === null ? null : editUnitPrice.value.toFixed(2),
       material_code: editForm.material_code?.trim() || undefined,
       category: editForm.category?.trim() || undefined,
       subitem_no: editForm.subitem_no?.trim() || undefined,
@@ -1087,6 +1109,8 @@ function openBatchEdit() {
     sailing_date: null,
     update_contract_sign_date: false,
     contract_sign_date: null,
+    update_unit_price: false,
+    unit_price: null,
     update_purchase_date: false,
     purchase_date: null,
     update_actual_demand_person: false,
@@ -1146,6 +1170,11 @@ async function batchUpdate() {
     payload.contract_sign_date = batchEditForm.contract_sign_date
       ? toShanghaiDate(batchEditForm.contract_sign_date)
       : null
+  }
+  if (batchEditForm.update_unit_price) {
+    // 勾选「修改单价」但留空 = 批量清空单价；填了值则统一两位小数提交。
+    payload.unit_price =
+      batchEditForm.unit_price === null ? null : batchEditForm.unit_price.toFixed(2)
   }
   if (batchEditForm.update_purchase_date) {
     payload.purchase_date = batchEditForm.purchase_date
@@ -1527,6 +1556,21 @@ onMounted(() => {
             </n-form-item>
             <n-form-item>
               <template #label>
+                <n-checkbox v-model:checked="batchEditForm.update_unit_price">
+                  修改单价
+                </n-checkbox>
+              </template>
+              <n-input-number
+                v-model:value="batchEditForm.unit_price"
+                class="full-width"
+                :min="0"
+                :precision="2"
+                placeholder="留空表示清空单价"
+                :disabled="!batchEditForm.update_unit_price"
+              />
+            </n-form-item>
+            <n-form-item>
+              <template #label>
                 <n-checkbox v-model:checked="batchEditForm.update_purchase_date">
                   修改申购日期
                 </n-checkbox>
@@ -1762,6 +1806,16 @@ onMounted(() => {
                     type="date"
                     class="full-width"
                     clearable
+                  />
+                </n-form-item>
+                <n-form-item label="单价">
+                  <n-input-number
+                    v-model:value="editUnitPrice"
+                    class="full-width"
+                    :min="0"
+                    :precision="2"
+                    placeholder="留空表示未填写"
+                    :disabled="!canWrite"
                   />
                 </n-form-item>
                 <n-form-item label="物料编码">

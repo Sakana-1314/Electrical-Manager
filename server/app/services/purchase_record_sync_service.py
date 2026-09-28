@@ -44,6 +44,7 @@ _SYNC_FIELDS = frozenset(
         "consolidation_date",
         "sailing_date",
         "contract_sign_date",
+        "unit_price",
         "status",
     }
 )
@@ -190,6 +191,10 @@ def _apply_mutation(
         # 合同签订日期是物资级字段（行级），同样只补空值，不覆盖人工填写。
         if data.contract_sign_date is not None and line.contract_sign_date is None:
             line.contract_sign_date = data.contract_sign_date
+            changed = True
+        # 采购单价同为物资级字段（行级）：只补空值，人工填写过的价格不会被平台覆盖。
+        if data.unit_price is not None and line.unit_price is None:
+            line.unit_price = data.unit_price
             changed = True
         if (
             data.status is not None

@@ -11,6 +11,18 @@ function present(value, fallback) {
   return text && !['\\', '/', '-', '—'].includes(text) ? text : fallback;
 }
 
+/** 日期标签：后端给 YYYY-MM-DD，页面统一显示 YYYY/MM/DD（与申购日期一致）。 */
+function dateLabel(value, fallback) {
+  const text = String(value || '').trim();
+  return text ? text.replace(/-/g, '/') : fallback;
+}
+
+/** 单价标签：后端是 DECIMAL(18,2) 字符串；空值 / 非数值统一显示「未填写」。 */
+function priceLabel(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? `${parsed.toFixed(2)} 元` : fallback;
+}
+
 Page(withTheme({
   data: {
     record: null,
@@ -65,6 +77,14 @@ Page(withTheme({
         remark_label: present(result.remark, t('noRemark')),
         trace_no_label: present(result.trace_no, t('notSet')),
         subitem_no_label: present(result.subitem_no, t('notSet')),
+        // 采购与发运（同步脚本回写）：空值统一显示「未填写」
+        unit_price_label: priceLabel(result.unit_price, t('notSet')),
+        contract_no_label: present(result.contract_no, t('notSet')),
+        contract_sign_date_label: dateLabel(result.contract_sign_date, t('notSet')),
+        vessel_no_label: present(result.vessel_no, t('notSet')),
+        consolidation_date_label: dateLabel(result.consolidation_date, t('notSet')),
+        consolidation_port_label: present(result.consolidation_port, t('notSet')),
+        sailing_date_label: dateLabel(result.sailing_date, t('notSet')),
         image_count_label: t('imageCount', { count: (result.images || []).length }),
         status_theme:
           result.status === '已入库'
