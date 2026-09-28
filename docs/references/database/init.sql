@@ -514,6 +514,7 @@ CREATE TABLE IF NOT EXISTS `purchase_request_line` (
   `trace_no` VARCHAR(128) NULL,
   `salesperson` VARCHAR(128) NULL,
   `contract_sign_date` DATE NULL,
+  `unit_price` DECIMAL(18, 2) NULL,
   `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   `version` INT UNSIGNED NOT NULL DEFAULT 1,

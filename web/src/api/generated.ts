@@ -301,6 +301,7 @@ export type PurchaseRecordResultColumn =
   | 'consolidation_date'
   | 'consolidation_port'
   | 'sailing_date'
+  | 'unit_price'
   | 'category'
   | 'demand_department'
   | 'material_name'
@@ -341,6 +342,7 @@ export interface PurchaseRecordBatchUpdate {
   consolidation_port?: string | null
   sailing_date?: string | null
   contract_sign_date?: string | null
+  unit_price?: string | null
   purchase_date?: string | null
   actual_demand_person?: string
   purchase_responsible?: string
@@ -396,6 +398,7 @@ export interface PurchaseRecordWrite {
   consolidation_port?: string | null
   sailing_date?: string
   contract_sign_date?: string
+  unit_price?: string | null
   purchase_date: string
   salesperson?: string
   status: string

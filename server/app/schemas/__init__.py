@@ -41,6 +41,8 @@ from app.domain.enums import (
 
 PositiveQuantity = Annotated[Decimal, Field(gt=0, max_digits=18, decimal_places=1)]
 NonnegativeQuantity = Annotated[Decimal, Field(ge=0, max_digits=18, decimal_places=1)]
+# 单价（人民币）：非负、最多两位小数，与 purchase_request_line.unit_price 的 DECIMAL(18, 2) 一致。
+UnitPrice = Annotated[Decimal, Field(ge=0, max_digits=18, decimal_places=2)]
 NonBlank = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 FileId = Annotated[
     str,
@@ -1477,6 +1479,8 @@ class PurchaseRecordUpdate(RequestModel):
     ) = None
     sailing_date: date | None = None
     contract_sign_date: date | None = None
+    # 单价（物资级，人民币）：人工可填可清空；同步回写只补空值。
+    unit_price: UnitPrice | None = None
     purchase_date: date | None = None
     salesperson: (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
@@ -1521,6 +1525,7 @@ class BatchUpdatePurchaseRecordsRequest(RequestModel):
     ) = None
     sailing_date: date | None = None
     contract_sign_date: date | None = None
+    unit_price: UnitPrice | None = None
     purchase_date: date | None = None
     actual_demand_person: (
         Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
@@ -1560,6 +1565,7 @@ class BatchUpdatePurchaseRecordsRequest(RequestModel):
             "consolidation_port",
             "sailing_date",
             "contract_sign_date",
+            "unit_price",
             "purchase_date",
             "actual_demand_person",
             "purchase_responsible",
@@ -1591,6 +1597,7 @@ class PurchaseRecordRead(ReadModel):
     consolidation_port: str | None = None
     sailing_date: date | None = None
     contract_sign_date: date | None = None
+    unit_price: Decimal | None = None
     status: str
     material_code: str | None = None
     category: str | None = None
@@ -1625,6 +1632,7 @@ PurchaseRecordResultColumn = Literal[
     "consolidation_port",
     "sailing_date",
     "contract_sign_date",
+    "unit_price",
     "category",
     "demand_department",
     "material_name",
@@ -1642,7 +1650,7 @@ PurchaseRecordResultColumn = Literal[
 
 
 class PurchaseRecordResultExportRequest(RequestModel):
-    columns: list[PurchaseRecordResultColumn] = Field(min_length=1, max_length=23)
+    columns: list[PurchaseRecordResultColumn] = Field(min_length=1, max_length=24)
     purchase_order_no: str | None = Field(default=None, max_length=255)
     trace_no: str | None = Field(default=None, max_length=255)
     category: str | None = Field(default=None, max_length=64)
@@ -1821,6 +1829,8 @@ class PurchaseRecordSyncTraceUpdate(RequestModel):
     sailing_date: date | None = None
     # 物资级字段：按追溯号（行）回写，与集港/发船等单据级日期不同。
     contract_sign_date: date | None = None
+    # 采购单价（人民币，物资级）：同样按追溯号（行）回写，只补空值。
+    unit_price: UnitPrice | None = None
     status: (
         Annotated[str, StringConstraints(strip_whitespace=True, max_length=128)] | None
     ) = None

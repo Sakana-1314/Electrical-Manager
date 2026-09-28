@@ -2950,6 +2950,7 @@ export interface components {
          *       "consolidation_port": "Morowali",
          *       "sailing_date": "2026-09-02",
          *       "contract_sign_date": "2026-08-25",
+         *       "unit_price": "46.55",
          *       "purchase_date": "2026-08-20",
          *       "actual_demand_person": "李建军",
          *       "purchase_responsible": "吴德海",
@@ -2979,6 +2980,8 @@ export interface components {
             sailing_date?: string | null;
             /** Contract Sign Date */
             contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
             /** Purchase Date */
             purchase_date?: string | null;
             /** Actual Demand Person */
@@ -8106,6 +8109,7 @@ export interface components {
          *           "consolidation_port": "Morowali",
          *           "sailing_date": "2026-09-02",
          *           "contract_sign_date": "2026-08-25",
+         *           "unit_price": "46.55",
          *           "status": "已入库",
          *           "material_code": "E011-00237",
          *           "category": "备品备件",
@@ -8142,6 +8146,7 @@ export interface components {
          *           "consolidation_port": "Morowali",
          *           "sailing_date": "2026-09-02",
          *           "contract_sign_date": "2026-08-25",
+         *           "unit_price": "3.20",
          *           "status": "部分入库",
          *           "material_code": "E011-00402",
          *           "category": "消耗物资",
@@ -8178,6 +8183,7 @@ export interface components {
          *           "consolidation_port": "Morowali",
          *           "sailing_date": "2026-09-15",
          *           "contract_sign_date": "2026-09-04",
+         *           "unit_price": "2860.00",
          *           "status": "已采购",
          *           "material_code": "E013-00019",
          *           "category": "备品备件",
@@ -8214,6 +8220,7 @@ export interface components {
          *           "consolidation_port": "Morowali",
          *           "sailing_date": "2026-09-23",
          *           "contract_sign_date": null,
+         *           "unit_price": null,
          *           "status": "已申购",
          *           "material_code": "E012-00071",
          *           "category": "备品备件",
@@ -8250,6 +8257,7 @@ export interface components {
          *           "consolidation_port": "Morowali",
          *           "sailing_date": "2026-09-23",
          *           "contract_sign_date": null,
+         *           "unit_price": null,
          *           "status": "已申购",
          *           "material_code": "E011-00631",
          *           "category": "备品备件",
@@ -10884,6 +10892,7 @@ export interface components {
          *       "consolidation_port": "Morowali",
          *       "sailing_date": "2026-09-02",
          *       "contract_sign_date": "2026-08-25",
+         *       "unit_price": "46.55",
          *       "status": "已入库",
          *       "material_code": "E011-00237",
          *       "category": "备品备件",
@@ -10937,6 +10946,8 @@ export interface components {
             sailing_date?: string | null;
             /** Contract Sign Date */
             contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: string | null;
             /** Status */
             status: string;
             /** Material Code */
@@ -11002,7 +11013,7 @@ export interface components {
          */
         PurchaseRecordResultExportRequest: {
             /** Columns */
-            columns: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no")[];
+            columns: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "unit_price" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no")[];
             /** Purchase Order No */
             purchase_order_no?: string | null;
             /** Trace No */
@@ -11036,7 +11047,7 @@ export interface components {
              */
             empty_subitem_no: boolean;
             /** Sort By */
-            sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
+            sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "unit_price" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
             /**
              * Sort Order
              * @default asc
@@ -11056,6 +11067,7 @@ export interface components {
          *           "consolidation_date": "2026-09-18",
          *           "sailing_date": "2026-09-23",
          *           "contract_sign_date": "2026-09-12",
+         *           "unit_price": "12.80",
          *           "status": "已采购",
          *           "trace_no": "HX20260909001"
          *         }
@@ -11141,6 +11153,7 @@ export interface components {
          *       "consolidation_date": "2026-09-18",
          *       "sailing_date": "2026-09-23",
          *       "contract_sign_date": "2026-09-12",
+         *       "unit_price": "12.80",
          *       "status": "已采购",
          *       "trace_no": "HX20260909001"
          *     }
@@ -11160,6 +11173,8 @@ export interface components {
             sailing_date?: string | null;
             /** Contract Sign Date */
             contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
             /** Status */
             status?: string | null;
             /** Trace No */
@@ -11229,6 +11244,7 @@ export interface components {
          *       "consolidation_date": "2026-09-18",
          *       "sailing_date": "2026-09-23",
          *       "contract_sign_date": "2026-09-12",
+         *       "unit_price": "12.80",
          *       "status": "已采购"
          *     }
          */
@@ -11247,6 +11263,8 @@ export interface components {
             sailing_date?: string | null;
             /** Contract Sign Date */
             contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
             /** Status */
             status?: string | null;
         };
@@ -11273,6 +11291,7 @@ export interface components {
          *       "consolidation_port": "Morowali",
          *       "sailing_date": "2026-09-02",
          *       "contract_sign_date": "2026-08-25",
+         *       "unit_price": "46.55",
          *       "purchase_date": "2026-08-20",
          *       "salesperson": "马晓东",
          *       "status": "已入库",
@@ -11336,6 +11355,8 @@ export interface components {
             sailing_date?: string | null;
             /** Contract Sign Date */
             contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
             /** Purchase Date */
             purchase_date?: string | null;
             /** Salesperson */
@@ -27926,6 +27947,7 @@ export interface operations {
                      *         "consolidation_port": "Morowali",
                      *         "sailing_date": "2026-09-02",
                      *         "contract_sign_date": "2026-08-25",
+                     *         "unit_price": "46.55",
                      *         "status": "已入库",
                      *         "material_code": "E011-00237",
                      *         "category": "备品备件",
@@ -28746,6 +28768,7 @@ export interface operations {
                      *       "consolidation_port": "Morowali",
                      *       "sailing_date": "2026-09-02",
                      *       "contract_sign_date": "2026-08-25",
+                     *       "unit_price": "46.55",
                      *       "status": "已入库",
                      *       "material_code": "E011-00237",
                      *       "category": "备品备件",
@@ -30363,7 +30386,7 @@ export interface operations {
                 empty_status?: boolean;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
                 keyword?: string | null;
-                search_field?: ("plan_no" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "category" | "material_code" | "material_name" | "model_spec" | "unit_name" | "purchase_qty" | "salesperson" | "status" | "purchase_date" | "usage" | "subitem_no" | "plan_remark" | "record_remark") | null;
+                search_field?: ("plan_no" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "unit_price" | "category" | "material_code" | "material_name" | "model_spec" | "unit_name" | "purchase_qty" | "salesperson" | "status" | "purchase_date" | "usage" | "subitem_no" | "plan_remark" | "record_remark") | null;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
                 search_value?: string | null;
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
@@ -30386,7 +30409,7 @@ export interface operations {
                 subitem_no?: string | null;
                 empty_subitem_no?: boolean;
                 ai_expand?: boolean;
-                sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
+                sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "unit_price" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
                 sort_order?: "asc" | "desc";
             };
             header?: {
@@ -30420,6 +30443,7 @@ export interface operations {
                      *           "consolidation_port": "Morowali",
                      *           "sailing_date": "2026-09-02",
                      *           "contract_sign_date": "2026-08-25",
+                     *           "unit_price": "46.55",
                      *           "status": "已入库",
                      *           "material_code": "E011-00237",
                      *           "category": "备品备件",
@@ -30456,6 +30480,7 @@ export interface operations {
                      *           "consolidation_port": "Morowali",
                      *           "sailing_date": "2026-09-02",
                      *           "contract_sign_date": "2026-08-25",
+                     *           "unit_price": "3.20",
                      *           "status": "部分入库",
                      *           "material_code": "E011-00402",
                      *           "category": "消耗物资",
@@ -30492,6 +30517,7 @@ export interface operations {
                      *           "consolidation_port": "Morowali",
                      *           "sailing_date": "2026-09-15",
                      *           "contract_sign_date": "2026-09-04",
+                     *           "unit_price": "2860.00",
                      *           "status": "已采购",
                      *           "material_code": "E013-00019",
                      *           "category": "备品备件",
@@ -30528,6 +30554,7 @@ export interface operations {
                      *           "consolidation_port": "Morowali",
                      *           "sailing_date": "2026-09-23",
                      *           "contract_sign_date": null,
+                     *           "unit_price": null,
                      *           "status": "已申购",
                      *           "material_code": "E012-00071",
                      *           "category": "备品备件",
@@ -30564,6 +30591,7 @@ export interface operations {
                      *           "consolidation_port": "Morowali",
                      *           "sailing_date": "2026-09-23",
                      *           "contract_sign_date": null,
+                     *           "unit_price": null,
                      *           "status": "已申购",
                      *           "material_code": "E011-00631",
                      *           "category": "备品备件",
@@ -30992,6 +31020,7 @@ export interface operations {
                      *         "consolidation_port": "Morowali",
                      *         "sailing_date": "2026-09-02",
                      *         "contract_sign_date": "2026-08-25",
+                     *         "unit_price": "46.55",
                      *         "status": "已入库",
                      *         "material_code": "E011-00237",
                      *         "category": "备品备件",
@@ -31140,6 +31169,7 @@ export interface operations {
                      *       "consolidation_port": "Morowali",
                      *       "sailing_date": "2026-09-02",
                      *       "contract_sign_date": "2026-08-25",
+                     *       "unit_price": "46.55",
                      *       "status": "已入库",
                      *       "material_code": "E011-00237",
                      *       "category": "备品备件",
@@ -31291,6 +31321,7 @@ export interface operations {
                      *       "consolidation_port": "Morowali",
                      *       "sailing_date": "2026-09-02",
                      *       "contract_sign_date": "2026-08-25",
+                     *       "unit_price": "46.55",
                      *       "status": "已入库",
                      *       "material_code": "E011-00237",
                      *       "category": "备品备件",

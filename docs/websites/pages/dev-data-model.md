@@ -632,6 +632,7 @@ erDiagram
 | `purchase_request_line` | `trace_no` | VARCHAR(128) | 是 | NULL | 追溯号 |
 | `purchase_request_line` | `salesperson` | VARCHAR(128) | 是 | NULL | 业务员 |
 | `purchase_request_line` | `contract_sign_date` | DATE | 是 | NULL | 合同签订日期（物资级） |
+| `purchase_request_line` | `unit_price` | DECIMAL(18, 2) | 是 | NULL | 单价（人民币，物资级；平台同步只补空值，也可人工填写） |
 | `purchase_request_line` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_request_line(id)`；唯一 `uq_purchase_request_line_purchase_request_id(purchase_request_id, purchase_material_id, subitem_no, usage_hash)`；`ix_purchase_request_line_trace_no(trace_no)`；检查约束 `ck_purchase_request_line_purchase_positive`；外键 `purchase_request_id → purchase_request.id`（`ON DELETE CASCADE`）、`purchase_material_id → purchase_material.id`（`ON DELETE SET NULL`） |
 | `purchase_request_line_image` | `line_id` | BIGINT UNSIGNED | 否 | 无 | 主键之一，关联申购记录行 |
 | `purchase_request_line_image` | `file_id` | VARCHAR(36) | 否 | 无 | 主键之一，关联文件 |

@@ -12261,6 +12261,7 @@ paths:
                 consolidation_port: Morowali
                 sailing_date: '2026-09-02'
                 contract_sign_date: '2026-08-25'
+                unit_price: '46.55'
                 status: 已入库
                 material_code: E011-00237
                 category: 备品备件
@@ -12936,6 +12937,7 @@ paths:
                 consolidation_port: Morowali
                 sailing_date: '2026-09-02'
                 contract_sign_date: '2026-08-25'
+                unit_price: '46.55'
                 status: 已入库
                 material_code: E011-00237
                 category: 备品备件
@@ -14429,6 +14431,7 @@ paths:
             - consolidation_port
             - sailing_date
             - contract_sign_date
+            - unit_price
             - category
             - material_code
             - material_name
@@ -14592,6 +14595,7 @@ paths:
             - consolidation_port
             - sailing_date
             - contract_sign_date
+            - unit_price
             - category
             - demand_department
             - material_name
@@ -14648,6 +14652,7 @@ paths:
                   consolidation_port: Morowali
                   sailing_date: '2026-09-02'
                   contract_sign_date: '2026-08-25'
+                  unit_price: '46.55'
                   status: 已入库
                   material_code: E011-00237
                   category: 备品备件
@@ -14682,6 +14687,7 @@ paths:
                   consolidation_port: Morowali
                   sailing_date: '2026-09-02'
                   contract_sign_date: '2026-08-25'
+                  unit_price: '3.20'
                   status: 部分入库
                   material_code: E011-00402
                   category: 消耗物资
@@ -14716,6 +14722,7 @@ paths:
                   consolidation_port: Morowali
                   sailing_date: '2026-09-15'
                   contract_sign_date: '2026-09-04'
+                  unit_price: '2860.00'
                   status: 已采购
                   material_code: E013-00019
                   category: 备品备件
@@ -14750,6 +14757,7 @@ paths:
                   consolidation_port: Morowali
                   sailing_date: '2026-09-23'
                   contract_sign_date: null
+                  unit_price: null
                   status: 已申购
                   material_code: E012-00071
                   category: 备品备件
@@ -14784,6 +14792,7 @@ paths:
                   consolidation_port: Morowali
                   sailing_date: '2026-09-23'
                   contract_sign_date: null
+                  unit_price: null
                   status: 已申购
                   material_code: E011-00631
                   category: 备品备件
@@ -15120,6 +15129,7 @@ paths:
                 consolidation_port: Morowali
                 sailing_date: '2026-09-02'
                 contract_sign_date: '2026-08-25'
+                unit_price: '46.55'
                 status: 已入库
                 material_code: E011-00237
                 category: 备品备件
@@ -15241,6 +15251,7 @@ paths:
                 consolidation_port: Morowali
                 sailing_date: '2026-09-02'
                 contract_sign_date: '2026-08-25'
+                unit_price: '46.55'
                 status: 已入库
                 material_code: E011-00237
                 category: 备品备件
@@ -15367,6 +15378,7 @@ paths:
                 consolidation_port: Morowali
                 sailing_date: '2026-09-02'
                 contract_sign_date: '2026-08-25'
+                unit_price: '46.55'
                 status: 已入库
                 material_code: E011-00237
                 category: 备品备件
@@ -23403,6 +23415,14 @@ components:
             format: date
           - type: 'null'
           title: Contract Sign Date
+        unit_price:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
+          - type: 'null'
+          title: Unit Price
         purchase_date:
           anyOf:
           - type: string
@@ -23461,6 +23481,7 @@ components:
         consolidation_port: Morowali
         sailing_date: '2026-09-02'
         contract_sign_date: '2026-08-25'
+        unit_price: '46.55'
         purchase_date: '2026-08-20'
         actual_demand_person: 李建军
         purchase_responsible: 吴德海
@@ -29559,6 +29580,7 @@ components:
           consolidation_port: Morowali
           sailing_date: '2026-09-02'
           contract_sign_date: '2026-08-25'
+          unit_price: '46.55'
           status: 已入库
           material_code: E011-00237
           category: 备品备件
@@ -29593,6 +29615,7 @@ components:
           consolidation_port: Morowali
           sailing_date: '2026-09-02'
           contract_sign_date: '2026-08-25'
+          unit_price: '3.20'
           status: 部分入库
           material_code: E011-00402
           category: 消耗物资
@@ -29627,6 +29650,7 @@ components:
           consolidation_port: Morowali
           sailing_date: '2026-09-15'
           contract_sign_date: '2026-09-04'
+          unit_price: '2860.00'
           status: 已采购
           material_code: E013-00019
           category: 备品备件
@@ -29661,6 +29685,7 @@ components:
           consolidation_port: Morowali
           sailing_date: '2026-09-23'
           contract_sign_date: null
+          unit_price: null
           status: 已申购
           material_code: E012-00071
           category: 备品备件
@@ -29695,6 +29720,7 @@ components:
           consolidation_port: Morowali
           sailing_date: '2026-09-23'
           contract_sign_date: null
+          unit_price: null
           status: 已申购
           material_code: E011-00631
           category: 备品备件
@@ -32614,6 +32640,12 @@ components:
             format: date
           - type: 'null'
           title: Contract Sign Date
+        unit_price:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Unit Price
         status:
           type: string
           title: Status
@@ -32734,6 +32766,7 @@ components:
         consolidation_port: Morowali
         sailing_date: '2026-09-02'
         contract_sign_date: '2026-08-25'
+        unit_price: '46.55'
         status: 已入库
         material_code: E011-00237
         category: 备品备件
@@ -32771,6 +32804,7 @@ components:
             - consolidation_port
             - sailing_date
             - contract_sign_date
+            - unit_price
             - category
             - demand_department
             - material_name
@@ -32785,7 +32819,7 @@ components:
             - images
             - subitem_no
           type: array
-          maxItems: 23
+          maxItems: 24
           minItems: 1
           title: Columns
         purchase_order_no:
@@ -32876,6 +32910,7 @@ components:
             - consolidation_port
             - sailing_date
             - contract_sign_date
+            - unit_price
             - category
             - demand_department
             - material_name
@@ -32935,6 +32970,7 @@ components:
           consolidation_date: '2026-09-18'
           sailing_date: '2026-09-23'
           contract_sign_date: '2026-09-12'
+          unit_price: '12.80'
           status: 已采购
           trace_no: HX20260909001
     PurchaseRecordSyncOrderApplyRead:
@@ -33058,6 +33094,14 @@ components:
             format: date
           - type: 'null'
           title: Contract Sign Date
+        unit_price:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
+          - type: 'null'
+          title: Unit Price
         status:
           anyOf:
           - type: string
@@ -33083,6 +33127,7 @@ components:
         consolidation_date: '2026-09-18'
         sailing_date: '2026-09-23'
         contract_sign_date: '2026-09-12'
+        unit_price: '12.80'
         status: 已采购
         trace_no: HX20260909001
     PurchaseRecordSyncResultRead:
@@ -33192,6 +33237,14 @@ components:
             format: date
           - type: 'null'
           title: Contract Sign Date
+        unit_price:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
+          - type: 'null'
+          title: Unit Price
         status:
           anyOf:
           - type: string
@@ -33209,6 +33262,7 @@ components:
         consolidation_date: '2026-09-18'
         sailing_date: '2026-09-23'
         contract_sign_date: '2026-09-12'
+        unit_price: '12.80'
         status: 已采购
     PurchaseRecordUpdate:
       properties:
@@ -33346,6 +33400,14 @@ components:
             format: date
           - type: 'null'
           title: Contract Sign Date
+        unit_price:
+          anyOf:
+          - type: number
+            minimum: 0.0
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
+          - type: 'null'
+          title: Unit Price
         purchase_date:
           anyOf:
           - type: string
@@ -33408,6 +33470,7 @@ components:
         consolidation_port: Morowali
         sailing_date: '2026-09-02'
         contract_sign_date: '2026-08-25'
+        unit_price: '46.55'
         purchase_date: '2026-08-20'
         salesperson: 马晓东
         status: 已入库

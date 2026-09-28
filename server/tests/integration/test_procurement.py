@@ -1276,6 +1276,121 @@ async def test_contract_sign_date_is_line_level_and_batch_editable(client: Async
     assert cleared.json()["contract_sign_date"] is None
 
 
+def _record_edit_payload(record: dict[str, object], **extra: object) -> dict[str, object]:
+    """申购记录 PATCH 的全量载荷（除单价外保持记录原值，只改传入字段）。"""
+    return {
+        "version": record["version"],
+        "plan_date": record["plan_date"],
+        "material_name": record["material_name"],
+        "model_spec": record["model_spec"],
+        "unit_name": record["unit_name"],
+        "actual_demand_person": record["actual_demand_person"],
+        "purchase_responsible": record["purchase_responsible"],
+        "purchase_qty": record["purchase_qty"],
+        "usage": record["usage"],
+        "status": record["status"],
+        **extra,
+    }
+
+
+@pytest.mark.asyncio
+async def test_unit_price_is_line_level_and_editable(client: AsyncClient) -> None:
+    """单价是物资级字段：逐条可不同、可批量改、可清空，负数与超过两位小数一律拒绝。"""
+    headers = await auth_headers(client, "purchase")
+    first_plan = await create_purchase_plan(client, headers, "单价计划一", code="DQ-PRICE-1")
+    second_plan = await create_purchase_plan(client, headers, "单价计划二", code="DQ-PRICE-2")
+    first = await move_to_record(client, headers, int(first_plan["id"]), trace_no="ZS-PRICE-1")
+    second = await move_to_record(client, headers, int(second_plan["id"]), trace_no="ZS-PRICE-2")
+    # 转入时不带单价：新字段默认为空，等待人工填写或平台同步补空
+    assert first["unit_price"] is None
+    assert second["unit_price"] is None
+
+    changed = await client.patch(
+        f"/api/v1/purchase-records/{first['line_id']}",
+        headers=headers,
+        json=_record_edit_payload(first, unit_price="128.50"),
+    )
+    assert changed.status_code == 200, changed.text
+    assert Decimal(changed.json()["unit_price"]) == Decimal("128.50")
+
+    # 只影响本行：同一批次里另一条物资的单价仍为空
+    sibling = await client.get(
+        f"/api/v1/purchase-records/{second['line_id']}", headers=headers
+    )
+    assert sibling.status_code == 200, sibling.text
+    assert sibling.json()["unit_price"] is None
+
+    # 按单价检索（search_field 白名单新增 unit_price）
+    searched = await client.get(
+        "/api/v1/purchase-records",
+        headers=headers,
+        params={"search_field": "unit_price", "search_value": "128"},
+    )
+    assert searched.status_code == 200, searched.text
+    assert [item["line_id"] for item in searched.json()["items"]] == [first["line_id"]]
+
+    # 批量修改：多条记录一次改成同一单价
+    batch = await client.patch(
+        "/api/v1/purchase-records/batch",
+        headers=headers,
+        json={
+            "records": [
+                {"line_id": first["line_id"], "version": changed.json()["version"]},
+                {"line_id": second["line_id"], "version": sibling.json()["version"]},
+            ],
+            "unit_price": "99.90",
+        },
+    )
+    assert batch.status_code == 200, batch.text
+    assert {Decimal(item["unit_price"]) for item in batch.json()} == {Decimal("99.90")}
+
+    # 负数 / 超过两位小数都会被契约拒绝（DECIMAL(18, 2)），避免写入无法展示的价格
+    for bad in ("-1", "1.234"):
+        rejected = await client.patch(
+            f"/api/v1/purchase-records/{first['line_id']}",
+            headers=headers,
+            json=_record_edit_payload(batch.json()[0], unit_price=bad),
+        )
+        assert rejected.status_code == 422, rejected.text
+
+    cleared = await client.patch(
+        f"/api/v1/purchase-records/{first['line_id']}",
+        headers=headers,
+        json=_record_edit_payload(batch.json()[0], unit_price=None),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["unit_price"] is None
+
+
+@pytest.mark.asyncio
+async def test_unit_price_can_be_exported(client: AsyncClient) -> None:
+    """导出结果的「单价」列取后端 DECIMAL 值（Excel 里是数值而不是文本）。"""
+    headers = await auth_headers(client, "purchase")
+    plan = await create_purchase_plan(client, headers, "单价导出物资", code="DQ-PRICE-EXP")
+    record = await move_to_record(client, headers, int(plan["id"]), trace_no="ZS-PRICE-EXP")
+    patched = await client.patch(
+        f"/api/v1/purchase-records/{record['line_id']}",
+        headers=headers,
+        json=_record_edit_payload(record, unit_price="1886.00"),
+    )
+    assert patched.status_code == 200, patched.text
+
+    export = await client.post(
+        "/api/v1/purchase-records/export-results",
+        headers=headers,
+        json={"columns": ["material_name", "unit_price"], "name": "单价导出物资"},
+    )
+    assert export.status_code == 202, export.text
+    job = await await_export_job(client, headers, export.json()["id"])
+    assert job["status"] == "SUCCEEDED", job
+    file = await client.get(f"/api/v1/excel-export-jobs/files/{job['file_uuid']}")
+    assert file.status_code == 200, file.text
+    sheet = load_workbook(BytesIO(file.content)).active
+    assert [sheet.cell(1, column).value for column in (1, 2)] == ["物资名称", "单价"]
+    assert sheet["A2"].value == "单价导出物资"
+    assert sheet["B2"].value == 1886.0
+
+
 @pytest.mark.asyncio
 async def test_batch_update_purchase_plans(client: AsyncClient) -> None:
     headers = await auth_headers(client, "purchase")

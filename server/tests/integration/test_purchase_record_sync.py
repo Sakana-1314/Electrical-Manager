@@ -4,6 +4,8 @@
 权限校验、NOT_FOUND。
 """
 
+from decimal import Decimal
+
 import pytest
 
 from tests.conftest import auth_headers
@@ -453,6 +455,73 @@ async def test_sync_contract_sign_date_is_line_level_and_only_fills_empty(client
 
     # 补全后该字段不再产生待同步目标
     targets = await _targets(client, headers, fields="contract_sign_date")
+    assert targets["items"] == []
+
+
+async def test_sync_unit_price_is_line_level_and_only_fills_empty(client) -> None:
+    """采购单价（平台「采购单价」列）为物资级字段：只补空值、按追溯号逐行写。"""
+    headers = await auth_headers(client, "purchase")
+    plan_a = await create_purchase_plan(client, headers, "单价同步A", code="PRICE-A")
+    record_a = await _move_plan(client, headers, int(plan_a["id"]), "TR-PRICE-A")
+    plan_b = await create_purchase_plan(client, headers, "单价同步B", code="PRICE-B")
+    record_b = await _move_plan(client, headers, int(plan_b["id"]), "TR-PRICE-B")
+    # 人工先填一条：同步不得覆盖人工价格（PATCH 是全量覆盖，未随载荷提交的字段会被清空，
+    # 所以这里把单据号/追溯号一并回传，保持后续整单回写仍能命中这条记录）。
+    manual = await client.patch(
+        f"/api/v1/purchase-records/{record_b['line_id']}",
+        headers=headers,
+        json={
+            "version": record_b["version"],
+            "plan_date": record_b["plan_date"],
+            "material_name": record_b["material_name"],
+            "model_spec": record_b["model_spec"],
+            "unit_name": record_b["unit_name"],
+            "actual_demand_person": record_b["actual_demand_person"],
+            "purchase_responsible": record_b["purchase_responsible"],
+            "purchase_qty": record_b["purchase_qty"],
+            "usage": record_b["usage"],
+            "status": record_b["status"],
+            "purchase_order_no": "SYNC-PO",
+            "trace_no": "TR-PRICE-B",
+            "unit_price": "1200.00",
+        },
+    )
+    assert manual.status_code == 200, manual.text
+
+    # 该字段可单独作为待补全字段筛选：已填写单价的行不再是目标
+    targets = await _targets(client, headers, fields="unit_price")
+    assert [item["trace_no"] for item in targets["items"]] == ["TR-PRICE-A"]
+
+    # 整单回写（新脚本路径）：A 补空、B 的人工价格不被覆盖
+    result = await _apply_order(
+        client,
+        headers,
+        "SYNC-PO",
+        [
+            {"trace_no": "TR-PRICE-A", "unit_price": "46.55"},
+            {"trace_no": "TR-PRICE-B", "unit_price": "47.00"},
+        ],
+    )
+    assert result == {
+        "applied": 2,
+        "not_found": 0,
+        "affected_headers": 0,
+        "affected_lines": 1,
+    }
+
+    rec_a = await _record(client, headers, record_a["line_id"])
+    assert Decimal(rec_a["unit_price"]) == Decimal("46.55")
+    rec_b = await _record(client, headers, record_b["line_id"])
+    assert Decimal(rec_b["unit_price"]) == Decimal("1200.00")
+
+    # 幂等：再次回写同一字段不产生变更
+    repeat = await _apply_trace(client, headers, "TR-PRICE-A", {"unit_price": "99.99"})
+    assert repeat == {"affected_headers": 0, "affected_lines": 0}
+    rec_a = await _record(client, headers, record_a["line_id"])
+    assert Decimal(rec_a["unit_price"]) == Decimal("46.55")
+
+    # 补全后该字段不再产生待同步目标
+    targets = await _targets(client, headers, fields="unit_price")
     assert targets["items"] == []
 
 

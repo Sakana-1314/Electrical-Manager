@@ -598,6 +598,8 @@ class PurchaseRequestLine(ProjectScoped, AuditMixin, Base):
     salesperson: Mapped[str | None] = mapped_column(String(128))
     # 合同签订日期为物资级字段：同一申购单下不同物资可分别签订，故挂在行表而非头表。
     contract_sign_date: Mapped[date | None] = mapped_column(Date)
+    # 单价（人民币，物资级）：同一申购单下不同物资单价不同；由物资平台同步补空，也可人工填写。
+    unit_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
 
     @validates("usage")
     def _sync_usage_hash(self, _key: str, value: str) -> str:

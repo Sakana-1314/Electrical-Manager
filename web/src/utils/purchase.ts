@@ -22,6 +22,17 @@ export function rememberPurchaseResponsible(value: string): void {
 }
 
 /**
+ * 单价展示：后端是 DECIMAL(18, 2)，JSON 里是字符串（如 `46.55`）。
+ * 空值统一返回空串，由调用方决定显示什么（列表显示 `\`）；非法值也不渲染成 `NaN 元`。
+ */
+export function formatUnitPrice(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') return ''
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return ''
+  return `${parsed.toFixed(2)} 元`
+}
+
+/**
  * 列表把「计划数量 + 计量单位」合并成一列展示，导出仍按两列走。
  *
  * 传入列表勾选的列键与完整列顺序，返回导出该用的列键：勾了合并列（`planned_qty`）就补上
