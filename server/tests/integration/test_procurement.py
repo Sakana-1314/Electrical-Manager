@@ -1924,6 +1924,28 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_purchase_approval_export_writes_zero_quantities_without_material_code(
+    client: AsyncClient,
+) -> None:
+    """没有物料编码的计划不参与库存 / 在途匹配，两格都导出 0，不留空。"""
+    headers = await auth_headers(client, "purchase")
+    plan = await create_purchase_plan(client, headers, "无编码审批物资", code=None)
+    response = await client.post(
+        "/api/v1/purchase-materials/export-purchase-approval",
+        headers=headers,
+        json={"material_ids": [plan["id"]]},
+    )
+
+    assert response.status_code == 200, response.text
+    sheet = load_workbook(BytesIO(response.content)).active
+    assert sheet["B2"].value in (None, "")
+    assert sheet["J2"].value is not None
+    assert sheet["K2"].value is not None
+    assert float(sheet["J2"].value) == 0
+    assert float(sheet["K2"].value) == 0
+
+
+@pytest.mark.asyncio
 async def test_purchase_approval_export_fills_stock_and_in_transit_by_material_code(
     client: AsyncClient,
 ) -> None:

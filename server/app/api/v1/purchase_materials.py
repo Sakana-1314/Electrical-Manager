@@ -404,12 +404,14 @@ async def export_purchase_approval(
     )
     material_service.validate_purchase_approval_export(materials)
     # 库存量取华星总库存、在途量取最近 3 个月申购记录，均只按物料编码精准匹配；
+    # 没有物料编码时不参与匹配，两格都填 0（不留空）；
     # 单价 / 总价暂时留空（模板里两个列不绑定字段）。
     quantities = await material_service.purchase_approval_export_quantities(session, materials)
     rows = []
     for index, item in enumerate(materials, start=1):
         code = item.material_code
         matched = quantities.get(code) if code else None
+        stock_qty, in_transit_qty = matched if matched else (0, 0)
         rows.append(
             {
                 "serial": index,
@@ -421,8 +423,8 @@ async def export_purchase_approval(
                 "purchase_responsible": item.purchase_responsible,
                 "department": "HXNI 检修维护部",
                 "usage": item.usage,
-                "stock_qty": matched[0] if matched else None,
-                "in_transit_qty": matched[1] if matched else None,
+                "stock_qty": stock_qty,
+                "in_transit_qty": in_transit_qty,
                 "required_arrival_date": date.today() + timedelta(days=80),
                 "urgency": item.urgency,
                 "remark": item.remark,
