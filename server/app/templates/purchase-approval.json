@@ -24,7 +24,8 @@
       "N": 13.33,
       "O": 11.5,
       "P": 24.16,
-      "Q": 7.33
+      "Q": 7.33,
+      "R": 14.0
     }
   },
   "styles": {
@@ -77,6 +78,7 @@
     },
     { "column": "O", "header": "紧急程度", "field": "urgency" },
     { "column": "P", "header": "备注", "field": "remark" },
-    { "column": "Q", "header": "子项号", "field": "subitem_no" }
+    { "column": "Q", "header": "子项号", "field": "subitem_no" },
+    { "column": "R", "header": "图片", "field": "images" }
   ]
 }

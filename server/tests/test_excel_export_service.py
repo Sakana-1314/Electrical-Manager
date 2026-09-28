@@ -49,7 +49,7 @@ def test_invalid_template_raises_readable_business_error(monkeypatch, tmp_path: 
     assert raised.value.code == "EXPORT_TEMPLATE_INVALID"
 
 
-def test_purchase_approval_template_renders_seventeen_columns() -> None:
+def test_purchase_approval_template_renders_eighteen_columns() -> None:
     content, filename = excel_export_service.render_excel(
         "purchase-approval.json",
         [
@@ -75,7 +75,7 @@ def test_purchase_approval_template_renders_seventeen_columns() -> None:
 
     assert filename == f"采购申请（审批）_{date.today():%Y%m%d}.xlsx"
     sheet = load_workbook(BytesIO(content)).active
-    assert [sheet.cell(1, column).value for column in range(1, 18)] == [
+    assert [sheet.cell(1, column).value for column in range(1, 19)] == [
         "序号",
         "物料编码",
         "物料名称",
@@ -93,6 +93,7 @@ def test_purchase_approval_template_renders_seventeen_columns() -> None:
         "紧急程度",
         "备注",
         "子项号",
+        "图片",
     ]
     assert sheet["A2"].value == 1
     assert sheet["B2"].value == "DQ-001"
@@ -104,7 +105,51 @@ def test_purchase_approval_template_renders_seventeen_columns() -> None:
     assert sheet["L2"].value in (None, "")
     assert sheet["M2"].value in (None, "")
     assert sheet["N2"].value.date() == date(2026, 11, 15)
-    assert sheet.auto_filter.ref == "A1:Q2"
+    assert sheet.auto_filter.ref == "A1:R2"
+
+
+def test_purchase_approval_template_embeds_row_images(tmp_path: Path) -> None:
+    from PIL import Image
+
+    image_path = tmp_path / "approval.png"
+    Image.new("RGB", (40, 24), "blue").save(image_path, format="PNG")
+    missing = tmp_path / "missing.png"
+
+    content, _ = excel_export_service.render_excel(
+        "purchase-approval.json",
+        [
+            {
+                "serial": 1,
+                "name": "带图物资",
+                "model_spec": "M1",
+                "planned_qty": 1,
+                "unit_name": "个",
+                "purchase_responsible": "张三",
+                "usage": "检修备用",
+                "subitem_no": "GX-002",
+                "images": [image_path],
+            },
+            {
+                "serial": 2,
+                "name": "缺图物资",
+                "model_spec": "M2",
+                "planned_qty": 1,
+                "unit_name": "个",
+                "purchase_responsible": "李四",
+                "usage": "检修备用",
+                "subitem_no": "GX-003",
+                "images": [missing],
+            },
+        ],
+    )
+
+    sheet = load_workbook(BytesIO(content)).active
+    assert len(sheet._images) == 1
+    # 图片列在最后一列，有图行加高、缺图行保持默认行高
+    assert sheet["R1"].value == "图片"
+    assert sheet.row_dimensions[2].height == 74
+    assert sheet.row_dimensions[3].height == 24
+    assert sheet.column_dimensions["R"].width >= 16
 
 
 def test_result_excel_uses_visible_columns_and_readable_layout() -> None:
