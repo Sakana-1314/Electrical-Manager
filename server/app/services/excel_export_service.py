@@ -26,7 +26,10 @@ from openpyxl.styles import (  # type: ignore[import-untyped]
     PatternFill,
     Side,
 )
-from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+from openpyxl.utils import (  # type: ignore[import-untyped]
+    column_index_from_string,
+    get_column_letter,
+)
 from openpyxl.utils.units import pixels_to_EMU  # type: ignore[import-untyped]
 from openpyxl.worksheet.datavalidation import (  # type: ignore[import-untyped]
     DataValidation,
@@ -188,13 +191,41 @@ def _purchase_application_workbook(spec: dict[str, Any], rows: list[dict[str, An
         _style(header, styles["header"])
     sheet.row_dimensions[header_row].height = 34
 
+    image_slots: dict[str, int] = {}
     for offset, row in enumerate(rows):
         row_no = data_start + offset
+        row_height = 24
         for column in spec["columns"]:
             cell = sheet[f"{column['column']}{row_no}"]
+            style = styles[column.get("style", "data")]
+            field = column.get("field")
+            raw_value = row.get(field) if field else None
+            if _is_image_list(raw_value):
+                # 图片列：字段值是本地图片路径列表时嵌入原图（空列表只留空单元格）
+                _style(cell, style)
+                image_slots[column["column"]] = max(
+                    image_slots.get(column["column"], 0), len(raw_value)
+                )
+                if _embed_row_images(
+                    sheet,
+                    row_no,
+                    column_index_from_string(column["column"]),
+                    raw_value,
+                ):
+                    row_height = max(row_height, _IMAGE_ROW_HEIGHT)
+                continue
             cell.value = _cell_value(row, column)
-            _style(cell, styles[column.get("style", "data")])
-        sheet.row_dimensions[row_no].height = 24
+            _style(cell, style)
+        sheet.row_dimensions[row_no].height = row_height
+
+    # 图片列按最多图片数放宽，保证同一行的图片都能落在本列内
+    for column_letter, slots in image_slots.items():
+        if not slots:
+            continue
+        current = sheet.column_dimensions[column_letter].width or 0
+        sheet.column_dimensions[column_letter].width = max(
+            current, slots * (_IMAGE_DISPLAY + _IMAGE_GAP_PX) // 7 + 2
+        )
 
     last_column = get_column_letter(len(spec["columns"]))
     last_row = max(data_start, data_start + len(rows) - 1)

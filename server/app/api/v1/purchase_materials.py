@@ -429,11 +429,18 @@ async def export_purchase_approval(
                 "urgency": item.urgency,
                 "remark": item.remark,
                 "subitem_no": item.subitem_no,
+                # 图片列在最后，与原「申购计划导出」一致：嵌入计划附带的原图
+                "images": [
+                    file_service.file_path(link.file.id)
+                    for link in item.images
+                    if link.file is not None and file_service.file_path(link.file.id).is_file()
+                ],
             }
         )
-    return excel_export_service.excel_response(
-        *excel_export_service.render_excel("purchase-approval.json", rows)
+    content, filename = await asyncio.to_thread(
+        excel_export_service.render_excel, "purchase-approval.json", rows
     )
+    return excel_export_service.excel_response(content, filename)
 
 
 @router.post(

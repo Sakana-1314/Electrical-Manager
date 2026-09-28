@@ -2066,6 +2066,59 @@ async def test_purchase_approval_export_requires_mandatory_fields(
 
 
 @pytest.mark.asyncio
+async def test_purchase_approval_export_embeds_plan_images(client: AsyncClient) -> None:
+    """申购审批表最后一列是图片列，嵌入所选计划附带的原图。"""
+    headers = await auth_headers(client, "purchase")
+
+    source = BytesIO()
+    Image.new("RGB", (64, 40), "purple").save(source, format="PNG")
+    uploaded = await client.post(
+        "/api/v1/files/images",
+        headers=headers,
+        files={"file": ("approval.png", source.getvalue(), "image/png")},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    file_id = uploaded.json()["id"]
+
+    plan = await create_purchase_plan(
+        client, headers, "审批表带图物资", code="DQ-APP-IMG", image_ids=[file_id]
+    )
+
+    response = await client.post(
+        "/api/v1/purchase-materials/export-purchase-approval",
+        headers=headers,
+        json={"material_ids": [plan["id"]]},
+    )
+
+    assert response.status_code == 200, response.text
+    sheet = load_workbook(BytesIO(response.content)).active
+    assert sheet["Q1"].value == "子项号"
+    assert sheet["R1"].value == "图片"
+    assert len(sheet._images) == 1
+
+
+@pytest.mark.asyncio
+async def test_purchase_approval_export_without_images_keeps_empty_column(
+    client: AsyncClient,
+) -> None:
+    """没有附图时图片列留空，不影响其余导出列。"""
+    headers = await auth_headers(client, "purchase")
+    plan = await create_purchase_plan(client, headers, "审批表无图物资", code="DQ-APP-NOIMG")
+
+    response = await client.post(
+        "/api/v1/purchase-materials/export-purchase-approval",
+        headers=headers,
+        json={"material_ids": [plan["id"]]},
+    )
+
+    assert response.status_code == 200, response.text
+    sheet = load_workbook(BytesIO(response.content)).active
+    assert sheet["R1"].value == "图片"
+    assert sheet["R2"].value in (None, "")
+    assert len(sheet._images) == 0
+
+
+@pytest.mark.asyncio
 async def test_purchase_result_exports_follow_filters_and_visible_columns(
     client: AsyncClient,
 ) -> None:
