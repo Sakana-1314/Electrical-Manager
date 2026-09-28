@@ -430,8 +430,13 @@ a {
  * 单独一个类比 `.muted` 更小一档（13px → 12px）：它贴着 16px 的弹窗标题，
  * 字号接近会显得和标题抢视线。不加 `white-space: nowrap`，窄屏放不下时
  * 允许换行，避免把标题挤出可视区或压到关闭按钮上。
+ *
+ * 右侧留一段间距：组件库只给关闭按钮 8px 左外边距（`.n-card-header__close`），
+ * 12px 的时间紧贴 18px 的 × 图标会挤在一起；这里再补 8px（合计 16px）。
+ * 间距只加在本类上（而不是所有弹窗的关闭按钮上），因为只有它贴得这么近。
  */
 .card-header-time {
+  margin-right: 8px;
   color: var(--color-text-muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
