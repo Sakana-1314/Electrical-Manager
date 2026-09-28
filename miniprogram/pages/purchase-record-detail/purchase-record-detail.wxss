@@ -77,8 +77,14 @@
 .detail-row:last-child { border-bottom: 0; }
 .detail-label { flex: none; width: 160rpx; color: var(--app-text-subtle); font-size: 23rpx; line-height: 1.5; }
 .detail-value { flex: 1; min-width: 0; color: var(--app-text-value); font-size: 24rpx; line-height: 1.5; text-align: right; word-break: break-all; }
+/* 可复制的物料编码：虚线下划线只跟文字一样长。
+   `.detail-value` 是 flex:1（会铺满整行剩余宽度），这里必须退回按内容宽度收缩再右对齐，
+   否则下划线会一直拖到行尾。 */
 .copy-value {
   box-sizing: border-box;
+  flex: 0 1 auto;
+  max-width: 100%;
+  margin-left: auto;
   border-bottom: 2rpx dashed var(--app-brand);
   padding-bottom: 2rpx;
   color: var(--app-brand);

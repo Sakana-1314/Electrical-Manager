@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.6.0
-// @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
+// @version      3.7.0
+// @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
@@ -25,7 +25,9 @@
   const PLATFORM_BASE = `${PLATFORM_ORIGIN}/webroot/decision`;
   const MATERIALS_API = "https://materials-manager.qcloud.19890605.xyz/api/v1";
   // 同步字段白名单：按后端支持能力动态拼装（见 activeSyncFields）。
-  const BASE_SYNC_FIELDS = "contract_no,vessel_no,salesperson,status";
+  // 集港日期 / 集港港口是单据级字段，后端白名单早于本脚本支持，故直接放进基础字段。
+  const BASE_SYNC_FIELDS =
+    "contract_no,vessel_no,salesperson,status,consolidation_date,consolidation_port";
   const SIGN_DATE_FIELD = "contract_sign_date";
   const UNIT_PRICE_FIELD = "unit_price";
   // 平台“物料申购跟踪”报表里的合同签订日期列。列名来自真实 HAR（page/data）：
@@ -41,9 +43,15 @@
   // 「采购单价\nCNY」——`\n` 是字面反斜杠 + n 两个字符（不是换行），故除精确匹配外还按
   // 「采购单价」前缀兜底，兼容平台在列名后追加币种/单位后缀。
   const UNIT_PRICE_COLUMNS = ["采购单价", "采购单价\\nCNY", "单价"];
+  // 平台报表里的集港信息列（真实 HAR 表头：`国内集港日期`、`国内港口`），
+  // 对应本系统申购单头的 `consolidation_date` / `consolidation_port`（单据级，只补空值）。
+  const CONSOLIDATION_DATE_COLUMNS = ["国内集港日期", "集港日期", "到港日期"];
+  const CONSOLIDATION_PORT_COLUMNS = ["国内港口", "集港港口", "集港口岸"];
   // 报表解析（worker 页内）命中的列名；空表示该报表没有对应列。
   let contractSignDateColumn = "";
   let unitPriceColumn = "";
+  let consolidationDateColumn = "";
+  let consolidationPortColumn = "";
   // 服务端是否支持新增同步字段：被拒（旧后端）时各自置 false，自动降级为旧字段列表。
   let signDateSyncSupported = true;
   let unitPriceSyncSupported = true;
@@ -119,17 +127,26 @@
   // 报表里的日期列解析为 ISO 日期（YYYY-MM-DD）：平台可能给「2026-08-20」「2026/8/20」
   // 「2026年8月20日」「2026-08-20 00:00:00」或「20260820」，后端只接受 ISO 日期。
   // 无法识别的值（如平台返回未格式化的日期序列号）一律返回空串——宁可不填，也不写错日期。
+  // 平台把「无日期」写成 1900-01-01 之类的占位值时同样跳过（年份 < 2000 一律不认）。
   const toIsoDate = (value) => {
     const text = clean(value);
     if (!text) return "";
-    const parts = text.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
-    if (parts) {
-      const [, year, month, day] = parts;
-      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-    }
-    const compact = text.match(/^(\d{4})(\d{2})(\d{2})$/);
-    if (compact) return `${compact[1]}-${compact[2]}-${compact[3]}`;
-    return "";
+    const matched =
+      text.match(/^(\d{4})\D+(\d{1,2})\D+(\d{1,2})/) ||
+      text.match(/^(\d{4})(\d{2})(\d{2})$/);
+    if (!matched) return "";
+    const year = Number(matched[1]);
+    const month = Number(matched[2]);
+    const day = Number(matched[3]);
+    if (year < 2000) return "";
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (
+      date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day
+    )
+      return "";
+    return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
   // 同一追溯号可能有多批次行：日期取最新的有效值（与何佳脚本一致）。
   const latestDate = (values) => {
@@ -155,6 +172,14 @@
     candidates.find((name) => headers.includes(name)) ||
     headers.find((header) => header.startsWith(candidates[0])) ||
     "";
+  // 一次性解析报表表头里所有同步列的命中情况（空 = 该报表没有这一列）。
+  // 结果既用于逐字段取值，也回传给主脚本做「报表缺列」提示。
+  const matchedColumns = (headers) => ({
+    contractSignDate: CONTRACT_SIGN_DATE_COLUMNS.find((name) => headers.includes(name)) || "",
+    unitPrice: matchColumn(headers, UNIT_PRICE_COLUMNS),
+    consolidationDate: matchColumn(headers, CONSOLIDATION_DATE_COLUMNS),
+    consolidationPort: matchColumn(headers, CONSOLIDATION_PORT_COLUMNS),
+  });
   const sleep = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
   // 结构性错误：报表模板/接口契约与脚本不符，属于系统性问题，出现即应终止本次同步。
@@ -418,6 +443,10 @@
     contractSignDate: latestDate(rows.map((row) => row[contractSignDateColumn])),
     // 采购单价同为物资级字段：同一追溯号多批次行的单价一致，取首个有效值即可（缺失则跳过该字段）。
     unitPrice: rows.map((row) => toUnitPrice(row[unitPriceColumn])).find(Boolean) || "",
+    // 集港日期 / 集港港口是单据级字段（同一申购单下多行取同一值，回写到申购单头，只补空值）：
+    // 日期取最新有效值，港口去重后按「/」合并。
+    consolidationDate: latestDate(rows.map((row) => row[consolidationDateColumn])),
+    consolidationPort: joined(rows.map((row) => row[consolidationPortColumn])),
     status: progressStatus(rows, quantityRows),
   });
   // 按申购单号查询一次，返回该单下每个追溯码的聚合结果（追溯码 -> 结果）。
@@ -428,9 +457,11 @@
     const sections = reportSections(text);
     // 报表可能分多个 canvas 块（表头重复），逐个块的表头里找一个命中的列名。
     const headerNames = [...new Set(sections.flatMap((section) => section.headers))];
-    contractSignDateColumn =
-      CONTRACT_SIGN_DATE_COLUMNS.find((name) => headerNames.includes(name)) || "";
-    unitPriceColumn = matchColumn(headerNames, UNIT_PRICE_COLUMNS);
+    const columns = matchedColumns(headerNames);
+    contractSignDateColumn = columns.contractSignDate;
+    unitPriceColumn = columns.unitPrice;
+    consolidationDateColumn = columns.consolidationDate;
+    consolidationPortColumn = columns.consolidationPort;
     const trackingRows = [];
     const quantityRows = [];
     for (const section of sections) {
@@ -605,8 +636,7 @@
           id: taskId,
           ok: true,
           result: {},
-          contractSignDateColumn: CONTRACT_SIGN_DATE_COLUMNS.find((name) => header.includes(name)) || "",
-          unitPriceColumn: matchColumn(header, UNIT_PRICE_COLUMNS),
+          syncColumns: matchedColumns(header),
         });
         return;
       }
@@ -619,8 +649,7 @@
         ok: true,
         result: parseOrderReport(text),
         // 上报命中的列名（空 = 报表没有该列），供主脚本提示一次
-        contractSignDateColumn,
-        unitPriceColumn,
+        syncColumns: matchedColumns(header),
       });
     } catch (error) {
       GM_setValue(responseKey, {
@@ -984,6 +1013,8 @@
       ["合同号", result.contractNo],
       ["合同签订日期", result.contractSignDate],
       ["单价", result.unitPrice],
+      ["集港日期", result.consolidationDate],
+      ["集港港口", result.consolidationPort],
       ["船名", result.vesselNo],
     ]
       .filter(([, value]) => value)
@@ -996,6 +1027,9 @@
       ["vessel_no", result.vesselNo],
       ["salesperson", result.salesperson],
       ["status", result.status],
+      // 集港日期 / 集港港口是单据级字段（后端白名单一直支持，无需降级开关）
+      ["consolidation_date", result.consolidationDate],
+      ["consolidation_port", result.consolidationPort],
       // 旧后端不支持这些字段时跳过，避免整单回写被 422 拒绝
       ...(signDateSyncSupported ? [[SIGN_DATE_FIELD, result.contractSignDate]] : []),
       ...(unitPriceSyncSupported ? [[UNIT_PRICE_FIELD, result.unitPrice]] : []),
@@ -1100,8 +1134,7 @@
       log("查询将复用浏览器平台会话；如需补登会使用脚本账号自动登录");
       let orderIndex = 0;
       let aborted = false;
-      let signDateColumnWarned = false;
-      let unitPriceColumnWarned = false;
+      let missingColumnsWarned = false;
       for (const order of pendingOrders) {
         orderIndex += 1;
         const orderNo = clean(order.purchase_order_no);
@@ -1111,19 +1144,23 @@
         try {
           const queryResult = await queryOrder(orderNo);
           const perTrace = queryResult.result || {};
-          if (!queryResult.contractSignDateColumn && !signDateColumnWarned) {
-            signDateColumnWarned = true;
-            log(
-              `平台报表未包含合同签订日期列（候选：${CONTRACT_SIGN_DATE_COLUMNS.join("、")}），本次不同步该字段，其余字段照常同步`,
-              "warn",
-            );
-          }
-          if (!queryResult.unitPriceColumn && !unitPriceColumnWarned) {
-            unitPriceColumnWarned = true;
-            log(
-              `平台报表未包含采购单价列（候选：${UNIT_PRICE_COLUMNS.join("、")}），本次不同步单价，其余字段照常同步`,
-              "warn",
-            );
+          if (!missingColumnsWarned) {
+            const syncColumns = queryResult.syncColumns || {};
+            const missing = [
+              ["合同签订日期", CONTRACT_SIGN_DATE_COLUMNS, syncColumns.contractSignDate],
+              ["采购单价", UNIT_PRICE_COLUMNS, syncColumns.unitPrice],
+              ["集港日期", CONSOLIDATION_DATE_COLUMNS, syncColumns.consolidationDate],
+              ["集港港口", CONSOLIDATION_PORT_COLUMNS, syncColumns.consolidationPort],
+            ].filter(([, , matched]) => !matched);
+            if (missing.length) {
+              missingColumnsWarned = true;
+              log(
+                `平台报表未包含：${missing
+                  .map(([label, candidates]) => `${label}（候选：${candidates.join("、")}）`)
+                  .join("；")}，本次不同步这些字段，其余字段照常同步`,
+                "warn",
+              );
+            }
           }
           const items = [];
           for (const traceNo of traceNos) {

@@ -359,6 +359,13 @@ def purchase_record_item_read(line: PurchaseRequestLine) -> MiniProgramPurchaseR
         remark=request.remark,
         purchase_date=request.purchase_date,
         salesperson=line.salesperson,
+        contract_no=request.contract_no,
+        vessel_no=request.vessel_no,
+        consolidation_date=request.consolidation_date,
+        consolidation_port=request.consolidation_port,
+        sailing_date=request.sailing_date,
+        contract_sign_date=line.contract_sign_date,
+        unit_price=line.unit_price,
         images=[file_read(link.file) for link in line.images],
     )
 

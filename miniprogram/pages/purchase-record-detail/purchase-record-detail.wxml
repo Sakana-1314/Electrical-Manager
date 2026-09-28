@@ -46,6 +46,20 @@
       </view>
     </view>
 
+    <view class="section-card detail-card">
+      <view class="section-heading"><view class="section-title">{{i18n.purchaseTrackingInfo}}</view></view>
+      <view class="section-divider"></view>
+      <view class="detail-list">
+        <view class="detail-row"><view class="detail-label">{{i18n.unitPrice}}</view><view class="detail-value">{{record.unit_price_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.contractNo}}</view><view class="detail-value">{{record.contract_no_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.contractSignDate}}</view><view class="detail-value">{{record.contract_sign_date_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.vesselNo}}</view><view class="detail-value">{{record.vessel_no_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.consolidationDate}}</view><view class="detail-value">{{record.consolidation_date_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.consolidationPort}}</view><view class="detail-value">{{record.consolidation_port_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.sailingDate}}</view><view class="detail-value">{{record.sailing_date_label}}</view></view>
+      </view>
+    </view>
+
     <view class="section-card image-card">
       <view class="section-heading">
         <view class="section-title">{{i18n.imageAttachments}}</view>

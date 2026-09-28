@@ -2033,6 +2033,13 @@ def _build_schema_examples() -> dict[str, Any]:
             "remark": record["record_remark"],
             "purchase_date": record["purchase_date"],
             "salesperson": record["salesperson"],
+            "contract_no": record["contract_no"],
+            "vessel_no": record["vessel_no"],
+            "consolidation_date": record["consolidation_date"],
+            "consolidation_port": record["consolidation_port"],
+            "sailing_date": record["sailing_date"],
+            "contract_sign_date": record["contract_sign_date"],
+            "unit_price": record["unit_price"],
             "images": record["images"],
         },
         "Page_MiniProgramPurchaseRecordItemRead_": _page(
@@ -2058,6 +2065,13 @@ def _build_schema_examples() -> dict[str, Any]:
                     "remark": row["record_remark"],
                     "purchase_date": row["purchase_date"],
                     "salesperson": row["salesperson"],
+                    "contract_no": row["contract_no"],
+                    "vessel_no": row["vessel_no"],
+                    "consolidation_date": row["consolidation_date"],
+                    "consolidation_port": row["consolidation_port"],
+                    "sailing_date": row["sailing_date"],
+                    "contract_sign_date": row["contract_sign_date"],
+                    "unit_price": row["unit_price"],
                     "images": row["images"],
                 }
                 for row in _RECORD_ROWS

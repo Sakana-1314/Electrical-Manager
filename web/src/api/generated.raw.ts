@@ -5174,6 +5174,13 @@ export interface components {
          *       "remark": "8 月低压电器备件整单申购",
          *       "purchase_date": "2026-08-20",
          *       "salesperson": "马晓东",
+         *       "contract_no": "HX-CG-2026-0157",
+         *       "vessel_no": "MV HXNI 03",
+         *       "consolidation_date": "2026-08-28",
+         *       "consolidation_port": "Morowali",
+         *       "sailing_date": "2026-09-02",
+         *       "contract_sign_date": "2026-08-25",
+         *       "unit_price": "46.55",
          *       "images": []
          *     }
          */
@@ -5221,6 +5228,20 @@ export interface components {
             purchase_date?: string | null;
             /** Salesperson */
             salesperson?: string | null;
+            /** Contract No */
+            contract_no?: string | null;
+            /** Vessel No */
+            vessel_no?: string | null;
+            /** Consolidation Date */
+            consolidation_date?: string | null;
+            /** Consolidation Port */
+            consolidation_port?: string | null;
+            /** Sailing Date */
+            sailing_date?: string | null;
+            /** Contract Sign Date */
+            contract_sign_date?: string | null;
+            /** Unit Price */
+            unit_price?: string | null;
             /** Images */
             images?: components["schemas"]["FileObjectRead"][];
         };
@@ -7357,6 +7378,13 @@ export interface components {
          *           "remark": "8 月低压电器备件整单申购",
          *           "purchase_date": "2026-08-20",
          *           "salesperson": "马晓东",
+         *           "contract_no": "HX-CG-2026-0157",
+         *           "vessel_no": "MV HXNI 03",
+         *           "consolidation_date": "2026-08-28",
+         *           "consolidation_port": "Morowali",
+         *           "sailing_date": "2026-09-02",
+         *           "contract_sign_date": "2026-08-25",
+         *           "unit_price": "46.55",
          *           "images": []
          *         },
          *         {
@@ -7380,6 +7408,13 @@ export interface components {
          *           "remark": "8 月低压电器备件整单申购",
          *           "purchase_date": "2026-08-20",
          *           "salesperson": "马晓东",
+         *           "contract_no": "HX-CG-2026-0157",
+         *           "vessel_no": "MV HXNI 03",
+         *           "consolidation_date": "2026-08-28",
+         *           "consolidation_port": "Morowali",
+         *           "sailing_date": "2026-09-02",
+         *           "contract_sign_date": "2026-08-25",
+         *           "unit_price": "3.20",
          *           "images": []
          *         },
          *         {
@@ -7403,6 +7438,13 @@ export interface components {
          *           "remark": "变频器专项采购",
          *           "purchase_date": "2026-09-02",
          *           "salesperson": "徐怀志",
+         *           "contract_no": "HX-CG-2026-0172",
+         *           "vessel_no": "MV HXNI 05",
+         *           "consolidation_date": "2026-09-10",
+         *           "consolidation_port": "Morowali",
+         *           "sailing_date": "2026-09-15",
+         *           "contract_sign_date": "2026-09-04",
+         *           "unit_price": "2860.00",
          *           "images": []
          *         },
          *         {
@@ -7426,6 +7468,13 @@ export interface components {
          *           "remark": "破碎机与防爆区备件",
          *           "purchase_date": "2026-09-09",
          *           "salesperson": "何丽娟",
+         *           "contract_no": "HX-CG-2026-0183",
+         *           "vessel_no": "MV HXNI 05",
+         *           "consolidation_date": "2026-09-18",
+         *           "consolidation_port": "Morowali",
+         *           "sailing_date": "2026-09-23",
+         *           "contract_sign_date": null,
+         *           "unit_price": null,
          *           "images": []
          *         },
          *         {
@@ -7449,6 +7498,13 @@ export interface components {
          *           "remark": "破碎机与防爆区备件",
          *           "purchase_date": "2026-09-09",
          *           "salesperson": "何丽娟",
+         *           "contract_no": "HX-CG-2026-0183",
+         *           "vessel_no": "MV HXNI 05",
+         *           "consolidation_date": "2026-09-18",
+         *           "consolidation_port": "Morowali",
+         *           "sailing_date": "2026-09-23",
+         *           "contract_sign_date": null,
+         *           "unit_price": null,
          *           "images": []
          *         }
          *       ],
@@ -23387,6 +23443,13 @@ export interface operations {
                      *           "remark": "8 月低压电器备件整单申购",
                      *           "purchase_date": "2026-08-20",
                      *           "salesperson": "马晓东",
+                     *           "contract_no": "HX-CG-2026-0157",
+                     *           "vessel_no": "MV HXNI 03",
+                     *           "consolidation_date": "2026-08-28",
+                     *           "consolidation_port": "Morowali",
+                     *           "sailing_date": "2026-09-02",
+                     *           "contract_sign_date": "2026-08-25",
+                     *           "unit_price": "46.55",
                      *           "images": []
                      *         },
                      *         {
@@ -23410,6 +23473,13 @@ export interface operations {
                      *           "remark": "8 月低压电器备件整单申购",
                      *           "purchase_date": "2026-08-20",
                      *           "salesperson": "马晓东",
+                     *           "contract_no": "HX-CG-2026-0157",
+                     *           "vessel_no": "MV HXNI 03",
+                     *           "consolidation_date": "2026-08-28",
+                     *           "consolidation_port": "Morowali",
+                     *           "sailing_date": "2026-09-02",
+                     *           "contract_sign_date": "2026-08-25",
+                     *           "unit_price": "3.20",
                      *           "images": []
                      *         },
                      *         {
@@ -23433,6 +23503,13 @@ export interface operations {
                      *           "remark": "变频器专项采购",
                      *           "purchase_date": "2026-09-02",
                      *           "salesperson": "徐怀志",
+                     *           "contract_no": "HX-CG-2026-0172",
+                     *           "vessel_no": "MV HXNI 05",
+                     *           "consolidation_date": "2026-09-10",
+                     *           "consolidation_port": "Morowali",
+                     *           "sailing_date": "2026-09-15",
+                     *           "contract_sign_date": "2026-09-04",
+                     *           "unit_price": "2860.00",
                      *           "images": []
                      *         },
                      *         {
@@ -23456,6 +23533,13 @@ export interface operations {
                      *           "remark": "破碎机与防爆区备件",
                      *           "purchase_date": "2026-09-09",
                      *           "salesperson": "何丽娟",
+                     *           "contract_no": "HX-CG-2026-0183",
+                     *           "vessel_no": "MV HXNI 05",
+                     *           "consolidation_date": "2026-09-18",
+                     *           "consolidation_port": "Morowali",
+                     *           "sailing_date": "2026-09-23",
+                     *           "contract_sign_date": null,
+                     *           "unit_price": null,
                      *           "images": []
                      *         },
                      *         {
@@ -23479,6 +23563,13 @@ export interface operations {
                      *           "remark": "破碎机与防爆区备件",
                      *           "purchase_date": "2026-09-09",
                      *           "salesperson": "何丽娟",
+                     *           "contract_no": "HX-CG-2026-0183",
+                     *           "vessel_no": "MV HXNI 05",
+                     *           "consolidation_date": "2026-09-18",
+                     *           "consolidation_port": "Morowali",
+                     *           "sailing_date": "2026-09-23",
+                     *           "contract_sign_date": null,
+                     *           "unit_price": null,
                      *           "images": []
                      *         }
                      *       ],
@@ -23736,6 +23827,13 @@ export interface operations {
                      *       "remark": "8 月低压电器备件整单申购",
                      *       "purchase_date": "2026-08-20",
                      *       "salesperson": "马晓东",
+                     *       "contract_no": "HX-CG-2026-0157",
+                     *       "vessel_no": "MV HXNI 03",
+                     *       "consolidation_date": "2026-08-28",
+                     *       "consolidation_port": "Morowali",
+                     *       "sailing_date": "2026-09-02",
+                     *       "contract_sign_date": "2026-08-25",
+                     *       "unit_price": "46.55",
                      *       "images": []
                      *     }
                      */

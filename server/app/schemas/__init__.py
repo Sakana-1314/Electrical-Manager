@@ -894,6 +894,15 @@ class MiniProgramPurchaseRecordItemRead(ReadModel):
     remark: str | None = None
     purchase_date: date | None = None
     salesperson: str | None = None
+    # 采购 / 发运信息（由同步脚本回写）：合同号、船号、集港日期、集港港口、发船日期、
+    # 物资级合同签订日期与单价。
+    contract_no: str | None = None
+    vessel_no: str | None = None
+    consolidation_date: date | None = None
+    consolidation_port: str | None = None
+    sailing_date: date | None = None
+    contract_sign_date: date | None = None
+    unit_price: Decimal | None = None
     images: list[FileObjectRead] = Field(default_factory=list)
 
 
