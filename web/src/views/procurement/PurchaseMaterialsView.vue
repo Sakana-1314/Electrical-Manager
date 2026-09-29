@@ -211,6 +211,11 @@ const { running: resultExporting, run: runResultExport } =
     start: procurementApi.exportMaterialResults,
     poll: procurementApi.excelExportJob,
   })
+// 申购审批表同样嵌图、文件可能很大：一律走异步任务，避免请求超时被网关掐断
+const { running: approvalExporting, run: runApprovalExport } = useExportJob<number[]>({
+  start: procurementApi.exportPurchaseApproval,
+  poll: procurementApi.excelExportJob,
+})
 const show = ref(false)
 const editing = ref<PurchaseMaterial | null>(null)
 // 详情弹窗（原 /procurement/materials/:id 详情页）写成 URL 的 ?detail=<id>
@@ -347,7 +352,9 @@ const exportOptions = computed<ExportOption[]>(() => {
   return options
 })
 const showShare = ref(false)
-const exportLoading = computed(() => resultExporting.value || batchExporting.value)
+const exportLoading = computed(
+  () => resultExporting.value || approvalExporting.value || batchExporting.value,
+)
 const form = reactive<PurchaseMaterialWrite>({
   status: defaultPurchasePlanStatus,
   material_code: '',
@@ -1213,18 +1220,25 @@ async function exportPurchaseApproval() {
     message.warning(`导出申购审批表前请补全：${missingLabels.join('、')}`)
     return
   }
-  batchExporting.value = true
   try {
-    const content = await procurementApi.exportPurchaseApproval(
-      selectedPlans.value.map((item) => item.id),
-    )
+    // 后端已异步化：提交 202 秒回任务 → 轮询到终态 → 按 file_uuid 原生下载（链接不鉴权）
+    const job = await runApprovalExport(selectedPlans.value.map((item) => item.id))
+    if (!job.file_uuid) {
+      throw new AppError({
+        code: 'EXPORT_FILE_EXPIRED',
+        message: '导出文件不存在，请重新导出；若仍失败请确认后端服务已更新到最新版本',
+        request_id: '',
+      })
+    }
     const date = toShanghaiDate(Date.now()).replace(/-/g, '')
-    downloadBlob(content, `采购申请（审批）_${date}.xlsx`)
-    message.success('申购审批表已导出')
+    downloadFromUrl(
+      exportDownloadUrl(job.file_uuid),
+      job.download_filename ?? `采购申请（审批）_${date}.xlsx`,
+    )
+    const rows = job.result?.rows
+    message.success(rows != null ? `申购审批表已导出（共${rows}条）` : '申购审批表已导出')
   } catch (error) {
     message.error(error instanceof Error ? error.message : '导出失败')
-  } finally {
-    batchExporting.value = false
   }
 }
 function handleExport(key: string) {
