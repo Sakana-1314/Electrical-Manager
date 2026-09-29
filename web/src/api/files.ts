@@ -6,6 +6,7 @@ import type {
   FileObject,
   ImageDigestMatch,
   Page,
+  UnreferencedDeletionPreview,
 } from './generated'
 
 /** 附件列表筛选：不传 status / referenced 即「不限」。 */
@@ -69,7 +70,17 @@ export const fileApi = {
   restoreAttachment: (id: string) =>
     apiClient.post<Attachment>(`/files/images/attachments/${id}/restore`).then((r) => r.data),
   /**
-   * 删除未引用：把所有 0 引用的附件批量标记为待删除（软删除）。
+   * 删除未引用的预检：先拿到「会被标记的清单」（数量 + 前若干条明细）与「因新人保护期跳过的数量」，
+   * 由管理员确认后再真正执行。
+   */
+  previewDeleteUnreferenced: (limit = 100) =>
+    apiClient
+      .get<UnreferencedDeletionPreview>('/files/images/attachments/delete-unreferenced/preview', {
+        params: { limit },
+      })
+      .then((r) => r.data),
+  /**
+   * 删除未引用：把所有 0 引用、且已过新人保护期的附件批量标记为待删除（软删除）。
    * 物理清除由保留期满后第一个凌晨 2 点的定时复查任务执行，没有手动物理删除入口。
    */
   deleteUnreferenced: () =>

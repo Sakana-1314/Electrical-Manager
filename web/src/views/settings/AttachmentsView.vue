@@ -120,34 +120,70 @@ async function restore(row: Attachment) {
 }
 
 function deleteUnreferenced() {
-  dialog.warning({
-    draggable: true,
-    title: '删除未引用附件',
-    content:
-      '将把所有「被引用次数为 0」的图片一次性标记为待删除，被业务引用的图片不受影响。' +
-      '这只是软删除：图片会立即从业务中隐藏，但数据库记录与磁盘文件会保留 7 个完整自然日——' +
-      '到保留期满后的第一个凌晨 2 点，系统复查全库确认仍无新增引用才真正删除（保留期内可撤销删除）。',
-    positiveText: '删除',
-    negativeText: '取消',
-    onPositiveClick: async () => {
-      deletingUnreferenced.value = true
-      try {
-        const result = await fileApi.deleteUnreferenced()
-        message.success(
-          result.deleted_count > 0
-            ? `已提交 ${result.deleted_count} 张未引用图片的删除，将于 ` +
-                `${formatShanghaiTime(result.purge_after)} 复查后清除`
-            : '当前没有被引用的图片需要删除',
-        )
-        await load()
-      } catch (error) {
-        message.error(error instanceof Error ? error.message : '删除未引用失败')
-        return false
-      } finally {
-        deletingUnreferenced.value = false
+  // 先预检、再确认：把「会被标记的清单」摊开给管理员看，避免像以前那样一次点击扫掉上百张。
+  deletingUnreferenced.value = true
+  fileApi
+    .previewDeleteUnreferenced()
+    .then((preview) => {
+      const protectNote =
+        preview.protected_count > 0
+          ? `另有 ${preview.protected_count} 张处于新人保护期（上传未满 ${preview.protect_days} 天且从未被引用），本轮不会标记。`
+          : ''
+      if (preview.total === 0) {
+        dialog.info({
+          draggable: true,
+          title: '没有需要删除的未引用附件',
+          content: `当前没有「已过保护期、且被引用次数为 0」的图片。${protectNote}`,
+          positiveText: '知道了',
+        })
+        return
       }
-    },
-  })
+      const names = preview.items
+        .slice(0, 10)
+        .map((item) => `· ${item.original_name}（${formatShanghaiTime(item.created_at)}）`)
+        .join('\n')
+      const more =
+        preview.total > preview.items.length
+          ? `\n…共 ${preview.total} 张，列表里只显示前 ${preview.items.length} 张。`
+          : ''
+      dialog.warning({
+        draggable: true,
+        title: '删除未引用附件',
+        content:
+          `将被标记为待删除：${preview.total} 张（被业务引用的图片不受影响）。\n` +
+          `${protectNote}\n\n${names}${more}\n\n` +
+          `这只是软删除：图片立即从业务中隐藏，数据库记录与磁盘文件保留 7 个完整自然日——` +
+          `到 ${formatShanghaiTime(preview.purge_after)} 复查全库确认仍无新增引用后才真正删除（保留期内可撤销删除）。`,
+        positiveText: '删除',
+        negativeText: '取消',
+        onPositiveClick: async () => {
+          deletingUnreferenced.value = true
+          try {
+            const result = await fileApi.deleteUnreferenced()
+            const skipped =
+              result.skipped_recent_count > 0
+                ? `另有 ${result.skipped_recent_count} 张处于新人保护期，未标记。`
+                : ''
+            message.success(
+              result.deleted_count > 0
+                ? `已提交 ${result.deleted_count} 张未引用图片的删除，将于 ` +
+                    `${formatShanghaiTime(result.purge_after)} 复查后清除。${skipped}`
+                : `当前没有可标记的未引用图片。${skipped}`,
+            )
+            await load()
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : '删除未引用失败')
+            return false
+          }
+        },
+      })
+    })
+    .catch((error) => {
+      message.error(error instanceof Error ? error.message : '预检未引用附件失败')
+    })
+    .finally(() => {
+      deletingUnreferenced.value = false
+    })
 }
 
 const columns = preventTableColumnCompression<Attachment>([

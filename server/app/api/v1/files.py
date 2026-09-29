@@ -18,6 +18,7 @@ from app.schemas import (
     ImageDigestMatchRead,
     OrphanFileCleanupRead,
     OrphanFileReportRead,
+    UnreferencedDeletionPreviewRead,
     Page,
 )
 from app.services import file_service
@@ -141,6 +142,27 @@ async def list_attachments(
     return Page(items=items, page=page, page_size=page_size, total=total)
 
 
+@router.get(
+    "/attachments/delete-unreferenced/preview",
+    response_model=UnreferencedDeletionPreviewRead,
+    summary="删除未引用附件的预检清单",
+)
+async def preview_unreferenced_attachments(
+    session: DbSession,
+    user: SuperAdmin,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> UnreferencedDeletionPreviewRead:
+    """先看清「删除未引用附件」会命中哪些图片，再由管理员确认执行。"""
+    preview = await file_service.preview_unreferenced_deletion(session, limit=limit)
+    return UnreferencedDeletionPreviewRead(
+        total=preview.total,
+        protected_count=preview.protected_count,
+        protect_days=preview.protect_days,
+        purge_after=preview.purge_after,
+        items=preview.items,
+    )
+
+
 @router.post(
     "/attachments/delete-unreferenced",
     response_model=AttachmentBulkDeleteRead,
@@ -149,11 +171,12 @@ async def list_attachments(
 async def delete_unreferenced_attachments(
     session: DbSession, user: SuperAdmin
 ) -> AttachmentBulkDeleteRead:
-    """把当前所有未被引用的附件批量标记为待删除。
+    """把当前所有未被引用、且已过新人保护期的附件批量标记为待删除。
 
     只做软删除：数据库记录与磁盘文件都保留，保留 7 个完整自然日后的第一个凌晨 2 点，
     定时任务复查引用后才真正物理清除（复查发现新增引用则自动撤销删除；保留期内可随时撤销）。
-    不提供手动物理删除入口。
+    上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS` 天且从未被引用过的附件本轮跳过，
+    数量在回执的 `skipped_recent_count` 里回报。不提供手动物理删除入口。
     """
     return await file_service.soft_delete_unreferenced(session)
 

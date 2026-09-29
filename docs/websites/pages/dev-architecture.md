@@ -130,7 +130,7 @@ web/src/
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
 | `/settings/mini-program-users` | `mini-program-users` | `views/settings/MiniProgramUsersView.vue` | `settings:write` | 小程序用户查询/更新/删除/合并 |
-| `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `settings:write` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件、撤销删除 |
+| `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `settings:write` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
 | `/settings/about` | `about` | `views/settings/AboutView.vue` | `settings:write` | 版本信息与构建时间（`versionApi.get()`） |
 | `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `settings:write` | 分享链接列表/改列/改期/撤回 |
 | `/share/:token` | `share` | `views/public/ShareView.vue` | 无（公开 `meta.public`） | 匿名分享预览（按配置列渲染） |
@@ -729,7 +729,7 @@ flowchart LR
 | --- | --- | --- | --- |
 | `webhook-delivery-worker` | `webhook_service.run_delivery_worker(stop_event)` | 循环投递待发送 webhook，无可投递时 `asyncio.wait_for(stop_event.wait(), timeout=2.0)` 轮询 | `_POLL_INTERVAL_SECONDS=2.0`；`_MAX_ATTEMPTS=5`；退避 `_RETRY_MINUTES=(1,5,15,60,180)`；`_SENDING_LEASE_MINUTES=5`；HTTP 超时 8s/连接 3s |
 | `purchase-plan-cleanup-worker` | `purchase_plan_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理直到无候选 | 仅当 `settings.purchase_plan_cleanup_enabled` 为真时创建；批次 `_BATCH_SIZE=50`；先解绑 `purchase_request_line.purchase_material_id` 再物理删除计划；`with_for_update(skip_locked=True)` |
-| `attachment-cleanup-worker` | `attachment_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理（一轮什么都没清也没撤销就结束） | 仅当 `settings.attachment_cleanup_enabled` 为真时创建；批次上限 200；对 `file_object.deleted_at` 非空的待删除附件**逐张复查被引用次数**：复查到新增引用即撤销删除（不等保留期），仍无引用且已过 `file_service.attachment_purge_after`（提交删除的完整 7 天后的第一个 2 点，`ATTACHMENT_RETENTION_DAYS=7`）才物理删除数据库行与磁盘文件，保留期未满的继续留着；`with_for_update(skip_locked=True)`。物理清除只能由本任务完成，**没有手动物理删除接口** |
+| `attachment-cleanup-worker` | `attachment_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理（一轮什么都没清也没撤销就结束） | 仅当 `settings.attachment_cleanup_enabled` 为真时创建；批次上限 200；对 `file_object.deleted_at` 非空的待删除附件**逐张复查被引用次数**：复查到新增引用即撤销删除（不等保留期），仍无引用且已过 `file_service.attachment_purge_after`（提交删除的完整 7 天后的第一个 2 点，`ATTACHMENT_RETENTION_DAYS=7`）才物理删除数据库行与磁盘文件，保留期未满的继续留着；批量标记（`soft_delete_unreferenced`）另有**新人保护期**：上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS=7` 天且从未被引用过的附件不会被标记，只在回执的 `skipped_recent_count` 里回报；`with_for_update(skip_locked=True)`。物理清除只能由本任务完成，**没有手动物理删除接口** |
 | `excel-export-cleanup-worker` | `excel_export_job_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 终态任务保留 3 天；顺带清理 `upload_dir/exports` 下超过 24 小时的 `.tmp` 孤儿文件 |
 | `share-link-cleanup-worker` | `share_link_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 删除 `expires_at < utcnow()` 的行 |
 

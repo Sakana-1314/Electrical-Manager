@@ -614,7 +614,25 @@ class AttachmentBulkDeleteRead(ReadModel):
     """批量软删除未引用附件的回执：物理删除仍要等 `purge_after` 那次引用复查。"""
 
     deleted_count: int
+    # 仍在上传新人保护期内、本轮没有被标记的数量（这些图片继续留在「在用」里）。
+    skipped_recent_count: int = 0
     purge_after: UtcDateTime
+
+
+class UnreferencedDeletionPreviewRead(ReadModel):
+    """「删除未引用附件」的预检清单：先看清会被标记的是哪些，再决定是否执行。
+
+    `items` 只给前若干条（按上传时间正序），`total` 是本次会命中的总数。
+    """
+
+    total: int
+    # 仍在上传新人保护期内、不会被标记的数量。
+    protected_count: int
+    # 新人保护期的天数（上传未满这么多天且从未被引用的附件本轮不标记）。
+    protect_days: int
+    # 现在提交删除的话，物理清除会在该时刻的凌晨 2 点执行。
+    purge_after: UtcDateTime
+    items: list[AttachmentRead]
 
 
 class AttachmentCleanupRead(ReadModel):
