@@ -1439,7 +1439,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 导出申购审批表 */
+        /**
+         * 导出申购审批表
+         * @description 申购审批表导出（嵌入原图，单文件可能很大）：请求期做必填校验，202 秒回任务。
+         *
+         *     渲染耗时不可控（图片按原始字节嵌入，200 条计划可能上百 MB），必须异步执行，
+         *     否则会被网关 / 浏览器超时掐断；请求期只做「必填字段」这类能秒回的校验，
+         *     让用户立刻拿到「导出申购审批表前请补全」的提示。
+         */
         post: operations["export_purchase_approval_api_v1_purchase_materials_export_purchase_approval_post"];
         delete?: never;
         options?: never;
@@ -27913,12 +27920,34 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "export_type": "PURCHASE_PLAN_RESULTS",
+                     *       "status": "SUCCEEDED",
+                     *       "download_filename": "申购计划导出_20260913.xlsx",
+                     *       "file_uuid": "f8252584-1591-7c8d-804a-c3015f9eb786",
+                     *       "params": {
+                     *         "status": "正常",
+                     *         "category": "备品备件"
+                     *       },
+                     *       "result": {
+                     *         "rows": 16,
+                     *         "image_count": 0
+                     *       },
+                     *       "error_code": null,
+                     *       "error_message": null,
+                     *       "created_at": "2026-09-13T10:00:00+08:00",
+                     *       "started_at": "2026-09-13T10:00:01+08:00",
+                     *       "finished_at": "2026-09-13T10:00:04+08:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ExcelExportJobRead"];
                 };
             };
             /** @description Excel 导出模板缺失或格式错误 */

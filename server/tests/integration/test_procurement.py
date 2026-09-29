@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from io import BytesIO
+from typing import Any
 from urllib.parse import unquote
 
 import pytest
@@ -1860,6 +1861,31 @@ async def test_purchase_application_export_requires_code_subitem_and_usage(
     }
 
 
+async def run_purchase_approval_export(
+    client: AsyncClient,
+    headers: dict[str, str],
+    material_ids: list[int],
+) -> tuple[dict[str, Any], Any]:
+    """提交申购审批表导出并等到成功，返回（任务, 工作表）。
+
+    导出已异步化（嵌入原图后单文件可能很大，同步返回会被网关 / 浏览器超时掐断）：
+    接口只做必填校验并 202 秒回任务号，渲染在后台执行，终态后按 file_uuid 下载。
+    """
+    response = await client.post(
+        "/api/v1/purchase-materials/export-purchase-approval",
+        headers=headers,
+        json={"material_ids": material_ids},
+    )
+    assert response.status_code == 202, response.text
+    job = await await_export_job(client, headers, response.json()["id"])
+    assert job["status"] == "SUCCEEDED", job
+    assert job["export_type"] == "PURCHASE_APPROVAL"
+    assert job["file_uuid"]
+    download = await client.get(f"/api/v1/excel-export-jobs/files/{job['file_uuid']}")
+    assert download.status_code == 200, download.text
+    return job, load_workbook(BytesIO(download.content)).active
+
+
 @pytest.mark.asyncio
 async def test_export_purchase_approval(client: AsyncClient) -> None:
     headers = await auth_headers(client, "purchase")
@@ -1873,17 +1899,11 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
         purchase_responsible="王工",
         subitem_no="GX-99",
     )
-    response = await client.post(
-        "/api/v1/purchase-materials/export-purchase-approval",
-        headers=headers,
-        json={"material_ids": [plan["id"]]},
-    )
-    assert response.status_code == 200, response.text
-    assert f"采购申请（审批）_{date.today():%Y%m%d}.xlsx" in unquote(
-        response.headers["content-disposition"]
-    )
-    sheet = load_workbook(BytesIO(response.content)).active
-    assert [sheet.cell(1, column).value for column in range(1, 18)] == [
+    job, sheet = await run_purchase_approval_export(client, headers, [plan["id"]])
+    assert job["download_filename"] == f"采购申请（审批）_{date.today():%Y%m%d}.xlsx"
+    assert job["result"]["rows"] == 1
+    assert job["result"]["image_count"] == 0
+    assert [sheet.cell(1, column).value for column in range(1, 19)] == [
         "序号",
         "物料编码",
         "物料名称",
@@ -1901,6 +1921,7 @@ async def test_export_purchase_approval(client: AsyncClient) -> None:
         "紧急程度",
         "备注",
         "子项号",
+        "图片",
     ]
     assert sheet["A2"].value == 1
     assert sheet["B2"].value == "DQ-APP-1"
@@ -1930,14 +1951,7 @@ async def test_purchase_approval_export_writes_zero_quantities_without_material_
     """没有物料编码的计划不参与库存 / 在途匹配，两格都导出 0，不留空。"""
     headers = await auth_headers(client, "purchase")
     plan = await create_purchase_plan(client, headers, "无编码审批物资", code=None)
-    response = await client.post(
-        "/api/v1/purchase-materials/export-purchase-approval",
-        headers=headers,
-        json={"material_ids": [plan["id"]]},
-    )
-
-    assert response.status_code == 200, response.text
-    sheet = load_workbook(BytesIO(response.content)).active
+    _, sheet = await run_purchase_approval_export(client, headers, [plan["id"]])
     assert sheet["B2"].value in (None, "")
     assert sheet["J2"].value is not None
     assert sheet["K2"].value is not None
@@ -2004,14 +2018,7 @@ async def test_purchase_approval_export_fills_stock_and_in_transit_by_material_c
     )
     assert other_moved.status_code == 200, other_moved.text
 
-    response = await client.post(
-        "/api/v1/purchase-materials/export-purchase-approval",
-        headers=headers,
-        json={"material_ids": [export_plan["id"]]},
-    )
-
-    assert response.status_code == 200, response.text
-    sheet = load_workbook(BytesIO(response.content)).active
+    _, sheet = await run_purchase_approval_export(client, headers, [export_plan["id"]])
     # 华星总库存 6 + 3：不含相近编码的 100，也不含别的项目的 1000
     assert float(sheet["J2"].value) == 9
     # 近 3 个月申购记录 5 + 2：不含 120 天前的 400，也不含别的项目的 1000
@@ -2084,14 +2091,8 @@ async def test_purchase_approval_export_embeds_plan_images(client: AsyncClient) 
         client, headers, "审批表带图物资", code="DQ-APP-IMG", image_ids=[file_id]
     )
 
-    response = await client.post(
-        "/api/v1/purchase-materials/export-purchase-approval",
-        headers=headers,
-        json={"material_ids": [plan["id"]]},
-    )
-
-    assert response.status_code == 200, response.text
-    sheet = load_workbook(BytesIO(response.content)).active
+    job, sheet = await run_purchase_approval_export(client, headers, [plan["id"]])
+    assert job["result"]["image_count"] == 1
     assert sheet["Q1"].value == "子项号"
     assert sheet["R1"].value == "图片"
     assert len(sheet._images) == 1
@@ -2105,14 +2106,7 @@ async def test_purchase_approval_export_without_images_keeps_empty_column(
     headers = await auth_headers(client, "purchase")
     plan = await create_purchase_plan(client, headers, "审批表无图物资", code="DQ-APP-NOIMG")
 
-    response = await client.post(
-        "/api/v1/purchase-materials/export-purchase-approval",
-        headers=headers,
-        json={"material_ids": [plan["id"]]},
-    )
-
-    assert response.status_code == 200, response.text
-    sheet = load_workbook(BytesIO(response.content)).active
+    _, sheet = await run_purchase_approval_export(client, headers, [plan["id"]])
     assert sheet["R1"].value == "图片"
     assert sheet["R2"].value in (None, "")
     assert len(sheet._images) == 0
