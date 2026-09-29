@@ -10576,6 +10576,10 @@ export interface components {
         };
         /**
          * PurchaseMaterialUpdate
+         * @description 申购计划更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+         *
+         *     基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+         *     的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。
          * @example {
          *       "plan_date": "2026-08-05",
          *       "material_code": "E011-00237",
@@ -10635,7 +10639,7 @@ export interface components {
             /** Stock Material Id */
             stock_material_id?: number | null;
             /** Image Ids */
-            image_ids?: string[];
+            image_ids?: string[] | null;
             /** @default 正常 */
             status: components["schemas"]["PurchasePlanStatus"];
             /** Version */
@@ -10868,6 +10872,7 @@ export interface components {
         };
         /**
          * PurchasePlanTemplateUpdate
+         * @description 申购计划模板更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
          * @example {
          *       "material_code": "E014-00007",
          *       "category": "消耗物资",
@@ -10923,7 +10928,7 @@ export interface components {
             /** Stock Material Id */
             stock_material_id?: number | null;
             /** Image Ids */
-            image_ids?: string[];
+            image_ids?: string[] | null;
             /** Version */
             version: number;
         };
@@ -11450,7 +11455,7 @@ export interface components {
             /** Stock Material Id */
             stock_material_id?: number | null;
             /** Image Ids */
-            image_ids?: string[];
+            image_ids?: string[] | null;
             /** Purchase Order No */
             purchase_order_no?: string | null;
             /** Trace No */
@@ -11936,6 +11941,10 @@ export interface components {
         };
         /**
          * StockMaterialUpdate
+         * @description 二级库物资更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+         *
+         *     基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+         *     的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。
          * @example {
          *       "name": "塑壳断路器",
          *       "name_id": "E011-00308",
@@ -11963,7 +11972,7 @@ export interface components {
             /** Remark */
             remark?: string | null;
             /** Image Ids */
-            image_ids?: string[];
+            image_ids?: string[] | null;
             /** Version */
             version: number;
         };

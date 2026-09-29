@@ -965,6 +965,158 @@ async def test_record_keeps_purchase_plan_attachments(client: AsyncClient) -> No
     assert [image["id"] for image in detail.json()["images"]] == [file_id]
 
 
+async def upload_png(client: AsyncClient, headers: dict[str, str], name: str, color: str) -> str:
+    source = BytesIO()
+    Image.new("RGB", (24, 16), color).save(source, format="PNG")
+    uploaded = await client.post(
+        "/api/v1/files/images",
+        headers=headers,
+        files={"file": (name, source.getvalue(), "image/png")},
+    )
+    assert uploaded.status_code == 201, uploaded.text
+    return str(uploaded.json()["id"])
+
+
+async def attachment_reference_count(
+    client: AsyncClient, headers: dict[str, str], file_id: str
+) -> int:
+    listed = await client.get(
+        "/api/v1/files/images/attachments",
+        headers=headers,
+        params={"keyword": "", "status": "active", "page_size": 200},
+    )
+    assert listed.status_code == 200, listed.text
+    for item in listed.json()["items"]:
+        if item["id"] == file_id:
+            return int(item["reference_count"])
+    raise AssertionError(f"附件列表里找不到刚上传的图片 {file_id}")
+
+
+@pytest.mark.asyncio
+async def test_patch_without_image_ids_keeps_plan_attachments(client: AsyncClient) -> None:
+    """回归：PATCH 不带 `image_ids`（脚本 / MCP 只改某个字段）不得清空计划图片。
+
+    历史故障：更新模型的 `image_ids` 默认空列表，省略该字段等于「把图片清空」，
+    62 条计划的附件就是这样被静默摘掉、随后被当成未引用附件清理掉的。
+    """
+    purchase_headers = await auth_headers(client, "purchase")
+    admin_headers = await auth_headers(client, "admin")
+    file_id = await upload_png(client, purchase_headers, "keep.png", "green")
+    plan = await create_purchase_plan(
+        client, purchase_headers, "带附件待改计划", code="DQ-KEEP-001", image_ids=[file_id]
+    )
+    assert [image["id"] for image in plan["images"]] == [file_id]
+
+    patched = await client.patch(
+        f"/api/v1/purchase-materials/{plan['id']}",
+        headers=purchase_headers,
+        json={
+            "version": plan["version"],
+            "material_code": plan["material_code"],
+            "name": plan["name"],
+            "model_spec": plan["model_spec"],
+            "unit_name": plan["unit_name"],
+            "actual_demand_person": plan["actual_demand_person"],
+            "purchase_responsible": "王工",
+            "planned_qty": plan["planned_qty"],
+            "usage": plan["usage"],
+            "subitem_no": plan["subitem_no"],
+            "remark": "只改负责人，不动图片",
+            "stock_material_id": None,
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["purchase_responsible"] == "王工"
+    assert [image["id"] for image in patched.json()["images"]] == [file_id]
+    # 附件仍被引用：不会被「删除未引用附件」当成垃圾清掉
+    assert await attachment_reference_count(client, admin_headers, file_id) == 1
+
+    # 显式传空列表才是「清空图片」
+    cleared = await client.patch(
+        f"/api/v1/purchase-materials/{plan['id']}",
+        headers=purchase_headers,
+        json={
+            "version": patched.json()["version"],
+            "material_code": plan["material_code"],
+            "name": plan["name"],
+            "model_spec": plan["model_spec"],
+            "unit_name": plan["unit_name"],
+            "actual_demand_person": plan["actual_demand_person"],
+            "purchase_responsible": "王工",
+            "planned_qty": plan["planned_qty"],
+            "usage": plan["usage"],
+            "subitem_no": plan["subitem_no"],
+            "remark": "清空图片",
+            "stock_material_id": None,
+            "image_ids": [],
+        },
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["images"] == []
+    assert await attachment_reference_count(client, admin_headers, file_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_patch_without_image_ids_keeps_record_attachments(client: AsyncClient) -> None:
+    """回归：申购记录的 PATCH 同样只在显式传 `image_ids` 时才替换图片。"""
+    purchase_headers = await auth_headers(client, "purchase")
+    file_id = await upload_png(client, purchase_headers, "record.png", "red")
+    plan = await create_purchase_plan(
+        client, purchase_headers, "带附件记录物资", code="DQ-REC-KEEP-001", image_ids=[file_id]
+    )
+    record = await move_to_record(client, purchase_headers, int(plan["id"]))
+    assert [image["id"] for image in record["images"]] == [file_id]
+
+    detail = await client.get(
+        f"/api/v1/purchase-records/{record['line_id']}", headers=purchase_headers
+    )
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+
+    patched = await client.patch(
+        f"/api/v1/purchase-records/{record['line_id']}",
+        headers=purchase_headers,
+        json={
+            "version": body["version"],
+            "plan_date": body["plan_date"],
+            "material_code": body["material_code"],
+            "category": body["category"],
+            "demand_department": body["demand_department"],
+            "material_name": body["material_name"],
+            "model_spec": body["model_spec"],
+            "unit_name": body["unit_name"],
+            "actual_demand_person": body["actual_demand_person"],
+            "purchase_responsible": body["purchase_responsible"],
+            "plan_remark": body["plan_remark"],
+            "stock_material_id": None,
+            "purchase_qty": body["purchase_qty"],
+            "status": body["status"],
+            "usage": body["usage"],
+            "subitem_no": body.get("subitem_no"),
+            "purchase_order_no": body.get("purchase_order_no"),
+            "trace_no": body.get("trace_no"),
+            "contract_no": body.get("contract_no"),
+            "vessel_no": body.get("vessel_no"),
+            "consolidation_date": body.get("consolidation_date"),
+            "consolidation_port": body.get("consolidation_port"),
+            "sailing_date": body.get("sailing_date"),
+            "contract_sign_date": body.get("contract_sign_date"),
+            "unit_price": body.get("unit_price"),
+            "purchase_date": body.get("purchase_date"),
+            "salesperson": body.get("salesperson"),
+            "record_remark": "只改备注，不动图片",
+        },
+    )
+    assert patched.status_code == 200, patched.text
+    assert [image["id"] for image in patched.json()["images"]] == [file_id]
+
+    after = await client.get(
+        f"/api/v1/purchase-records/{record['line_id']}", headers=purchase_headers
+    )
+    assert after.status_code == 200, after.text
+    assert [image["id"] for image in after.json()["images"]] == [file_id]
+
+
 @pytest.mark.asyncio
 async def test_uncoded_plan_must_be_coded_before_moving_to_record(client: AsyncClient) -> None:
     headers = await auth_headers(client, "purchase")

@@ -32176,11 +32176,13 @@ components:
           - type: 'null'
           title: Stock Material Id
         image_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          maxItems: 9
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
           title: Image Ids
         status:
           $ref: '#/components/schemas/PurchasePlanStatus'
@@ -32198,6 +32200,12 @@ components:
       - usage
       - version
       title: PurchaseMaterialUpdate
+      description: '申购计划更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+
+
+        基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+
+        的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。'
       examples:
       - plan_date: '2026-08-05'
         material_code: E011-00237
@@ -32715,11 +32723,13 @@ components:
           - type: 'null'
           title: Stock Material Id
         image_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          maxItems: 9
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
           title: Image Ids
         version:
           type: integer
@@ -32734,6 +32744,7 @@ components:
       - usage
       - version
       title: PurchasePlanTemplateUpdate
+      description: 申购计划模板更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
       examples:
       - material_code: E014-00007
         category: 消耗物资
@@ -33602,11 +33613,13 @@ components:
           - type: 'null'
           title: Stock Material Id
         image_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          maxItems: 9
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
           title: Image Ids
         purchase_order_no:
           anyOf:
@@ -34400,11 +34413,13 @@ components:
           - type: 'null'
           title: Remark
         image_ids:
-          items:
-            type: string
-            pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
-          type: array
-          maxItems: 9
+          anyOf:
+          - items:
+              type: string
+              pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+            type: array
+            maxItems: 9
+          - type: 'null'
           title: Image Ids
         version:
           type: integer
@@ -34417,6 +34432,12 @@ components:
       - unit_name
       - version
       title: StockMaterialUpdate
+      description: '二级库物资更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+
+
+        基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+
+        的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。'
       examples:
       - name: 塑壳断路器
         name_id: E011-00308

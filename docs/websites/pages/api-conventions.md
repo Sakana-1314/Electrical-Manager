@@ -69,6 +69,21 @@
 2. 在 [错误码总表](/api-error-codes) 对应分类补一行：code、HTTP 状态码、含义、来源文件。
 3. 跑 `cd server && pytest tests/test_error_code_docs.py`。
 
+## 更新接口的可选字段语义
+
+更新（PATCH）里「整体替换」的字段（`image_ids`、`before_image_ids` / `after_image_ids` 等）必须区分
+「没传」和「传空」，否则脚本 / MCP 只改一个字段就会顺手清掉附件：
+
+| 请求里的写法 | 服务端行为 |
+| --- | --- |
+| 字段省略，或显式传 `null` | **不改动**该字段对应的图片 |
+| 显式传 `[]` | 清空图片 |
+| 显式传 id 列表 | 按列表整体替换（列表顺序即 `sort_order`） |
+
+实现约定：更新用的 schema 里这些字段写成 `list[FileId] | None = None`，服务层只在
+`if data.image_ids is not None:` 时才替换；只有「新建」的 schema 才用 `default_factory=list`。
+网页端表单每次都显式带上图片列表，所以这条差异只影响脚本 / MCP 调用方。
+
 ## 项目上下文（`X-Project-Id`）
 
 业务数据按项目隔离：业务接口都必须带 `X-Project-Id: <项目 id>`，服务端据此只读写该项目的
