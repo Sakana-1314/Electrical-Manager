@@ -62,6 +62,8 @@ export type ImageDigestMatch = components['schemas']['ImageDigestMatchRead']
 export type Attachment = components['schemas']['AttachmentRead']
 export type AttachmentDelete = components['schemas']['AttachmentDeleteRead']
 export type AttachmentBulkDelete = components['schemas']['AttachmentBulkDeleteRead']
+export type UnreferencedDeletionPreview =
+  components['schemas']['UnreferencedDeletionPreviewRead']
 export type ReplenishmentPolicy = components['schemas']['ReplenishmentPolicyRead']
 export type StockMaterial = components['schemas']['StockMaterialRead']
 export type InventoryBalance = components['schemas']['InventoryBalanceRead']

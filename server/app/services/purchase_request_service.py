@@ -24,7 +24,7 @@ from app.schemas import (
     PurchaseRecordRead,
     PurchaseRecordUpdate,
 )
-from app.services.common import file_read, utc_aware, validate_version
+from app.services.common import file_read, log_image_change, utc_aware, validate_version
 from app.services.material_service import next_purchase_plan_no
 
 
@@ -250,6 +250,14 @@ async def update_purchase_record(
     line.usage = data.usage
     line.subitem_no = data.subitem_no
     if data.image_ids is not None:
+        await log_image_change(
+            session,
+            business_type="PURCHASE_RECORD",
+            business_id=line.id,
+            label=f"申购记录 {request.purchase_order_no or line.id}",
+            before_ids=[link.file_id for link in line.images],
+            after_ids=list(data.image_ids),
+        )
         line.images = _line_images(files)
     line.version += 1
     await session.flush()

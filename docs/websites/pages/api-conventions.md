@@ -84,6 +84,24 @@
 `if data.image_ids is not None:` 时才替换；只有「新建」的 schema 才用 `default_factory=list`。
 网页端表单每次都显式带上图片列表，所以这条差异只影响脚本 / MCP 调用方。
 
+## 附件（图片）删除的三道闸
+
+图片的业务链路是「上传到全局附件池 → 业务表按 `file_id` 引用」，因此删除要过三道闸，任何一道都不能替代另外两道：
+
+| 闸 | 位置 | 规则 |
+| --- | --- | --- |
+| ① 引用门禁 | `file_service.soft_delete_image` / `soft_delete_unreferenced` | 被引用次数 > 0 的附件不允许删除；批量标记只挑「零引用」的行 |
+| ② 新人保护期 | `soft_delete_unreferenced` | 上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS`（7）天、且从未被引用的附件本轮不标记，避免「刚上传、还没挂到业务上」的图片被整批扫走；跳过数量在回执的 `skipped_recent_count` 里回报 |
+| ③ 保留期 + 复查 | `purge_deleted_attachments` | 软删除后保留 7 个完整自然日，到期后的第一个凌晨 2 点**逐张复查引用**：有新引用就撤销删除，仍无引用才物理清除 |
+
+配套接口：`GET /files/images/attachments/delete-unreferenced/preview` 先返回会被标记的数量与明细
+（`total` / `items`）以及被保护期跳过的数量（`protected_count` / `protect_days`），管理员确认后再调
+`POST /files/images/attachments/delete-unreferenced`。
+
+图片集合发生变化（新增 / 移除）时会写一条 `IMAGES_CHANGED` 业务事件（`business_event_log`），
+`before_data` / `after_data` 里带上变更前后的 `image_ids` 与增删明细：图片从业务记录上被摘掉不会
+留下别的痕迹（附件池与磁盘文件都还在，只是不再被引用），所以变更必须自己留痕。
+
 ## 项目上下文（`X-Project-Id`）
 
 业务数据按项目隔离：业务接口都必须带 `X-Project-Id: <项目 id>`，服务端据此只读写该项目的

@@ -71,6 +71,9 @@ MANAGED_FILE_NAME = re.compile(
 ATTACHMENT_PURGE_HOUR = 2
 # 软删除后的保留期：完整 7 个自然日，给「删错了」留出可撤销的窗口。
 ATTACHMENT_RETENTION_DAYS = 7
+# 「删除未引用附件」的新人保护期：上传后这么多天内、且从未被引用过的附件不进回收队列。
+# 刚上传、还没来得及挂到业务记录上的图片，在批量清理时仍然算「在用」，避免被整批扫走。
+ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS = 7
 # 所有可能引用 file_object 的图片关联表。新增引用表时必须同步这里，
 # 否则附件管理会低估「被引用次数」并误删在用图片。
 REFERENCE_MODELS: tuple[type[Any], ...] = (
@@ -104,6 +107,16 @@ def _reference_count_expression() -> ColumnElement[int]:
     return expression
 
 
+def _unreferenced_conditions() -> tuple[ColumnElement[bool], ...]:
+    """「在用且当前零引用」的附件筛选条件（批量清理的候选范围）。"""
+    return (FileObject.deleted_at.is_(None), _reference_count_expression() == 0)
+
+
+def unreferenced_protected_cutoff(now: datetime) -> datetime:
+    """新人保护期的分界：`created_at` 早于它的零引用附件才允许提交删除。纯函数便于单测。"""
+    return now - timedelta(days=ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS)
+
+
 def attachment_purge_after(deleted_at: datetime) -> datetime:
     """软删除后的物理清除时刻：保留期满后的第一个凌晨 2 点（北京时间）。
 
@@ -115,6 +128,17 @@ def attachment_purge_after(deleted_at: datetime) -> datetime:
         days=ATTACHMENT_RETENTION_DAYS
     )
     return next_local_hour(deadline, ATTACHMENT_PURGE_HOUR, inclusive=True).astimezone(UTC)
+
+
+@dataclass(frozen=True)
+class UnreferencedDeletionPreview:
+    """「删除未引用附件」预检结果：会被标记的数量、受保护跳过的数量、示例明细。"""
+
+    total: int
+    protected_count: int
+    protect_days: int
+    purge_after: datetime
+    items: list[AttachmentRead]
 
 
 @dataclass
@@ -441,6 +465,50 @@ async def list_attachments(
     return items, total
 
 
+async def preview_unreferenced_deletion(
+    session: AsyncSession, *, limit: int = 100
+) -> UnreferencedDeletionPreview:
+    """「删除未引用附件」的预检：先给出会被标记的清单与数量，再让管理员决定是否执行。
+
+    `total` 是本次会命中的数量；`protected_count` 是仍在新人保护期、本轮不会被标记的数量；
+    `items` 只取前 `limit` 条（按上传时间正序，最老的排前面）供界面展示。
+    """
+    deleted_at = utcnow()
+    cutoff = unreferenced_protected_cutoff(deleted_at)
+    markable = (*_unreferenced_conditions(), FileObject.created_at < cutoff)
+    total = int(
+        await session.scalar(select(func.count()).select_from(FileObject).where(*markable)) or 0
+    )
+    protected_count = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(FileObject)
+            .where(*_unreferenced_conditions(), FileObject.created_at >= cutoff)
+        )
+        or 0
+    )
+    rows = list(
+        (
+            await session.scalars(
+                select(FileObject)
+                .where(*markable)
+                .order_by(FileObject.created_at, FileObject.id)
+                .limit(limit)
+            )
+        ).all()
+    )
+    disk_files = await asyncio.to_thread(_managed_disk_files)
+    return UnreferencedDeletionPreview(
+        total=total,
+        protected_count=protected_count,
+        protect_days=ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS,
+        purge_after=attachment_purge_after(deleted_at),
+        items=[
+            attachment_read(item, 0, file_exists=f"{item.id}.png" in disk_files) for item in rows
+        ],
+    )
+
+
 async def soft_delete_image(session: AsyncSession, file_id: str) -> AttachmentDeleteRead:
     """软删除：仅当被引用次数为 0 时允许，落 `deleted_at` 但不删文件。
 
@@ -469,20 +537,34 @@ async def soft_delete_image(session: AsyncSession, file_id: str) -> AttachmentDe
 
 
 async def soft_delete_unreferenced(session: AsyncSession) -> AttachmentBulkDeleteRead:
-    """批量软删除：把所有「在用且被引用次数为 0」的附件一次性标记为待删除。
+    """批量软删除：把「在用、零引用、且已过新人保护期」的附件标记为待删除。
 
     引用条件直接写在 UPDATE 的 WHERE 里（不先查后改），避免两次操作之间被新引用插进来；
     这里只落 `deleted_at`，物理删除仍由保留期满后的凌晨 2 点引用复查执行。
+
+    新人保护期（`ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS`）：上传还不满这么多天、又从未被引用过的
+    附件本轮**不标记**，只在回执里报 `skipped_recent_count`。刚上传还没来得及挂到业务上的图片
+    因此不会被批量清理顺手扫掉（线上曾出现过一次：图片被外部脚本误摘后立刻算成未引用，随后被清走）。
     """
     deleted_at = utcnow()
+    cutoff = unreferenced_protected_cutoff(deleted_at)
+    protected_count = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(FileObject)
+            .where(*_unreferenced_conditions(), FileObject.created_at >= cutoff)
+        )
+        or 0
+    )
     result = await session.execute(
         update(FileObject)
-        .where(FileObject.deleted_at.is_(None), _reference_count_expression() == 0)
+        .where(*_unreferenced_conditions(), FileObject.created_at < cutoff)
         .values(deleted_at=deleted_at)
     )
     await session.commit()
     return AttachmentBulkDeleteRead(
         deleted_count=int(result.rowcount or 0),
+        skipped_recent_count=protected_count,
         purge_after=attachment_purge_after(deleted_at),
     )
 

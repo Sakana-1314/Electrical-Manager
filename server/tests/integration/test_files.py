@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import random
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 import pytest
@@ -504,6 +504,15 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
     assert (await attachment_cleanup_service.cleanup_deleted_attachments_once()).scanned == 0
 
 
+async def backdate_upload(file_id: str, days: int) -> None:
+    """把附件的上传时间往前挪：只有过了新人保护期的零引用附件才会被批量清理标记。"""
+    async with project_session() as session:
+        item = await session.get(FileObject, file_id)
+        assert item is not None
+        item.created_at = utcnow() - timedelta(days=days)
+        await session.commit()
+
+
 @pytest.mark.asyncio
 async def test_delete_unreferenced_requires_super_admin(client: AsyncClient) -> None:
     warehouse_headers = await auth_headers(client, "warehouse")
@@ -537,11 +546,27 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
     )
     assert linked.status_code == 201, linked.text
 
+    # 上传新人保护期内先试一次：刚上传、还没挂到业务上的图片不会被扫走。
+    protected = await client.post(
+        "/api/v1/files/images/attachments/delete-unreferenced", headers=admin_headers
+    )
+    assert protected.status_code == 200, protected.text
+    assert protected.json()["deleted_count"] == 0
+    assert protected.json()["skipped_recent_count"] == len(free_ids)
+    async with project_session() as session:
+        still_active = [await session.get(FileObject, file_id) for file_id in free_ids]
+    assert all(item is not None and item.deleted_at is None for item in still_active)
+
+    # 把上传时间挪到保护期之外后，才是批量清理的候选。
+    for file_id in free_ids:
+        await backdate_upload(file_id, file_service.ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
+
     response = await client.post(
         "/api/v1/files/images/attachments/delete-unreferenced", headers=admin_headers
     )
     assert response.status_code == 200, response.text
     assert response.json()["deleted_count"] == len(free_ids)
+    assert response.json()["skipped_recent_count"] == 0
     assert response.json()["purge_after"] is not None
 
     # 只做软删除：数据库记录与磁盘文件都还在；被引用的图片不受影响。
@@ -755,3 +780,59 @@ async def test_dedup_check_validates_payload(client: AsyncClient) -> None:
         )
         assert response.status_code == 422, response.text
         assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+@pytest.mark.asyncio
+async def test_unreferenced_preview_requires_super_admin(client: AsyncClient) -> None:
+    warehouse_headers = await auth_headers(client, "warehouse")
+    denied = await client.get(
+        "/api/v1/files/images/attachments/delete-unreferenced/preview", headers=warehouse_headers
+    )
+    assert denied.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_unreferenced_preview_lists_would_be_deleted_attachments(client: AsyncClient) -> None:
+    """预检清单先给出会被标记的附件：总数、示例明细，以及因新人保护期被跳过的数量。"""
+    headers = await auth_headers(client, "warehouse")
+    admin_headers = await auth_headers(client, "admin")
+    fresh_id = await upload_png(client, headers, name="preview-fresh.png", color="green")
+    old_id = await upload_png(client, headers, name="preview-old.png", color="red")
+    await backdate_upload(old_id, file_service.ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
+
+    preview = await client.get(
+        "/api/v1/files/images/attachments/delete-unreferenced/preview", headers=admin_headers
+    )
+    assert preview.status_code == 200, preview.text
+    body = preview.json()
+    assert body["total"] == 1
+    assert body["protected_count"] == 1
+    assert [item["id"] for item in body["items"]] == [old_id]
+    assert body["items"][0]["original_name"] == "preview-old.png"
+    # 预检同时也是「现在提交删除的话，物理清除会在什么时候执行」的预告
+    assert datetime.fromisoformat(body["purge_after"]) > datetime.now(UTC)
+
+    # 预检只读：两张图片都还在「在用」列表里，没有任何标记。
+    active = await client.get(
+        "/api/v1/files/images/attachments?page_size=50", headers=admin_headers
+    )
+    assert {fresh_id, old_id} <= {item["id"] for item in active.json()["items"]}
+    async with project_session() as session:
+        assert (await session.get(FileObject, fresh_id)).deleted_at is None
+        assert (await session.get(FileObject, old_id)).deleted_at is None
+
+    # limit 控制明细条数（总数仍为全量）。
+    limited = await client.get(
+        "/api/v1/files/images/attachments/delete-unreferenced/preview",
+        headers=admin_headers,
+        params={"limit": 1},
+    )
+    assert limited.status_code == 200, limited.text
+    assert limited.json()["total"] == 1
+    assert len(limited.json()["items"]) == 1
+    too_big = await client.get(
+        "/api/v1/files/images/attachments/delete-unreferenced/preview",
+        headers=admin_headers,
+        params={"limit": 501},
+    )
+    assert too_big.status_code == 422

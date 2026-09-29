@@ -2017,6 +2017,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/images/attachments/delete-unreferenced/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 删除未引用附件的预检清单
+         * @description 先看清「删除未引用附件」会命中哪些图片，再由管理员确认执行。
+         */
+        get: operations["preview_unreferenced_attachments_api_v1_files_images_attachments_delete_unreferenced_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files/images/attachments/delete-unreferenced": {
         parameters: {
             query?: never;
@@ -2028,11 +2048,12 @@ export interface paths {
         put?: never;
         /**
          * 删除未引用附件
-         * @description 把当前所有未被引用的附件批量标记为待删除。
+         * @description 把当前所有未被引用、且已过新人保护期的附件批量标记为待删除。
          *
          *     只做软删除：数据库记录与磁盘文件都保留，保留 7 个完整自然日后的第一个凌晨 2 点，
          *     定时任务复查引用后才真正物理清除（复查发现新增引用则自动撤销删除；保留期内可随时撤销）。
-         *     不提供手动物理删除入口。
+         *     上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS` 天且从未被引用过的附件本轮跳过，
+         *     数量在回执的 `skipped_recent_count` 里回报。不提供手动物理删除入口。
          */
         post: operations["delete_unreferenced_attachments_api_v1_files_images_attachments_delete_unreferenced_post"];
         delete?: never;
@@ -2775,6 +2796,11 @@ export interface components {
         AttachmentBulkDeleteRead: {
             /** Deleted Count */
             deleted_count: number;
+            /**
+             * Skipped Recent Count
+             * @default 0
+             */
+            skipped_recent_count: number;
             /**
              * Purge After
              * Format: date-time
@@ -12136,6 +12162,47 @@ export interface components {
              * @constant
              */
             token_type: "bearer";
+        };
+        /**
+         * UnreferencedDeletionPreviewRead
+         * @description 「删除未引用附件」的预检清单：先看清会被标记的是哪些，再决定是否执行。
+         *
+         *     `items` 只给前若干条（按上传时间正序），`total` 是本次会命中的总数。
+         * @example {
+         *       "total": 20,
+         *       "protected_count": 2,
+         *       "protect_days": 1,
+         *       "purge_after": "2026-09-13T10:30:00+08:00",
+         *       "items": [
+         *         {
+         *           "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+         *           "original_name": "交流接触器-CJX2-2510-正面.jpg",
+         *           "mime_type": "image/png",
+         *           "size_bytes": 486912,
+         *           "width": 1600,
+         *           "height": 1200,
+         *           "created_at": "2026-06-05T09:10:00+08:00",
+         *           "reference_count": 1,
+         *           "deleted_at": null,
+         *           "file_exists": true
+         *         }
+         *       ]
+         *     }
+         */
+        UnreferencedDeletionPreviewRead: {
+            /** Total */
+            total: number;
+            /** Protected Count */
+            protected_count: number;
+            /** Protect Days */
+            protect_days: number;
+            /**
+             * Purge After
+             * Format: date-time
+             */
+            purge_after: string;
+            /** Items */
+            items: components["schemas"]["AttachmentRead"][];
         };
         /**
          * UserApiTokenRead
@@ -33811,6 +33878,135 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Page_AttachmentRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    preview_unreferenced_attachments_api_v1_files_images_attachments_delete_unreferenced_preview_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "total": 20,
+                     *       "protected_count": 2,
+                     *       "protect_days": 1,
+                     *       "purge_after": "2026-09-13T10:30:00+08:00",
+                     *       "items": [
+                     *         {
+                     *           "id": "32d7f854-769d-72e7-8eac-1dc6b831456c",
+                     *           "original_name": "交流接触器-CJX2-2510-正面.jpg",
+                     *           "mime_type": "image/png",
+                     *           "size_bytes": 486912,
+                     *           "width": 1600,
+                     *           "height": 1200,
+                     *           "created_at": "2026-06-05T09:10:00+08:00",
+                     *           "reference_count": 1,
+                     *           "deleted_at": null,
+                     *           "file_exists": true
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UnreferencedDeletionPreviewRead"];
                 };
             };
             /** @description 业务校验失败 */
