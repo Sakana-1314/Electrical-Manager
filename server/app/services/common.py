@@ -132,6 +132,39 @@ def file_read(file: FileObject) -> FileObjectRead:
     )
 
 
+async def log_image_change(
+    session: AsyncSession,
+    *,
+    business_type: str,
+    business_id: int,
+    before_ids: Sequence[str],
+    after_ids: Sequence[str],
+    label: str | None = None,
+) -> None:
+    """把一次「附件（图片）变更」写进业务事件日志。
+
+    只在图片集合真的发生变化时记录（增删都算），`before_data` / `after_data` 里带上变更前后的
+    file_id 列表与增删明细，用于事后追溯「这张图是什么时候、被哪次操作摘掉的」——
+    图片从业务记录上被摘掉不会留下别的痕迹（磁盘文件与附件池都还在，只是不再被引用）。
+    """
+    before = [item for item in before_ids]
+    after = [item for item in after_ids]
+    if before == after:
+        return
+    removed = [item for item in before if item not in after]
+    added = [item for item in after if item not in before]
+    prefix = f"{label}：" if label else ""
+    await log_event(
+        session,
+        business_type=business_type,
+        business_id=business_id,
+        action="IMAGES_CHANGED",
+        remark=f"{prefix}附件 {len(before)} → {len(after)}（新增 {len(added)}、移除 {len(removed)}）"[:1000],
+        before_data={"image_ids": before},
+        after_data={"image_ids": after, "added": added, "removed": removed},
+    )
+
+
 async def log_event(
     session: AsyncSession,
     *,

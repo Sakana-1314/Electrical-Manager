@@ -31,6 +31,7 @@ from app.schemas import (
 )
 from app.services.common import (
     file_read,
+    log_image_change,
     utc_aware,
     validate_quantity_precision,
     validate_version,
@@ -177,6 +178,14 @@ async def update_template(
     template.purchase_responsible = responsible
     template.stock_material = stock
     if data.image_ids is not None:
+        await log_image_change(
+            session,
+            business_type="PURCHASE_PLAN_TEMPLATE",
+            business_id=template.id,
+            label="申购计划模板",
+            before_ids=[link.file_id for link in template.images],
+            after_ids=list(data.image_ids),
+        )
         template.images = _template_images(files)
     template.version += 1
     await session.flush()

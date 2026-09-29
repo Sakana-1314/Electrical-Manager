@@ -15,6 +15,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.core.constants import SHANGHAI
 from app.models import (
+    BusinessEventLog,
     HuaXingInventory,
     PurchaseMaterial,
     PurchaseRequest,
@@ -2456,3 +2457,75 @@ async def test_missing_excel_template_returns_readable_400(
     assert response.status_code == 400
     assert response.json()["code"] == "EXPORT_TEMPLATE_MISSING"
     assert "material-code-application.json" in response.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_image_change_is_logged_when_plan_images_change(client: AsyncClient) -> None:
+    """图片集合发生变化时落业务事件日志：事后能查到「这张图是哪次操作摘掉的」。
+
+    图片从计划上被摘掉不会留下别的痕迹（磁盘文件与附件池都还在，只是不再被引用），
+    所以变更必须自己留痕。
+    """
+    headers = await auth_headers(client, "purchase")
+    file_id = await upload_png(client, headers, "audit.png", "purple")
+    plan = await create_purchase_plan(
+        client, headers, "审计用计划", code="DQ-AUDIT-001", image_ids=[file_id]
+    )
+
+    def payload(version: int, **extra: object) -> dict[str, object]:
+        return {
+            "version": version,
+            "material_code": plan["material_code"],
+            "name": plan["name"],
+            "model_spec": plan["model_spec"],
+            "unit_name": plan["unit_name"],
+            "actual_demand_person": plan["actual_demand_person"],
+            "purchase_responsible": plan["purchase_responsible"],
+            "planned_qty": plan["planned_qty"],
+            "usage": plan["usage"],
+            "subitem_no": plan["subitem_no"],
+            "remark": plan["remark"],
+            "stock_material_id": None,
+            **extra,
+        }
+
+    # 只改字段、不带 image_ids：图片没变，不产生事件。
+    untouched = await client.patch(
+        f"/api/v1/purchase-materials/{plan['id']}",
+        headers=headers,
+        json=payload(int(plan["version"]), remark="只改备注"),
+    )
+    assert untouched.status_code == 200, untouched.text
+    assert [image["id"] for image in untouched.json()["images"]] == [file_id]
+    async with project_session() as session:
+        assert (
+            await session.scalar(
+                select(BusinessEventLog).where(BusinessEventLog.action == "IMAGES_CHANGED")
+            )
+        ) is None
+
+    # 显式清空：写一条 IMAGES_CHANGED，前后 file_id 都在里面。
+    cleared = await client.patch(
+        f"/api/v1/purchase-materials/{plan['id']}",
+        headers=headers,
+        json=payload(int(untouched.json()["version"]), image_ids=[]),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["images"] == []
+
+    async with project_session() as session:
+        event = await session.scalar(
+            select(BusinessEventLog)
+            .where(
+                BusinessEventLog.action == "IMAGES_CHANGED",
+                BusinessEventLog.business_id == int(plan["id"]),
+            )
+            .order_by(BusinessEventLog.id.desc())
+        )
+    assert event is not None
+    assert event.business_type == "PURCHASE_PLAN"
+    assert event.before_data == {"image_ids": [file_id]}
+    assert event.after_data is not None
+    assert event.after_data["image_ids"] == []
+    assert event.after_data["removed"] == [file_id]
+    assert plan["plan_no"] in (event.remark or "")

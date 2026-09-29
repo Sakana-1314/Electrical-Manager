@@ -98,6 +98,10 @@
 （`total` / `items`）以及被保护期跳过的数量（`protected_count` / `protect_days`），管理员确认后再调
 `POST /files/images/attachments/delete-unreferenced`。
 
+图片集合发生变化（新增 / 移除）时会写一条 `IMAGES_CHANGED` 业务事件（`business_event_log`），
+`before_data` / `after_data` 里带上变更前后的 `image_ids` 与增删明细：图片从业务记录上被摘掉不会
+留下别的痕迹（附件池与磁盘文件都还在，只是不再被引用），所以变更必须自己留痕。
+
 ## 项目上下文（`X-Project-Id`）
 
 业务数据按项目隔离：业务接口都必须带 `X-Project-Id: <项目 id>`，服务端据此只读写该项目的

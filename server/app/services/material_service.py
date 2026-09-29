@@ -37,6 +37,7 @@ from app.schemas import (
 from app.services.common import (
     file_read,
     identity_hash,
+    log_image_change,
     utc_aware,
     validate_quantity_precision,
     validate_version,
@@ -159,6 +160,14 @@ async def update_stock_material(
     item.remark = data.remark
     item.identity_hash = identity_hash(data.name, data.model_spec, data.unit_name)
     if data.image_ids is not None:
+        await log_image_change(
+            session,
+            business_type="STOCK_MATERIAL",
+            business_id=item.id,
+            label=f"二级库物资 {item.name}",
+            before_ids=[link.file_id for link in item.images],
+            after_ids=list(data.image_ids),
+        )
         item.images = [
             StockMaterialImage(file_id=file.id, file=file, sort_order=index)
             for index, file in enumerate(files)
@@ -357,6 +366,14 @@ async def update_purchase_material(
     item.purchase_responsible = responsible
     item.stock_material = stock
     if data.image_ids is not None:
+        await log_image_change(
+            session,
+            business_type="PURCHASE_PLAN",
+            business_id=item.id,
+            label=f"申购计划 {item.plan_no}",
+            before_ids=[link.file_id for link in item.images],
+            after_ids=list(data.image_ids),
+        )
         item.images = [
             PurchaseMaterialImage(file_id=file.id, file=file, sort_order=index)
             for index, file in enumerate(files)
