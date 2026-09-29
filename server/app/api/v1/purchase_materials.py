@@ -387,6 +387,8 @@ async def export_purchase_application(
 
 @router.post(
     "/export-purchase-approval",
+    response_model=ExcelExportJobRead,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={400: {"model": ApiError, "description": "Excel 导出模板缺失或格式错误"}},
     summary="导出申购审批表",
 )
@@ -394,53 +396,97 @@ async def export_purchase_approval(
     data: PurchasePlanExportRequest,
     session: DbSession,
     user: CurrentUser,
-) -> Response:
+) -> ExcelExportJobRead:
+    """申购审批表导出（嵌入原图，单文件可能很大）：请求期做必填校验，202 秒回任务。
+
+    渲染耗时不可控（图片按原始字节嵌入，200 条计划可能上百 MB），必须异步执行，
+    否则会被网关 / 浏览器超时掐断；请求期只做「必填字段」这类能秒回的校验，
+    让用户立刻拿到「导出申购审批表前请补全」的提示。
+    """
+    export_status = None if user.role == Role.SUPER_ADMIN else PurchasePlanStatus.NORMAL
     materials = await material_service.purchase_materials_for_export(
         session,
         material_ids=data.material_ids,
         coded=None,
         moved=False,
-        status=None if user.role == Role.SUPER_ADMIN else PurchasePlanStatus.NORMAL,
+        status=export_status,
     )
     material_service.validate_purchase_approval_export(materials)
-    # 库存量取华星总库存、在途量取最近 3 个月申购记录，均只按物料编码精准匹配；
-    # 没有物料编码时不参与匹配，两格都填 0（不留空）；
-    # 单价 / 总价暂时留空（模板里两个列不绑定字段）。
-    quantities = await material_service.purchase_approval_export_quantities(session, materials)
-    rows = []
-    for index, item in enumerate(materials, start=1):
-        code = item.material_code
-        matched = quantities.get(code) if code else None
-        stock_qty, in_transit_qty = matched if matched else (0, 0)
-        rows.append(
-            {
-                "serial": index,
-                "material_code": code,
-                "name": item.name,
-                "model_spec": item.model_spec,
-                "planned_qty": item.planned_qty,
-                "unit_name": item.unit_name,
-                "purchase_responsible": item.purchase_responsible,
-                "department": "HXNI 检修维护部",
-                "usage": item.usage,
-                "stock_qty": stock_qty,
-                "in_transit_qty": in_transit_qty,
-                "required_arrival_date": date.today() + timedelta(days=80),
-                "urgency": item.urgency,
-                "remark": item.remark,
-                "subitem_no": item.subitem_no,
-                # 图片列在最后，与原「申购计划导出」一致：嵌入计划附带的原图
-                "images": [
-                    file_service.file_path(link.file.id)
-                    for link in item.images
-                    if link.file is not None and file_service.file_path(link.file.id).is_file()
-                ],
-            }
+    return await excel_export_job_service.enqueue_export(
+        export_type="PURCHASE_APPROVAL",
+        params=data.model_dump(mode="json"),
+        processor=functools.partial(
+            _process_purchase_approval_export, data=data, export_status=export_status
+        ),
+        created_by=user.id,
+    )
+
+
+async def _process_purchase_approval_export(
+    target: Path,
+    *,
+    data: PurchasePlanExportRequest,
+    export_status: PurchasePlanStatus | None,
+) -> dict[str, object]:
+    """申购审批表导出处理器：查库 + 必填校验 + 数量取数 + 渲染（含图片）后写盘。
+
+    后台任务没有用户上下文，export_status 由端点在请求期按角色归一化后传入；
+    必填校验在这里再跑一次（请求期到执行期之间计划可能被改），不满足就整任务失败，
+    不会产出半成品文件。
+    """
+    async with SessionLocal() as session:
+        materials = await material_service.purchase_materials_for_export(
+            session,
+            material_ids=data.material_ids,
+            coded=None,
+            moved=False,
+            status=export_status,
         )
+        material_service.validate_purchase_approval_export(materials)
+        # 库存量取华星总库存、在途量取最近 3 个月申购记录，均只按物料编码精准匹配；
+        # 没有物料编码时不参与匹配，两格都填 0（不留空）；
+        # 单价 / 总价暂时留空（模板里两个列不绑定字段）。
+        quantities = await material_service.purchase_approval_export_quantities(session, materials)
+        rows: list[dict[str, Any]] = []
+        for index, item in enumerate(materials, start=1):
+            code = item.material_code
+            matched = quantities.get(code) if code else None
+            stock_qty, in_transit_qty = matched if matched else (0, 0)
+            rows.append(
+                {
+                    "serial": index,
+                    "material_code": code,
+                    "name": item.name,
+                    "model_spec": item.model_spec,
+                    "planned_qty": item.planned_qty,
+                    "unit_name": item.unit_name,
+                    "purchase_responsible": item.purchase_responsible,
+                    "department": "HXNI 检修维护部",
+                    "usage": item.usage,
+                    "stock_qty": stock_qty,
+                    "in_transit_qty": in_transit_qty,
+                    "required_arrival_date": date.today() + timedelta(days=80),
+                    "urgency": item.urgency,
+                    "remark": item.remark,
+                    "subitem_no": item.subitem_no,
+                    # 图片列在最后，与原「申购计划导出」一致：嵌入计划附带的原图
+                    "images": [
+                        file_service.file_path(link.file.id)
+                        for link in item.images
+                        if link.file is not None
+                        and file_service.file_path(link.file.id).is_file()
+                    ],
+                }
+            )
     content, filename = await asyncio.to_thread(
         excel_export_service.render_excel, "purchase-approval.json", rows
     )
-    return excel_export_service.excel_response(content, filename)
+    await asyncio.to_thread(excel_export_service.write_export_file, target, content)
+    return {
+        "download_filename": filename,
+        "rows": len(rows),
+        "image_count": sum(len(row.get("images") or []) for row in rows),
+    }
 
 
 @router.post(

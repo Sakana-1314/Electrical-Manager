@@ -138,13 +138,12 @@ export const procurementApi = {
         { responseType: 'blob' },
       )
       .then((r) => r.data),
+  /** 申购审批表导出（嵌入原图，文件可能很大）：202 秒回任务，前端轮询后下载。 */
   exportPurchaseApproval: (materialIds: number[]) =>
     apiClient
-      .post<Blob>(
-        '/purchase-materials/export-purchase-approval',
-        { material_ids: materialIds },
-        { responseType: 'blob' },
-      )
+      .post<ExcelExportJob>('/purchase-materials/export-purchase-approval', {
+        material_ids: materialIds,
+      })
       .then((r) => r.data),
   exportMaterialResults: (payload: PurchasePlanResultExportRequest) =>
     apiClient
