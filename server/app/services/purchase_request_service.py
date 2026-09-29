@@ -218,7 +218,9 @@ async def update_purchase_record(
 ) -> PurchaseRequestLine:
     request = line.request
     validate_version(data.version, request.version)
-    files = await _files(session, data.image_ids)
+    # `image_ids` 省略（None）＝不动图片；只有显式传了列表（含 `[]`）才整表替换。
+    if data.image_ids is not None:
+        files = await _files(session, data.image_ids)
     request.purchase_order_no = data.purchase_order_no or None
     line.trace_no = data.trace_no or None
     request.contract_no = data.contract_no or None
@@ -247,7 +249,8 @@ async def update_purchase_record(
     line.status = data.status
     line.usage = data.usage
     line.subitem_no = data.subitem_no
-    line.images = _line_images(files)
+    if data.image_ids is not None:
+        line.images = _line_images(files)
     line.version += 1
     await session.flush()
     return line

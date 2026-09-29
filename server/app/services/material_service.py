@@ -148,7 +148,9 @@ async def update_stock_material(
     session: AsyncSession, item: StockMaterial, data: StockMaterialUpdate
 ) -> StockMaterial:
     validate_version(data.version, item.version)
-    files = await _files(session, data.image_ids)
+    # `image_ids` 省略（None）＝不动图片；只有显式传了列表（含 `[]`）才整表替换。
+    if data.image_ids is not None:
+        files = await _files(session, data.image_ids)
     item.name = data.name
     item.name_id = data.name_id or None
     item.alias = data.alias or None
@@ -156,10 +158,11 @@ async def update_stock_material(
     item.unit_name = data.unit_name
     item.remark = data.remark
     item.identity_hash = identity_hash(data.name, data.model_spec, data.unit_name)
-    item.images = [
-        StockMaterialImage(file_id=file.id, file=file, sort_order=index)
-        for index, file in enumerate(files)
-    ]
+    if data.image_ids is not None:
+        item.images = [
+            StockMaterialImage(file_id=file.id, file=file, sort_order=index)
+            for index, file in enumerate(files)
+        ]
     item.version += 1
     try:
         await session.flush()
@@ -326,7 +329,9 @@ async def update_purchase_material(
     responsible = data.purchase_responsible or item.purchase_responsible
     validate_quantity_precision(data.planned_qty)
     stock = await _validate_stock_link(session, data.stock_material_id)
-    files = await _files(session, data.image_ids)
+    # `image_ids` 省略（None）＝不动图片；只有显式传了列表（含 `[]`）才整表替换。
+    if data.image_ids is not None:
+        files = await _files(session, data.image_ids)
     for key in (
         "material_code",
         "category",
@@ -351,10 +356,11 @@ async def update_purchase_material(
         item.status = data.status
     item.purchase_responsible = responsible
     item.stock_material = stock
-    item.images = [
-        PurchaseMaterialImage(file_id=file.id, file=file, sort_order=index)
-        for index, file in enumerate(files)
-    ]
+    if data.image_ids is not None:
+        item.images = [
+            PurchaseMaterialImage(file_id=file.id, file=file, sort_order=index)
+            for index, file in enumerate(files)
+        ]
     item.version += 1
     await session.flush()
     return item

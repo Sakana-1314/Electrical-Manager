@@ -666,7 +666,19 @@ class StockMaterialCreate(StockMaterialBase):
 
 
 class StockMaterialUpdate(StockMaterialBase):
+    """二级库物资更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+
+    基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+    的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。
+    """
+
     version: int
+    image_ids: list[FileId] | None = Field(default=None, max_length=9)
+
+    @field_validator("image_ids")
+    @classmethod
+    def unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
 
 
 class StockMaterialRead(ReadModel):
@@ -1062,7 +1074,19 @@ class PurchaseMaterialCreate(PurchaseMaterialBase):
 
 
 class PurchaseMaterialUpdate(PurchaseMaterialBase):
+    """申购计划更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。
+
+    基类为了「新建」把默认值设成空列表；更新若沿用这个默认值，任何不带 `image_ids`
+    的 PATCH（脚本 / MCP 只改某个字段）都会被当成「把图片清空」，附件会被静默摘掉。
+    """
+
     version: int
+    image_ids: list[FileId] | None = Field(default=None, max_length=9)
+
+    @field_validator("image_ids")
+    @classmethod
+    def unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
 
 
 class MaterialCodeLibraryRead(ReadModel):
@@ -1308,7 +1332,15 @@ class PurchasePlanTemplateCreate(PurchasePlanTemplateBase):
 
 
 class PurchasePlanTemplateUpdate(PurchasePlanTemplateBase):
+    """申购计划模板更新：`image_ids` 省略（None）＝不改动图片，显式传 `[]` 才清空。"""
+
     version: int
+    image_ids: list[FileId] | None = Field(default=None, max_length=9)
+
+    @field_validator("image_ids")
+    @classmethod
+    def unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
 
 
 class PurchasePlanTemplateRead(ReadModel):
@@ -1474,7 +1506,8 @@ class PurchaseRecordUpdate(RequestModel):
     ) = None
     plan_remark: str | None = Field(default=None, max_length=1000)
     stock_material_id: int | None = None
-    image_ids: list[FileId] = Field(default_factory=list, max_length=9)
+    # 省略（None）＝不改动图片，显式传 `[]` 才清空；见 PurchaseMaterialUpdate 的说明。
+    image_ids: list[FileId] | None = Field(default=None, max_length=9)
     purchase_order_no: (
         Annotated[str, StringConstraints(strip_whitespace=True, max_length=128)] | None
     ) = None
@@ -1504,8 +1537,8 @@ class PurchaseRecordUpdate(RequestModel):
 
     @field_validator("image_ids")
     @classmethod
-    def unique_images(cls, value: list[str]) -> list[str]:
-        return _ensure_unique_image_ids(value)
+    def unique_images(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _ensure_unique_image_ids(value)
 
     @field_validator("material_code", "category", mode="before")
     @classmethod

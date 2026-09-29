@@ -154,7 +154,9 @@ async def update_template(
     responsible = data.purchase_responsible or template.purchase_responsible
     validate_quantity_precision(data.planned_qty)
     stock = await _validate_stock_link(session, data.stock_material_id)
-    files = await _files(session, data.image_ids)
+    # `image_ids` 省略（None）＝不动图片；只有显式传了列表（含 `[]`）才整表替换。
+    if data.image_ids is not None:
+        files = await _files(session, data.image_ids)
     for key in (
         "material_code",
         "category",
@@ -174,7 +176,8 @@ async def update_template(
         template.actual_demand_person = data.actual_demand_person
     template.purchase_responsible = responsible
     template.stock_material = stock
-    template.images = _template_images(files)
+    if data.image_ids is not None:
+        template.images = _template_images(files)
     template.version += 1
     await session.flush()
     return template
