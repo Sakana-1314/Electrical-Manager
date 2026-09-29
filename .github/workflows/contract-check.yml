@@ -1,33 +1,70 @@
 name: 契约一致性校验
 
+# 校验「后端导出 → docs/openapi.yaml → 前端 generated.raw.ts」这条链没有漂移，并顺带做一次类型检查。
+#
+# 触发方式拆成两条互不重叠的路径，同一个提交只跑一次：
+#   - pull_request：唯一的「合并前」入口，跑 refs/pull/N/merge（PR 合入当时 main 的结果）。
+#   - push 到 main：唯一的「合并后」入口，再叠一层「已测过就跳过」的去重判断（见下面 precheck）。
+# 以前 push 还开了 branches: ["**"]，于是往 PR 分支 push 会同时命中 push 与 pull_request：
+# 两者 ref 不同（refs/heads/x 与 refs/pull/N/merge）、concurrency 组也就不同，谁都不会取消谁，
+# 同一套校验白跑一遍（实测 21 个 feature 分支 head 里有 20 个被跑了两遍）。
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     paths:
       - "server/**"
       - "docs/**"
       - "web/**"
       - ".github/workflows/contract-check.yml"
+      - ".github/actions/tree-already-tested/**"
   pull_request:
     paths:
       - "server/**"
       - "docs/**"
       - "web/**"
       - ".github/workflows/contract-check.yml"
+      - ".github/actions/tree-already-tested/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
+  # 去重判断要反查「这个提交来自哪个 PR」和「那个 head 上有没有成功的 PR 运行」，两者都只读。
+  pull-requests: read
+  actions: read
 
 concurrency:
-  # 发布引用（main / 标签）不取消进行中的运行：被取消的 check 会永久把该提交算作失败
+  # push 现在只发生在 main，所以会被取消的只剩 PR 运行：连续往同一个 PR 推提交时取消旧的那次。
+  # main 上的运行永不取消：被取消的 check 会永久把该提交算作失败
   # （statusCheckRollup=FAILURE，提交列表和仓库首页显示红叉），而被顶掉的运行并不代表代码有问题。
-  # 非发布引用（功能分支 / PR）继续取消旧运行，避免连续 push 反复占用 CI。
   group: contract-check-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  # 合并到 main 后，如果这次合并出来的树已经由本 workflow 在 PR 上完整校验过（逐字节相同），
+  # 就不再重跑一遍。判断逻辑集中在 .github/actions/tree-already-tested。
+  precheck:
+    name: 检测本次合并是否只是在重复 PR 已跑过的测试
+    # 只有 push 到 main 才需要判断；PR 上整块跳过，不额外占用 runner。
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.gate.outputs.skip }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 判断这棵树是否已经测过
+        id: gate
+        uses: ./.github/actions/tree-already-tested
+        with:
+          workflow-file: .github/workflows/contract-check.yml
+
   check:
     name: 校验 openapi / generated.ts 未漂移
+    needs: precheck
+    # always() 是兜底：precheck 被跳过（PR 运行）或它自己出错时必须照常跑，
+    # 绝不能让「去重」这个优化本身变成漏测的原因。
+    if: always() && needs.precheck.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码

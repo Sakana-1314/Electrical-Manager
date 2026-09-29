@@ -1,0 +1,76 @@
+name: 检测同一棵树是否已在 PR 上测试通过
+description: >-
+  合并到 main 后，判断本次合并出来的 git 树是否已经被同一个 workflow 的 pull_request 运行测试通过。
+  树的 SHA 相同 ⇒ 整棵源代码树逐字节相同 ⇒ 测试结果必然相同，可以安全跳过重跑；
+  这正是「PR 上测一遍、合并后又测一遍」里真正重复的那部分。
+  如果合并顺序把别的 PR 带了进来，合并后的树就会与 PR head 的树不同，判定为「需要重跑」，因此不会漏测。
+  任何一步判断不出来（没有关联 PR、查不到成功的 PR 运行、API 报错）都回落到「照常重跑」。
+
+inputs:
+  workflow-file:
+    description: 要比对的 workflow 文件（仓库根相对路径，例如 .github/workflows/api-test.yml）
+    required: true
+
+outputs:
+  skip:
+    description: "'true' 表示同一棵树已经由该 workflow 在 PR 上测试通过，可以跳过重跑；其它情况一律为 'false'"
+    value: ${{ steps.gate.outputs.skip }}
+
+runs:
+  using: composite
+  steps:
+    - name: 比对本次合并的树与 PR head 的树
+      id: gate
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        WORKFLOW_FILE: ${{ inputs.workflow-file }}
+      run: |
+        set -uo pipefail
+
+        # 默认照常跑（fail-open）：只有能【证明】同一棵树已经测试通过时，才把它改成 true。
+        echo "skip=false" >> "$GITHUB_OUTPUT"
+
+        # 只在「push 到 main」时才有去重可言，其它事件（手动触发等）一律照常跑。
+        if [ "${GITHUB_EVENT_NAME:-}" != "push" ] || [ "${GITHUB_REF:-}" != "refs/heads/main" ]; then
+          echo "非 main 的 push，不做去重判断，照常运行"
+          exit 0
+        fi
+
+        merge_tree=$(git rev-parse 'HEAD^{tree}') || exit 0
+        echo "本次合并后的树：$merge_tree"
+
+        # 1) 由默认分支上的 squash 提交反查它来自哪个 PR，取那个 PR 的 head 提交。
+        #    （refs/pull/N/merge 在 PR 合并后就不再存在，所以只能从 head 这一侧反推。）
+        pulls=$(gh api "repos/$REPO/commits/$GITHUB_SHA/pulls" 2>/dev/null) || exit 0
+        head_sha=$(printf '%s' "$pulls" | jq -r '.[0].head.sha // empty' 2>/dev/null) || exit 0
+        if [ -z "${head_sha:-}" ]; then
+          echo "未反查到关联 PR，照常运行"
+          exit 0
+        fi
+
+        # 2) 树必须完全一致。一致说明 PR 分支已经包含了当时的 main、合并没有引入新内容；
+        #    不一致说明合并顺序把别的 PR 带了进来（例如 PR 跑完后又有别的 PR 合入 main），
+        #    这个组合从未被测过，必须重跑。
+        head_tree=$(gh api "repos/$REPO/git/commits/$head_sha" 2>/dev/null | jq -r '.tree.sha // empty' 2>/dev/null) || exit 0
+        if [ "${head_tree:-}" != "$merge_tree" ]; then
+          echo "合并后的树与 PR head 的树不同（${head_tree:-未知}）：合并顺序引入了新组合，照常运行"
+          exit 0
+        fi
+
+        # 3) 该 head 上必须确实有本 workflow 成功的 PR 运行。
+        #    main 目前没有分支保护，不能假设「开了 PR 就一定跑过、一定通过」，所以必须实际查到记录。
+        runs=$(gh api "repos/$REPO/actions/runs?head_sha=$head_sha&per_page=100" 2>/dev/null) || exit 0
+        ok=$(printf '%s' "$runs" | jq --arg wf "$WORKFLOW_FILE" \
+          '[.workflow_runs[] | select(.path == $wf and .event == "pull_request" and .conclusion == "success")] | length' 2>/dev/null) || exit 0
+
+        if [ "${ok:-0}" -ge 1 ] 2>/dev/null; then
+          echo "✅ 树 $merge_tree 已由 $WORKFLOW_FILE 在 PR（head $head_sha）上测试通过，跳过这次重复重跑"
+          echo "skip=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "head $head_sha 上查不到 $WORKFLOW_FILE 成功的 PR 运行，照常运行"
+        fi
+
+        # 显式成功退出：这个步骤一旦失败会把依赖它的测试 job 一起带成 skipped，那就变成漏测了。
+        exit 0

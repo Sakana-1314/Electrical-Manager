@@ -1,8 +1,15 @@
 name: 构建 Docker 镜像
 
+# 触发方式拆成两条互不重叠的路径，同一个提交只构建一次：
+#   - pull_request：只做构建验证，绝不推送镜像（见 SHOULD_PUSH_IMAGE）。
+#   - push 到 main / v* 标签：构建并按需推送镜像。
+# 以前 push 还开了 branches: ["**"]，于是往 PR 分支 push 会同时命中 push 与 pull_request：
+# 两者 ref 不同（refs/heads/x 与 refs/pull/N/merge）、concurrency 组也就不同，谁都不会取消谁，
+# 同一份代码白构建一遍（实测 21 个 feature 分支 head 里有 20 个被构建了两遍）。
+# 这里不做「合并后跳过」的去重：main 上这次运行是唯一会把镜像推到 ghcr.io 的地方，必须每次都跑。
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags: ["v*"]
     paths:
       - "server/**"
@@ -24,7 +31,7 @@ permissions:
 concurrency:
   # 发布引用（main / 标签）不取消进行中的运行：被取消的 check 会永久把该提交算作失败
   # （statusCheckRollup=FAILURE，提交列表和仓库首页显示红叉），而被顶掉的运行并不代表代码有问题。
-  # 非发布引用（功能分支 / PR）继续取消旧运行，避免连续 push 反复占用 CI。
+  # push 现在只发生在 main 与标签上，会被取消的只剩 PR 运行：连续往同一个 PR 推提交时取消旧的那次。
   group: docker-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
