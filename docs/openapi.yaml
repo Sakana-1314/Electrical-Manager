@@ -4869,146 +4869,175 @@ paths:
                   name: 交流接触器
                   model_spec: CJX2-2510 AC220V
                   unit_name: 个
+                  unit_price: '46.55'
                 - id: 2
                   material_code: E011-00241
                   name: 交流接触器辅助触头
                   model_spec: F4-22
                   unit_name: 个
+                  unit_price: '12.80'
                 - id: 3
                   material_code: E011-00312
                   name: 小型断路器
                   model_spec: C65N-C16/2P
                   unit_name: 个
+                  unit_price: '38.00'
                 - id: 4
                   material_code: E011-00315
                   name: 漏电保护断路器
                   model_spec: DZ47LE-32 C32/2P
                   unit_name: 个
+                  unit_price: '76.50'
                 - id: 5
                   material_code: E011-00327
                   name: 热继电器
                   model_spec: JRS1-25/Z 4-6A
                   unit_name: 个
+                  unit_price: '55.20'
                 - id: 6
                   material_code: E011-00335
                   name: 中间继电器
                   model_spec: MY4N-GS DC24V
                   unit_name: 个
+                  unit_price: '42.00'
                 - id: 7
                   material_code: E011-00338
                   name: 时间继电器
                   model_spec: ST3PA-B AC220V
                   unit_name: 个
+                  unit_price: null
                 - id: 8
                   material_code: E011-00402
                   name: 熔断器芯
                   model_spec: RT18-32 10A
                   unit_name: 个
+                  unit_price: null
                 - id: 9
                   material_code: E011-00405
                   name: 熔断器底座
                   model_spec: RT18-32 3P
                   unit_name: 个
+                  unit_price: null
                 - id: 10
                   material_code: E011-00451
                   name: 智能电机保护器
                   model_spec: M60-2P 5A
                   unit_name: 个
+                  unit_price: null
                 - id: 11
                   material_code: E011-00511
                   name: 万能转换开关
                   model_spec: LW39-16B
                   unit_name: 个
+                  unit_price: null
                 - id: 12
                   material_code: E011-00521
                   name: 指示灯
                   model_spec: AD16-22D AC220V 红色
                   unit_name: 个
+                  unit_price: null
                 - id: 13
                   material_code: E011-00540
                   name: 接近开关
                   model_spec: LJ12A3-4-Z/BX
                   unit_name: 个
+                  unit_price: null
                 - id: 14
                   material_code: E011-00602
                   name: 接线端子
                   model_spec: UK-2.5B 灰
                   unit_name: 个
+                  unit_price: null
                 - id: 15
                   material_code: E011-00631
                   name: 防爆挠性连接管
                   model_spec: DN20×500mm
                   unit_name: 根
+                  unit_price: null
                 - id: 16
                   material_code: E011-00644
                   name: 万用表保险管
                   model_spec: DMM-11A 10A
                   unit_name: 个
+                  unit_price: null
                 - id: 17
                   material_code: E012-00058
                   name: 铜芯控制电缆
                   model_spec: KVV 4×1.5mm²
                   unit_name: 米
+                  unit_price: null
                 - id: 18
                   material_code: E012-00071
                   name: 铜芯电力电缆
                   model_spec: YJV 3×25+1×16mm²
                   unit_name: 米
+                  unit_price: null
                 - id: 19
                   material_code: E012-00083
                   name: 铜芯塑料线
                   model_spec: BV 2.5mm² 蓝色
                   unit_name: 米
+                  unit_price: null
                 - id: 20
                   material_code: E013-00019
                   name: 变频器
                   model_spec: ATV310HU22N4A 2.2kW
                   unit_name: 台
+                  unit_price: null
                 - id: 21
                   material_code: E013-00024
                   name: 软启动器
                   model_spec: STR022L-3 22kW
                   unit_name: 台
+                  unit_price: null
                 - id: 22
                   material_code: E014-00007
                   name: 绝缘胶带
                   model_spec: 3M 1600 18mm×20m 黑色
                   unit_name: 卷
+                  unit_price: null
                 - id: 23
                   material_code: E021-00006
                   name: 温湿度控制器
                   model_spec: WSK-SH
                   unit_name: 个
+                  unit_price: null
                 - id: 24
                   material_code: E011-00308
                   name: 塑壳断路器
                   model_spec: NM1-125S/3300 100A
                   unit_name: 个
+                  unit_price: null
                 - id: 25
                   material_code: E011-00518
                   name: 按钮开关
                   model_spec: LA38-11 绿色
                   unit_name: 个
+                  unit_price: null
                 - id: 26
                   material_code: L012-05048
                   name: 内丝三通
                   model_spec: DN15
                   unit_name: 个
+                  unit_price: null
                 - id: 27
                   material_code: W004-00003
                   name: 稀释剂
                   model_spec: 20L
                   unit_name: 桶
+                  unit_price: null
                 - id: 28
                   material_code: L018-00226
                   name: 不锈钢螺栓
                   model_spec: M10×40 304
                   unit_name: 套
+                  unit_price: null
                 - id: 29
                   material_code: W004-00011
                   name: 工业酒精
                   model_spec: 500ml
                   unit_name: 瓶
+                  unit_price: null
                 page: 1
                 page_size: 50
                 total: 29
@@ -5077,6 +5106,12 @@ paths:
       - HTTPBearer: []
       - APIKeyHeader: []
       parameters:
+      - name: table
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/MaterialCodeImportTable'
+          default: material
       - name: X-Project-Id
         in: header
         required: false
@@ -5245,12 +5280,19 @@ paths:
     post:
       tags:
       - 物料编码库
-      summary: 导入物料编码
+      summary: 导入物料编码或物料价格
+      description: 按 `table` 分流：物料表整表替换物料编码库，价格表整表替换物料价格。
       operationId: import_material_codes_api_v1_material_code_library_import_post
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
       parameters:
+      - name: table
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/MaterialCodeImportTable'
+          default: material
       - name: X-Project-Id
         in: header
         required: false
@@ -5356,6 +5398,12 @@ paths:
           type: integer
           minimum: 1
           title: Job Id
+      - name: table
+        in: query
+        required: false
+        schema:
+          $ref: '#/components/schemas/MaterialCodeImportTable'
+          default: material
       - name: X-Project-Id
         in: header
         required: false
@@ -8935,41 +8983,49 @@ paths:
                   name: 交流接触器
                   model_spec: CJX2-2510 AC220V
                   unit_name: 个
+                  unit_price: '46.55'
                 - id: 2
                   material_code: E011-00241
                   name: 交流接触器辅助触头
                   model_spec: F4-22
                   unit_name: 个
+                  unit_price: '12.80'
                 - id: 3
                   material_code: E011-00312
                   name: 小型断路器
                   model_spec: C65N-C16/2P
                   unit_name: 个
+                  unit_price: '38.00'
                 - id: 4
                   material_code: E011-00315
                   name: 漏电保护断路器
                   model_spec: DZ47LE-32 C32/2P
                   unit_name: 个
+                  unit_price: '76.50'
                 - id: 5
                   material_code: E011-00327
                   name: 热继电器
                   model_spec: JRS1-25/Z 4-6A
                   unit_name: 个
+                  unit_price: '55.20'
                 - id: 6
                   material_code: E011-00335
                   name: 中间继电器
                   model_spec: MY4N-GS DC24V
                   unit_name: 个
+                  unit_price: '42.00'
                 - id: 7
                   material_code: E011-00338
                   name: 时间继电器
                   model_spec: ST3PA-B AC220V
                   unit_name: 个
+                  unit_price: null
                 - id: 8
                   material_code: E011-00402
                   name: 熔断器芯
                   model_spec: RT18-32 10A
                   unit_name: 个
+                  unit_price: null
                 page: 1
                 page_size: 20
                 total: 8
@@ -25349,6 +25405,13 @@ components:
       examples:
       - material_code: E011-00237
         exists: true
+    MaterialCodeImportTable:
+      type: string
+      enum:
+      - material
+      - price
+      title: MaterialCodeImportTable
+      description: 物料编码库页面的导入表格类型：物料表 / 价格表。
     MaterialCodeLibraryRead:
       properties:
         id:
@@ -25370,6 +25433,12 @@ components:
         unit_name:
           type: string
           title: Unit Name
+        unit_price:
+          anyOf:
+          - type: string
+            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+          - type: 'null'
+          title: Unit Price
       type: object
       required:
       - id
@@ -25384,6 +25453,7 @@ components:
         name: 交流接触器
         model_spec: CJX2-2510 AC220V
         unit_name: 个
+        unit_price: '46.55'
     MemoCreate:
       properties:
         title:
@@ -28253,146 +28323,175 @@ components:
           name: 交流接触器
           model_spec: CJX2-2510 AC220V
           unit_name: 个
+          unit_price: '46.55'
         - id: 2
           material_code: E011-00241
           name: 交流接触器辅助触头
           model_spec: F4-22
           unit_name: 个
+          unit_price: '12.80'
         - id: 3
           material_code: E011-00312
           name: 小型断路器
           model_spec: C65N-C16/2P
           unit_name: 个
+          unit_price: '38.00'
         - id: 4
           material_code: E011-00315
           name: 漏电保护断路器
           model_spec: DZ47LE-32 C32/2P
           unit_name: 个
+          unit_price: '76.50'
         - id: 5
           material_code: E011-00327
           name: 热继电器
           model_spec: JRS1-25/Z 4-6A
           unit_name: 个
+          unit_price: '55.20'
         - id: 6
           material_code: E011-00335
           name: 中间继电器
           model_spec: MY4N-GS DC24V
           unit_name: 个
+          unit_price: '42.00'
         - id: 7
           material_code: E011-00338
           name: 时间继电器
           model_spec: ST3PA-B AC220V
           unit_name: 个
+          unit_price: null
         - id: 8
           material_code: E011-00402
           name: 熔断器芯
           model_spec: RT18-32 10A
           unit_name: 个
+          unit_price: null
         - id: 9
           material_code: E011-00405
           name: 熔断器底座
           model_spec: RT18-32 3P
           unit_name: 个
+          unit_price: null
         - id: 10
           material_code: E011-00451
           name: 智能电机保护器
           model_spec: M60-2P 5A
           unit_name: 个
+          unit_price: null
         - id: 11
           material_code: E011-00511
           name: 万能转换开关
           model_spec: LW39-16B
           unit_name: 个
+          unit_price: null
         - id: 12
           material_code: E011-00521
           name: 指示灯
           model_spec: AD16-22D AC220V 红色
           unit_name: 个
+          unit_price: null
         - id: 13
           material_code: E011-00540
           name: 接近开关
           model_spec: LJ12A3-4-Z/BX
           unit_name: 个
+          unit_price: null
         - id: 14
           material_code: E011-00602
           name: 接线端子
           model_spec: UK-2.5B 灰
           unit_name: 个
+          unit_price: null
         - id: 15
           material_code: E011-00631
           name: 防爆挠性连接管
           model_spec: DN20×500mm
           unit_name: 根
+          unit_price: null
         - id: 16
           material_code: E011-00644
           name: 万用表保险管
           model_spec: DMM-11A 10A
           unit_name: 个
+          unit_price: null
         - id: 17
           material_code: E012-00058
           name: 铜芯控制电缆
           model_spec: KVV 4×1.5mm²
           unit_name: 米
+          unit_price: null
         - id: 18
           material_code: E012-00071
           name: 铜芯电力电缆
           model_spec: YJV 3×25+1×16mm²
           unit_name: 米
+          unit_price: null
         - id: 19
           material_code: E012-00083
           name: 铜芯塑料线
           model_spec: BV 2.5mm² 蓝色
           unit_name: 米
+          unit_price: null
         - id: 20
           material_code: E013-00019
           name: 变频器
           model_spec: ATV310HU22N4A 2.2kW
           unit_name: 台
+          unit_price: null
         - id: 21
           material_code: E013-00024
           name: 软启动器
           model_spec: STR022L-3 22kW
           unit_name: 台
+          unit_price: null
         - id: 22
           material_code: E014-00007
           name: 绝缘胶带
           model_spec: 3M 1600 18mm×20m 黑色
           unit_name: 卷
+          unit_price: null
         - id: 23
           material_code: E021-00006
           name: 温湿度控制器
           model_spec: WSK-SH
           unit_name: 个
+          unit_price: null
         - id: 24
           material_code: E011-00308
           name: 塑壳断路器
           model_spec: NM1-125S/3300 100A
           unit_name: 个
+          unit_price: null
         - id: 25
           material_code: E011-00518
           name: 按钮开关
           model_spec: LA38-11 绿色
           unit_name: 个
+          unit_price: null
         - id: 26
           material_code: L012-05048
           name: 内丝三通
           model_spec: DN15
           unit_name: 个
+          unit_price: null
         - id: 27
           material_code: W004-00003
           name: 稀释剂
           model_spec: 20L
           unit_name: 桶
+          unit_price: null
         - id: 28
           material_code: L018-00226
           name: 不锈钢螺栓
           model_spec: M10×40 304
           unit_name: 套
+          unit_price: null
         - id: 29
           material_code: W004-00011
           name: 工业酒精
           model_spec: 500ml
           unit_name: 瓶
+          unit_price: null
         page: 1
         page_size: 50
         total: 29
@@ -28722,41 +28821,49 @@ components:
           name: 交流接触器
           model_spec: CJX2-2510 AC220V
           unit_name: 个
+          unit_price: '46.55'
         - id: 2
           material_code: E011-00241
           name: 交流接触器辅助触头
           model_spec: F4-22
           unit_name: 个
+          unit_price: '12.80'
         - id: 3
           material_code: E011-00312
           name: 小型断路器
           model_spec: C65N-C16/2P
           unit_name: 个
+          unit_price: '38.00'
         - id: 4
           material_code: E011-00315
           name: 漏电保护断路器
           model_spec: DZ47LE-32 C32/2P
           unit_name: 个
+          unit_price: '76.50'
         - id: 5
           material_code: E011-00327
           name: 热继电器
           model_spec: JRS1-25/Z 4-6A
           unit_name: 个
+          unit_price: '55.20'
         - id: 6
           material_code: E011-00335
           name: 中间继电器
           model_spec: MY4N-GS DC24V
           unit_name: 个
+          unit_price: '42.00'
         - id: 7
           material_code: E011-00338
           name: 时间继电器
           model_spec: ST3PA-B AC220V
           unit_name: 个
+          unit_price: null
         - id: 8
           material_code: E011-00402
           name: 熔断器芯
           model_spec: RT18-32 10A
           unit_name: 个
+          unit_price: null
         page: 1
         page_size: 20
         total: 8

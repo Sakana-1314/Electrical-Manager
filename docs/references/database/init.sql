@@ -169,6 +169,19 @@ CREATE TABLE IF NOT EXISTS `material_code_library` (
     FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS `material_price` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `project_id` BIGINT UNSIGNED NOT NULL,
+  `material_code` VARCHAR(64) NOT NULL,
+  `unit_price` DECIMAL(18, 6) NOT NULL,
+  `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  CONSTRAINT `pk_material_price` PRIMARY KEY (`id`),
+  CONSTRAINT `uq_material_price_project_material_code` UNIQUE (`project_id`, `material_code`),
+  INDEX `ix_material_price_project_id` (`project_id`),
+  CONSTRAINT `fk_material_price_project_id_project`
+    FOREIGN KEY (`project_id`) REFERENCES `project` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS `excel_import_job` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `project_id` BIGINT UNSIGNED NOT NULL,

@@ -10,6 +10,7 @@ from fastapi import Path as FPath
 from app.api.deps import PageNo, PageSize
 from app.core.errors import AppError
 from app.core.permissions import CurrentUser, DbSession, PurchaseWriter, require_current_project
+from app.domain.enums import MaterialCodeImportTable
 from app.schemas import (
     ExcelImportJobRead,
     LastImportRead,
@@ -17,7 +18,11 @@ from app.schemas import (
     MaterialCodeLibraryRead,
     Page,
 )
-from app.services import import_job_service, material_code_library_service
+from app.services import (
+    import_job_service,
+    material_code_library_service,
+    material_price_service,
+)
 from app.services.import_file_reader import SUPPORTED_IMPORT_SUFFIXES
 
 router = APIRouter(
@@ -26,7 +31,19 @@ router = APIRouter(
     dependencies=[Depends(require_current_project)],
 )
 
-JOB_TYPE = "MATERIAL_CODE_LIBRARY"
+# 下拉菜单的两个选项：物料表写物料编码库，价格表写物料价格；两者各自全量替换。
+JOB_TYPE_BY_TABLE = {
+    MaterialCodeImportTable.MATERIAL: "MATERIAL_CODE_LIBRARY",
+    MaterialCodeImportTable.PRICE: "MATERIAL_PRICE",
+}
+PROCESSOR_BY_TABLE = {
+    MaterialCodeImportTable.MATERIAL: material_code_library_service.process_import_file,
+    MaterialCodeImportTable.PRICE: material_price_service.process_import_file,
+}
+MAX_BYTES_BY_TABLE = {
+    MaterialCodeImportTable.MATERIAL: material_code_library_service.MAX_IMPORT_BYTES,
+    MaterialCodeImportTable.PRICE: material_price_service.MAX_IMPORT_BYTES,
+}
 
 
 @router.get(
@@ -64,9 +81,10 @@ async def list_material_codes(
 async def last_import(
     session: DbSession,
     user: CurrentUser,
+    table: MaterialCodeImportTable = MaterialCodeImportTable.MATERIAL,
 ) -> LastImportRead:
     last_import_at = await import_job_service.latest_import_finished_at(
-        session, import_type=JOB_TYPE
+        session, import_type=JOB_TYPE_BY_TABLE[table]
     )
     return LastImportRead(last_import_at=last_import_at)
 
@@ -92,25 +110,27 @@ async def material_code_exists(
     "/import",
     response_model=ExcelImportJobRead,
     status_code=202,
-    summary="导入物料编码",
+    summary="导入物料编码或物料价格",
 )
 async def import_material_codes(
     file: Annotated[UploadFile, File(...)],
     user: PurchaseWriter,
+    table: MaterialCodeImportTable = MaterialCodeImportTable.MATERIAL,
 ) -> ExcelImportJobRead:
+    """按 `table` 分流：物料表整表替换物料编码库，价格表整表替换物料价格。"""
     filename = (file.filename or "").lower()
     if not filename.endswith(SUPPORTED_IMPORT_SUFFIXES):
         raise AppError("UNSUPPORTED_EXCEL_FILE", "仅支持 .xls、.xlsx 或 .csv 格式的表格文件")
     file_path: Path | None = None
     try:
         file_path = await import_job_service.save_upload(
-            file, max_bytes=material_code_library_service.MAX_IMPORT_BYTES
+            file, max_bytes=MAX_BYTES_BY_TABLE[table]
         )
         return await import_job_service.enqueue_import(
-            import_type=JOB_TYPE,
+            import_type=JOB_TYPE_BY_TABLE[table],
             original_filename=file.filename or "import.xlsx",
             file_path=file_path,
-            processor=material_code_library_service.process_import_file,
+            processor=PROCESSOR_BY_TABLE[table],
             created_by=user.id,
         )
     except BaseException:
@@ -130,5 +150,8 @@ async def get_import_job(
     session: DbSession,
     user: CurrentUser,
     job_id: Annotated[int, FPath(ge=1)],
+    table: MaterialCodeImportTable = MaterialCodeImportTable.MATERIAL,
 ) -> ExcelImportJobRead:
-    return await import_job_service.get_import_job(session, import_type=JOB_TYPE, job_id=job_id)
+    return await import_job_service.get_import_job(
+        session, import_type=JOB_TYPE_BY_TABLE[table], job_id=job_id
+    )
