@@ -4,6 +4,7 @@ import type {
   ExcelImportJob,
   LastImport,
   MaterialCodeExists,
+  MaterialCodeImportTable,
   MaterialCodeLibrary,
   Page,
   PagedQueryParams,
@@ -82,21 +83,25 @@ export const procurementApi = {
         params: { material_code: materialCode },
       })
       .then((r) => r.data),
-  importMaterialCodes: (file: File) => {
+  /** 导入物料编码库或物料价格：`table` 决定整表替换哪张表（material=物料表，price=价格表）。 */
+  importMaterialCodes: (file: File, table: MaterialCodeImportTable = 'material') => {
     const formData = new FormData()
     formData.append('file', file)
     return apiClient
       .post<ExcelImportJob>('/material-code-library/import', formData, {
+        params: { table },
         timeout: 120_000,
       })
       .then((r) => r.data)
   },
-  materialCodeImportJob: (jobId: number) =>
+  materialCodeImportJob: (jobId: number, table: MaterialCodeImportTable = 'material') =>
     apiClient
-      .get<ExcelImportJob>(`/material-code-library/import-jobs/${jobId}`)
+      .get<ExcelImportJob>(`/material-code-library/import-jobs/${jobId}`, { params: { table } })
       .then((r) => r.data),
-  materialCodeLastImport: () =>
-    apiClient.get<LastImport>('/material-code-library/last-import').then((r) => r.data),
+  materialCodeLastImport: (table: MaterialCodeImportTable = 'material') =>
+    apiClient
+      .get<LastImport>('/material-code-library/last-import', { params: { table } })
+      .then((r) => r.data),
   materials: (params?: PurchaseMaterialListQuery) =>
     apiClient.get<Page<PurchaseMaterial>>('/purchase-materials', { params }).then((r) => r.data),
   materialFilterOptions: (params?: MaterialFilterOptionsQuery) =>

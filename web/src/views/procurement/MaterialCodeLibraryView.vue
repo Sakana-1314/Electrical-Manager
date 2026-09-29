@@ -2,7 +2,8 @@
 import { computed, h, onMounted, ref } from 'vue'
 import type { DataTableColumns } from 'naive-ui'
 import { useDialog, useMessage } from 'naive-ui'
-import type { MaterialCodeLibrary } from '@/api/generated'
+import { ChevronDownOutline } from '@vicons/ionicons5'
+import type { MaterialCodeImportTable, MaterialCodeLibrary } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -22,6 +23,12 @@ const dialog = useDialog()
 const message = useMessage()
 const fileInput = ref<HTMLInputElement | null>(null)
 const filterExpanded = ref(false)
+/** 下拉菜单当前选中的导入表格类型：物料表写编码库，价格表写物料价格。 */
+const importTable = ref<MaterialCodeImportTable>('material')
+const importOptions = [
+  { key: 'material', label: '物料表' },
+  { key: 'price', label: '价格表' },
+]
 type CodeLibraryFilters = {
   materialCode: string
   name: string
@@ -52,19 +59,29 @@ const {
   pageSizeOptions: [20, 50, 100, 200],
 })
 const importJob = useImportJob({
-  start: (file) => procurementApi.importMaterialCodes(file),
-  poll: (jobId) => procurementApi.materialCodeImportJob(jobId),
+  start: (file) => procurementApi.importMaterialCodes(file, importTable.value),
+  poll: (jobId) => procurementApi.materialCodeImportJob(jobId, importTable.value),
 })
 const importing = computed(() => importJob.running.value)
 const confirmImport = useImportConfirm(dialog)
 const lastImportAt = ref('')
-async function loadLastImport() {
+const priceLastImportAt = ref('')
+async function loadLastImportAt(table: MaterialCodeImportTable) {
   try {
-    const result = await procurementApi.materialCodeLastImport()
-    lastImportAt.value = formatShanghaiTime(result.last_import_at ?? undefined)
+    const result = await procurementApi.materialCodeLastImport(table)
+    return formatShanghaiTime(result.last_import_at ?? undefined)
   } catch {
-    lastImportAt.value = '—'
+    return '—'
   }
+}
+async function loadLastImport() {
+  // 两种表格各自记录上次导入时间，分开展示。
+  const [materialAt, priceAt] = await Promise.all([
+    loadLastImportAt('material'),
+    loadLastImportAt('price'),
+  ])
+  lastImportAt.value = materialAt
+  priceLastImportAt.value = priceAt
 }
 onMounted(() => void loadLastImport())
 const activeFilterCount = computed(
@@ -95,6 +112,13 @@ const columns: DataTableColumns<MaterialCodeLibrary> = preventTableColumnCompres
     render: (row) => row.model_spec || '—',
   },
   { title: '计量单位', key: 'unit_name', width: tableColumnWidths.unit },
+  {
+    // 「价格表」导入的全成本单价-人民币，按物料编码匹配；该编码不在价格表里显示「—」。
+    title: '全成本单价（元）',
+    key: 'unit_price',
+    width: tableColumnWidths.quantity,
+    render: (row) => (row.unit_price ? `${row.unit_price} 元` : '—'),
+  },
 ])
 const tableScrollX = getTableScrollX(columns)
 
@@ -102,8 +126,26 @@ function openFilePicker() {
   fileInput.value?.click()
 }
 
-function showImportSummary(result: Record<string, unknown> | null) {
+function showImportSummary(result: Record<string, unknown> | null, table: MaterialCodeImportTable) {
   const importedCount = Number(result?.imported_count ?? 0)
+  if (table === 'price') {
+    // 价格表只取「货品编码 + 全成本单价-人民币」两列；缺货品编码、或单价不是数值的行跳过并回报条数。
+    const skippedMissingCode = Number(result?.skipped_missing_code ?? 0)
+    const skippedMissingPrice = Number(result?.skipped_missing_price ?? 0)
+    const notes = [
+      `已全量更新 ${importedCount.toLocaleString()} 条物料价格。`,
+      skippedMissingCode ? `${skippedMissingCode.toLocaleString()} 行没有货品编码，已跳过。` : '',
+      skippedMissingPrice ? `${skippedMissingPrice.toLocaleString()} 行没有价格，已跳过。` : '',
+    ].filter(Boolean)
+    dialog.success({
+      draggable: true,
+      title: '导入完成',
+      content: notes.join('\n'),
+      positiveText: '知道了',
+      positiveButtonProps: { type: 'primary' },
+    })
+    return
+  }
   const blankNameCount = Number(result?.blank_name_count ?? 0)
   const blankModelCount = Number(result?.blank_model_spec_count ?? 0)
   const notes = [
@@ -120,14 +162,20 @@ function showImportSummary(result: Record<string, unknown> | null) {
   })
 }
 
-async function importFile(file: File) {
+async function importFile(file: File, table: MaterialCodeImportTable) {
   const result = await importJob.run(file)
-  showImportSummary(result)
+  showImportSummary(result, table)
   filters.materialCode = ''
   filters.name = ''
   filters.modelSpec = ''
   page.value = 1
   await query()
+  await loadLastImport()
+}
+
+function onImportSelect(key: string) {
+  importTable.value = key as MaterialCodeImportTable
+  openFilePicker()
 }
 
 function onFileChange(event: Event) {
@@ -135,11 +183,17 @@ function onFileChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  const table = importTable.value
+  const replacing = table === 'price' ? '物料价格' : '物料编码库'
+  const extra =
+    table === 'price'
+      ? '只取「货品编码 + 全成本单价-人民币」两列；货品编码为「没有货品编码」或单价不是数值的行会跳过。'
+      : ''
   confirmImport({
-    title: '全量更新物料编码库',
-    content: `确认导入“${file.name}”吗？现有编码库将被全部删除，并由该文件完整替换。`,
+    title: `全量更新${replacing}`,
+    content: `确认导入“${file.name}”吗？现有${replacing}将被全部删除，并由该文件完整替换。${extra}`,
     runningText: '正在导入并全量更新，请勿重复提交，完成后自动刷新列表…',
-    run: () => importFile(file),
+    run: () => importFile(file, table),
     onError: (error) => message.error(error instanceof Error ? error.message : '导入失败'),
   })
 }
@@ -150,15 +204,18 @@ function onFileChange(event: Event) {
     <div class="page-header">
       <h1 class="page-title">物料编码库</h1>
       <div class="page-actions">
-        <n-button
+        <n-dropdown
           v-if="auth.can('purchase:write')"
-          type="primary"
-          :loading="importing"
+          trigger="click"
+          :options="importOptions"
           :disabled="importing"
-          @click="openFilePicker"
+          @select="onImportSelect"
         >
-          导入表格全量更新
-        </n-button>
+          <n-button type="primary" :loading="importing" :disabled="importing">
+            导入表格全量更新
+            <n-icon class="import-caret" :component="ChevronDownOutline" />
+          </n-button>
+        </n-dropdown>
         <input
           ref="fileInput"
           class="hidden-file-input"
@@ -211,7 +268,8 @@ function onFileChange(event: Event) {
       <div class="filter-extras-actions">
         <div class="filter-actions">
           <span class="muted"
-            >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
+            >共 {{ total.toLocaleString() }} 条 · 物料表导入：{{ lastImportAt || '—' }} ·
+            价格表导入：{{ priceLastImportAt || '—' }}</span
           >
           <div class="filter-action-buttons">
             <n-button @click="resetFilters">重置</n-button>
@@ -249,6 +307,12 @@ function onFileChange(event: Event) {
 <style scoped>
 .hidden-file-input {
   display: none;
+}
+
+/* 下拉菜单触发按钮的展开指示：贴在文字右侧。 */
+.import-caret {
+  margin-left: 6px;
+  font-size: 14px;
 }
 
 .filter-heading,

@@ -102,6 +102,16 @@ class ExcelExportJobStatus(StrEnum):
     FAILED = "FAILED"
 
 
+class MaterialCodeImportTable(StrEnum):
+    """物料编码库页面的导入表格类型：物料表 / 价格表。"""
+
+    # 物料表写物料编码库（编码 / 名称 / 型号 / 单位），价格表写物料价格（货品编码 → 物料编码，
+    # 全成本单价-人民币 → 单价，只取这两列）；两者都是各自表的全量替换，价格表缺编码或缺价格
+    # 的行导入时跳过。
+    MATERIAL = "material"
+    PRICE = "price"
+
+
 class ShareType(StrEnum):
     """链接分享的数据类型：申购计划 / 申购记录。"""
 

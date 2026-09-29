@@ -243,9 +243,12 @@ stateDiagram-v2
 | --- | --- | --- |
 | `LITE_INVENTORY` | 物资名称、型号规格、单位、数量、备注 | 全量替换（`DELETE` 全表 + 分批 2000 行 `INSERT`，单次 `commit`），无逐行状态 |
 | `MATERIAL_CODE_LIBRARY` | 编码、名称、型号、记账单位名称 | 同上 |
+| `MATERIAL_PRICE` | 货品编码、全成本单价-人民币（价格表里「货品编码」即物料编码） | 同上（写 `material_price`，按编码在物料编码库页面展示） |
 | `HUAXING_INVENTORY` | 见导入模板 | 同上 |
 
-解析失败的错误码以类型前缀区分，如 `LITE_IMPORT_HEADERS_MISSING`、`HUAXING_IMPORT_CODE_REQUIRED`、`MATERIAL_CODE_IMPORT_DUPLICATE`。
+`MATERIAL_PRICE` 只取「货品编码 + 全成本单价-人民币」两列（平台导出的 SAP 对账表里还有物料编码、物料名称、结存、结算单价、更新月份等列，一律不导入）；没有货品编码的行（空单元格，或平台把「没有货品编码」写进该列）、单价不是有效数值的行（空单元格、「-」占位符，或「配件」这类非价格文本）都跳过，两类跳过的条数随任务结果（`skipped_missing_code` / `skipped_missing_price`）回报；只有单价能解析成数值却超出 `DECIMAL(18, 6)` 可存范围（负数 / 整数超 12 位）才整表失败、不动现有数据。
+
+解析失败的错误码以类型前缀区分，如 `LITE_IMPORT_HEADERS_MISSING`、`HUAXING_IMPORT_CODE_REQUIRED`、`MATERIAL_CODE_IMPORT_DUPLICATE`、`MATERIAL_PRICE_IMPORT_INVALID_PRICE`。
 
 ### Excel 导出任务
 

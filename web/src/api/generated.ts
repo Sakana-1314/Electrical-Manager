@@ -45,6 +45,8 @@ export type Project = components['schemas']['ProjectRead']
 export type ProjectCreate = components['schemas']['ProjectCreate']
 export type ProjectUpdate = components['schemas']['ProjectUpdate']
 export type MaterialCodeLibrary = components['schemas']['MaterialCodeLibraryRead']
+/* 物料编码库页面的导入表格类型：material=物料表，price=价格表 */
+export type MaterialCodeImportTable = components['schemas']['MaterialCodeImportTable']
 export type MaterialCodeExists = components['schemas']['MaterialCodeExistsRead']
 export type LastImport = components['schemas']['LastImportRead']
 export type ExcelImportJobStatus = components['schemas']['ExcelImportJobStatus']

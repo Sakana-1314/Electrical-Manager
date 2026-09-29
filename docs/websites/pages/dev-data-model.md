@@ -1,6 +1,6 @@
 # 数据模型
 
-MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **41 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **42 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -47,7 +47,7 @@ flowchart LR
 | 申购状态 | `purchase_request_line.status` | `VARCHAR(128)`，默认「已申购」；取值由数据决定（筛选项由 `purchase_status_options` 从库中 distinct 得出），同步时「只进不退」 |
 | 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅超级管理员可查询/打开已归档计划 |
 | 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
-| 编码库 / 华星总库存 | `material_code_library` / `huaxing_inventory` | 均为 Excel 全量替换导入：前者是公司编码参照表（用于编码存在性校验），后者是上游总库库存快照（仅查询） |
+| 编码库 / 物料价格 / 华星总库存 | `material_code_library` / `material_price` / `huaxing_inventory` | 均为 Excel 全量替换导入：编码库是公司编码参照表（用于编码存在性校验），物料价格按「货品编码 = 物料编码」挂单价、只在物料编码库页面展示，华星总库存是上游总库库存快照（仅查询） |
 | 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
@@ -94,7 +94,7 @@ flowchart TD
     M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、微信身份绑定、Webhook 渠道、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录、台账记录与标签"]
     M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
-    M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、华星总库存、精简库存"]
+    M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、物料价格、华星总库存、精简库存"]
     M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，有更新时间与乐观锁版本"]
     M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>九张图片关联表"]
     M --> G["只有 id 与业务时间<br/>业务事件日志"]
@@ -142,9 +142,9 @@ erDiagram
 
 默认项目不能停用、不能删除，也不能直接取消默认（把别的项目设为默认即可）；项目下已有业务数据时不能删除，只能停用。
 
-### 项目域表（31 张）
+### 项目域表（32 张）
 
-`excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`、`work_record`、`work_task`、`work_task_image`。
+`excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`material_price`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`、`work_record`、`work_task`、`work_task_image`。
 
 每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
@@ -170,6 +170,7 @@ erDiagram
 | --- | --- |
 | `stock_material` | `uq_stock_material_project_identity_hash` (`project_id`, `identity_hash`) |
 | `material_code_library` | `uq_material_code_library_project_material_code` (`project_id`, `material_code`) |
+| `material_price` | `uq_material_price_project_material_code` (`project_id`, `material_code`) |
 | `purchase_material` | `uq_purchase_material_project_plan_no` (`project_id`, `plan_no`) |
 | `stock_operation` | `uq_stock_operation_project_operation_no` (`project_id`, `operation_no`) |
 | `stock_operation` | `uq_stock_operation_project_client_request_id` (`project_id`, `client_request_id`) |
@@ -213,6 +214,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `excel_import_job` | `ExcelImportJob` | Excel 导入任务 | 导入导出 |
 | `excel_export_job` | `ExcelExportJob` | Excel 导出任务（`file_uuid` 为派生属性，无独立列） | 导入导出 |
 | `material_code_library` | `MaterialCodeLibrary` | 物资编码库（编码 / 名称 / 型号对照） | 导入导出 |
+| `material_price` | `MaterialPrice` | 物料价格（货品编码 → 物料编码 + 全成本单价-人民币） | 导入导出 |
 | `share_link` | `ShareLink` | 匿名分享链接 | 分享 |
 | `stock_material` | `StockMaterial` | 二级库物资 | 二级库（完整模式） |
 | `stock_balance` | `StockBalance` | 物资库存余额 | 二级库（完整模式） |
@@ -301,7 +303,7 @@ erDiagram
     file_object ||--o{ excel_export_job : "导出结果文件"
 ```
 
-物料编码库、华星总库存、精简库存三张表是各自模块的全量替换导入结果，没有外键。
+物料编码库、物料价格、华星总库存、精简库存四张表是各自模块的全量替换导入结果，没有外键（物料价格靠 `material_code` 弱关联编码库，不做外键约束）。
 
 ### Webhook、事件日志与设置
 
@@ -468,6 +470,10 @@ erDiagram
 | `material_code_library` | `model_spec` | VARCHAR(255) | 是 | NULL | 型号规格 |
 | `material_code_library` | `unit_name` | VARCHAR(32) | 否 | 无 | 单位 |
 | `material_code_library` | *索引 / 外键* | — | — | — | 索引 `pk_material_code_library(id)`；唯一 `uq_material_code_library_project_material_code(project_id, material_code)`（按项目唯一）；外键：无 |
+| `material_price` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `material_price` | `material_code` | VARCHAR(64) | 否 | 无 | 物料编码（价格表的「货品编码」），项目内唯一 |
+| `material_price` | `unit_price` | DECIMAL(18, 6) | 否 | 无 | 全成本单价-人民币；没有价格的行导入时跳过，因此不会存 NULL |
+| `material_price` | *索引 / 外键* | — | — | — | 索引 `pk_material_price(id)`；唯一 `uq_material_price_project_material_code(project_id, material_code)`（按项目唯一）；外键：无 |
 | `share_link` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `share_link` | `token` | VARCHAR(36) | 否 | 无 | 分享令牌（UUID，唯一，不可猜解） |
 | `share_link` | `share_type` | ENUM('PURCHASE_PLAN','PURCHASE_RECORD') | 否 | 无 | 分享数据类型，接口值为 `purchase_plan` / `purchase_record` |

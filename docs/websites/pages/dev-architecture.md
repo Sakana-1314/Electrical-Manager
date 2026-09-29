@@ -220,7 +220,7 @@ web/src/
 | --- | --- | --- |
 | `auth.ts` | `/auth/login`、`/auth/refresh`、`/auth/me` | 登录、刷新令牌、取当前用户 |
 | `inventory.ts` | `/dashboard/summary`、`/stock-materials*`、`/inventory/*` | 工作台汇总、物资档案 CRUD + 小程序码、补库策略、库存查询、低库存、出入库、流水查询/修改/冲减、补库草稿 |
-| `procurement.ts` | `/material-code-library*`、`/purchase-materials*`、`/purchase-records*`、`/excel-export-jobs/:id` | 申购计划/记录 CRUD 与批量操作、筛选选项、计划转记录、未编码物资、物料编码库导入与检查、各类导出与导出任务轮询 |
+| `procurement.ts` | `/material-code-library*`、`/purchase-materials*`、`/purchase-records*`、`/excel-export-jobs/:id` | 申购计划/记录 CRUD 与批量操作、筛选选项、计划转记录、未编码物资、物料编码库导入（`table=material` 物料表 / `table=price` 价格表）与编码检查、各类导出与导出任务轮询 |
 | `purchasePlanTemplates.ts` | `/purchase-plan-templates*` | 周期性计划模板 CRUD 与「生成申购计划」 |
 | `huaXingInventory.ts` | `/huaxing-inventory*` | 华星总库存查询、筛选选项、Excel 导入任务与最近导入 |
 | `secondaryWarehouse.ts` | `/secondary-warehouse*` | 精简二级库列表、Excel 导入任务与最近导入 |
@@ -401,7 +401,7 @@ FastAPI + SQLAlchemy 2.x async 单进程应用（MySQL 8.0 / asyncmy），源码
 | 模型契约层 | `server/app/schemas/__init__.py`、`server/app/domain/enums.py` | pydantic 请求/读模型、`Page[T]`、`ApiError`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等） |
 | 核心层 | `server/app/core/*.py` + `main.py`、`mcp_server.py` | 配置、引擎/会话、认证与权限、错误码与异常处理器、中间件、日志、常量、UUIDv7 生成、微信凭据 |
 ## 后端目录结构
-`server/app/` 共 85 个 Python 文件：
+`server/app/` 共 86 个 Python 文件：
 
 ```text
 server/app/
@@ -423,10 +423,10 @@ server/app/
 │                       #   ledger_repository、material_repository、purchase_plan_template_repository、
 │                       #   purchase_request_repository、work_repository
 ├── schemas/__init__.py
-└── services/           # 28 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
+└── services/           # 29 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
                         #   dashboard、dictionary、excel_export_job、excel_export、file、hazard、huaxing_inventory、
                         #   import_file_reader、import_job、inventory、ledger、lite_inventory、material_code_library、
-                        #   material、memo、mini_program、project、purchase_plan_cleanup、purchase_plan_template、
+                        #   material_price、material、memo、mini_program、project、purchase_plan_cleanup、purchase_plan_template、
                         #   purchase_record_sync、purchase_request、replenishment、share_link、webhook、work
 ```
 

@@ -1071,6 +1071,9 @@ class MaterialCodeLibraryRead(ReadModel):
     name: str | None
     model_spec: str | None
     unit_name: str
+    # 「价格表」导入的全成本单价-人民币（按物料编码匹配）；价格表里没有该编码、或还没导过
+    # 价格表时为 None，列表显示「—」。
+    unit_price: Decimal | None = None
 
 
 class MaterialCodeExistsRead(ReadModel):

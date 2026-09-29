@@ -117,13 +117,14 @@
 | `INVALID_CSV_FILE` | 400 | 无法解析 CSV 编码（需 UTF-8 或 GBK） | `import_file_reader` |
 | `XLS_SUPPORT_UNAVAILABLE` | 400 | 环境未安装 `.xls` 解析依赖 | `import_file_reader` |
 | `EXCEL_FILE_TOO_LARGE` | 400 | 导入文件超过大小上限 | `import_job_service` |
-| `HUAXING_IMPORT_EMPTY` / `LITE_IMPORT_EMPTY` / `MATERIAL_CODE_IMPORT_EMPTY` | 400 | 表格中没有可导入的数据 | 各自 service |
-| `HUAXING_IMPORT_HEADERS_MISSING` / `LITE_IMPORT_HEADERS_MISSING` / `MATERIAL_CODE_IMPORT_HEADERS_MISSING` | 400 | 缺少必需列（message 列出列名） | 各自 service |
+| `HUAXING_IMPORT_EMPTY` / `LITE_IMPORT_EMPTY` / `MATERIAL_CODE_IMPORT_EMPTY` / `MATERIAL_PRICE_IMPORT_EMPTY` | 400 | 表格中没有可导入的数据 | 各自 service |
+| `HUAXING_IMPORT_HEADERS_MISSING` / `LITE_IMPORT_HEADERS_MISSING` / `MATERIAL_CODE_IMPORT_HEADERS_MISSING` / `MATERIAL_PRICE_IMPORT_HEADERS_MISSING` | 400 | 缺少必需列（message 列出列名） | 各自 service |
 | `HUAXING_IMPORT_CODE_REQUIRED` / `LITE_IMPORT_NAME_REQUIRED` / `MATERIAL_CODE_IMPORT_CODE_REQUIRED` | 400 | 某行缺少必需字段 | 各自 service |
 | `HUAXING_IMPORT_INVALID_QUANTITY` / `LITE_IMPORT_INVALID_QUANTITY` | 400 | 某行数量不是有效数值 | 各自 service |
-| `HUAXING_IMPORT_VALUE_TOO_LONG` / `LITE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_CODE_IMPORT_VALUE_TOO_LONG` | 400 | 某行单元格超长 | 各自 service |
+| `HUAXING_IMPORT_VALUE_TOO_LONG` / `LITE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_CODE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_PRICE_IMPORT_VALUE_TOO_LONG` | 400 | 某行单元格超长 | 各自 service |
 | `MATERIAL_CODE_IMPORT_UNIT_REQUIRED` | 400 | 某行缺少记账单位名称 | `material_code_library_service` |
-| `MATERIAL_CODE_IMPORT_DUPLICATE` | 400 | 表格内编码重复 | `material_code_library_service` |
+| `MATERIAL_CODE_IMPORT_DUPLICATE` / `MATERIAL_PRICE_IMPORT_DUPLICATE` | 400 | 表格内编码重复 | 各自 service |
+| `MATERIAL_PRICE_IMPORT_INVALID_PRICE` | 400 | 「全成本单价-人民币」能解析成数值但超出可存范围（负数 / 整数超 12 位）；空值、「配件」这类非数值文本按「没有价格」跳过，不报错 | `material_price_service` |
 
 ## 导出任务
 

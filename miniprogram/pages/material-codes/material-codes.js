@@ -143,7 +143,11 @@ Page(withTheme({
   openDetail(event) {
     const item = this.data.items[event.currentTarget.dataset.index];
     if (!item) return;
-    this.setData({ detailItem: item, detailVisible: true });
+    // 单价来自「价格表」导入，可能没有：空值显示破折号，不显示 0 元。
+    this.setData({
+      detailItem: { ...item, unitPriceText: item.unit_price ? `${item.unit_price} 元` : '—' },
+      detailVisible: true,
+    });
   },
 
   onDetailVisibleChange(event) {

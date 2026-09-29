@@ -642,6 +642,17 @@ for _row in _HX_INVENTORY:
 
 _MATERIAL_IDS = {item["code"]: index for index, item in enumerate(_MATERIALS, start=1)}
 
+# 物料价格（价格表的「全成本单价-人民币」导入结果）：只给台账主力编码配示例单价，
+# 其余编码留空表示价格表里没有这一行。
+_CODE_PRICES: dict[str, str] = {
+    "E011-00237": "46.55",
+    "E011-00241": "12.80",
+    "E011-00312": "38.00",
+    "E011-00315": "76.50",
+    "E011-00327": "55.20",
+    "E011-00335": "42.00",
+}
+
 
 def _play_operations() -> dict[str, Any]:
     """按时间回放流水，得出每条明细的前后库存、每个物资的结存与冲销关系。"""
@@ -896,6 +907,7 @@ def _code_library_rows() -> list[dict[str, Any]]:
             "name": name,
             "model_spec": model_spec,
             "unit_name": unit_name,
+            "unit_price": _CODE_PRICES.get(code),
         }
         for index, (code, (name, model_spec, unit_name, _)) in enumerate(_CODEBOOK.items(), start=1)
     ]

@@ -200,6 +200,31 @@ class MaterialCodeLibrary(ProjectScoped, Base):
     )
 
 
+class MaterialPrice(ProjectScoped, Base):
+    """物料价格：物料编码库页面「价格表」导入的结果，没有独立展示页面。
+
+    价格表的「货品编码」就是物料编码，按它与 `material_code_library.material_code` 对齐；
+    价格表里出现、编码库暂时没有的编码同样入库（先导价格后导物料表不丢数据），
+    列表按编码左匹配展示，未匹配的行不显示价格；编码或单价缺失的行导入时跳过。
+    """
+
+    __tablename__ = "material_price"
+    # 编码按项目唯一：同一物料编码在不同项目可以有各自的单价。
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "material_code", name="uq_material_price_project_material_code"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BIGINT_ID, primary_key=True, autoincrement=True)
+    material_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    # 「全成本单价-人民币」：没有价格的行导入时直接跳过，所以这里不会出现 NULL。
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        UTC_DATETIME, default=_utcnow, server_default=func.now()
+    )
+
+
 class ExcelImportJob(ProjectScoped, Base):
     __tablename__ = "excel_import_job"
     __table_args__ = (Index("ix_excel_import_job_type_status", "import_type", "status", "id"),)
@@ -1174,6 +1199,7 @@ PROJECT_SCOPED_MODELS: tuple[type[ProjectScoped], ...] = (
     LedgerTagImage,
     LiteInventory,
     MaterialCodeLibrary,
+    MaterialPrice,
     PurchaseMaterial,
     PurchaseMaterialImage,
     PurchasePlanTemplate,
@@ -1213,6 +1239,7 @@ __all__ = [
     "LedgerTagImage",
     "LiteInventory",
     "MaterialCodeLibrary",
+    "MaterialPrice",
     "Memo",
     "MiniProgramUser",
     "Project",

@@ -10,6 +10,7 @@ from app.core.database import SessionLocal
 from app.core.errors import AppError
 from app.models import MaterialCodeLibrary
 from app.schemas import MaterialCodeLibraryRead
+from app.services import material_price_service
 from app.services.common import contains_any
 from app.services.import_file_reader import read_tabular_rows
 
@@ -177,6 +178,12 @@ async def search_material_codes(
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
+    rows = list(result.all())
+    # 单价单独按编码批量取，避免 LEFT JOIN 与项目隔离的 WHERE 注入互相干扰
+    # （价格表没有的编码照样返回，只是没有价格）。
+    prices = await material_price_service.load_unit_prices(
+        session, [item.material_code for item in rows]
+    )
     items = [
         MaterialCodeLibraryRead(
             id=item.id,
@@ -184,7 +191,8 @@ async def search_material_codes(
             name=item.name,
             model_spec=item.model_spec,
             unit_name=item.unit_name,
+            unit_price=prices.get(item.material_code),
         )
-        for item in result.all()
+        for item in rows
     ]
     return items, total
