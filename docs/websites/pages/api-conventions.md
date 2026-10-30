@@ -8,11 +8,11 @@
 
 | 场景 | HTTP | code | 实现 |
 | --- | --- | --- | --- |
-| 按 ID / UUID 查询的资源不存在（物资、用户、流水、图片等） | 400 | `NOT_FOUND` | `app.core.errors.not_found()` / `AppError("NOT_FOUND", …)`；客户端按响应体 `code` 判断，不依赖状态码 |
-| 请求打到不存在的 API 路径 | 400 | `ROUTE_NOT_FOUND` | `app/main.py` 用 `StarletteHTTPException` 全局处理，把框架默认 404 重映射为 400，message 为「接口路径不存在」 |
-| 405、422 等其余 Starlette 异常 | 原状态码 | `HTTP_ERROR` | 原状态码透传，不做重映射 |
+| 按 ID / UUID 查询的资源不存在（物资、用户、流水、图片等） | 400 | `NOT_FOUND` | `apperr.NotFound(resource)` / `apperr.New("NOT_FOUND", …)`；客户端按响应体 `code` 判断，不依赖状态码 |
+| 请求打到不存在的 API 路径 | 400 | `ROUTE_NOT_FOUND` | `server/internal/app` 的 Gin `NoRoute` 处理器直接返回 400，message 为「接口路径不存在」，框架默认的 404 不会出现 |
+| 路径存在但方法不匹配 | 405 | `HTTP_ERROR` | Gin `NoMethod` 处理器返回，message 为 `Method Not Allowed` |
 | 前端路由级「页面不存在」 | — | — | `web/src/views/NotFoundView.vue`，浏览器端 UI 展示，不涉及 HTTP 状态码 |
-| 上游服务的 404 判断 | — | — | `ai_search_service` 判断上游 AI 接口 404 后转换为 `AI_ENDPOINT_NOT_FOUND`，属消费外部服务的逻辑 |
+| 上游服务的 404 判断 | — | — | `service/aisearch` 判断上游 AI 接口 404 后转换为 `AI_ENDPOINT_NOT_FOUND`，属消费外部服务的逻辑 |
 
 ```json
 { "code": "NOT_FOUND", "message": "二级库物资不存在", "details": {}, "request_id": "…" }
@@ -36,6 +36,32 @@
 }
 ```
 
+### 422 校验错误体
+
+请求参数（路径 / 查询 / 请求头 / 请求体）校验失败统一返回 422 `VALIDATION_ERROR`，message 为「请求参数校验失败」。
+同一请求里的全部字段错误合并成一次响应，放在 `details.errors` 数组里，每项是与 Pydantic 兼容的结构：
+
+| 字段 | 说明 |
+| --- | --- |
+| `type` | 错误类型，如 `missing`、`int_parsing`、`string_too_long`、`greater_than_equal`、`literal_error`、`value_error` |
+| `loc` | 出错位置，首元素是参数来源（`path` / `query` / `header` / `body`），其后是字段名或数组下标 |
+| `msg` | 英文错误说明 |
+| `input` | 原始输入值 |
+| `ctx` | 可选，校验规则的上下文（如长度上限 `max_length`） |
+
+```json
+{
+  "code": "VALIDATION_ERROR",
+  "message": "请求参数校验失败",
+  "details": {
+    "errors": [
+      {"type": "greater_than_equal", "loc": ["query", "page"], "msg": "Input should be greater than or equal to 1", "input": "0", "ctx": {"ge": 1}}
+    ]
+  },
+  "request_id": "…"
+}
+```
+
 ## 状态码使用总表
 
 | HTTP 状态码 | 用途 | 典型 code |
@@ -51,23 +77,23 @@
 | 500 | 服务内部错误 | `INTERNAL_SERVER_ERROR`、`DATABASE_ERROR`、`DATABASE_QUERY_ERROR` |
 | 502 / 503 | 上游不可用 / 服务不可用 | `AI_UPSTREAM_FAILED`、`AI_INVALID_RESPONSE`、`DATABASE_UNAVAILABLE`、`AI_NOT_CONFIGURED` |
 
-`HTTP_ERROR` 是其余 Starlette 异常的透传壳：状态码取框架原值（如 405），message 为框架 `detail`，因此不出现在固定映射里。
+`HTTP_ERROR` 只用于方法不匹配（405），状态码由 `NoMethod` 处理器直接指定，因此不出现在默认状态码映射里。
 
 ## 代码实现位置
 
 | 职责 | 位置 |
 | --- | --- |
-| 错误码 → 默认状态码映射 | `server/app/core/errors.py`（`_DEFAULT_STATUS_BY_CODE`） |
-| 业务错误全局处理 | `server/app/main.py`（`handle_app_error`） |
-| 框架级 404 重映射 | `server/app/main.py`（`handle_http_exception`） |
-| 校验错误（422） | `server/app/core/exception_handlers.py`（`handle_validation_error`） |
-| 文档一致性测试 | `server/tests/test_error_code_docs.py` |
+| 错误码 → 默认状态码映射 | `server/internal/apperr`（`defaultStatusByCode`，`apperr.New` 据此推断状态码） |
+| 错误到响应体的统一映射 | `server/internal/web`（`WriteError`：业务错误、校验错误、数据库错误与未知错误） |
+| 未匹配路径 / 方法 | `server/internal/app`（Gin `NoRoute` → `ROUTE_NOT_FOUND`、`NoMethod` → `HTTP_ERROR`） |
+| 校验错误（422） | `server/internal/web`（`Params` 收集参数错误，`ValidationError` → `VALIDATION_ERROR`） |
+| 文档一致性测试 | `server` 目录下 `go test ./...` |
 
 ## 新增错误码
 
-1. 在 `server/app/core/errors.py` 的 `_DEFAULT_STATUS_BY_CODE` 登记默认状态码（若所有调用点都显式传 `status_code` 可跳过）。
-2. 在 [错误码总表](/api-error-codes) 对应分类补一行：code、HTTP 状态码、含义、来源文件。
-3. 跑 `cd server && pytest tests/test_error_code_docs.py`。
+1. 在 `server/internal/apperr` 的 `defaultStatusByCode` 登记默认状态码（若所有调用点都用 `WithStatus` 显式指定可跳过）。
+2. 在 [错误码总表](/api-error-codes) 对应分类补一行：code、HTTP 状态码、含义、来源包。
+3. 跑 `cd server && go test ./...`。
 
 ## 更新接口的可选字段语义
 
@@ -80,8 +106,8 @@
 | 显式传 `[]` | 清空图片 |
 | 显式传 id 列表 | 按列表整体替换（列表顺序即 `sort_order`） |
 
-实现约定：更新用的 schema 里这些字段写成 `list[FileId] | None = None`，服务层只在
-`if data.image_ids is not None:` 时才替换；只有「新建」的 schema 才用 `default_factory=list`。
+实现约定：更新用的请求结构体里这些字段写成指针切片 `*[]string`（省略与 `null` 都解码为 `nil`），服务层只在
+`data.ImageIDs != nil` 时才替换；只有「新建」的结构体才用普通切片并预填空列表。
 网页端表单每次都显式带上图片列表，所以这条差异只影响脚本 / MCP 调用方。
 
 ## 附件（图片）删除的三道闸
@@ -90,9 +116,9 @@
 
 | 闸 | 位置 | 规则 |
 | --- | --- | --- |
-| ① 引用门禁 | `file_service.soft_delete_image` / `soft_delete_unreferenced` | 被引用次数 > 0 的附件不允许删除；批量标记只挑「零引用」的行 |
-| ② 新人保护期 | `soft_delete_unreferenced` | 上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS`（7）天、且从未被引用的附件本轮不标记，避免「刚上传、还没挂到业务上」的图片被整批扫走；跳过数量在回执的 `skipped_recent_count` 里回报 |
-| ③ 保留期 + 复查 | `purge_deleted_attachments` | 软删除后保留 7 个完整自然日，到期后的第一个凌晨 2 点**逐张复查引用**：有新引用就撤销删除，仍无引用才物理清除 |
+| ① 引用门禁 | `file.SoftDeleteImage` / `file.SoftDeleteUnreferenced`（`server/internal/service/file`） | 被引用次数 > 0 的附件不允许删除；批量标记只挑「零引用」的行 |
+| ② 新人保护期 | `file.SoftDeleteUnreferenced` | 上传未满 `AttachmentUnreferencedMinAgeDays`（7）天、且从未被引用的附件本轮不标记，避免「刚上传、还没挂到业务上」的图片被整批扫走；跳过数量在回执的 `skipped_recent_count` 里回报 |
+| ③ 保留期 + 复查 | `file.PurgeDeletedAttachments`（由附件清理后台任务调用） | 软删除后保留 7 个完整自然日，到期后的第一个凌晨 2 点**逐张复查引用**：有新引用就撤销删除，仍无引用才物理清除 |
 
 配套接口：`GET /files/images/attachments/delete-unreferenced/preview` 先返回会被标记的数量与明细
 （`total` / `items`）以及被保护期跳过的数量（`protected_count` / `protect_days`），管理员确认后再调

@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from httpx import AsyncClient
 
-from app.core.security import create_mini_program_access_token
-from app.models import MiniProgramUser
 from tests.conftest import SECOND_PROJECT_ID, auth_headers, project_session
+from tests.testkit.models import MiniProgramUser
+from tests.testkit.security import create_mini_program_access_token
 
 
 async def mini_headers(display_name: str = "台账查看员") -> dict[str, str]:

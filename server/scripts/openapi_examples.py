@@ -1,9 +1,13 @@
-"""为导出的 OpenAPI 契约补充示例数据（Mock 数据）。
+"""为 OpenAPI 契约补齐缺失的示例数据（Mock 数据）。
 
-为什么要做：`docs/openapi.yaml` 由本脚本从后端 App 生成，同时也是 Apifox Mock 与前端类型的
+为什么要做：`docs/openapi.yaml` 是手工维护的接口契约，同时也是 Apifox Mock 与前端类型的
 唯一数据来源。Apifox 的「Mock 环境」按 schema 里的 `example` / `examples` 返回数据，所以示例
-必须是一套**自洽的业务台账**，而不是 `xxx-示例` 这类占位符；`docs/openapi.yaml` 是生成物，
-手改会被 CI 重跑本脚本覆盖。
+必须是一套**自洽的业务台账**，而不是 `xxx-示例` 这类占位符。
+
+用法（在 server/ 目录执行，只依赖 PyYAML）：
+    python scripts/openapi_examples.py          # 给缺示例的 schema / JSON 响应补示例并写回契约
+    python scripts/openapi_examples.py --check  # 只检查：有缺失示例时以非零码退出，不写文件
+已有的示例原样保留（只补缺失项）；写回后用 `make sync-openapi` 同步后端内嵌副本。
 
 示例口径：华星镍业（HXNI）检修维护部电气自动化车间的二级库备件台账。
 需求人与领用人是车间检修班组员工，申购责任人是车间申购员，业务员 / 合同号 / 船期是外部采购
@@ -26,16 +30,24 @@
 第 5 步兜底值形如 `xxx-示例`，它是「新字段忘了登记示例」的信号而不是可发布内容，
 `server/tests/test_openapi_examples.py` 会守住这条线。
 
-确定性：不取当前时间、不用随机数，同一份代码必然生成同一份示例，CI 重跑后 `git diff` 为空。
+确定性：不取当前时间、不用随机数，同一份代码必然生成同一份示例，重跑后 `git diff` 为空。
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
+import sys
 from copy import deepcopy
 from datetime import date, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
+
+import yaml
+
+# 接口契约（唯一来源）
+OPENAPI_PATH = Path(__file__).resolve().parents[2] / "docs" / "openapi.yaml"
 
 # ===========================================================================
 # 一、业务台账：示例数据唯一的事实来源
@@ -3371,26 +3383,29 @@ def add_response_examples(document: dict[str, Any]) -> int:
     return handled
 
 
-def add_examples(document: dict[str, Any]) -> int:
-    """为 `components.schemas` 写入 `examples[0]`，返回处理的 schema 数。"""
+def add_examples(document: dict[str, Any]) -> list[str]:
+    """为缺示例的 `components.schemas` 写入 `examples[0]`，返回补了示例的 schema 名。"""
     schemas = document.get("components", {}).get("schemas", {})
-    handled = 0
+    handled: list[str] = []
     for name, spec in schemas.items():
         if not isinstance(spec, dict) or "examples" in spec:
             continue
         if name in _SCHEMA_EXAMPLES:
             spec["examples"] = [deepcopy(_SCHEMA_EXAMPLES[name])]
-            handled += 1
+            handled.append(name)
             continue
         if spec.get("type") not in ("object", None) or "properties" not in spec:
             continue
         spec["examples"] = [_object_example(spec, 1, schemas)]
-        handled += 1
+        handled.append(name)
     return handled
 
 
-def resolve_refs(document: dict[str, Any]) -> None:
-    """把示例中的 __ref__ 占位替换成被引用 schema 的示例（原地修改）。"""
+def resolve_refs(document: dict[str, Any], names: list[str] | None = None) -> None:
+    """把示例中的 __ref__ 占位替换成被引用 schema 的示例（原地修改）。
+
+    `names` 限定只处理这些 schema（默认全部），已有的示例保持原样。
+    """
     schemas = document.get("components", {}).get("schemas", {})
     cache: dict[str, Any] = {}
 
@@ -3421,6 +3436,51 @@ def resolve_refs(document: dict[str, Any]) -> None:
             return [walk(item, depth + 1) for item in node]
         return node
 
-    for spec in schemas.values():
+    for name, spec in schemas.items():
+        if names is not None and name not in names:
+            continue
         if isinstance(spec, dict) and spec.get("examples"):
             spec["examples"] = [walk(spec["examples"][0])]
+
+
+def fill_missing_examples(document: dict[str, Any]) -> tuple[list[str], int]:
+    """补齐契约里缺失的示例：返回（补了示例的 schema 名，补了示例的响应数）。"""
+    schemas = add_examples(document)
+    # 示例里用 __ref__ 占位保留结构，最后统一换成被引用 schema 的示例。
+    resolve_refs(document, schemas)
+    # 接口响应示例：Apifox「响应示例优先」时作为 Mock 返回值。
+    responses = add_response_examples(document)
+    return schemas, responses
+
+
+def load_document(path: Path = OPENAPI_PATH) -> dict[str, Any]:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def dump_document(document: dict[str, Any]) -> str:
+    """与现有契约同一种 YAML 写法（键序不变、中文不转义），读入再写出逐字节一致。"""
+    return yaml.safe_dump(document, allow_unicode=True, sort_keys=False)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="为 docs/openapi.yaml 补齐缺失的示例数据")
+    parser.add_argument("--check", action="store_true", help="只检查：有缺失示例时返回 1")
+    parser.add_argument("--path", type=Path, default=OPENAPI_PATH, help="契约文件路径")
+    args = parser.parse_args(argv)
+
+    document = load_document(args.path)
+    schemas, responses = fill_missing_examples(document)
+    if not schemas and not responses:
+        print(f"{args.path}：示例齐全")
+        return 0
+    if args.check:
+        print(f"{args.path}：{len(schemas)} 个 schema、{responses} 个响应缺示例：{schemas[:10]}")
+        return 1
+    args.path.write_text(dump_document(document), encoding="utf-8", newline="\n")
+    print(f"{args.path}：已为 {len(schemas)} 个 schema、{responses} 个响应补充示例")
+    print("请运行 make sync-openapi 同步后端内嵌副本，并在 web/ 重新生成前端类型")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

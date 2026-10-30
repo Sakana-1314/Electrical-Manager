@@ -7,10 +7,10 @@ from datetime import date, datetime, timedelta
 
 from httpx import AsyncClient
 
-from app.core.constants import SHANGHAI
-from app.core.security import create_mini_program_access_token
-from app.models import MiniProgramUser
 from tests.conftest import auth_headers, project_session
+from tests.testkit.constants import SHANGHAI
+from tests.testkit.models import MiniProgramUser
+from tests.testkit.security import create_mini_program_access_token
 
 
 def today() -> date:

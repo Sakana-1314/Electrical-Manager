@@ -6,22 +6,24 @@ from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from PIL import Image
 from sqlalchemy import select
 
-from app.core.database import system_session
-from app.core.security import create_mini_program_registration_token
-from app.domain.enums import MiniProgramCodeEnv, WebhookEventType
-from app.main import app
-from app.models import HuaXingInventory, MiniProgramUser, WebhookDelivery
-from app.services import ai_search_service, mini_program_service
-from tests.conftest import DEFAULT_PROJECT_ID, auth_headers, project_session
+from tests.conftest import DEFAULT_PROJECT_ID, api_client, auth_headers, project_session
+from tests.go_upstream import StartWechat
+from tests.go_upstream import go_wechat as _go_wechat_fixture
+from tests.testkit.database import system_session
+from tests.testkit.enums import MiniProgramCodeEnv, WebhookEventType
+from tests.testkit.models import HuaXingInventory, MiniProgramUser, WebhookDelivery
+from tests.testkit.security import create_mini_program_registration_token
+
+go_wechat = _go_wechat_fixture  # 微信接口桩（pytest fixture）
 
 
 @pytest.mark.asyncio
 async def test_wechat_profile_registration_scan_and_outbound_flow(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
@@ -29,11 +31,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
         assert code == "temporary-login-code"
         return app_id or "wx-test-primary", "openid-for-scan-user"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
 
@@ -110,33 +108,31 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert material.status_code == 201, material.text
     material_data = material.json()
 
-    async def fake_generate_unlimited_material_code(material_uuid, env, app_id):
-        assert str(material_uuid) == material_data["uuid"]
-        assert env == MiniProgramCodeEnv.TRIAL
-        assert app_id == "wx-test-secondary"
+    # 小程序码由微信接口桩生成；体验版环境与第二个 AppID 走高级设置。
+    def fake_material_code(body: dict[str, object]) -> bytes:
+        assert body["scene"] == str(material_data["uuid"]).replace("-", "")
+        assert body["env_version"] == MiniProgramCodeEnv.TRIAL.value
         return b"mini-program-code"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "generate_unlimited_material_code",
-        fake_generate_unlimited_material_code,
+    wechat_stub = await go_wechat(
+        exchange=fake_exchange_wechat_code, material_code=fake_material_code
     )
-    async def fake_mini_program_code_env(_session):
-        return MiniProgramCodeEnv.TRIAL
-
-    async def fake_mini_program_code_app_id(_session):
-        return "wx-test-secondary"
-
-    monkeypatch.setattr(
-        ai_search_service,
-        "get_mini_program_code_env",
-        fake_mini_program_code_env,
+    code_settings = await client.put(
+        "/api/v1/ai-search/settings",
+        headers=admin,
+        json={
+            "endpoint": "",
+            "api_key": "",
+            "model": "",
+            "enabled": False,
+            "mini_program_code_env": "trial",
+            "mini_program_code_app_id": "wx-test-secondary",
+            "mini_program_registration_enabled": True,
+            "mini_program_new_user_enabled": True,
+            "version": 0,
+        },
     )
-    monkeypatch.setattr(
-        ai_search_service,
-        "get_mini_program_code_app_id",
-        fake_mini_program_code_app_id,
-    )
+    assert code_settings.status_code == 200, code_settings.text
     mini_program_code_entry_url = (
         f"/api/v1/stock-materials/{material_data['id']}/mini-program-code"
     )
@@ -169,6 +165,11 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
         "public, max-age=31536000, s-maxage=31536000, immutable"
     )
     assert material_code.content == b"mini-program-code"
+    assert [
+        request.url.params["appid"]
+        for request in wechat_stub.requests
+        if request.url.path == "/cgi-bin/token"
+    ] == ["wx-test-secondary"]
 
     inbound = await client.post(
         "/api/v1/inventory/inbounds",
@@ -408,18 +409,14 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
 
 @pytest.mark.asyncio
 async def test_admin_can_merge_accounts_from_different_mini_programs(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
 
@@ -551,18 +548,14 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
 
 @pytest.mark.asyncio
 async def test_mini_program_inventory_search_filters_pagination_and_detail(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"inventory-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     warehouse = await auth_headers(client, "warehouse")
     login = await client.post(
         "/api/v1/mini-program/auth/wx-login",
@@ -749,18 +742,14 @@ async def test_mini_program_inventory_search_filters_pagination_and_detail(
 
 @pytest.mark.asyncio
 async def test_mini_program_purchase_plans_only_show_normal_items_with_images_and_next(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"purchase-plan-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     purchase_headers = await auth_headers(client, "purchase")
     login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "viewer"})
     profile = await client.post(
@@ -836,18 +825,14 @@ async def test_mini_program_purchase_plans_only_show_normal_items_with_images_an
 
 @pytest.mark.asyncio
 async def test_mini_program_purchase_plans_exclude_plans_moved_to_record(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"purchase-plan-moved-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     purchase_headers = await auth_headers(client, "purchase")
     login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "viewer"})
     profile = await client.post(
@@ -922,18 +907,14 @@ async def test_mini_program_purchase_plans_exclude_plans_moved_to_record(
 
 @pytest.mark.asyncio
 async def test_mini_program_purchase_records_search_status_and_pagination(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"purchase-record-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     purchase_headers = await auth_headers(client, "purchase")
     login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "viewer"})
     profile = await client.post(
@@ -1228,7 +1209,7 @@ async def test_mini_program_purchase_records_search_status_and_pagination(
 
 @pytest.mark.asyncio
 async def test_mini_program_material_codes_search_and_pagination(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     from tests.integration.test_material_code_library import build_workbook
 
@@ -1237,11 +1218,7 @@ async def test_mini_program_material_codes_search_and_pagination(
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"material-code-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     purchase_headers = await auth_headers(client, "purchase")
     login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "viewer"})
     profile = await client.post(
@@ -1318,18 +1295,14 @@ async def test_mini_program_material_codes_search_and_pagination(
 
 @pytest.mark.asyncio
 async def test_mini_program_huaxing_inventory_search_and_pagination(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"huaxing-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     async with project_session() as session:
         session.add_all(
             [
@@ -1409,18 +1382,14 @@ async def test_mini_program_huaxing_inventory_search_and_pagination(
 
 @pytest.mark.asyncio
 async def test_advanced_setting_can_close_new_mini_program_bindings(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
 
     existing_login = await client.post(
@@ -1484,18 +1453,14 @@ async def test_advanced_setting_can_close_new_mini_program_bindings(
 
 @pytest.mark.asyncio
 async def test_advanced_setting_controls_new_mini_program_user_status(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"status-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
 
     pending_settings = await client.put(
@@ -1599,7 +1564,7 @@ async def test_mini_program_users_require_super_admin(client: AsyncClient) -> No
 
 @pytest.mark.asyncio
 async def test_last_used_at_tracks_mini_program_sign_in(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     """最近使用时间：建档即记录，之后每次登录刷新，且刷新不自增 version。
 
@@ -1613,11 +1578,7 @@ async def test_last_used_at_tracks_mini_program_sign_in(
         assert code == "last-used-code"
         return app_id or "wx-test-primary", "openid-last-used"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
 
     login = await client.post(
@@ -1690,7 +1651,7 @@ async def test_wechat_registration_without_project_header_falls_back_to_default_
         "wx-test-primary", "openid-without-project-header"
     )
     # 独立客户端：不带 conftest 默认的 X-Project-Id，复刻小程序首次绑定的真实请求。
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anonymous:
+    async with api_client() as anonymous:
         profile = await anonymous.post(
             "/api/v1/mini-program/profile",
             headers={"Authorization": f"Bearer {registration_token}"},
@@ -1707,7 +1668,7 @@ async def test_wechat_registration_without_project_header_falls_back_to_default_
     stale_token = create_mini_program_registration_token(
         "wx-test-primary", "openid-with-stale-project-header"
     )
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anonymous:
+    async with api_client() as anonymous:
         stale = await anonymous.post(
             "/api/v1/mini-program/profile",
             headers={

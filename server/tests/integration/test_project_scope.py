@@ -1,6 +1,6 @@
-"""项目隔离层（core.project_scope）单测。
+"""测试直连数据库时的项目隔离（testkit.project_scope）自检 + init.sql 的项目域唯一键。
 
-覆盖四件事：
+其余用例直接写库造数据、核对落库结果都依赖这层隔离，这里确认它的行为与服务端约定一致：
 1. 未设定项目上下文时，任何碰项目域表的读写都 fail-closed 报 `PROJECT_REQUIRED`；
 2. 设定上下文后，查/取主键/聚合/列查询都只看到当前项目的数据；
 3. `system_scope()` 显式跨项目（系统级任务）能看全量；
@@ -13,22 +13,26 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
-from app.core.database import SessionLocal
-from app.core.errors import AppError
-from app.core.project_scope import current_project_id, project_scope, system_scope
-from app.models import Ledger, StockMaterial, User
 from tests.conftest import DEFAULT_PROJECT_ID, SECOND_PROJECT_ID, project_session, system_session
+from tests.testkit.database import SessionLocal
+from tests.testkit.models import Ledger, StockMaterial, User
+from tests.testkit.project_scope import (
+    ProjectScopeError,
+    current_project_id,
+    project_scope,
+    system_scope,
+)
 
 
 @pytest.mark.asyncio
 async def test_project_required_when_context_missing(client: AsyncClient) -> None:
     # 故意不声明任何项目上下文（既不是请求上下文，也不是 system_scope）。
     async with SessionLocal() as session:
-        with pytest.raises(AppError) as read_error:
+        with pytest.raises(ProjectScopeError) as read_error:
             await session.scalars(select(StockMaterial))
         assert read_error.value.code == "PROJECT_REQUIRED"
 
-        with pytest.raises(AppError) as write_error:
+        with pytest.raises(ProjectScopeError) as write_error:
             session.add(
                 StockMaterial(name="X", model_spec="Y", unit_name="个", identity_hash="h")
             )
@@ -37,7 +41,6 @@ async def test_project_required_when_context_missing(client: AsyncClient) -> Non
 
         # 纯全局表的语句不受影响（登录、项目列表、系统配置等不需要项目上下文）。
         assert await session.scalar(select(func.count()).select_from(User)) == 7
-
 
 
 @pytest.mark.asyncio
@@ -67,7 +70,6 @@ async def test_reads_are_filtered_by_current_project(client: AsyncClient) -> Non
         assert await session.scalar(by_name) is None
 
 
-
 @pytest.mark.asyncio
 async def test_same_identity_hash_allowed_in_other_project(client: AsyncClient) -> None:
     """同名物资在两个项目各存一份：项目域唯一键不能跨项目互斥。"""
@@ -80,7 +82,6 @@ async def test_same_identity_hash_allowed_in_other_project(client: AsyncClient) 
     with system_scope():
         async with system_session() as session:
             assert await session.scalar(select(func.count()).select_from(StockMaterial)) == 2
-
 
 
 @pytest.mark.asyncio
@@ -103,7 +104,6 @@ async def test_system_scope_sees_every_project(client: AsyncClient) -> None:
         ]
 
 
-
 @pytest.mark.asyncio
 async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
     async with project_session(SECOND_PROJECT_ID) as session:
@@ -112,7 +112,7 @@ async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
 
     async with project_session(DEFAULT_PROJECT_ID) as session:
         # 显式写别的项目的数据：守卫必须拦下，避免跨项目写入/删除。
-        with pytest.raises(AppError) as mismatch:
+        with pytest.raises(ProjectScopeError) as mismatch:
             session.add(Ledger(
                 name="越界台账",
                 model_spec="C",
@@ -124,11 +124,10 @@ async def test_cross_project_write_is_rejected(client: AsyncClient) -> None:
         assert mismatch.value.code == "PROJECT_MISMATCH"
 
 
-
 @pytest.mark.asyncio
 async def test_context_is_restored_after_scope_exits(client: AsyncClient) -> None:
     with project_scope(SECOND_PROJECT_ID):
         assert current_project_id() == SECOND_PROJECT_ID
-    with pytest.raises(AppError) as missing:
+    with pytest.raises(ProjectScopeError) as missing:
         current_project_id()
     assert missing.value.code == "PROJECT_REQUIRED"

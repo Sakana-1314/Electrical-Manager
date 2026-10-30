@@ -4,7 +4,7 @@
 
 | 部分 | 目录 | 发布方式 |
 | --- | --- | --- |
-| 服务端（FastAPI） | `server/` | 镜像 `electrical-manager:server` |
+| 服务端（Go + Gin） | `server/` | 镜像 `electrical-manager:server` |
 | 网页端（Vue 3 + nginx） | `web/` | 镜像 `electrical-manager:web` |
 | 小程序 | `miniprogram/` | CI 上传微信小程序代码 |
 | 数据库结构与种子数据 | `docs/references/database/init.sql` | 手工初始化 |
@@ -34,7 +34,7 @@ docker compose up -d
 
 | 变量 | 说明 |
 | --- | --- |
-| `APP_DATABASE_URL` | 如 `postgresql+asyncpg://user:pass@postgresql:5432/db`，密码需 URL 编码。 |
+| `APP_DATABASE_URL` | 如 `postgresql+asyncpg://user:pass@postgresql:5432/db`（也接受 `postgresql://`），密码需 URL 编码。 |
 | `APP_JWT_SECRET` | 至少 32 位随机字符串，生产环境必须修改。 |
 | `APP_ACCESS_TOKEN_MINUTES` | 登录有效期（分钟），默认 480。 |
 | `APP_FERNET_KEY` | 可选，加密 API Key / Webhook 密钥的专用密钥；留空则从 `APP_JWT_SECRET` 派生。 |
@@ -57,9 +57,9 @@ docker compose up -d
 
 | 事项 | 说明 |
 | --- | --- |
-| 结构与种子数据 | `docs/references/database/init.sql` 是唯一来源，用于新库初始化；`server/tests/test_init_sql.py` 强制校验它与 ORM 模型一致，改模型必须同步改 `init.sql`。 |
+| 结构与种子数据 | `docs/references/database/init.sql` 是唯一来源，用于新库初始化；Go 测试校验它与 `server/internal/model/models_gen.go` 一致（表、列、NULL 约束），改表结构必须同时改两边。 |
 | 初始账号 | `admin`、`warehouse`、`purchase`、`hazard`、`ledger`、`work`、`readonly`，初始密码均为 `123456`，首次登录后请修改。 |
-| 已有库升级 | 仓库不保存增量迁移脚本：先备份，再参照 `init.sql` 与服务端 ORM 模型的差异，按各自流程改库。 |
+| 已有库升级 | 仓库不保存增量迁移脚本：先备份，再参照 `init.sql` 与现有库结构的差异，按各自流程改库。 |
 
 表结构说明见[数据模型](/dev-data-model)。
 
@@ -98,7 +98,7 @@ docker compose up -d
 
 ### 后端跨域
 
-后端用 `RefererCORSMiddleware`：优先按 `Referer` 解析前端站点，缺失或无效时回退 `Origin`，并为预检与正常响应（含结构化错误响应）补齐 CORS Header。
+后端用 CORS 中间件（`server/internal/middleware` 的 `CORS`）：优先按 `Referer` 解析前端站点，缺失或无效时回退 `Origin`，并为预检与正常响应（含结构化错误响应）补齐 CORS Header。
 
 ```text
 Referer: https://spares.example.com/login?redirect=/

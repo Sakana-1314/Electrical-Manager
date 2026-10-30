@@ -1,6 +1,6 @@
 # 状态机
 
-枚举取值来自 `server/app/domain/enums.py`，流转规则来自 `server/app/services/` 与 `server/app/api/v1/`，错误码来自 `server/app/core/errors.py` 与各服务内抛出的业务错误。全部错误码见[错误码总表](/api-error-codes)。
+枚举取值来自 `server/internal/domain`，流转规则来自 `server/internal/service/` 与 `server/internal/api/`，错误码来自 `server/internal/apperr` 与各服务内返回的业务错误。全部错误码见[错误码总表](/api-error-codes)。
 
 ```mermaid
 flowchart LR
@@ -224,7 +224,7 @@ stateDiagram-v2
 stateDiagram-v2
     direction LR
     [*] --> 待处理 : 上传文件并登记任务（立即返回任务号）
-    待处理 --> 处理中 : 后台协程接手
+    待处理 --> 处理中 : 后台 goroutine 接手
     处理中 --> 成功 : 处理器返回导入与去重条数
     处理中 --> 失败 : 业务错误记录错误码与消息，未知异常记为内部导入错误
     待处理 --> 失败 : 服务重启
@@ -235,7 +235,7 @@ stateDiagram-v2
         文件过大或后缀不在支持范围内会被拒绝
         同一类型同时只允许一个进行中的任务，重复上传被拒绝：IMPORT_IN_PROGRESS
         失败时记录错误码与消息（消息截断到 1000 字符），服务重启导致的失败错误码为 SERVER_RESTARTED
-        进程内按类型串行，单 worker 有效
+        进程内按类型串行，单进程有效
     end note
 ```
 
@@ -256,7 +256,7 @@ stateDiagram-v2
 stateDiagram-v2
     direction LR
     [*] --> 待处理 : 创建导出（立即返回任务号）
-    待处理 --> 处理中 : 后台协程接手
+    待处理 --> 处理中 : 后台 goroutine 接手
     处理中 --> 成功 : 生成文件并保留 3 天
     处理中 --> 失败 : 业务错误或未知异常，半成品文件立即删除
     待处理 --> 失败 : 服务重启
@@ -370,7 +370,7 @@ stateDiagram-v2
 | 规则 | 说明 |
 | --- | --- |
 | 起止精度 | 起止都精确到上午（`AM`）/ 下午（`PM`），存 `start_date` + `start_half` + `end_date` + `end_half` |
-| 合法性 | 结束不得早于开始；同一天时不允许「下午 → 上午」（400 `WORK_DATE_RANGE`），规则只在 `work_service` 实现一次 |
+| 合法性 | 结束不得早于开始；同一天时不允许「下午 → 上午」（400 `WORK_DATE_RANGE`），规则只在 `service/work` 实现一次 |
 | 某天占用 | 起始日之后全天占用；起始日只在上午档时占上午；结束日之前全天占用；结束日只在下午档时占下午 |
 | 派生结果 | 一天同时占上午与下午 → 工作总览时段「全天」，否则「上午」或「下午」；一条跨天记录在总览里展开成多行（每天一行） |
 | 查询区间 | 三个视图都要求日期区间，最长 92 天（400 `WORK_RANGE_TOO_LONG`）；总览按天展开、人员视图按姓名分组都在服务端完成 |

@@ -7,8 +7,11 @@ from io import StringIO
 import pytest
 from httpx import AsyncClient
 
-from app.services import mini_program_service
 from tests.conftest import auth_headers, create_stock
+from tests.go_upstream import StartWechat
+from tests.go_upstream import go_wechat as _go_wechat_fixture
+
+go_wechat = _go_wechat_fixture  # 微信接口桩（pytest fixture）
 
 LITE_HEADERS = ["物资名称", "型号规格", "单位", "数量", "备注"]
 
@@ -90,18 +93,14 @@ async def test_settings_roundtrip_persists_mode(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_lite_mode_blocks_mini_program_outbound(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
 
@@ -188,18 +187,14 @@ async def test_lite_mode_blocks_admin_full_warehouse_writes(client: AsyncClient)
 
 @pytest.mark.asyncio
 async def test_lite_mode_mini_program_lite_inventory(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
-    monkeypatch.setattr(
-        mini_program_service,
-        "exchange_wechat_code",
-        fake_exchange_wechat_code,
-    )
+    await go_wechat(exchange=fake_exchange_wechat_code)
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
 

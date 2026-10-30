@@ -1,17 +1,17 @@
 # 数据流
 
-按端到端链路说明数据怎么走：**入口 → 服务 → 表 → 事务与并发控制**。细节出自 `server/app/api/v1/`、`server/app/services/`、`server/app/core/` 与 `docs/references/database/init.sql`。
+按端到端链路说明数据怎么走：**入口 → 服务 → 表 → 事务与并发控制**。细节出自 `server/internal/api/`、`server/internal/service/`、`server/internal/{web,db,auth}` 与 `docs/references/database/init.sql`。
 
 ```mermaid
 flowchart TD
-    A["一次 HTTP 请求"] --> B["请求级事务：路由执行期间共用一个数据库会话<br/>正常返回即提交，抛错即回滚；服务层只 flush 不提交"]
+    A["一次 HTTP 请求"] --> B["请求级事务：路由执行期间共用一个数据库会话<br/>正常返回先提交再写响应，出错即回滚；服务层不手动提交"]
     B --> C["需要「先落库再返回 / 再抛错」的场景自行提交<br/>图片上传与删除、导入导出任务、Webhook 投递、各类清理任务"]
     B --> D["后台任务不使用请求会话：自建会话并自行提交"]
     E["并发控制手段"] --> E1["按 id 升序加行锁，固定加锁顺序避免死锁"]
     E --> E2["跳过已锁定行的认领式队列（Webhook 投递、计划清理）"]
     E --> E3["唯一索引幂等（客户端请求键、计划单号、投递去重）"]
     E --> E4["版本号乐观锁，冲突提示刷新后重试"]
-    E --> E5["进程内协程锁（导入按类型、图片按摘要、微信凭证）"]
+    E --> E5["进程内互斥锁（导入按类型、图片按摘要、微信凭证）"]
 ```
 
 <Tabs :tabs="[
@@ -239,15 +239,15 @@ sequenceDiagram
     participant U as 浏览器
     participant API as 导入接口
     participant S as 导入服务
-    participant BG as 后台协程
+    participant BG as 后台 goroutine
     participant DB as PostgreSQL
     U->>API: 上传文件（不超过 50MB，支持 xlsx / xlsm / xls / csv）
-    API->>S: 分块流式写入临时目录
-    API->>S: 按导入类型加协程锁后登记任务
+    API->>S: 写入上传目录下的临时文件
+    API->>S: 按导入类型加互斥锁后登记任务
     S->>DB: 已有同类进行中任务则拒绝；否则登记待处理任务并提交（独立事务）
     API-->>U: 任务号与状态（异步）
     BG->>DB: 置为处理中（独立事务）
-    BG->>BG: 在线程中解析文件
+    BG->>BG: 解析文件（xlsx / xlsm / xls / csv）
     BG->>DB: 全量替换目标表：先清空，再分批 2000 行写入并一次提交（失败则整表不变）
     BG->>DB: 写终态与结果（独立事务）
     BG->>BG: 删除临时文件
@@ -259,9 +259,9 @@ sequenceDiagram
 ```mermaid
 flowchart LR
     A["进程重启"] --> B["启动时把遗留的待处理 / 处理中任务标记为失败，错误码记为服务重启，并删除临时文件"]
-    C["任务行"] --> D["启动时清理 30 天前的终态行，没有周期性清理 worker"]
+    C["任务行"] --> D["启动时清理 30 天前的终态行，没有周期性清理任务"]
     E["精简库存导入"] --> F["「名称 + 规格 + 单位 + 数量 + 备注」完全相同的行只保留一条<br/>分别返回导入条数与去重条数"]
-    G["协程锁按导入类型串行化「检查进行中 + 登记」"] --> H["单进程 worker 内有效，保证并发上传时判断原子"]
+    G["互斥锁按导入类型串行化「检查进行中 + 登记」"] --> H["单进程内有效，保证并发上传时判断原子"]
 ```
 
 ### Excel 导出
@@ -271,12 +271,12 @@ sequenceDiagram
     participant U as 浏览器
     participant API as 导出接口
     participant S as 导出服务
-    participant BG as 后台协程
+    participant BG as 后台 goroutine
     U->>API: 当前筛选条件与导出列
     API->>S: 登记导出任务（只读，允许并发）
     S-->>U: 任务号与状态
     BG->>BG: 置为处理中，确定目标文件路径
-    BG->>BG: 独立会话查库，在线程中用 openpyxl 渲染（含嵌入图片）
+    BG->>BG: 独立会话查库，用 excelize 渲染（含嵌入图片）
     BG->>BG: 先写临时文件再原子改名
     alt 成功
         BG->>S: 写成功状态与文件名、行数、图片数
@@ -336,7 +336,7 @@ sequenceDiagram
     participant DB as 文件表
     U->>API: 上传图片（jpeg / png / webp，不超过 10MB）
     FS->>FS: 解码后统一重编码为 PNG
-    FS->>FS: 计算重编码字节的摘要，并按摘要加协程锁
+    FS->>FS: 计算重编码字节的摘要，并按摘要加互斥锁
     FS->>DB: 按摘要查已有文件记录
     alt 已有记录且磁盘文件一致
         FS-->>U: 复用已有文件（不新增行、不写盘）
@@ -608,7 +608,7 @@ sequenceDiagram
 | 项 | 说明 |
 | --- | --- |
 | 人员不是实体 | 参与人员是 `work_record.participants` 里「、」连接的姓名串（一条记录最多 20 人、每人 ≤24 字），没有人员表；人员视图的人员清单 = 区间内记录里出现过的姓名去重，新姓名第一次录入即成为一行。表单下拉给项目内历史姓名辅助输入（`GET /work-participants`），错别字仍可能造出重名条目 |
-| 半天语义 | 起止都精确到上午 / 下午，某天是否占用由 `work_service.occupied_halves` 一处判定：起始日之后全天、起始日只在上午档时占上午、结束日之前全天、结束日只在下午档时占下午；前端 `recordHalfKeys` 用同一口径算色块范围（两侧改动必须同步） |
+| 半天语义 | 起止都精确到上午 / 下午，某天是否占用由 `service/work` 的 `OccupiedHalves` 一处判定：起始日之后全天、起始日只在上午档时占上午、结束日之前全天、结束日只在下午档时占下午；前端 `recordHalfKeys` 用同一口径算色块范围（两侧改动必须同步） |
 | 区间必填且封顶 | 三个视图都要求 `start_date` / `end_date`，最长 92 天（`WORK_RANGE_TOO_LONG`）；总览按天展开、人员按姓名分组都在服务端过滤与分页（区间封顶后是车间量级的数据） |
 | 参与人筛选 | 工作总览的 `participants` 按拆分后的姓名列表精确匹配（不是子串匹配）：「张三」不会命中「张三丰」 |
 | 任务与记录的关系 | 任务名项目内唯一（同一件活反复干都挂同一个任务）；删任务前必须先删记录（409 `WORK_TASK_HAS_RECORDS`），不做级联删除 |

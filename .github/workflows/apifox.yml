@@ -10,8 +10,7 @@ on:
     branches: [main]
     paths:
       - "docs/openapi.yaml"
-      - "server/app/**"
-      - "server/scripts/export_openapi.py"
+      - "server/scripts/openapi_examples.py"
       - ".github/workflows/apifox.yml"
   workflow_dispatch:
 

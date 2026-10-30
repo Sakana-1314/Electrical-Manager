@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-from app.models import StockMaterial
-from app.services import mini_program_service
 from tests.conftest import (
     DEFAULT_PROJECT_ID,
     SECOND_PROJECT_ID,
     auth_headers,
     project_session,
 )
+from tests.go_upstream import StartWechat
+from tests.go_upstream import go_wechat as _go_wechat_fixture
+from tests.testkit.models import StockMaterial
+
+go_wechat = _go_wechat_fixture  # 微信接口桩（pytest fixture）
 
 
 def _headers(user_headers: dict[str, str], project_id: int) -> dict[str, str]:
@@ -246,13 +248,13 @@ async def test_share_link_reads_its_own_project_anonymously(client: AsyncClient)
 
 
 async def test_mini_program_follows_project_header(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_wechat: StartWechat
 ) -> None:
     """小程序不带项目头时落默认项目，带头时按头读写该项目的数据。"""
     async def fake_exchange(code: str, app_id: str | None = None) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"openid-{code}"
 
-    monkeypatch.setattr(mini_program_service, "exchange_wechat_code", fake_exchange)
+    await go_wechat(exchange=fake_exchange)
 
     login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "project-test"})
     profile = await client.post(

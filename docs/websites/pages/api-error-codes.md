@@ -6,18 +6,18 @@
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `INVALID_CREDENTIALS` | 401 | 用户名或密码错误 | `api/v1/auth.py` |
-| `INVALID_REFRESH_TOKEN` | 401 | 续期凭证无效或已过期 | `api/v1/auth.py` |
-| `INVALID_TOKEN` | 401 | 接口令牌无效 | `core/permissions.py` |
-| `UNAUTHORIZED` | 401 | 请先登录 | `core/permissions.py` |
-| `USER_DISABLED` | 401 | 用户不存在或已停用 | `core/permissions.py` |
-| `ACCOUNT_DISABLED` | 403 | 账号待审核或已停用，请联系管理员 | `core/permissions.py`、`mini_program_service` |
-| `FORBIDDEN` | 403 | 没有执行此操作的权限 | `core/permissions.py`、`share_link_service` |
-| `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `mini_program_service` |
-| `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `mini_program_service` |
-| `SECONDARY_WAREHOUSE_LITE_MODE` | 403 | 精简模式下二级库仅支持导入与查询 | `api/deps.py` |
-| `OUTBOUND_DISABLED` | 403 | 精简模式下不支持出入库 | `mini_program_service` |
-| `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅超级管理员可查询已归档申购计划 | `api/v1/purchase_materials.py` |
+| `INVALID_CREDENTIALS` | 401 | 用户名或密码错误 | `api/system` |
+| `INVALID_REFRESH_TOKEN` | 401 | 续期凭证无效或已过期 | `api/system` |
+| `INVALID_TOKEN` | 401 | 接口令牌无效 | `auth` |
+| `UNAUTHORIZED` | 401 | 请先登录 | `auth` |
+| `USER_DISABLED` | 401 | 用户不存在或已停用 | `auth` |
+| `ACCOUNT_DISABLED` | 403 | 账号待审核或已停用，请联系管理员 | `auth`、`service/miniprogram` |
+| `FORBIDDEN` | 403 | 没有执行此操作的权限 | `auth`、`service/share` |
+| `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `service/miniprogram` |
+| `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `service/miniprogram` |
+| `SECONDARY_WAREHOUSE_LITE_MODE` | 403 | 精简模式下二级库仅支持导入与查询 | `api/deps` |
+| `OUTBOUND_DISABLED` | 403 | 精简模式下不支持出入库 | `service/miniprogram` |
+| `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅超级管理员可查询已归档申购计划 | `api/purchase` |
 
 ## 项目（多项目数据隔离）
 
@@ -25,178 +25,177 @@
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `PROJECT_REQUIRED` | 400 | 未选择项目（请求缺少 `X-Project-Id`，或系统级任务未声明项目上下文） | `core/project_scope.py`、`core/permissions.py` |
-| `PROJECT_NOT_FOUND` | 400 | 项目不存在 | `core/permissions.py`、`project_service` |
-| `PROJECT_DISABLED` | 400 | 项目已停用，请切换到其他项目 | `core/permissions.py` |
-| `PROJECT_MISMATCH` | 409 | 不能跨项目写入或删除数据 | `core/project_scope.py` |
-| `PROJECT_IS_DEFAULT` | 409 | 默认项目不能停用、删除或取消默认（请改设其他项目为默认） | `project_service` |
-| `PROJECT_IN_USE` | 409 | 项目下已有业务数据，不能删除（请改为停用） | `project_service` |
-| `DUPLICATE_PROJECT_NAME` | 409 | 项目名称已存在 | `project_service` |
+| `PROJECT_REQUIRED` | 400 | 未选择项目（请求缺少 `X-Project-Id`，或系统级任务未声明项目上下文） | `db`（`Session.ProjectID`）、`auth`（`RequireProject`） |
+| `PROJECT_NOT_FOUND` | 400 | 项目不存在 | `auth`、`service/project` |
+| `PROJECT_DISABLED` | 400 | 项目已停用，请切换到其他项目 | `auth` |
+| `PROJECT_MISMATCH` | 409 | 不能跨项目写入或删除数据 | `apperr`（默认状态码已登记；业务 SQL 显式按 `project_id` 过滤，当前没有调用点会返回它） |
+| `PROJECT_IS_DEFAULT` | 409 | 默认项目不能停用、删除或取消默认（请改设其他项目为默认） | `service/project` |
+| `PROJECT_IN_USE` | 409 | 项目下已有业务数据，不能删除（请改为停用） | `service/project` |
+| `DUPLICATE_PROJECT_NAME` | 409 | 项目名称已存在 | `service/project` |
 
 ## 并发与状态流转
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `VERSION_CONFLICT` | 409 | 数据已被其他用户修改，请刷新后重试（details 带 `expected`/`actual`） | `core/errors.py` |
-| `INVALID_STATUS_TRANSITION` | 409 | 当前状态不允许执行此操作（details 带 `current_status`/`action`） | `core/errors.py` |
-| `DATA_CONFLICT` | 409 | 数据约束冲突 | `core/exception_handlers.py` |
-| `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `mini_program_service` |
-| `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `material_service` |
-| `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `dictionary_service` |
-| `PLAN_NO_CONFLICT` | 409 | 计划号生成冲突，请稍后重试 | `material_service` |
-| `PLAN_ALREADY_MOVED` | 409 | 部分申购计划已转入申购记录 | `purchase_request_service` |
-| `PLAN_DAILY_LIMIT_EXCEEDED` | 409 | 同一计划日期最多创建 999 条申购计划 | `material_service` |
-| `PURCHASE_PLAN_IN_USE` | 409 | 已转入申购记录的计划不能删除 | `material_service` |
-| `STOCK_MATERIAL_IN_USE` | 409 | 该物资已有出入库操作记录，仅支持编辑，不能删除 | `material_service` |
-| `MATERIAL_CODE_REQUIRED` | 409 | 未编码物资不能转入申购记录 | `purchase_request_service` |
-| `NOT_LOW_STOCK` | 409 | 该物资当前不在低库存范围 | `replenishment_service` |
-| `BALANCE_MISSING` | 409 | 库存余额记录不存在 | `inventory_service` |
-| `INSUFFICIENT_QUANTITY` | 409 | 冲销数量超过剩余可冲数量 | `inventory_service` |
-| `INVALID_REVERSAL_LINE` | 400 | 冲销行不在原流水内 | `inventory_service` |
-| `REVERSAL_NOT_ALLOWED` | 409 | 冲销记录不能再被冲销 | `inventory_service` |
-| `CANNOT_DELETE_CURRENT_USER` | 409 | 不能删除当前登录用户 | `dictionary_service` |
-| `IMPORT_IN_PROGRESS` | 409 | 同类导入任务正在进行中 | `import_job_service` |
-| `FILE_IN_USE` | 409 | 图片已被业务引用，不能删除 | `file_service` |
-| `MINI_PROGRAM_IDENTITY_CONFLICT` | 409 | 两个账号包含相同小程序身份，无法直接合并 | `mini_program_service` |
-| `MINI_PROGRAM_USER_PROFILE_MISMATCH` | 409 | 姓名和部门单位必须一致才能合并账号 | `mini_program_service` |
-| `WECHAT_USER_CREATE_CONFLICT` | 409 | 微信用户创建冲突，请重新登录 | `mini_program_service` |
-| `DUPLICATE_HAZARD_UNIT` | 409 | 责任单位名称已存在 | `hazard_service` |
-| `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `hazard_service` |
-| `HAZARD_UNIT_IN_USE` | 409 | 责任单位已被隐患记录引用，无法删除 | `hazard_service` |
-| `HAZARD_TYPE_IN_USE` | 409 | 隐患类型已被隐患记录引用，只能修改，不能删除 | `hazard_service` |
-| `DUPLICATE_LEDGER_TAG` | 409 | 同一层级下已有同名标签 | `ledger_service` |
-| `LEDGER_TAG_HAS_CHILDREN` | 409 | 标签下还有子标签，不能删除 | `ledger_service` |
-| `LEDGER_TAG_IN_USE` | 409 | 标签（或其子标签）已被台账记录引用，不能删除 | `ledger_service` |
-| `DUPLICATE_WORK_TASK` | 409 | 任务名称已存在（同一项目内唯一，请直接编辑已有任务） | `work_service` |
-| `WORK_TASK_HAS_RECORDS` | 409 | 任务下还有工作记录，请先删除记录再删任务 | `work_service` |
+| `VERSION_CONFLICT` | 409 | 数据已被其他用户修改，请刷新后重试（details 带 `expected`/`actual`） | `apperr`（`ValidateVersion`） |
+| `INVALID_STATUS_TRANSITION` | 409 | 当前状态不允许执行此操作（details 带 `current_status`/`action`） | `apperr`（`InvalidTransition`；当前没有调用点会返回它） |
+| `DATA_CONFLICT` | 409 | 数据约束冲突 | `web`（`WriteError`） |
+| `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `service/miniprogram` |
+| `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `service/material` |
+| `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `service/dictionary` |
+| `PLAN_NO_CONFLICT` | 409 | 计划号生成冲突，请稍后重试 | `service/material` |
+| `PLAN_ALREADY_MOVED` | 409 | 部分申购计划已转入申购记录 | `service/purchaserequest` |
+| `PLAN_DAILY_LIMIT_EXCEEDED` | 409 | 同一计划日期最多创建 999 条申购计划 | `service/material` |
+| `PURCHASE_PLAN_IN_USE` | 409 | 已转入申购记录的计划不能删除 | `service/material` |
+| `STOCK_MATERIAL_IN_USE` | 409 | 该物资已有出入库操作记录，仅支持编辑，不能删除 | `service/material` |
+| `MATERIAL_CODE_REQUIRED` | 409 | 未编码物资不能转入申购记录 | `service/purchaserequest` |
+| `NOT_LOW_STOCK` | 409 | 该物资当前不在低库存范围 | `service/replenishment` |
+| `BALANCE_MISSING` | 409 | 库存余额记录不存在 | `service/inventory`、`service/replenishment` |
+| `INSUFFICIENT_QUANTITY` | 409 | 冲销数量超过剩余可冲数量 | `service/inventory` |
+| `INVALID_REVERSAL_LINE` | 400 | 冲销行不在原流水内 | `service/inventory` |
+| `REVERSAL_NOT_ALLOWED` | 409 | 冲销记录不能再被冲销 | `service/inventory` |
+| `CANNOT_DELETE_CURRENT_USER` | 409 | 不能删除当前登录用户 | `service/dictionary` |
+| `IMPORT_IN_PROGRESS` | 409 | 同类导入任务正在进行中 | `service/importjob` |
+| `FILE_IN_USE` | 409 | 图片已被业务引用，不能删除 | `service/file` |
+| `MINI_PROGRAM_IDENTITY_CONFLICT` | 409 | 两个账号包含相同小程序身份，无法直接合并 | `service/miniprogram` |
+| `MINI_PROGRAM_USER_PROFILE_MISMATCH` | 409 | 姓名和部门单位必须一致才能合并账号 | `service/miniprogram` |
+| `WECHAT_USER_CREATE_CONFLICT` | 409 | 微信用户创建冲突，请重新登录 | `service/miniprogram` |
+| `DUPLICATE_HAZARD_UNIT` | 409 | 责任单位名称已存在 | `service/hazard` |
+| `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `service/hazard` |
+| `HAZARD_UNIT_IN_USE` | 409 | 责任单位已被隐患记录引用，无法删除 | `service/hazard` |
+| `HAZARD_TYPE_IN_USE` | 409 | 隐患类型已被隐患记录引用，只能修改，不能删除 | `service/hazard` |
+| `DUPLICATE_LEDGER_TAG` | 409 | 同一层级下已有同名标签 | `service/ledger` |
+| `LEDGER_TAG_HAS_CHILDREN` | 409 | 标签下还有子标签，不能删除 | `service/ledger` |
+| `LEDGER_TAG_IN_USE` | 409 | 标签（或其子标签）已被台账记录引用，不能删除 | `service/ledger` |
+| `DUPLICATE_WORK_TASK` | 409 | 任务名称已存在（同一项目内唯一，请直接编辑已有任务） | `service/work` |
+| `WORK_TASK_HAS_RECORDS` | 409 | 任务下还有工作记录，请先删除记录再删任务 | `service/work` |
 
 ## 请求与业务校验
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `VALIDATION_ERROR` | 422 | 请求字段或筛选参数不合法 | `core/exception_handlers.py`、各 API |
+| `VALIDATION_ERROR` | 422 | 请求字段或筛选参数不合法 | `web`（参数校验）、各路由包与 service |
 | `NOT_FOUND` | 400 | 资源不存在（不区分物资/用户/流水，message 里带具体对象） | 全局 |
-| `BUSINESS_REASON_REQUIRED` | 400 | 出库必须填写用途 | `inventory_service` |
-| `RECEIVER_REQUIRED` | 400 | 出库必须填写领用人 | `inventory_service` |
-| `INVALID_RECEIVER` | 400 | 只有出库业务可以填写领用人 | `inventory_service` |
-| `INVALID_RECEIVER_UNIT` | 400 | 只有出库业务可以填写领用单位 | `inventory_service` |
-| `INVALID_SOURCE_TYPE` | 400 | 初始化业务只能是入库 | `inventory_service` |
-| `INVALID_QUANTITY_PRECISION` | 400 | 数量小数位超出限制 | `services/common.py` |
-| `EXPORT_RESULT_LIMIT_EXCEEDED` | 400 | 查询结果超过导出行数上限，请缩小筛选范围 | `api/v1/purchase_*` |
-| `PURCHASE_APPLICATION_EXPORT_FIELDS_REQUIRED` | 409 | 导出采购申请表前需补全字段（message 列出缺失项） | `material_service` |
-| `PURCHASE_APPROVAL_EXPORT_FIELDS_REQUIRED` | 409 | 导出申购审批表前需补全字段 | `material_service` |
-| `INVALID_WEBHOOK_URL` | 422 | 请输入有效的机器人 Webhook 地址 | `webhook_service` |
-| `WEBHOOK_URL_REQUIRED` | 422 | 启用推送前请填写 Webhook 地址 | `webhook_service` |
-| `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `webhook_service` |
-| `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `mini_program_service` |
-| `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `ai_search_service` |
-| `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `ledger_service` |
-| `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `ledger_service` |
-| `WORK_DATE_RANGE` | 400 | 日期区间不合法：结束早于开始、同一天的结束时段早于开始时段，或任务计划结束早于开始 | `work_service` |
-| `WORK_RANGE_TOO_LONG` | 400 | 工作管理的查询区间最长 92 天，请缩小范围 | `work_service` |
-| `INVALID_WORK_TASK_ID` | 400 | 任务不存在（新增工作记录时引用了不存在的任务，details 带 `task_id`） | `work_service` |
-| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `hazard_service` |
+| `BUSINESS_REASON_REQUIRED` | 400 | 出库必须填写用途 | `service/inventory` |
+| `RECEIVER_REQUIRED` | 400 | 出库必须填写领用人 | `service/inventory` |
+| `INVALID_RECEIVER` | 400 | 只有出库业务可以填写领用人 | `service/inventory` |
+| `INVALID_RECEIVER_UNIT` | 400 | 只有出库业务可以填写领用单位 | `service/inventory` |
+| `INVALID_SOURCE_TYPE` | 400 | 初始化业务只能是入库 | `service/inventory` |
+| `INVALID_QUANTITY_PRECISION` | 400 | 数量小数位超出限制 | `service/common` |
+| `EXPORT_RESULT_LIMIT_EXCEEDED` | 400 | 查询结果超过导出行数上限，请缩小筛选范围 | `api/purchase`、`api/exportjob` |
+| `PURCHASE_APPLICATION_EXPORT_FIELDS_REQUIRED` | 409 | 导出采购申请表前需补全字段（message 列出缺失项） | `service/material` |
+| `PURCHASE_APPROVAL_EXPORT_FIELDS_REQUIRED` | 409 | 导出申购审批表前需补全字段 | `service/material` |
+| `INVALID_WEBHOOK_URL` | 422 | 请输入有效的机器人 Webhook 地址 | `service/webhook` |
+| `WEBHOOK_URL_REQUIRED` | 422 | 启用推送前请填写 Webhook 地址 | `service/webhook` |
+| `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `service/webhook` |
+| `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `service/miniprogram` |
+| `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `service/aisearch` |
+| `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `service/ledger` |
+| `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `service/ledger` |
+| `WORK_DATE_RANGE` | 400 | 日期区间不合法：结束早于开始、同一天的结束时段早于开始时段，或任务计划结束早于开始 | `service/work` |
+| `WORK_RANGE_TOO_LONG` | 400 | 工作管理的查询区间最长 92 天，请缩小范围 | `service/work` |
+| `INVALID_WORK_TASK_ID` | 400 | 任务不存在（新增工作记录时引用了不存在的任务，details 带 `task_id`） | `service/work` |
+| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `service/hazard` |
 
 ## 图片与文件
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `INVALID_IMAGE` | 400 | 图片无法解码 | `file_service` |
-| `INVALID_IMAGE_ID` | 400 | 图片不存在 | `material_service`、`hazard_service` |
-| `FILE_MISSING` | 400 | 图片文件不存在（记录在库但磁盘缺失） | `file_service` |
-| `INVALID_IMAGE_TYPE` | 400 | 仅支持 JPEG、PNG 或 WebP 图片 | `file_service` |
-| `IMAGE_TOO_LARGE` | 413 | 单张图片超过 10 MB | `file_service` |
-| `FILE_ALREADY_DELETED` | 409 | 图片已提交删除，保留 7 天后由凌晨清理任务清除 | `file_service` |
+| `INVALID_IMAGE` | 400 | 图片无法解码 | `service/file` |
+| `INVALID_IMAGE_ID` | 400 | 图片不存在 | `service/material`、`service/hazard`、`service/ledger`、`service/work` |
+| `FILE_MISSING` | 400 | 图片文件不存在（记录在库但磁盘缺失） | `service/file` |
+| `INVALID_IMAGE_TYPE` | 400 | 仅支持 JPEG、PNG 或 WebP 图片 | `service/file` |
+| `IMAGE_TOO_LARGE` | 413 | 单张图片超过 10 MB | `service/file` |
+| `FILE_ALREADY_DELETED` | 409 | 图片已提交删除，保留 7 天后由凌晨清理任务清除 | `service/file` |
 
 ## 表格导入
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `UNSUPPORTED_EXCEL_FILE` | 400 | 仅支持 `.xls`、`.xlsx` 或 `.csv` | `api/v1/huaxing_inventory.py` 等 |
-| `INVALID_EXCEL_FILE` | 400 | 无法读取 Excel 文件 | `import_file_reader` |
-| `INVALID_CSV_FILE` | 400 | 无法解析 CSV 编码（需 UTF-8 或 GBK） | `import_file_reader` |
-| `XLS_SUPPORT_UNAVAILABLE` | 400 | 环境未安装 `.xls` 解析依赖 | `import_file_reader` |
-| `EXCEL_FILE_TOO_LARGE` | 400 | 导入文件超过大小上限 | `import_job_service` |
-| `HUAXING_IMPORT_EMPTY` / `LITE_IMPORT_EMPTY` / `MATERIAL_CODE_IMPORT_EMPTY` / `MATERIAL_PRICE_IMPORT_EMPTY` | 400 | 表格中没有可导入的数据 | 各自 service |
-| `HUAXING_IMPORT_HEADERS_MISSING` / `LITE_IMPORT_HEADERS_MISSING` / `MATERIAL_CODE_IMPORT_HEADERS_MISSING` / `MATERIAL_PRICE_IMPORT_HEADERS_MISSING` | 400 | 缺少必需列（message 列出列名） | 各自 service |
-| `HUAXING_IMPORT_CODE_REQUIRED` / `LITE_IMPORT_NAME_REQUIRED` / `MATERIAL_CODE_IMPORT_CODE_REQUIRED` | 400 | 某行缺少必需字段 | 各自 service |
-| `HUAXING_IMPORT_INVALID_QUANTITY` / `LITE_IMPORT_INVALID_QUANTITY` | 400 | 某行数量不是有效数值 | 各自 service |
-| `HUAXING_IMPORT_VALUE_TOO_LONG` / `LITE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_CODE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_PRICE_IMPORT_VALUE_TOO_LONG` | 400 | 某行单元格超长 | 各自 service |
-| `MATERIAL_CODE_IMPORT_UNIT_REQUIRED` | 400 | 某行缺少记账单位名称 | `material_code_library_service` |
-| `MATERIAL_CODE_IMPORT_DUPLICATE` / `MATERIAL_PRICE_IMPORT_DUPLICATE` | 400 | 表格内编码重复 | 各自 service |
-| `MATERIAL_PRICE_IMPORT_INVALID_PRICE` | 400 | 「全成本单价-人民币」能解析成数值但超出可存范围（负数 / 整数超 12 位）；空值、「配件」这类非数值文本按「没有价格」跳过，不报错 | `material_price_service` |
+| `UNSUPPORTED_EXCEL_FILE` | 400 | 仅支持 `.xls`、`.xlsx` 或 `.csv` | `service/importfile` |
+| `INVALID_EXCEL_FILE` | 400 | 无法读取 Excel 文件 | `service/importfile` |
+| `INVALID_CSV_FILE` | 400 | 无法解析 CSV 编码（需 UTF-8 或 GBK） | `service/importfile` |
+| `EXCEL_FILE_TOO_LARGE` | 400 | 导入文件超过大小上限 | `service/importjob` |
+| `HUAXING_IMPORT_EMPTY` / `LITE_IMPORT_EMPTY` / `MATERIAL_CODE_IMPORT_EMPTY` / `MATERIAL_PRICE_IMPORT_EMPTY` | 400 | 表格中没有可导入的数据 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `HUAXING_IMPORT_HEADERS_MISSING` / `LITE_IMPORT_HEADERS_MISSING` / `MATERIAL_CODE_IMPORT_HEADERS_MISSING` / `MATERIAL_PRICE_IMPORT_HEADERS_MISSING` | 400 | 缺少必需列（message 列出列名） | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `HUAXING_IMPORT_CODE_REQUIRED` / `LITE_IMPORT_NAME_REQUIRED` / `MATERIAL_CODE_IMPORT_CODE_REQUIRED` | 400 | 某行缺少必需字段 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `HUAXING_IMPORT_INVALID_QUANTITY` / `LITE_IMPORT_INVALID_QUANTITY` | 400 | 某行数量不是有效数值 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `HUAXING_IMPORT_VALUE_TOO_LONG` / `LITE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_CODE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_PRICE_IMPORT_VALUE_TOO_LONG` | 400 | 某行单元格超长 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `MATERIAL_CODE_IMPORT_UNIT_REQUIRED` | 400 | 某行缺少记账单位名称 | `service/codelib` |
+| `MATERIAL_CODE_IMPORT_DUPLICATE` / `MATERIAL_PRICE_IMPORT_DUPLICATE` | 400 | 表格内编码重复 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
+| `MATERIAL_PRICE_IMPORT_INVALID_PRICE` | 400 | 「全成本单价-人民币」能解析成数值但超出可存范围（负数 / 整数超 12 位）；空值、「配件」这类非数值文本按「没有价格」跳过，不报错 | `service/price` |
 
 ## 导出任务
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `EXPORT_FILE_EXPIRED` | 400 | 导出文件已过期或不存在，请重新导出 | `excel_export_job_service` |
-| `INTERNAL_EXPORT_ERROR` | 400 | 导出任务未返回有效结果 | `excel_export_job_service` |
-| `EXPORT_TEMPLATE_MISSING` | 400 | 导出模板缺失（检查 `server/app/templates/`） | `excel_export_service` |
-| `EXPORT_TEMPLATE_INVALID` | 400 | 导出模板编码错误 | `excel_export_service` |
+| `EXPORT_FILE_EXPIRED` | 400 | 导出文件已过期或不存在，请重新导出 | `service/exportjob` |
+| `INTERNAL_EXPORT_ERROR` | 400 | 导出任务未返回有效结果 | `service/exportjob` |
+| `EXPORT_TEMPLATE_MISSING` | 400 | 导出模板缺失（检查 `server/templates/`，运行时目录由环境变量 APP_TEMPLATE_DIR 指定） | `service/excelexport` |
+| `EXPORT_TEMPLATE_INVALID` | 400 | 导出模板编码错误 | `service/excelexport` |
 
 ## 分享链接
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `SHARE_NOT_FOUND` | 400 | 分享链接不存在或已失效 | `share_link_service` |
-| `SHARE_EXPIRED` | 400 | 分享链接已失效，请联系分享人重新分享 | `share_link_service` |
+| `SHARE_NOT_FOUND` | 400 | 分享链接不存在或已失效 | `service/share` |
+| `SHARE_EXPIRED` | 400 | 分享链接已失效，请联系分享人重新分享 | `service/share` |
 
 ## AI 搜索（上游）
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `AI_NOT_CONFIGURED` | 503 | AI 搜索服务未启用或配置不完整 | `ai_search_service` |
-| `AI_API_KEY_DECRYPT_FAILED` | 503 | API Key 无法解密，请重新保存配置 | `ai_search_service` |
-| `AI_CONNECTION_FAILED` | 400 | 无法连接 AI 服务（地址/DNS/TLS/出网） | `ai_search_service` |
-| `AI_CONNECT_TIMEOUT` | 400 | 连接 AI 服务超时 | `ai_search_service` |
-| `AI_REQUEST_FAILED` | 400 | 请求 AI 服务失败 | `ai_search_service` |
-| `AI_REQUEST_TIMEOUT` / `AI_RESPONSE_TIMEOUT` | 400 | 请求或等待上游响应超时 | `ai_search_service` |
-| `AI_RATE_LIMITED` | 429 | 上游限流 | `ai_search_service` |
-| `AI_INVALID_RESPONSE` | 502 | 上游返回不是有效 JSON | `ai_search_service` |
-| `AI_UPSTREAM_FAILED` | 502 | 上游返回错误状态 | `ai_search_service` |
-| `AI_ENDPOINT_NOT_FOUND` | 400 | 上游接口 404（地址填错） | `ai_search_service` |
-| `AI_AUTH_FAILED` | 400 | 上游鉴权失败（Key 无效） | `ai_search_service` |
-| `AI_REQUEST_REJECTED` | 400 | 上游拒绝请求（模型名/参数不对） | `ai_search_service` |
+| `AI_NOT_CONFIGURED` | 503 | AI 搜索服务未启用或配置不完整 | `service/aisearch` |
+| `AI_API_KEY_DECRYPT_FAILED` | 503 | API Key 无法解密，请重新保存配置 | `service/aisearch` |
+| `AI_CONNECTION_FAILED` | 400 | 无法连接 AI 服务（地址/DNS/TLS/出网） | `service/aisearch` |
+| `AI_CONNECT_TIMEOUT` | 400 | 连接 AI 服务超时 | `service/aisearch` |
+| `AI_REQUEST_FAILED` | 400 | 请求 AI 服务失败 | `service/aisearch` |
+| `AI_REQUEST_TIMEOUT` / `AI_RESPONSE_TIMEOUT` | 400 | 请求或等待上游响应超时 | `service/aisearch` |
+| `AI_RATE_LIMITED` | 429 | 上游限流 | `service/aisearch` |
+| `AI_INVALID_RESPONSE` | 502 | 上游返回不是有效 JSON | `service/aisearch` |
+| `AI_UPSTREAM_FAILED` | 502 | 上游返回错误状态 | `service/aisearch` |
+| `AI_ENDPOINT_NOT_FOUND` | 400 | 上游接口 404（地址填错） | `service/aisearch` |
+| `AI_AUTH_FAILED` | 400 | 上游鉴权失败（Key 无效） | `service/aisearch` |
+| `AI_REQUEST_REJECTED` | 400 | 上游拒绝请求（模型名/参数不对） | `service/aisearch` |
 
 ## 微信小程序（上游）
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `WECHAT_NOT_CONFIGURED` | 503 | 微信小程序登录尚未配置 | `core/wechat.py` |
-| `WECHAT_CONFIGURATION_INVALID` | 503 | AppID 与 AppSecret 配置无效 | `core/wechat.py` |
-| `WECHAT_AUTH_UNAVAILABLE` | 503 | 微信登录服务暂时不可用 | `mini_program_service` |
-| `WECHAT_AUTH_INVALID_RESPONSE` | 502 | 微信登录服务返回异常 | `mini_program_service` |
-| `WECHAT_ACCESS_TOKEN_FAILED` | 502 | 微信接口凭证获取失败 | `mini_program_service` |
-| `WECHAT_ACCESS_TOKEN_UNAVAILABLE` | 503 | 微信接口调用暂时不可用 | `mini_program_service` |
-| `WECHAT_MINI_PROGRAM_CODE_FAILED` | 502 | 小程序码生成失败 | `mini_program_service` |
-| `WECHAT_MINI_PROGRAM_CODE_INVALID_RESPONSE` | 502 | 小程序码生成服务返回异常 | `mini_program_service` |
-| `WECHAT_MINI_PROGRAM_CODE_UNAVAILABLE` | 503 | 小程序码生成服务暂时不可用 | `mini_program_service` |
+| `WECHAT_NOT_CONFIGURED` | 503 | 微信小程序登录尚未配置 | `service/miniprogram`、`service/aisearch` |
+| `WECHAT_CONFIGURATION_INVALID` | 503 | AppID 与 AppSecret 配置无效 | `service/miniprogram`、`service/aisearch` |
+| `WECHAT_AUTH_UNAVAILABLE` | 503 | 微信登录服务暂时不可用 | `service/miniprogram` |
+| `WECHAT_AUTH_INVALID_RESPONSE` | 502 | 微信登录服务返回异常 | `service/miniprogram` |
+| `WECHAT_ACCESS_TOKEN_FAILED` | 502 | 微信接口凭证获取失败 | `service/miniprogram` |
+| `WECHAT_ACCESS_TOKEN_UNAVAILABLE` | 503 | 微信接口调用暂时不可用 | `service/miniprogram` |
+| `WECHAT_MINI_PROGRAM_CODE_FAILED` | 502 | 小程序码生成失败 | `service/miniprogram` |
+| `WECHAT_MINI_PROGRAM_CODE_INVALID_RESPONSE` | 502 | 小程序码生成服务返回异常 | `service/miniprogram` |
+| `WECHAT_MINI_PROGRAM_CODE_UNAVAILABLE` | 503 | 小程序码生成服务暂时不可用 | `service/miniprogram` |
 
 ## Webhook 投递（上游）
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `WEBHOOK_CREDENTIAL_DECRYPT_FAILED` | 503 | Webhook 配置无法解密，请重新保存 | `webhook_service` |
-| `WEBHOOK_TEST_FAILED` | 502 | 测试推送失败 | `webhook_service` |
+| `WEBHOOK_CREDENTIAL_DECRYPT_FAILED` | 503 | Webhook 配置无法解密，请重新保存 | `service/webhook` |
+| `WEBHOOK_TEST_FAILED` | 502 | 测试推送失败 | `service/webhook` |
 
 ## 系统与框架
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `ROUTE_NOT_FOUND` | 400 | 接口路径不存在（框架 404 重映射） | `core/exception_handlers.py` |
-| `INTERNAL_SERVER_ERROR` | 500 | 服务内部异常 | `core/exception_handlers.py` |
-| `DATABASE_ERROR` | 500 | 数据库操作失败 | `core/exception_handlers.py` |
-| `DATABASE_QUERY_ERROR` | 500 | 数据库查询执行失败 | `core/exception_handlers.py` |
-| `DATABASE_UNAVAILABLE` | 503 | 数据库暂时不可用 | `core/exception_handlers.py`、`main.py` |
+| `ROUTE_NOT_FOUND` | 400 | 接口路径不存在（框架 404 重映射） | `app`（Gin `NoRoute`） |
+| `INTERNAL_SERVER_ERROR` | 500 | 服务内部异常 | `web`、`middleware`（panic 兜底） |
+| `DATABASE_ERROR` | 500 | 数据库操作失败 | `web`（`WriteError`） |
+| `DATABASE_QUERY_ERROR` | 500 | 数据库查询执行失败 | `web`（`WriteError`） |
+| `DATABASE_UNAVAILABLE` | 503 | 数据库暂时不可用 | `web`（`WriteError`）、`app`（`/health`） |
 
 ## 不在上表的码
 
-- `HTTP_ERROR`：其余 Starlette HTTP 异常（如 405 Method Not Allowed）**按原始状态码透传**，message 为框架 `detail`，没有固定 HTTP 状态码。
+- `HTTP_ERROR`：请求方法与路由不匹配时由 Gin 的 `NoMethod`（`internal/app`）返回，状态码 405，message 为 `Method Not Allowed`；不在默认状态码表里。
 - SERVER_RESTARTED：异步任务（Excel 导入/导出）记录的 `error_code` 字段内部标记（服务重启导致任务中断），不是 HTTP 错误响应的 `code`。
 
 ## 新增错误码时的要求
 
-1. 在 `server/app/core/errors.py` 的 `_DEFAULT_STATUS_BY_CODE` 里登记默认状态码（除非所有调用点都显式传 `status_code`）。
-2. 在本页对应分类下补一行：code、HTTP 状态码、含义、来源文件。
-3. 运行 `cd server && pytest tests/test_error_code_docs.py`。
+1. 在 `server/internal/apperr` 的 `defaultStatusByCode` 里登记默认状态码（除非所有调用点都用 `WithStatus` 显式指定）。
+2. 在本页对应分类下补一行：code、HTTP 状态码、含义、来源包。
+3. 运行 `cd server && go test ./...`（含文档一致性校验）。

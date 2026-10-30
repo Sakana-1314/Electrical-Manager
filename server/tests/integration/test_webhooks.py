@@ -7,11 +7,15 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
-from app.core.security import create_mini_program_registration_token
-from app.domain.enums import WebhookDeliveryStatus, WebhookPlatform
-from app.models import WebhookChannel, WebhookDelivery
-from app.services import webhook_service
 from tests.conftest import auth_headers, create_stock, project_session
+from tests.go_upstream import (  # noqa: F401  （go_upstream 是 fixture）
+    StartUpstream,
+    deliver_pending_once,
+    go_upstream,
+)
+from tests.testkit.enums import WebhookDeliveryStatus, WebhookPlatform
+from tests.testkit.models import WebhookChannel, WebhookDelivery
+from tests.testkit.security import create_mini_program_registration_token
 
 
 async def configure_channel(
@@ -48,7 +52,7 @@ async def configure_channel(
 
 @pytest.mark.asyncio
 async def test_webhook_settings_permissions_and_validation(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
     unauthorized = await client.get("/api/v1/system-settings/webhooks")
     assert unauthorized.status_code == 401
@@ -105,82 +109,24 @@ async def test_webhook_settings_permissions_and_validation(
         captured.append(request)
         return httpx.Response(200, json={"code": 0, "msg": "success"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
-        monkeypatch.setattr(webhook_service, "_client", mock_client)
-        tested = await client.post(
-            "/api/v1/system-settings/webhooks/FEISHU/test",
-            headers=admin,
-            json={
-                "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/unsaved-token",
-                "secret": "unsaved-secret",
-            },
-        )
+    test_request = {
+        "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/unsaved-token",
+        "secret": "unsaved-secret",
+    }
+    # 推送改投到本地桩服务，由 handler 记录请求。
+    await go_upstream("webhook", handler)
+    tested = await client.post(
+        "/api/v1/system-settings/webhooks/FEISHU/test", headers=admin, json=test_request
+    )
     assert tested.status_code == 200, tested.text
     assert len(captured) == 1
     test_body = __import__("json").loads(captured[0].content)
     assert test_body["content"]["text"] == "测试通知\n这是一条 Webhook 测试通知。"
 
 
-def test_notification_message_format() -> None:
-    single_outbound_payload = {
-        "event_type": "stock.outbound.created",
-        "data": {
-            "operation_no": "OUT-SHOULD-NOT-APPEAR",
-            "receiver_name": "张三",
-            "subitem_no": "01-02",
-            "business_reason": "设备检修",
-            "materials": [
-                {
-                    "name": "接触器",
-                    "model_spec": "CJX2",
-                    "quantity": "2.0000",
-                    "unit_name": "个",
-                }
-            ],
-        },
-    }
-    title, text = webhook_service._message_text(single_outbound_payload)
-    assert title == "出库通知"
-    assert text == "物资：接触器 CJX2\n数量：2个\n领用人：张三\n用途：01-02 设备检修"
-    assert "流水号" not in text
-
-    multiple_outbound_payload = {
-        "event_type": "stock.outbound.created",
-        "data": {
-            "receiver_name": "张三",
-            "subitem_no": "01-02",
-            "business_reason": "设备检修",
-            "materials": [
-                {"name": "接触器", "model_spec": "CJX2"},
-                {"name": "断路器", "model_spec": "DZ47"},
-                {"name": "继电器", "model_spec": "RXM"},
-            ],
-        },
-    }
-    multiple_title, multiple_text = webhook_service._message_text(
-        multiple_outbound_payload
-    )
-    assert multiple_title == "出库通知"
-    assert multiple_text == "物资：3项物资\n领用人：张三\n用途：01-02 设备检修"
-
-    inbound_title, inbound_text = webhook_service._message_text(
-        {
-            "event_type": "stock.inbound.created",
-            "data": {"materials": [{"name": "接触器"}, {"name": "断路器"}]},
-        }
-    )
-    assert inbound_title == "入库通知"
-    assert inbound_text == "入库数量：2 项"
-
-    user_title, _ = webhook_service._message_text(
-        {"event_type": "mini_program.user.bound", "data": {}}
-    )
-    assert user_title == "新用户绑定通知"
-
-
 @pytest.mark.asyncio
 async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
@@ -302,10 +248,10 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
             return httpx.Response(200, json={"code": 0, "msg": "success"})
         return httpx.Response(200, json={"errcode": 0, "errmsg": "ok"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
-        monkeypatch.setattr(webhook_service, "_client", mock_client)
-        while await webhook_service.deliver_pending_once():
-            pass
+    # 推送改投到本地桩服务，再用测试钩子逐条触发投递。
+    await go_upstream("webhook", handler)
+    while await deliver_pending_once(client):
+        pass
 
     assert len(captured) == 5
     feishu_requests = [item for item in captured if item.url.host == "open.feishu.cn"]

@@ -6,7 +6,6 @@ from datetime import UTC, datetime, timedelta, timezone
 import pytest
 from httpx import AsyncClient
 
-from app.core.database import engine
 from tests.conftest import auth_headers, create_stock
 
 
@@ -212,12 +211,8 @@ async def test_concurrent_outbound_allows_negative_without_lost_updates(
             | {"receiver_name": "测试领用人"},
         )
 
-    if engine.dialect.name in {"mysql", "postgresql"}:
-        # MySQL/InnoDB 与 PostgreSQL 分支验证 SELECT ... FOR UPDATE 串行化后不会丢失扣减。
-        responses = await asyncio.gather(outbound("concurrent-a"), outbound("concurrent-b"))
-    else:
-        # SQLite 不提供行级 FOR UPDATE；本地快速测试顺序执行相同业务。
-        responses = [await outbound("concurrent-a"), await outbound("concurrent-b")]
+    # 并发出库：SELECT ... FOR UPDATE 串行化后不会丢失扣减。
+    responses = await asyncio.gather(outbound("concurrent-a"), outbound("concurrent-b"))
     assert [response.status_code for response in responses] == [201, 201]
     detail = await client.get(f"/api/v1/stock-materials/{material_id}", headers=headers)
     assert detail.json()["current_qty"] == "-3"

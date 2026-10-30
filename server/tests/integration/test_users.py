@@ -5,8 +5,8 @@ from uuid import UUID
 import pytest
 from httpx import AsyncClient
 
-from app.models import User
 from tests.conftest import auth_headers, create_stock, project_session
+from tests.testkit.models import User
 
 
 async def _clear_api_token_enc(user_id: int) -> None:
