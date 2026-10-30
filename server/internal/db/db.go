@@ -281,10 +281,8 @@ func (s *Session) Commit() error {
 	s.c.afterRollback = nil
 	s.c.mu.Unlock()
 	if tx != nil {
-		start := time.Now()
-		err := tx.Commit()
-		s.track(start)
-		if err != nil {
+		// 与原实现一致：只统计业务语句，COMMIT 不计入 X-DB-Time / X-DB-Queries。
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 	}

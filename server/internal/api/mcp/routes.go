@@ -6,6 +6,7 @@ package mcp
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -860,8 +862,11 @@ func callInternal(c *gin.Context, ident *identity, method, path string, query ma
 	if enc := values.Encode(); enc != "" {
 		target += "?" + enc
 	}
+	// 与原实现一致：单次内部调用最长 60 秒。
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 60*time.Second)
+	defer cancel()
 	for redirects := 0; ; redirects++ {
-		req, err := http.NewRequestWithContext(c.Request.Context(), method, "http://mcp.internal"+target, bytes.NewReader(reqBody))
+		req, err := http.NewRequestWithContext(ctx, method, "http://mcp.internal"+target, bytes.NewReader(reqBody))
 		if err != nil {
 			return nil, err
 		}

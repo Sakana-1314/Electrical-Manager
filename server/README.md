@@ -20,9 +20,10 @@ https://<服务域名>/api/v1/mcp/?token=<接口令牌>
 支持自定义请求头的 MCP 客户端也可以把地址设为不含查询参数的 `/api/v1/mcp/`，并发送
 `X-API-Token` 或 `Authorization: Bearer <接口令牌>`。
 
-服务提供四个工具：
+服务提供五个工具：
 
-- `system_whoami`：确认令牌对应的用户和角色。
+- `system_whoami`：确认令牌对应的用户、角色与当前项目。
+- `projects_list`：列出全部项目。
 - `operations_list`：按标签或关键字查询可用业务操作。
 - `operation_describe`：读取某个操作的参数和响应契约。
 - `operation_call`：调用已登记的业务接口；文件上传和下载使用 Base64。
