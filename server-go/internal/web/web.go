@@ -188,6 +188,10 @@ func writeFile(c *gin.Context, p *pendingResponse) error {
 	}
 	h.Set("Last-Modified", st.ModTime().UTC().Format(http.TimeFormat))
 	h.Set("Accept-Ranges", "bytes")
+	// Starlette FileResponse 不做条件请求（总是 200），去掉条件头避免标准库返回 304。
+	for _, k := range []string{"If-None-Match", "If-Modified-Since", "If-Match", "If-Unmodified-Since"} {
+		c.Request.Header.Del(k)
+	}
 	http.ServeContent(c.Writer, c.Request, filepath.Base(p.filePath), st.ModTime(), f)
 	return nil
 }

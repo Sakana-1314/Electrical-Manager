@@ -100,7 +100,7 @@ func decodeImage(raw []byte) (img *decodedImage, err error) {
 	)
 	switch format {
 	case formatPNG:
-		configFn, decodeFn = png.DecodeConfig, png.Decode
+		configFn, decodeFn = png.DecodeConfig, decodePNG
 	case formatJPEG:
 		configFn, decodeFn = jpeg.DecodeConfig, jpeg.Decode
 	case formatWebP:
