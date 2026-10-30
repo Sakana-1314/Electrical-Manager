@@ -36,7 +36,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "无法初始化日志:", err)
 		os.Exit(1)
 	}
-	dsn, err := s.MySQLDSN()
+	dsn, err := s.PostgresDSN()
 	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)

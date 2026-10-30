@@ -43,11 +43,9 @@ def project_session(project_id: int = DEFAULT_PROJECT_ID):
 async def _truncate_all_tables() -> None:
     from sqlalchemy import text
 
+    tables = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
     async with engine.begin() as connection:
-        await connection.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-        for table in Base.metadata.sorted_tables:
-            await connection.execute(text(f"TRUNCATE TABLE `{table.name}`"))
-        await connection.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+        await connection.execute(text(f"TRUNCATE TABLE {tables} RESTART IDENTITY CASCADE"))
 
 
 @pytest_asyncio.fixture

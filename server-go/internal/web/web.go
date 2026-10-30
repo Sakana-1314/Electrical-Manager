@@ -310,7 +310,10 @@ func WriteError(g *gin.Context, err error) {
 	case db.IsQueryError(err):
 		slog.Error(fmt.Sprintf("database query error request_id=%s error=%v", rid, err))
 		WriteErrorBody(g, 500, "DATABASE_QUERY_ERROR", "数据库查询执行失败，请联系管理员", nil)
-	case db.IsMySQLError(err):
+	case db.IsConnectionError(err):
+		slog.Error(fmt.Sprintf("database unavailable request_id=%s error=%v", rid, err))
+		WriteErrorBody(g, 503, "DATABASE_UNAVAILABLE", "数据库暂时不可用，请稍后重试", nil)
+	case db.IsDBError(err):
 		slog.Error(fmt.Sprintf("database error request_id=%s error=%v", rid, err))
 		WriteErrorBody(g, 500, "DATABASE_ERROR", "数据库操作失败，请联系管理员", nil)
 	case isUnavailable(err):

@@ -25,7 +25,7 @@ type BusinessEventLog struct {
 }
 
 const TableBusinessEventLog = "business_event_log"
-const ColsBusinessEventLog = "`id`, `business_type`, `business_id`, `action`, `old_status`, `new_status`, `occurred_at`, `remark`, `before_data`, `after_data`"
+const ColsBusinessEventLog = `"id", "business_type", "business_id", "action", "old_status", "new_status", "occurred_at", "remark", "before_data", "after_data"`
 
 // ExcelExportJob ↔ 表 `excel_export_job`（项目域）。
 type ExcelExportJob struct {
@@ -47,7 +47,7 @@ type ExcelExportJob struct {
 }
 
 const TableExcelExportJob = "excel_export_job"
-const ColsExcelExportJob = "`id`, `export_type`, `status`, `download_filename`, `file_path`, `params`, `result`, `error_code`, `error_message`, `created_by`, `created_at`, `started_at`, `finished_at`, `updated_at`, `project_id`"
+const ColsExcelExportJob = `"id", "export_type", "status", "download_filename", "file_path", "params", "result", "error_code", "error_message", "created_by", "created_at", "started_at", "finished_at", "updated_at", "project_id"`
 
 // ExcelImportJob ↔ 表 `excel_import_job`（项目域）。
 type ExcelImportJob struct {
@@ -68,7 +68,7 @@ type ExcelImportJob struct {
 }
 
 const TableExcelImportJob = "excel_import_job"
-const ColsExcelImportJob = "`id`, `import_type`, `status`, `original_filename`, `file_path`, `result`, `error_code`, `error_message`, `created_by`, `created_at`, `started_at`, `finished_at`, `updated_at`, `project_id`"
+const ColsExcelImportJob = `"id", "import_type", "status", "original_filename", "file_path", "result", "error_code", "error_message", "created_by", "created_at", "started_at", "finished_at", "updated_at", "project_id"`
 
 // FileObject ↔ 表 `file_object`。
 type FileObject struct {
@@ -88,7 +88,7 @@ type FileObject struct {
 }
 
 const TableFileObject = "file_object"
-const ColsFileObject = "`id`, `original_name`, `mime_type`, `size_bytes`, `width`, `height`, `sha256`, `source_sha256`, `source_probes`, `deleted_at`, `created_at`, `updated_at`, `version`"
+const ColsFileObject = `"id", "original_name", "mime_type", "size_bytes", "width", "height", "sha256", "source_sha256", "source_probes", "deleted_at", "created_at", "updated_at", "version"`
 
 // Hazard ↔ 表 `hazard`（项目域）。
 type Hazard struct {
@@ -115,7 +115,7 @@ type Hazard struct {
 }
 
 const TableHazard = "hazard"
-const ColsHazard = "`id`, `inspection_area`, `inspection_date`, `inspector`, `description`, `suggestion`, `hazard_unit_id`, `person`, `due_date`, `recheck_person`, `rectify_person`, `status`, `hazard_type_id`, `level`, `remark`, `client_request_id`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsHazard = `"id", "inspection_area", "inspection_date", "inspector", "description", "suggestion", "hazard_unit_id", "person", "due_date", "recheck_person", "rectify_person", "status", "hazard_type_id", "level", "remark", "client_request_id", "project_id", "created_at", "updated_at", "version"`
 
 // HazardAfterImage ↔ 表 `hazard_after_image`（项目域）。
 type HazardAfterImage struct {
@@ -126,7 +126,7 @@ type HazardAfterImage struct {
 }
 
 const TableHazardAfterImage = "hazard_after_image"
-const ColsHazardAfterImage = "`hazard_id`, `file_id`, `sort_order`, `project_id`"
+const ColsHazardAfterImage = `"hazard_id", "file_id", "sort_order", "project_id"`
 
 // HazardBeforeImage ↔ 表 `hazard_before_image`（项目域）。
 type HazardBeforeImage struct {
@@ -137,7 +137,7 @@ type HazardBeforeImage struct {
 }
 
 const TableHazardBeforeImage = "hazard_before_image"
-const ColsHazardBeforeImage = "`hazard_id`, `file_id`, `sort_order`, `project_id`"
+const ColsHazardBeforeImage = `"hazard_id", "file_id", "sort_order", "project_id"`
 
 // HazardType ↔ 表 `hazard_type`（项目域）。
 type HazardType struct {
@@ -151,7 +151,7 @@ type HazardType struct {
 }
 
 const TableHazardType = "hazard_type"
-const ColsHazardType = "`id`, `major`, `minor`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsHazardType = `"id", "major", "minor", "project_id", "created_at", "updated_at", "version"`
 
 // HazardUnit ↔ 表 `hazard_unit`（项目域）。
 type HazardUnit struct {
@@ -167,7 +167,7 @@ type HazardUnit struct {
 }
 
 const TableHazardUnit = "hazard_unit"
-const ColsHazardUnit = "`id`, `name`, `person`, `remark`, `enabled`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsHazardUnit = `"id", "name", "person", "remark", "enabled", "project_id", "created_at", "updated_at", "version"`
 
 // HuaxingInventory ↔ 表 `huaxing_inventory`（项目域）。
 type HuaxingInventory struct {
@@ -187,7 +187,7 @@ type HuaxingInventory struct {
 }
 
 const TableHuaxingInventory = "huaxing_inventory"
-const ColsHuaxingInventory = "`id`, `first_inbound_date`, `warehouse`, `material_code`, `name`, `model_spec`, `quantity`, `unit_name`, `purchaser`, `purchase_department`, `subitem_no_name`, `created_at`, `project_id`"
+const ColsHuaxingInventory = `"id", "first_inbound_date", "warehouse", "material_code", "name", "model_spec", "quantity", "unit_name", "purchaser", "purchase_department", "subitem_no_name", "created_at", "project_id"`
 
 // Ledger ↔ 表 `ledger`（项目域）。
 type Ledger struct {
@@ -207,7 +207,7 @@ type Ledger struct {
 }
 
 const TableLedger = "ledger"
-const ColsLedger = "`id`, `name`, `model_spec`, `subitem_no`, `quantity`, `unit_name`, `usage`, `remark`, `tag_ids`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsLedger = `"id", "name", "model_spec", "subitem_no", "quantity", "unit_name", "usage", "remark", "tag_ids", "project_id", "created_at", "updated_at", "version"`
 
 // LedgerImage ↔ 表 `ledger_image`（项目域）。
 type LedgerImage struct {
@@ -218,7 +218,7 @@ type LedgerImage struct {
 }
 
 const TableLedgerImage = "ledger_image"
-const ColsLedgerImage = "`ledger_id`, `file_id`, `sort_order`, `project_id`"
+const ColsLedgerImage = `"ledger_id", "file_id", "sort_order", "project_id"`
 
 // LedgerTag ↔ 表 `ledger_tag`（项目域）。
 type LedgerTag struct {
@@ -233,7 +233,7 @@ type LedgerTag struct {
 }
 
 const TableLedgerTag = "ledger_tag"
-const ColsLedgerTag = "`id`, `parent_id`, `name`, `remark`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsLedgerTag = `"id", "parent_id", "name", "remark", "project_id", "created_at", "updated_at", "version"`
 
 // LedgerTagImage ↔ 表 `ledger_tag_image`（项目域）。
 type LedgerTagImage struct {
@@ -244,7 +244,7 @@ type LedgerTagImage struct {
 }
 
 const TableLedgerTagImage = "ledger_tag_image"
-const ColsLedgerTagImage = "`tag_id`, `file_id`, `sort_order`, `project_id`"
+const ColsLedgerTagImage = `"tag_id", "file_id", "sort_order", "project_id"`
 
 // LiteInventory ↔ 表 `lite_inventory`（项目域）。
 type LiteInventory struct {
@@ -259,7 +259,7 @@ type LiteInventory struct {
 }
 
 const TableLiteInventory = "lite_inventory"
-const ColsLiteInventory = "`id`, `name`, `model_spec`, `unit_name`, `quantity`, `remark`, `created_at`, `project_id`"
+const ColsLiteInventory = `"id", "name", "model_spec", "unit_name", "quantity", "remark", "created_at", "project_id"`
 
 // MaterialCodeLibrary ↔ 表 `material_code_library`（项目域）。
 type MaterialCodeLibrary struct {
@@ -273,7 +273,7 @@ type MaterialCodeLibrary struct {
 }
 
 const TableMaterialCodeLibrary = "material_code_library"
-const ColsMaterialCodeLibrary = "`id`, `material_code`, `name`, `model_spec`, `unit_name`, `created_at`, `project_id`"
+const ColsMaterialCodeLibrary = `"id", "material_code", "name", "model_spec", "unit_name", "created_at", "project_id"`
 
 // MaterialPrice ↔ 表 `material_price`（项目域）。
 type MaterialPrice struct {
@@ -285,7 +285,7 @@ type MaterialPrice struct {
 }
 
 const TableMaterialPrice = "material_price"
-const ColsMaterialPrice = "`id`, `material_code`, `unit_price`, `created_at`, `project_id`"
+const ColsMaterialPrice = `"id", "material_code", "unit_price", "created_at", "project_id"`
 
 // Memo ↔ 表 `memo`。
 type Memo struct {
@@ -299,7 +299,7 @@ type Memo struct {
 }
 
 const TableMemo = "memo"
-const ColsMemo = "`id`, `title`, `content`, `created_by`, `created_at`, `updated_at`, `version`"
+const ColsMemo = `"id", "title", "content", "created_by", "created_at", "updated_at", "version"`
 
 // MiniProgramIdentity ↔ 表 `mini_program_identity`。
 type MiniProgramIdentity struct {
@@ -313,7 +313,7 @@ type MiniProgramIdentity struct {
 }
 
 const TableMiniProgramIdentity = "mini_program_identity"
-const ColsMiniProgramIdentity = "`id`, `mini_program_user_id`, `app_id`, `wechat_openid`, `created_at`, `updated_at`, `version`"
+const ColsMiniProgramIdentity = `"id", "mini_program_user_id", "app_id", "wechat_openid", "created_at", "updated_at", "version"`
 
 // MiniProgramUser ↔ 表 `mini_program_user`。
 type MiniProgramUser struct {
@@ -328,7 +328,7 @@ type MiniProgramUser struct {
 }
 
 const TableMiniProgramUser = "mini_program_user"
-const ColsMiniProgramUser = "`id`, `display_name`, `department_name`, `enabled`, `last_used_at`, `created_at`, `updated_at`, `version`"
+const ColsMiniProgramUser = `"id", "display_name", "department_name", "enabled", "last_used_at", "created_at", "updated_at", "version"`
 
 // Project ↔ 表 `project`。
 type Project struct {
@@ -343,7 +343,7 @@ type Project struct {
 }
 
 const TableProject = "project"
-const ColsProject = "`id`, `name`, `enabled`, `is_default`, `remark`, `created_at`, `updated_at`, `version`"
+const ColsProject = `"id", "name", "enabled", "is_default", "remark", "created_at", "updated_at", "version"`
 
 // PurchaseMaterial ↔ 表 `purchase_material`（项目域）。
 type PurchaseMaterial struct {
@@ -372,7 +372,7 @@ type PurchaseMaterial struct {
 }
 
 const TablePurchaseMaterial = "purchase_material"
-const ColsPurchaseMaterial = "`id`, `plan_no`, `plan_date`, `material_code`, `category`, `urgency`, `demand_department`, `name`, `model_spec`, `unit_name`, `actual_demand_person`, `purchase_responsible`, `planned_qty`, `usage`, `subitem_no`, `remark`, `stock_material_id`, `status`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsPurchaseMaterial = `"id", "plan_no", "plan_date", "material_code", "category", "urgency", "demand_department", "name", "model_spec", "unit_name", "actual_demand_person", "purchase_responsible", "planned_qty", "usage", "subitem_no", "remark", "stock_material_id", "status", "project_id", "created_at", "updated_at", "version"`
 
 // PurchaseMaterialImage ↔ 表 `purchase_material_image`（项目域）。
 type PurchaseMaterialImage struct {
@@ -383,7 +383,7 @@ type PurchaseMaterialImage struct {
 }
 
 const TablePurchaseMaterialImage = "purchase_material_image"
-const ColsPurchaseMaterialImage = "`material_id`, `file_id`, `sort_order`, `project_id`"
+const ColsPurchaseMaterialImage = `"material_id", "file_id", "sort_order", "project_id"`
 
 // PurchasePlanTemplate ↔ 表 `purchase_plan_template`（项目域）。
 type PurchasePlanTemplate struct {
@@ -409,7 +409,7 @@ type PurchasePlanTemplate struct {
 }
 
 const TablePurchasePlanTemplate = "purchase_plan_template"
-const ColsPurchasePlanTemplate = "`id`, `material_code`, `category`, `urgency`, `demand_department`, `name`, `model_spec`, `unit_name`, `actual_demand_person`, `purchase_responsible`, `planned_qty`, `usage`, `subitem_no`, `remark`, `stock_material_id`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsPurchasePlanTemplate = `"id", "material_code", "category", "urgency", "demand_department", "name", "model_spec", "unit_name", "actual_demand_person", "purchase_responsible", "planned_qty", "usage", "subitem_no", "remark", "stock_material_id", "project_id", "created_at", "updated_at", "version"`
 
 // PurchasePlanTemplateImage ↔ 表 `purchase_plan_template_image`（项目域）。
 type PurchasePlanTemplateImage struct {
@@ -420,7 +420,7 @@ type PurchasePlanTemplateImage struct {
 }
 
 const TablePurchasePlanTemplateImage = "purchase_plan_template_image"
-const ColsPurchasePlanTemplateImage = "`plan_id`, `file_id`, `sort_order`, `project_id`"
+const ColsPurchasePlanTemplateImage = `"plan_id", "file_id", "sort_order", "project_id"`
 
 // PurchaseRequest ↔ 表 `purchase_request`（项目域）。
 type PurchaseRequest struct {
@@ -440,7 +440,7 @@ type PurchaseRequest struct {
 }
 
 const TablePurchaseRequest = "purchase_request"
-const ColsPurchaseRequest = "`id`, `purchase_order_no`, `contract_no`, `vessel_no`, `consolidation_date`, `consolidation_port`, `sailing_date`, `remark`, `purchase_date`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsPurchaseRequest = `"id", "purchase_order_no", "contract_no", "vessel_no", "consolidation_date", "consolidation_port", "sailing_date", "remark", "purchase_date", "project_id", "created_at", "updated_at", "version"`
 
 // PurchaseRequestLine ↔ 表 `purchase_request_line`（项目域）。
 type PurchaseRequestLine struct {
@@ -475,7 +475,7 @@ type PurchaseRequestLine struct {
 }
 
 const TablePurchaseRequestLine = "purchase_request_line"
-const ColsPurchaseRequestLine = "`id`, `purchase_request_id`, `purchase_material_id`, `plan_no_snapshot`, `plan_date_snapshot`, `material_code_snapshot`, `category_snapshot`, `demand_department_snapshot`, `material_name_snapshot`, `model_spec_snapshot`, `unit_name_snapshot`, `actual_demand_person_snapshot`, `purchase_responsible_snapshot`, `plan_remark_snapshot`, `stock_material_id_snapshot`, `purchase_qty`, `status`, `usage`, `usage_hash`, `subitem_no`, `trace_no`, `salesperson`, `contract_sign_date`, `unit_price`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsPurchaseRequestLine = `"id", "purchase_request_id", "purchase_material_id", "plan_no_snapshot", "plan_date_snapshot", "material_code_snapshot", "category_snapshot", "demand_department_snapshot", "material_name_snapshot", "model_spec_snapshot", "unit_name_snapshot", "actual_demand_person_snapshot", "purchase_responsible_snapshot", "plan_remark_snapshot", "stock_material_id_snapshot", "purchase_qty", "status", "usage", "usage_hash", "subitem_no", "trace_no", "salesperson", "contract_sign_date", "unit_price", "project_id", "created_at", "updated_at", "version"`
 
 // PurchaseRequestLineImage ↔ 表 `purchase_request_line_image`（项目域）。
 type PurchaseRequestLineImage struct {
@@ -486,7 +486,7 @@ type PurchaseRequestLineImage struct {
 }
 
 const TablePurchaseRequestLineImage = "purchase_request_line_image"
-const ColsPurchaseRequestLineImage = "`line_id`, `file_id`, `sort_order`, `project_id`"
+const ColsPurchaseRequestLineImage = `"line_id", "file_id", "sort_order", "project_id"`
 
 // ShareLink ↔ 表 `share_link`（项目域）。
 type ShareLink struct {
@@ -503,7 +503,7 @@ type ShareLink struct {
 }
 
 const TableShareLink = "share_link"
-const ColsShareLink = "`id`, `token`, `share_type`, `item_ids`, `columns`, `expires_at`, `created_by`, `created_at`, `updated_at`, `project_id`"
+const ColsShareLink = `"id", "token", "share_type", "item_ids", "columns", "expires_at", "created_by", "created_at", "updated_at", "project_id"`
 
 // StockBalance ↔ 表 `stock_balance`（项目域）。
 type StockBalance struct {
@@ -515,7 +515,7 @@ type StockBalance struct {
 }
 
 const TableStockBalance = "stock_balance"
-const ColsStockBalance = "`stock_material_id`, `quantity`, `version`, `updated_at`, `project_id`"
+const ColsStockBalance = `"stock_material_id", "quantity", "version", "updated_at", "project_id"`
 
 // StockMaterial ↔ 表 `stock_material`（项目域）。
 type StockMaterial struct {
@@ -535,7 +535,7 @@ type StockMaterial struct {
 }
 
 const TableStockMaterial = "stock_material"
-const ColsStockMaterial = "`id`, `uuid`, `name`, `name_id`, `alias`, `model_spec`, `unit_name`, `remark`, `identity_hash`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsStockMaterial = `"id", "uuid", "name", "name_id", "alias", "model_spec", "unit_name", "remark", "identity_hash", "project_id", "created_at", "updated_at", "version"`
 
 // StockMaterialImage ↔ 表 `stock_material_image`（项目域）。
 type StockMaterialImage struct {
@@ -546,7 +546,7 @@ type StockMaterialImage struct {
 }
 
 const TableStockMaterialImage = "stock_material_image"
-const ColsStockMaterialImage = "`material_id`, `file_id`, `sort_order`, `project_id`"
+const ColsStockMaterialImage = `"material_id", "file_id", "sort_order", "project_id"`
 
 // StockOperation ↔ 表 `stock_operation`（项目域）。
 type StockOperation struct {
@@ -569,7 +569,7 @@ type StockOperation struct {
 }
 
 const TableStockOperation = "stock_operation"
-const ColsStockOperation = "`id`, `operation_no`, `operation_type`, `occurred_at`, `business_reason`, `receiver_unit`, `receiver_name`, `subitem_no`, `source_type`, `reversal_of_id`, `client_request_id`, `mini_program_user_name_snapshot`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsStockOperation = `"id", "operation_no", "operation_type", "occurred_at", "business_reason", "receiver_unit", "receiver_name", "subitem_no", "source_type", "reversal_of_id", "client_request_id", "mini_program_user_name_snapshot", "project_id", "created_at", "updated_at", "version"`
 
 // StockOperationLine ↔ 表 `stock_operation_line`（项目域）。
 type StockOperationLine struct {
@@ -590,7 +590,7 @@ type StockOperationLine struct {
 }
 
 const TableStockOperationLine = "stock_operation_line"
-const ColsStockOperationLine = "`id`, `operation_id`, `stock_material_id`, `quantity`, `remaining_qty`, `before_qty`, `after_qty`, `material_name_snapshot`, `model_spec_snapshot`, `unit_name_snapshot`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsStockOperationLine = `"id", "operation_id", "stock_material_id", "quantity", "remaining_qty", "before_qty", "after_qty", "material_name_snapshot", "model_spec_snapshot", "unit_name_snapshot", "project_id", "created_at", "updated_at", "version"`
 
 // StockReplenishmentPolicy ↔ 表 `stock_replenishment_policy`（项目域）。
 type StockReplenishmentPolicy struct {
@@ -604,7 +604,7 @@ type StockReplenishmentPolicy struct {
 }
 
 const TableStockReplenishmentPolicy = "stock_replenishment_policy"
-const ColsStockReplenishmentPolicy = "`stock_material_id`, `minimum_qty`, `enabled`, `created_at`, `updated_at`, `version`, `project_id`"
+const ColsStockReplenishmentPolicy = `"stock_material_id", "minimum_qty", "enabled", "created_at", "updated_at", "version", "project_id"`
 
 // SystemSetting ↔ 表 `system_setting`。
 type SystemSetting struct {
@@ -615,7 +615,7 @@ type SystemSetting struct {
 }
 
 const TableSystemSetting = "system_setting"
-const ColsSystemSetting = "`setting_key`, `setting_value`, `version`, `updated_at`"
+const ColsSystemSetting = `"setting_key", "setting_value", "version", "updated_at"`
 
 // User ↔ 表 `user`。
 type User struct {
@@ -633,7 +633,7 @@ type User struct {
 }
 
 const TableUser = "user"
-const ColsUser = "`id`, `username`, `password_hash`, `api_token_hash`, `api_token_enc`, `display_name`, `role`, `enabled`, `created_at`, `updated_at`, `version`"
+const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "role", "enabled", "created_at", "updated_at", "version"`
 
 // WebhookChannel ↔ 表 `webhook_channel`。
 type WebhookChannel struct {
@@ -649,7 +649,7 @@ type WebhookChannel struct {
 }
 
 const TableWebhookChannel = "webhook_channel"
-const ColsWebhookChannel = "`id`, `platform`, `enabled`, `webhook_url_encrypted`, `secret_encrypted`, `subscribed_events`, `created_at`, `updated_at`, `version`"
+const ColsWebhookChannel = `"id", "platform", "enabled", "webhook_url_encrypted", "secret_encrypted", "subscribed_events", "created_at", "updated_at", "version"`
 
 // WebhookDelivery ↔ 表 `webhook_delivery`。
 type WebhookDelivery struct {
@@ -670,7 +670,7 @@ type WebhookDelivery struct {
 }
 
 const TableWebhookDelivery = "webhook_delivery"
-const ColsWebhookDelivery = "`id`, `event_id`, `event_type`, `channel_id`, `payload`, `status`, `attempts`, `next_retry_at`, `response_status`, `response_excerpt`, `last_error`, `created_at`, `updated_at`, `delivered_at`"
+const ColsWebhookDelivery = `"id", "event_id", "event_type", "channel_id", "payload", "status", "attempts", "next_retry_at", "response_status", "response_excerpt", "last_error", "created_at", "updated_at", "delivered_at"`
 
 // WorkRecord ↔ 表 `work_record`（项目域）。
 type WorkRecord struct {
@@ -689,7 +689,7 @@ type WorkRecord struct {
 }
 
 const TableWorkRecord = "work_record"
-const ColsWorkRecord = "`id`, `task_id`, `start_date`, `start_half`, `end_date`, `end_half`, `participants`, `remark`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsWorkRecord = `"id", "task_id", "start_date", "start_half", "end_date", "end_half", "participants", "remark", "project_id", "created_at", "updated_at", "version"`
 
 // WorkTask ↔ 表 `work_task`（项目域）。
 type WorkTask struct {
@@ -707,7 +707,7 @@ type WorkTask struct {
 }
 
 const TableWorkTask = "work_task"
-const ColsWorkTask = "`id`, `name`, `description`, `status`, `plan_start_date`, `plan_end_date`, `remark`, `project_id`, `created_at`, `updated_at`, `version`"
+const ColsWorkTask = `"id", "name", "description", "status", "plan_start_date", "plan_end_date", "remark", "project_id", "created_at", "updated_at", "version"`
 
 // WorkTaskImage ↔ 表 `work_task_image`（项目域）。
 type WorkTaskImage struct {
@@ -718,7 +718,7 @@ type WorkTaskImage struct {
 }
 
 const TableWorkTaskImage = "work_task_image"
-const ColsWorkTaskImage = "`task_id`, `file_id`, `sort_order`, `project_id`"
+const ColsWorkTaskImage = `"task_id", "file_id", "sort_order", "project_id"`
 
 // ProjectScopedTables 是带 project_id 的项目域业务表（对应 PROJECT_SCOPED_MODELS）。
 var ProjectScopedTables = []string{

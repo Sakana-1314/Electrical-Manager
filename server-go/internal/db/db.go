@@ -13,12 +13,14 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/jackc/pgx/v5/pgconn"
+	_ "github.com/jackc/pgx/v5/stdlib" // 注册 database/sql 驱动 "pgx"
 	"github.com/jmoiron/sqlx"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
@@ -28,14 +30,7 @@ import (
 var DB *sqlx.DB
 
 func Open(dsn string) (*sqlx.DB, error) {
-	if !strings.Contains(dsn, "interpolateParams=") {
-		if strings.Contains(dsn, "?") {
-			dsn += "&interpolateParams=true"
-		} else {
-			dsn += "?interpolateParams=true"
-		}
-	}
-	conn, err := sqlx.Open("mysql", dsn)
+	conn, err := sqlx.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +180,7 @@ func (s *Session) Get(dest any, query string, args ...any) error {
 		return err
 	}
 	defer s.track(time.Now())
-	return sqlx.GetContext(s.c.ctx, e, dest, query, args...)
+	return sqlx.GetContext(s.c.ctx, e, dest, Translate(query), args...)
 }
 
 // Find 查询单行；无结果时返回 (false, nil)。
@@ -204,7 +199,7 @@ func (s *Session) Select(dest any, query string, args ...any) error {
 		return err
 	}
 	defer s.track(time.Now())
-	return sqlx.SelectContext(s.c.ctx, e, dest, query, args...)
+	return sqlx.SelectContext(s.c.ctx, e, dest, Translate(query), args...)
 }
 
 // Exec 执行写语句。
@@ -214,16 +209,19 @@ func (s *Session) Exec(query string, args ...any) (sql.Result, error) {
 		return nil, err
 	}
 	defer s.track(time.Now())
-	return e.ExecContext(s.c.ctx, query, args...)
+	return e.ExecContext(s.c.ctx, Translate(query), args...)
 }
 
-// Insert 执行 INSERT 并返回自增 id。
+// Insert 执行 INSERT 并返回自增 id（自动追加 RETURNING id）。
 func (s *Session) Insert(query string, args ...any) (int64, error) {
-	res, err := s.Exec(query, args...)
-	if err != nil {
+	if !strings.Contains(strings.ToUpper(query), "RETURNING") {
+		query += " RETURNING id"
+	}
+	var id int64
+	if err := s.Get(&id, query, args...); err != nil {
 		return 0, err
 	}
-	return res.LastInsertId()
+	return id, nil
 }
 
 // Query 返回原始行游标（调用方负责 Close）。
@@ -233,7 +231,7 @@ func (s *Session) Query(query string, args ...any) (*sqlx.Rows, error) {
 		return nil, err
 	}
 	defer s.track(time.Now())
-	return e.QueryxContext(s.c.ctx, query, args...)
+	return e.QueryxContext(s.c.ctx, Translate(query), args...)
 }
 
 // Scalar 查询单个值（COUNT 等）。
@@ -316,45 +314,82 @@ func (s *Session) Rollback() {
 // Close 结束会话：未提交的事务回滚。
 func (s *Session) Close() { s.Rollback() }
 
-// ---- MySQL 错误分类 ----
+// ---- PostgreSQL 错误分类（SQLSTATE） ----
 
-func mysqlErrNo(err error) uint16 {
-	var me *mysql.MySQLError
-	if errors.As(err, &me) {
-		return me.Number
+func sqlState(err error) string {
+	var pe *pgconn.PgError
+	if errors.As(err, &pe) {
+		return pe.Code
 	}
-	return 0
+	return ""
 }
 
-// IsDuplicate 唯一键冲突（1062）。
-func IsDuplicate(err error) bool { return mysqlErrNo(err) == 1062 }
+// SQLState 返回 PostgreSQL 错误码（非服务端错误为空串）。
+func SQLState(err error) string { return sqlState(err) }
 
-// IsIntegrity 完整性约束错误（唯一键 / 外键 / 非空 / CHECK），对应 SQLAlchemy IntegrityError。
-func IsIntegrity(err error) bool {
-	switch mysqlErrNo(err) {
-	case 1062, 1451, 1452, 1048, 1216, 1217, 3819, 1364, 1586, 1557, 1022:
-		return true
-	}
-	return false
+// IsDuplicate 唯一键冲突（23505）。
+func IsDuplicate(err error) bool { return sqlState(err) == "23505" }
+
+// IsIntegrity 完整性约束错误（23 类：唯一键 / 外键 / 非空 / CHECK），对应 SQLAlchemy IntegrityError。
+func IsIntegrity(err error) bool { return strings.HasPrefix(sqlState(err), "23") }
+
+// IsForeignKey 外键约束错误（23503）。
+func IsForeignKey(err error) bool { return sqlState(err) == "23503" }
+
+// IsQueryError SQL 本身有误（42 类：语法错误、未定义列 / 表、列名歧义等）。
+func IsQueryError(err error) bool { return strings.HasPrefix(sqlState(err), "42") }
+
+// IsConnectionError 连接类错误（08 类、管理员关闭 57P、资源不足 53 类）。
+func IsConnectionError(err error) bool {
+	code := sqlState(err)
+	return strings.HasPrefix(code, "08") || strings.HasPrefix(code, "57P") || strings.HasPrefix(code, "53")
 }
 
-// IsForeignKey 外键约束错误。
-func IsForeignKey(err error) bool {
-	switch mysqlErrNo(err) {
-	case 1451, 1452, 1216, 1217:
-		return true
-	}
-	return false
-}
+// IsDBError 是否为服务端返回的数据库错误。
+func IsDBError(err error) bool { return sqlState(err) != "" }
 
-// IsQueryError SQL 本身有误（未知列 / 语法错误 / 表不存在等）。
-func IsQueryError(err error) bool {
-	switch mysqlErrNo(err) {
-	case 1052, 1054, 1064, 1066, 1109, 1146:
-		return true
-	}
-	return false
-}
+// ---- SQL 方言转换 ----
 
-// IsMySQLError 是否为服务端返回的 MySQL 错误。
-func IsMySQLError(err error) bool { return mysqlErrNo(err) != 0 }
+var translateCache sync.Map // string → string
+
+// Translate 把业务代码里的 `?` 占位符与反引号标识符转换为 PostgreSQL 的 `$n` 与双引号（跳过字符串字面量）。
+func Translate(query string) string {
+	if v, ok := translateCache.Load(query); ok {
+		return v.(string)
+	}
+	var b strings.Builder
+	b.Grow(len(query) + 16)
+	n := 0
+	inLiteral := false
+	for i := 0; i < len(query); i++ {
+		ch := query[i]
+		if inLiteral {
+			b.WriteByte(ch)
+			if ch == '\'' {
+				if i+1 < len(query) && query[i+1] == '\'' {
+					b.WriteByte('\'')
+					i++
+					continue
+				}
+				inLiteral = false
+			}
+			continue
+		}
+		switch ch {
+		case '\'':
+			inLiteral = true
+			b.WriteByte(ch)
+		case '`':
+			b.WriteByte('"')
+		case '?':
+			n++
+			b.WriteByte('$')
+			b.WriteString(strconv.Itoa(n))
+		default:
+			b.WriteByte(ch)
+		}
+	}
+	out := b.String()
+	translateCache.Store(query, out)
+	return out
+}

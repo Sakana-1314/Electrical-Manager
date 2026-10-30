@@ -61,7 +61,7 @@ func Load() (*Settings, error) {
 	s := &Settings{
 		AppName:                    env("APP_APP_NAME", "电气车间备件管理系统"),
 		Environment:                env("APP_ENVIRONMENT", "development"),
-		DatabaseURL:                env("APP_DATABASE_URL", "mysql+asyncmy://spare:spare@mysql:3306/spare_parts?charset=utf8mb4"),
+		DatabaseURL:                env("APP_DATABASE_URL", "postgresql+asyncpg://spare:spare@postgresql:5432/spare_parts"),
 		JWTSecret:                  env("APP_JWT_SECRET", "change-me-in-production"),
 		JWTAlgorithm:               env("APP_JWT_ALGORITHM", "HS256"),
 		FernetKey:                  env("APP_FERNET_KEY", ""),
@@ -121,52 +121,33 @@ func Load() (*Settings, error) {
 	return S, nil
 }
 
-// MySQLDSN 把 SQLAlchemy 风格的 `mysql+asyncmy://user:pass@host:port/db?charset=utf8mb4`
-// 转换为 go-sql-driver 的 DSN；同时兼容直接填写的 Go DSN（含 `@tcp(`）。
-func (s *Settings) MySQLDSN() (string, error) {
-	raw := s.DatabaseURL
-	if strings.Contains(raw, "@tcp(") || strings.Contains(raw, "@unix(") {
-		return withDSNDefaults(raw), nil
+// PostgresDSN 把 SQLAlchemy 风格的 `postgresql+asyncpg://user:pass@host:5432/db` 转换为 pgx 可用的
+// `postgres://user:pass@host:5432/db`（去掉驱动后缀，会话时区固定为 UTC，与存 naive UTC 的口径一致）。
+func (s *Settings) PostgresDSN() (string, error) {
+	raw := strings.TrimSpace(s.DatabaseURL)
+	scheme, rest, ok := strings.Cut(raw, "://")
+	if !ok {
+		return "", fmt.Errorf("APP_DATABASE_URL 无法解析")
 	}
-	if i := strings.Index(raw, "://"); i >= 0 {
-		raw = "mysql" + raw[i:]
+	base := strings.SplitN(scheme, "+", 2)[0]
+	if base != "postgresql" && base != "postgres" {
+		return "", fmt.Errorf("APP_DATABASE_URL 必须是 PostgreSQL 连接串（postgresql://...）")
 	}
-	u, err := url.Parse(raw)
+	u, err := url.Parse("postgres://" + rest)
 	if err != nil {
 		return "", fmt.Errorf("APP_DATABASE_URL 无法解析: %w", err)
 	}
-	user := u.User.Username()
-	pass, _ := u.User.Password()
-	host := u.Host
-	if u.Port() == "" {
-		host += ":3306"
+	q := u.Query()
+	if q.Get("timezone") == "" && q.Get("TimeZone") == "" {
+		q.Set("timezone", "UTC")
 	}
-	dbName := strings.TrimPrefix(u.Path, "/")
-	charset := u.Query().Get("charset")
-	if charset == "" {
-		charset = "utf8mb4"
+	// asyncpg 风格的 ssl 参数映射到 libpq 的 sslmode。
+	if v := q.Get("ssl"); v != "" && q.Get("sslmode") == "" {
+		q.Set("sslmode", v)
+		q.Del("ssl")
 	}
-	cred := user
-	if pass != "" {
-		cred += ":" + pass
-	}
-	dsn := fmt.Sprintf("%s@tcp(%s)/%s?charset=%s", cred, host, dbName, charset)
-	return withDSNDefaults(dsn), nil
-}
-
-func withDSNDefaults(dsn string) string {
-	sep := "?"
-	if strings.Contains(dsn, "?") {
-		sep = "&"
-	}
-	for _, kv := range []string{"parseTime=true", "loc=UTC", "time_zone=%27%2B00%3A00%27"} {
-		key := kv[:strings.Index(kv, "=")+1]
-		if !strings.Contains(dsn, key) {
-			dsn += sep + kv
-			sep = "&"
-		}
-	}
-	return dsn
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 func lookup(key string) (string, bool) { return os.LookupEnv(key) }

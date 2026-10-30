@@ -48,7 +48,7 @@ func CountProjectRows(s *db.Session, projectID int64) (int64, error) {
 }
 
 func clearOtherDefaults(s *db.Session, keepID int64) error {
-	_, err := s.Exec("UPDATE project SET is_default = 0, version = version + 1, updated_at = ? WHERE is_default = 1 AND id <> ?", common.UTCNow(), keepID)
+	_, err := s.Exec("UPDATE project SET is_default = FALSE, version = version + 1, updated_at = ? WHERE is_default = TRUE AND id <> ?", common.UTCNow(), keepID)
 	return err
 }
 

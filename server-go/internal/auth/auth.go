@@ -233,14 +233,14 @@ func SystemScope(c *web.Ctx) error {
 // DefaultProject 默认项目：is_default 且启用；没有时退回第一个启用项目。
 func DefaultProject(s *db.Session) (*model.Project, error) {
 	var p model.Project
-	ok, err := s.Find(&p, "SELECT "+model.ColsProject+" FROM project WHERE is_default = 1 AND enabled = 1 ORDER BY id LIMIT 1")
+	ok, err := s.Find(&p, "SELECT "+model.ColsProject+" FROM project WHERE is_default = TRUE AND enabled = TRUE ORDER BY id LIMIT 1")
 	if err != nil {
 		return nil, err
 	}
 	if ok {
 		return &p, nil
 	}
-	ok, err = s.Find(&p, "SELECT "+model.ColsProject+" FROM project WHERE enabled = 1 ORDER BY id LIMIT 1")
+	ok, err = s.Find(&p, "SELECT "+model.ColsProject+" FROM project WHERE enabled = TRUE ORDER BY id LIMIT 1")
 	if err != nil || !ok {
 		return nil, err
 	}

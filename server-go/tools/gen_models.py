@@ -2,8 +2,7 @@
 import os, sys, re
 os.environ.setdefault("APP_JWT_SECRET", "x" * 32)
 sys.path.insert(0, sys.argv[1])
-from sqlalchemy import Boolean, Date, DateTime, Integer, Numeric, String, Text, JSON, Enum, SmallInteger
-from sqlalchemy.dialects.mysql import BIGINT, DATETIME, TINYINT, INTEGER
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Integer, Numeric, String, Text, JSON, Enum, SmallInteger
 from app.core.database import Base
 from app.models import PROJECT_SCOPED_MODELS
 import app.models as m
@@ -25,7 +24,7 @@ def gotype(col):
         base = "string"
     elif isinstance(t, Boolean):
         base = "bool"
-    elif isinstance(t, (DATETIME, DateTime)):
+    elif isinstance(t, DateTime):
         base = "time.Time"
     elif isinstance(t, Date):
         base = "jtype.Date"
@@ -33,7 +32,7 @@ def gotype(col):
         base = "jtype.Decimal"
     elif isinstance(t, JSON):
         return "jtype.JSON"
-    elif isinstance(t, (BIGINT, Integer, SmallInteger, TINYINT, INTEGER)):
+    elif isinstance(t, (Integer, SmallInteger)):
         base = "int64"
     elif isinstance(t, (String, Text)):
         base = "string"
@@ -61,7 +60,7 @@ for table in sorted(Base.metadata.tables.values(), key=lambda t: t.name):
     lines.append("}")
     lines.append("")
     lines.append(f"const Table{sname} = \"{table.name}\"")
-    lines.append(f"const Cols{sname} = \"" + ", ".join(f"`{c}`" for c in cols) + "\"")
+    lines.append(f"const Cols{sname} = `" + ", ".join(f'"{c}"' for c in cols) + "`")
     lines.append("")
     if table.name in scoped:
         scoped_list.append(table.name)
