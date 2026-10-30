@@ -6,11 +6,9 @@ import (
 	"strings"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
@@ -56,19 +54,11 @@ func materialMiniProgramCodeRedirect(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	cfg, err := miniProgramCodeSetting(c.DB)
+	env, err := aisearch.GetMiniProgramCodeEnv(c.DB)
 	if err != nil {
 		return err
 	}
-	env := domain.MiniProgramCodeEnvRelease
-	var selected string
-	if cfg != nil {
-		env = normalizeCodeEnv(cfg["mini_program_code_env"])
-		selected = normalizeCodeAppID(cfg["mini_program_code_app_id"])
-	} else {
-		selected = normalizeCodeAppID(nil)
-	}
-	appID, err := wechatAppID(selected)
+	appID, err := aisearch.GetMiniProgramCodeAppID(c.DB)
 	if err != nil {
 		return err
 	}
@@ -115,117 +105,4 @@ func pathUUID(p *web.Params, raw string) string {
 		return ""
 	}
 	return hex[0:8] + "-" + hex[8:12] + "-" + hex[12:16] + "-" + hex[16:20] + "-" + hex[20:32]
-}
-
-// ---------------- 小程序码配置（ai_search_service.get_mini_program_code_env / _app_id） ----------------
-//
-// TODO(aisearch)：aisearch 包提供 GetMiniProgramCodeEnv / GetMiniProgramCodeAppID 后改为直接调用。
-
-const (
-	settingKey          = "ai_search_config"
-	settingBusinessType = "SYSTEM_SETTING"
-	settingBusinessID   = 1
-	settingAction       = "AI_SEARCH_CONFIG_UPDATED"
-)
-
-// miniProgramCodeSetting 读取高级设置 JSON（system_setting 为空时回退最后一条配置事件）；都没有返回 nil。
-func miniProgramCodeSetting(s *db.Session) (map[string]any, error) {
-	var row model.SystemSetting
-	ok, err := s.Find(&row, "SELECT "+model.ColsSystemSetting+" FROM system_setting WHERE setting_key = ?", settingKey)
-	if err != nil {
-		return nil, err
-	}
-	var raw jtype.JSON
-	if ok {
-		raw = row.SettingValue
-	} else {
-		var after jtype.JSON
-		found, err := s.Find(&after, "SELECT after_data FROM business_event_log WHERE business_type = ? AND business_id = ? AND action = ? ORDER BY id DESC LIMIT 1",
-			settingBusinessType, settingBusinessID, settingAction)
-		if err != nil {
-			return nil, err
-		}
-		if !found {
-			return nil, nil
-		}
-		raw = after
-	}
-	data := map[string]any{}
-	var v any
-	if err := raw.Unmarshal(&v); err == nil {
-		if m, ok := v.(map[string]any); ok {
-			data = m
-		}
-	}
-	return data, nil
-}
-
-func normalizeCodeEnv(v any) string {
-	if s, ok := v.(string); ok && domain.MiniProgramCodeEnv.Valid(s) {
-		return s
-	}
-	return domain.MiniProgramCodeEnvRelease
-}
-
-func splitConfig(raw string) []string {
-	out := []string{}
-	for _, item := range strings.Split(raw, ",") {
-		if item = strings.TrimSpace(item); item != "" {
-			out = append(out, item)
-		}
-	}
-	return out
-}
-
-func configuredAppIDs() []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, id := range splitConfig(config.S.WechatMiniProgramAppID) {
-		if !seen[id] {
-			seen[id] = true
-			out = append(out, id)
-		}
-	}
-	return out
-}
-
-func normalizeCodeAppID(v any) string {
-	ids := configuredAppIDs()
-	if s, ok := v.(string); ok {
-		for _, id := range ids {
-			if id == s {
-				return s
-			}
-		}
-	}
-	if len(ids) > 0 {
-		return ids[0]
-	}
-	return ""
-}
-
-// wechatAppID 对应 get_wechat_credentials(app_id)[0]。
-func wechatAppID(appID string) (string, error) {
-	ids := splitConfig(config.S.WechatMiniProgramAppID)
-	secrets := splitConfig(config.S.WechatMiniProgramAppSecret)
-	uniq := map[string]bool{}
-	for _, id := range ids {
-		uniq[id] = true
-	}
-	if len(ids) == 0 || len(ids) != len(secrets) || len(ids) != len(uniq) {
-		return "", apperr.New("WECHAT_CONFIGURATION_INVALID", "微信小程序 AppID 与 AppSecret 配置无效").WithStatus(503).
-			WithDetails(apperr.D{"app_id_count": len(ids), "app_secret_count": len(secrets)})
-	}
-	effective := appID
-	if effective == "" {
-		effective = ids[0]
-	}
-	if !uniq[effective] {
-		var detail any
-		if effective != "" {
-			detail = effective
-		}
-		return "", apperr.New("WECHAT_NOT_CONFIGURED", "当前微信小程序登录尚未配置").WithStatus(503).WithDetails(apperr.D{"app_id": detail})
-	}
-	return effective, nil
 }

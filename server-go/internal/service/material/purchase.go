@@ -190,9 +190,9 @@ func PurchaseReads(s *db.Session, items []*Purchase) ([]schema.PurchaseMaterialR
 	return out, nil
 }
 
-// castText 对应 SQLAlchemy cast(col, String)。MySQL 只能写 CAST(x AS CHAR)；切到 PostgreSQL 时须改为
+// castText 对应 SQLAlchemy cast(col, String)（PostgreSQL 的 CHAR 是 char(1)，必须写 VARCHAR）。
 // CAST(x AS VARCHAR)（PostgreSQL 的 CHAR 是 char(1)，会截断）。
-func castText(col string) string { return "CAST(" + col + " AS CHAR)" }
+func castText(col string) string { return "CAST(" + col + " AS VARCHAR)" }
 
 // NextPurchasePlanNo 对应 next_purchase_plan_no：PLAN-YYYYMMDD-NNN，取计划表与记录行快照两者最大序号 +1。
 // 与上游一致不加 FOR UPDATE（PostgreSQL 不允许聚合加行锁）；并发撞号由 CreatePurchase 的保存点重试兜底。

@@ -2,8 +2,8 @@ package material
 
 // 对应 server/tests/unit/test_material_service.py（Python 版 monkeypatch next_purchase_plan_no 模拟并发撞号）。
 //
-// 需要一个已按 init.sql 建好表的 MySQL 库：默认连 tools/run_contract_tests.sh 用过的 em_go_stock，
-// 可用 GO_TEST_MYSQL_DSN 覆盖；连不上时跳过。
+// 需要一个已按 init.sql 建好表的 PostgreSQL 库：默认连 tools/run_contract_tests.sh 用过的 em_go_test，
+// 可用 GO_TEST_DATABASE_URL 覆盖；连不上时跳过。
 
 import (
 	"context"
@@ -19,23 +19,23 @@ const testProjectID = 1
 
 func openTestDB(t *testing.T) {
 	t.Helper()
-	dsn := os.Getenv("GO_TEST_MYSQL_DSN")
+	dsn := os.Getenv("GO_TEST_DATABASE_URL")
 	if dsn == "" {
-		dsn = "root@tcp(127.0.0.1:3306)/em_go_stock?charset=utf8mb4&parseTime=true&loc=UTC&time_zone=%27%2B00%3A00%27"
+		dsn = "postgres://postgres@127.0.0.1:5432/em_go_test?sslmode=disable&timezone=UTC"
 	}
 	conn, err := db.Open(dsn)
 	if err != nil {
-		t.Skipf("mysql unavailable: %v", err)
+		t.Skipf("database unavailable: %v", err)
 	}
 	if err := conn.Ping(); err != nil {
-		t.Skipf("mysql unavailable: %v", err)
+		t.Skipf("database unavailable: %v", err)
 	}
 	var n int
-	if err := conn.Get(&n, "SELECT COUNT(*) FROM project WHERE id = ?", testProjectID); err != nil {
+	if err := conn.Get(&n, db.Translate("SELECT COUNT(*) FROM project WHERE id = ?"), testProjectID); err != nil {
 		t.Skipf("schema unavailable: %v", err)
 	}
 	if n == 0 {
-		if _, err := conn.Exec("INSERT INTO project (id, name, enabled, is_default, created_at, updated_at, version) VALUES (?, ?, ?, ?, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6), 1)",
+		if _, err := conn.Exec(db.Translate("INSERT INTO project (id, name, enabled, is_default, created_at, updated_at, version) VALUES (?, ?, ?, ?, NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC', 1)"),
 			testProjectID, "测试项目", true, true); err != nil {
 			t.Fatalf("seed project: %v", err)
 		}
@@ -44,7 +44,7 @@ func openTestDB(t *testing.T) {
 
 func cleanupPlans(t *testing.T, planDate jtype.Date) {
 	t.Helper()
-	if _, err := db.DB.Exec("DELETE FROM purchase_material WHERE plan_date = ? AND project_id = ?", planDate, testProjectID); err != nil {
+	if _, err := db.DB.Exec(db.Translate("DELETE FROM purchase_material WHERE plan_date = ? AND project_id = ?"), planDate, testProjectID); err != nil {
 		t.Fatalf("cleanup: %v", err)
 	}
 }
