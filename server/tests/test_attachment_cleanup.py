@@ -9,7 +9,7 @@ from app.models import FileObject
 from app.services import attachment_cleanup_service, file_service
 from app.services.common import next_local_hour, seconds_until_local_hour
 from tests.conftest import auth_headers, project_session
-from tests.integration.test_files import upload_png
+from tests.integration.test_files import cleanup_once, upload_png
 from tests.integration.test_purchase_plan_template import create_template
 
 
@@ -99,7 +99,7 @@ async def test_cleanup_restores_attachment_rescued_by_business(client: AsyncClie
     # 模拟删除后业务重新挂上该图片（引用表新增一行）。
     await create_template(client, headers, "抢救模板", code="ATT-TPL-2", image_ids=[file_id])
 
-    result = await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    result = await cleanup_once(client)
     assert result.restored_file_ids == [file_id]
     assert result.purged_file_ids == []
 
