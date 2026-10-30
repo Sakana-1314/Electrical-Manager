@@ -5,6 +5,10 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 os.environ["APP_DATABASE_URL"] = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+# 设置 GO_SERVER_URL 时，接口测试改为通过真实 HTTP 调用独立运行的 Go 服务（黑盒契约测试）：
+# 双方共用 TEST_DATABASE_URL 指向的 MySQL（结构来自 init.sql），每个用例前清空全部表再写种子数据。
+GO_SERVER_URL = os.environ.get("GO_SERVER_URL", "").rstrip("/")
+GO_UPLOAD_DIR = os.environ.get("GO_UPLOAD_DIR", "")
 os.environ["APP_JWT_SECRET"] = "test-secret-that-is-long-enough-123456"
 os.environ["APP_WECHAT_MINI_PROGRAM_APP_ID"] = "wx-test-primary,wx-test-secondary"
 os.environ["APP_WECHAT_MINI_PROGRAM_APP_SECRET"] = (
@@ -36,11 +40,29 @@ def project_session(project_id: int = DEFAULT_PROJECT_ID):
     return _project_session(project_id)
 
 
+async def _truncate_all_tables() -> None:
+    from sqlalchemy import text
+
+    async with engine.begin() as connection:
+        await connection.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        for table in Base.metadata.sorted_tables:
+            await connection.execute(text(f"TRUNCATE TABLE `{table.name}`"))
+        await connection.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+
+
 @pytest_asyncio.fixture
 async def client(tmp_path) -> AsyncIterator[AsyncClient]:
-    settings.upload_dir = tmp_path / "uploads"
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+    if GO_SERVER_URL:
+        import shutil
+
+        settings.upload_dir = Path(GO_UPLOAD_DIR)
+        shutil.rmtree(settings.upload_dir, ignore_errors=True)
+        settings.upload_dir.mkdir(parents=True, exist_ok=True)
+        await _truncate_all_tables()
+    else:
+        settings.upload_dir = tmp_path / "uploads"
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
     async with system_session() as session:
         session.add_all(
             [
@@ -123,13 +145,18 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
             )
             await session.commit()
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+    if GO_SERVER_URL:
+        http_client = AsyncClient(base_url=GO_SERVER_URL, timeout=30)
+    else:
+        http_client = AsyncClient(transport=ASGITransport(app=app), base_url="http://test")
+    async with http_client as http:
         # 默认项目：业务接口都要求项目上下文，这样既有测试不用逐个加请求头。
         http.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
         yield http
 
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.drop_all)
+    if not GO_SERVER_URL:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
 
 
 async def auth_headers(client: AsyncClient, username: str) -> dict[str, str]:
