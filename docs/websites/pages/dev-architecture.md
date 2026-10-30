@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    Web["网页端<br/>Vue 3 + Naive UI"] --> API["服务端<br/>FastAPI"]
+    Web["网页端<br/>Vue 3 + Naive UI"] --> API["服务端<br/>Go + Gin"]
     MP["微信小程序"] --> API
     Agent["AI Agent / MCP"] --> API
     API --> DB[("PostgreSQL 16+")]
@@ -17,8 +17,8 @@ flowchart LR
 
 | 部分 | 技术 | 版本约束 |
 | --- | --- | --- |
-| 服务端语言与框架 | Python（镜像 `python:3.12-slim`）+ FastAPI + SQLAlchemy（asyncio）+ asyncpg | Python `>=3.12,<3.15`；FastAPI `>=0.141,<1`；SQLAlchemy `>=2.0.36,<3`；asyncpg `>=0.30,<1`（`server/pyproject.toml`、`server/Dockerfile`） |
-| 服务端依赖与数据库 | pydantic-settings（`APP_` 前缀 + `server/.env`）；PyJWT + argon2-cffi（密码哈希）；cryptography（Fernet 凭证加密）；Pillow；openpyxl / xlrd；httpx；mcp；pytest / pytest-asyncio / aiosqlite、ruff、mypy(strict)；PostgreSQL 16+ | pydantic-settings `>=2.7,<3`；PyJWT `>=2.10,<3`、argon2-cffi `>=23.1,<26`；cryptography `>=44,<47`；Pillow `>=11,<13`；openpyxl `>=3.1.5,<4`、xlrd `>=2.0,<3`；httpx `>=0.28,<1`；mcp `>=2,<3`；pytest `>=8.3,<9`、pytest-asyncio `>=0.25,<1`；PostgreSQL 16+（`server/app/core/config.py`、`server/app/core/security.py`、`server/app/services/file_service.py`、`server/app/services/import_file_reader.py`、`server/app/mcp_server.py`） |
+| 服务端语言与框架 | Go + Gin + pgx（经 `database/sql` 驱动，查询用 sqlx）；单个静态二进制（构建镜像 `golang:1.26-alpine`，运行镜像 `alpine:3.22`） | Go `1.26`；Gin `v1.12.0`；pgx `v5.11.0`；sqlx `v1.4.0`（`server/go.mod`、`server/Dockerfile`） |
+| 服务端依赖与数据库 | 配置读 `APP_` 前缀环境变量 + `server/.env`（`internal/config`）；golang-jwt（JWT）+ `golang.org/x/crypto/argon2`（argon2id 密码哈希）；fernet-go（凭证加密）；excelize（xlsx 读写与导出渲染）+ mscfb（`.xls` 复合文档解析）；`golang.org/x/image` + gen2brain/webp（图片解码与预览）；shopspring/decimal（数量与金额）；google/uuid；yaml.v3（内嵌接口契约）；PostgreSQL 16+ | golang-jwt `v5.3.1`；`golang.org/x/crypto v0.58.0`；fernet-go `v0.0.0-20240119011108-303da6aec611`；excelize `v2.11.0`、mscfb `v1.0.9`；`golang.org/x/image v0.47.0`、webp `v0.6.4`；decimal `v1.6.0`；uuid `v1.6.0`；yaml.v3 `v3.0.1`；PostgreSQL 16+（`server/go.mod`） |
 | 网页端 | Vue、Vue Router、Pinia、Naive UI、Axios、VueUse | `^3.5.17`、`^4.5.1`、`^3.0.3`、`^2.42.0`、`^1.10.0`、`^13.5.0` |
 | 网页端构建与测试 | Vite、TypeScript、vue-tsc；Vitest、Vue Test Utils、jsdom；openapi-typescript（契约生成） | Vite `^7.0.4`、TypeScript `~5.8.3`、vue-tsc `^3.0.3`；Vitest `^3.2.4`、Vue Test Utils `^2.4.6`、jsdom `^26.1.0`；openapi-typescript `^7.8.0`（`web/package.json`） |
 | 小程序与站点 | 微信小程序原生（WXML/WXSS/JS）+ tdesign-miniprogram、miniprogram-ci；VitePress 站点（`srcDir: pages`、`base: /Electrical-Manager/`） | tdesign `^1.15.3`、miniprogram-ci `2.1.31`；VitePress `^1.6.4`（`miniprogram/package.json`、`docs/websites/package.json`、`docs/websites/.vitepress/config.ts`） |
@@ -29,13 +29,9 @@ flowchart LR
 ```text
 Electrical-Manager/
 ├── AGENTS.md / CLAUDE.md / README.md / docker-compose.yml（backend:8000 + frontend:80→8080，外部 1panel-network）
-├── docs/   openapi.yaml（契约唯一来源）、env/、references/database/init.sql（结构唯一来源）、websites/（VitePress）
-├── server/ Dockerfile（python:3.12-slim）、pyproject.toml、scripts/（导出 OpenAPI 等）、data/（uploads/imports/exports、logs/）、tests/（unit/、integration/）
-│   └── app/  main.py（FastAPI、lifespan worker、MCP 挂载）、mcp_server.py
-│       ├── api/deps.py（分页/排序/精简模式守卫）、api/v1/（21 个路由模块）
-│       ├── core/（config、database、security、permissions、errors、middleware、logging、constants…）
-│       ├── domain/enums.py、models/__init__.py、schemas/__init__.py、templates/（Excel 布局 JSON）
-│       └── repositories/（7 个查询仓储）、services/（26 个服务与公共模块）
+├── docs/   openapi.yaml（契约唯一来源，手工维护）、env/、references/database/init.sql（结构唯一来源）、websites/（VitePress）
+├── server/ Dockerfile（多阶段 Go 构建）、go.mod、Makefile、cmd/server/（入口）、internal/（见「后端目录结构」）、templates/（Excel 布局 JSON）、
+│           data/（uploads/imports/exports、logs/）、scripts/（openapi_examples.py、e2e_simulation.py）、tools/run_contract_tests.sh、tests/（黑盒契约测试）
 ├── web/    Dockerfile（node:22-alpine → nginx:1.27-alpine）、nginx.conf、vite.config.ts、vitest.config.ts、src/（api、router、stores、views、components、composables…）
 └── miniprogram/  app.json（18 个页面）、pages/、components/、utils/、scripts/（check.js / upload.js）
 ```
@@ -212,7 +208,7 @@ web/src/
 #### 契约生成
 | 文件 | 说明 |
 | --- | --- |
-| `docs/openapi.yaml` | 唯一事实源（后端导出） |
+| `docs/openapi.yaml` | 唯一事实源（手工维护；后端用 `make sync-openapi` 同步内嵌副本） |
 | `web/src/api/generated.raw.ts` | 由 `npm run generate:api`（`openapi-typescript`）从 `docs/openapi.yaml` 生成，**禁止手改** |
 | `web/src/api/generated.ts` | 手写类型别名层：能一一映射的写 `export type X = components['schemas']['X']`，再补前端自建视图模型（`Page<T>`、`PagedQueryParams`、`ManagedUser`、`OperationWrite`、`PurchaseRequest` 等）；**不是生成产物，但生成段仍不应手改** |
 #### `web/src/api/` 模块职责
@@ -380,124 +376,185 @@ Apifox 智能 Mock，按字段名自己编数据（见 [/api](/api)）。
 
 <TabsContent id="backend">
 
-FastAPI + SQLAlchemy 2.x async 单进程应用（PostgreSQL 16+ / asyncpg），源码在 `server/`，包名 `app`。
+Go + Gin 单进程服务（PostgreSQL 16+ / pgx），源码在 `server/`，Go 模块名 `github.com/Sakana-1314/Electrical-Manager/server`，入口 `cmd/server`。
 
 | 入口 | 路径 |
 | --- | --- |
 | 管理端 REST | `/api/v1/*` |
 | 微信小程序 | `/api/v1/mini-program/*` |
-| MCP（Streamable HTTP） | `/api/v1/mcp` |
+| MCP（Streamable HTTP） | `/api/v1/mcp/` |
 
-运行：开发 `uvicorn app.main:app --reload`；容器 CMD `uvicorn app.main:app --host 0.0.0.0 --port 8000`（`server/Dockerfile`）。同一进程内还有若干常驻后台 worker。
+运行：开发 `go run ./cmd/server`（或 `make run`）；容器 `ENTRYPOINT ["/app/server"]`，监听 `APP_HOST:APP_PORT`（默认 `0.0.0.0:8000`）。同一进程内还有若干常驻后台 goroutine（见「日志、配置与后台任务」）。
+
+<Tabs :tabs="[
+  { id: 'be-layers', title: '分层与请求链' },
+  { id: 'be-auth', title: '认证与权限' },
+  { id: 'be-errors', title: '错误与响应头' },
+  { id: 'be-data', title: '项目隔离与数据库' },
+  { id: 'be-ops', title: '日志、配置与后台任务' },
+  { id: 'be-mcp', title: 'MCP、契约、测试与部署' }
+]">
+
+<TabsContent id="be-layers">
+
 ## 分层架构
-分层调用方向为 `api → service → repository → models`，service 之间也可互相调用（如 `inventory_service` 调用 `webhook_service`）；`from app.repositories` 只在 `server/app/services/` 下命中，api 层不直接访问仓储层。
+分层调用方向为 `api → service → schema / model`；service 之间单向依赖（如 `service/inventory` 调用 `service/webhook`），不得循环导入（Go 编译期即拒绝）。api 层只调 service，不直接写 SQL。
 
-| 层 | 目录/文件 | 职责 |
+| 层 | 目录 | 职责 |
 | --- | --- | --- |
-| 路由层 | `server/app/api/v1/*.py`、`server/app/api/deps.py` | 参数解析与校验（`Query(ge=1, le=200)`、`max_length`、`Literal["asc","desc"]`）、依赖注入取当前用户/权限、把 service 结果转成 `Page[...]` 等响应模型、抛 `AppError` 表达参数类错误 |
-| 服务层 | `server/app/services/*.py` | 业务规则与状态流转校验、乐观锁校验（`common.validate_version`）、事务边界（显式 `await session.commit()`）、审计事件（`common.log_event`）、read 模型组装、后台任务编排 |
-| 仓储层 | `server/app/repositories/*.py` | **只承载纯 SELECT 查询（含 `with_for_update` 锁定查询），不抛业务错误、不组装 read、不自建 session**；可排序列白名单字典也定义在这里 |
-| 模型层 | `server/app/models/__init__.py` | 唯一的 ORM 声明文件（表名/列/约束/索引）；`docs/references/database/init.sql` 与其一致，由 `server/tests/test_init_sql.py` 校验 |
-| 模型契约层 | `server/app/schemas/__init__.py`、`server/app/domain/enums.py` | pydantic 请求/读模型、`Page[T]`、`ApiError`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等） |
-| 核心层 | `server/app/core/*.py` + `main.py`、`mcp_server.py` | 配置、引擎/会话、认证与权限、错误码与异常处理器、中间件、日志、常量、UUIDv7 生成、微信凭据 |
+| 路由层 | `server/internal/api/<模块>`、`server/internal/api/deps` | 用 `web.Router` 注册路由并列出依赖；经 `c.Params()` 解析与校验路径 / 查询 / 请求头 / 请求体（`ge=1`、`le=200`、`max=128`、`oneof=asc\|desc` 等规则写在参数调用或结构体 `v` 标签上）；把 service 结果组装成 `schema.Page[T]` 等响应；参数类业务错误用 `apperr.New` 返回 |
+| 服务层 | `server/internal/service/<模块>` | 业务规则与状态流转校验、乐观锁校验（`apperr.ValidateVersion`）、SQL（`?` 占位符，显式带 `project_id` 过滤）、行锁（`FOR UPDATE` / `FOR UPDATE SKIP LOCKED`）、审计事件（`common.LogEvent`）、read 模型组装、后台任务编排 |
+| 契约层 | `server/internal/schema`、`server/internal/domain` | 请求 / 响应结构体（与 `docs/openapi.yaml` 字段与格式逐一对应，`v` 标签声明校验规则）、`Page[T]`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等）及名称 ↔ 值转换（`domain.<Enum>.ToDB` / `FromDB`） |
+| 模型层 | `server/internal/model` | 表结构体与列清单常量（`models_gen.go`，与 `docs/references/database/init.sql` 一致），项目域表清单 `ProjectScopedTables` |
+| 基础层 | `server/internal/{web,db,auth,middleware,config,logx,lifecycle,openapi,apperr,jtype,security}`、`server/internal/app` | 请求处理框架、事务会话与项目上下文、鉴权依赖、中间件、配置、日志、启动清理与后台任务登记、内嵌契约、错误体、JSON 类型（`jtype.UTCTime` / `jtype.Date` / `jtype.Decimal`）、密码哈希 / JWT / Fernet / UUIDv7；`app.New()` 组装 Gin 引擎 |
+
 ## 后端目录结构
-`server/app/` 共 86 个 Python 文件：
+`server/` 下 `cmd/` 与 `internal/` 共 118 个非测试 Go 文件：
 
 ```text
-server/app/
-├── main.py             # FastAPI 实例、lifespan（启动清理 + worker）、/health、router 与 MCP 挂载
-├── mcp_server.py       # MCP 服务与 5 个工具、McpTokenAuthMiddleware
-├── api/deps.py         # PageNo/PageSize/SortOrder/OrSearch/RequireFullSecondaryWarehouse
-├── api/v1/__init__.py  # 汇总 router，统一声明错误响应模型
-├── api/v1/             # 23 个模块：ai_search、auth、dictionaries、excel_export_jobs、files、hazards、
-│                       #   huaxing_inventory、inventory、ledger、material_code_library、memos、mini_program、
-│                       #   projects、purchase_materials、purchase_plan_templates、purchase_record_sync、
-│                       #   purchase_requests、secondary_warehouse、share、stock_materials、system_settings、
-│                       #   version、work
-├── core/               # config（Settings，env 前缀 APP_）、constants、database（Base/engine/SessionLocal/get_db）、
-│                       #   db_timing、errors、exception_handlers、identifiers（uuid7_string）、logging、middleware、
-│                       #   permissions（认证/角色/接口令牌/If-Match）、security（JWT/argon2/Fernet）、wechat
-├── domain/enums.py
-├── models/__init__.py
-├── repositories/       # 8 个：dashboard_repository、hazard_repository、inventory_repository、
-│                       #   ledger_repository、material_repository、purchase_plan_template_repository、
-│                       #   purchase_request_repository、work_repository
-├── schemas/__init__.py
-└── services/           # 29 个：ai_search、attachment_cleanup、common（utcnow/分页/OR 搜索/乐观锁/审计/文件 read 等共用件）、
-                        #   dashboard、dictionary、excel_export_job、excel_export、file、hazard、huaxing_inventory、
-                        #   import_file_reader、import_job、inventory、ledger、lite_inventory、material_code_library、
-                        #   material_price、material、memo、mini_program、project、purchase_plan_cleanup、purchase_plan_template、
-                        #   purchase_record_sync、purchase_request、replenishment、share_link、webhook、work
+server/
+├── cmd/server/main.go  # 入口：读配置 → 建上传目录 → 初始化日志 → 打开连接池 → 启动清理 → 后台任务 → HTTP 服务；`server healthcheck` 子命令
+├── internal/app/       # app.New()：中间件、NoRoute/NoMethod、/health、/api/v1/openapi.json、/api/docs、业务路由与 MCP 绑定；路由一致性测试
+├── internal/api/       # 17 个路由包：aisearch、codelib、deps、exportjob、files、hazard、huaxing、ledger、mcp、
+│                       #   miniprogram、purchase、secondary、settings、share、stock、system、work
+├── internal/service/   # 29 个业务包：aisearch、attachment、codelib、common、dashboard、dictionary、excelexport、
+│                       #   exportjob、file、hazard、huaxing、importfile、importjob、inventory、ledger、lite、material、
+│                       #   memo、miniprogram、plancleanup、plantemplate、price、project、purchaserequest、recordsync、
+│                       #   replenishment、share、webhook、work
+├── internal/web/       # Router（依赖链）、Ctx、Params（参数校验 → 422）、先提交再写响应、统一错误体
+├── internal/db/        # 连接池、请求级事务会话、项目 / 系统上下文、`?` → `$n` 方言转换、语句耗时统计、SQLSTATE 错误分类
+├── internal/auth/      # 管理端 / 小程序鉴权、角色依赖、RequireProject / SystemScope、默认项目解析
+├── internal/middleware/ # RealIP、RequestContext（request_id / 耗时头 / 访问日志）、Recovery、ProjectHeader、CORS
+├── internal/config/    # Settings（APP_ 前缀环境变量 + server/.env）
+├── internal/logx/      # 控制台 + 按天轮转、按月归档的文件日志（log/slog）
+├── internal/lifecycle/ # 启动任务 / 常驻任务 / 退出收尾的登记与调度
+├── internal/openapi/   # 内嵌契约副本 openapi.yaml（make sync-openapi 同步）及 JSON、Swagger UI、操作清单
+├── internal/schema/    # 请求 / 响应结构体
+├── internal/model/     # 表结构体（models_gen.go）、列清单、ProjectScopedTables
+├── internal/domain/    # 领域枚举
+├── internal/apperr/    # 业务错误与默认状态码表
+├── internal/jtype/     # UTCTime / Date / Decimal / JSON 等序列化类型
+├── internal/security/  # argon2id、JWT、Fernet、SHA-256、UUIDv4 / UUIDv7
+├── templates/          # Excel 导出模板（3 个 JSON 布局）
+├── tools/run_contract_tests.sh  # 黑盒契约测试入口
+└── tests/              # 黑盒契约测试（pytest，HTTP 调用运行中的服务）
 ```
 
+`internal/api/<模块>` 与接口前缀的对应：
+
+| 路由包 | 接口前缀 | 依赖（按需列出） |
+| --- | --- | --- |
+| `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SuperAdmin`；`/version` 公开 |
+| `api/aisearch` | `/ai-search` | `auth.SuperAdmin`、`auth.CurrentUser` |
+| `api/settings` | `/system-settings` | `auth.SuperAdmin`（`/system-settings/mini-program-features`、`/system-settings/image-acceleration` 公开读取） |
+| `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse` |
+| `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
+| `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
+| `api/secondary` | `/secondary-warehouse` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
+| `api/miniprogram` | `/mini-program-users`（管理端）、`/mini-program/*`（小程序） | `auth.SuperAdmin`；`auth.MiniProgramUser`、`auth.MiniProgramRegistration` |
+| `api/purchase` | `/purchase-materials`、`/purchase-plan-templates`、`/purchase-record-sync/*`、`/purchase-records*` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
+| `api/share` | `/shares` | `auth.CurrentUser`；`GET /shares/{token}` 匿名 |
+| `api/exportjob` | `/excel-export-jobs` | `auth.CurrentUser`；`GET /excel-export-jobs/files/{file_uuid}` 匿名 |
+| `api/files` | `/files/images` | 分组挂 `auth.SystemScope`；上传 / 查重用各写角色（`auth.Roles`），附件治理用 `auth.SuperAdmin`；读图公开 |
+| `api/hazard` | `/hazards*`、`/hazard-types`、`/hazard-units` | `auth.RequireProject`、`auth.CurrentUser`、`auth.HazardWriter` |
+| `api/ledger` | `/ledger-items`、`/ledger-tags` | `auth.RequireProject`、`auth.CurrentUser`、`auth.LedgerWriter` |
+| `api/work` | `/work-tasks`、`/work-records`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WorkWriter` |
+| `api/mcp` | `/mcp/` | 自带令牌认证（见 MCP 小节） |
+
+路由注册顺序集中在 `internal/api/api.go` 的 `Register`。`/__test__/*` 钩子只在 `APP_TEST_HOOKS=1` 时注册，供契约测试驱动后台任务与上游桩服务，生产环境不存在。
+
+## 请求处理链
+
+中间件在 `internal/app` 里按 **由外到内** 注册：真实 IP → 请求上下文（request_id / 耗时头 / 访问日志）→ panic 兜底 → 项目头 → CORS；之后进入 `web.H` 包装的处理函数。
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant RIP as RealIP
+    participant RC as RequestContext
+    participant PH as ProjectHeader
+    participant CORS as CORS
+    participant H as web.H
+    participant DB as PostgreSQL
+    C->>RIP: HTTP 请求
+    RIP->>RC: 取可信代理头里的真实 IP
+    RC->>PH: 生成 / 沿用 request_id，挂上 DB 计时器
+    PH->>CORS: 可解析的正整数 X-Project-Id 落进请求上下文
+    CORS->>H: 预检直接 200 返回；正常请求补 CORS 头
+    H->>H: 新建请求会话（带上项目头）
+    H->>H: 依赖按声明顺序执行（分组依赖在前、路由依赖在后）
+    H->>H: 参数统一校验，全部错误合并为一次 422
+    H->>DB: 处理函数执行 SQL（首条语句时惰性开启事务）
+    alt 处理函数返回错误
+        H->>DB: 回滚
+        H-->>C: 统一错误体
+    else 成功
+        H->>DB: 提交事务
+        H-->>C: 写出响应（此刻写库已可见）
+    end
+    RC->>RC: 写耗时响应头与访问日志
+```
+
+| 环节 | 实现 |
+| --- | --- |
+| 中间件 | `middleware.RealIP()` → `middleware.RequestContext()` → `middleware.Recovery()` → `middleware.ProjectHeader()` → `middleware.CORS()`（`internal/app/app.go`）；`RequestContext` 在 RealIP 内层以便日志读到改写后的 IP；CORS 在最内层，`NoRoute` 的 400 与各类错误体同样带 CORS 头 |
+| 依赖顺序 | `web.Router.Group(prefix, deps...)` 的分组依赖先于路由依赖；习惯顺序为项目（`auth.RequireProject`）→ 鉴权（`auth.CurrentUser`）→ 角色（`auth.WarehouseWriter` 等，内部会先确保已鉴权）→ 其它（`deps.RequireFullSecondaryWarehouse`）；任一依赖返回错误立即中止，参数尚未校验 |
+| 参数校验与 422 | 依赖全部通过后，处理函数用 `c.Params()` 读取路径（`PathInt`）、查询（`QueryStr` / `QueryInt` / `Page` …）、请求头（`IfMatch`）、JSON 请求体（`Body`），每处的错误都追加进同一个列表，最后 `p.Err()` 一次性返回 `*web.ValidationError` → 422 `VALIDATION_ERROR`，`details.errors` 为 `type` / `loc` / `msg` / `input` 结构（与 Pydantic 兼容） |
+| 先提交再写响应 | 处理函数通过 `c.OK` / `c.Created` / `c.NoContent` / `c.File` 等只是**登记**响应；`web.H` 在函数返回后先 `c.DB.Commit()` 再写出响应，所以客户端拿到 2xx 时写库已可见；提交失败按数据库错误返回错误体。出错则 `Rollback()`。处理函数不手动提交，提交后才做的事登记 `c.DB.AfterCommit`（回滚后的补偿用 `AfterRollback`） |
+| panic | 处理函数里的 panic 由 `web.H` 转成 500 `INTERNAL_SERVER_ERROR`；中间件层的 panic 由 `middleware.Recovery()` 兜底 |
+| 路由细节 | Gin 关闭 `RedirectFixedPath`、开启 `RedirectTrailingSlash` 与 `HandleMethodNotAllowed`；路由定义沿用契约里的 `{item_id}` 写法，由 `web.Router` 转成 Gin 的 `:item_id`；multipart 内存上限 32 MB（超出部分落临时文件） |
+
+</TabsContent>
+
+<TabsContent id="be-auth">
 
 ### 认证与权限
-#### 角色与依赖注入器（`server/app/core/permissions.py`、`server/app/domain/enums.py`）
+#### 角色与依赖（`server/internal/auth`、`server/internal/domain`）
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
-| `Role` | `SUPER_ADMIN` / `WAREHOUSE_ADMIN` / `PURCHASE_ADMIN` / `HAZARD_ADMIN` / `LEDGER_ADMIN` / `WORK_ADMIN` / `READ_ONLY` | 七值 `StrEnum`，存 `user.role` |
-| `require_roles(*roles)` | 工厂函数 | 角色不在集合内抛 `FORBIDDEN`（403） |
-| `CurrentUser` | `depends(get_current_user)` | 管理端用户（Bearer JWT 或 `X-API-Token`） |
-| `WarehouseWriter` | `require_roles(SUPER_ADMIN, WAREHOUSE_ADMIN)` | 库存写操作 |
-| `PurchaseWriter` | `require_roles(SUPER_ADMIN, PURCHASE_ADMIN)` | 申购写操作 |
-| `HazardWriter` | `require_roles(SUPER_ADMIN, HAZARD_ADMIN)` | 隐患管理写操作（台账与两张字典表） |
-| `LedgerWriter` | `require_roles(SUPER_ADMIN, LEDGER_ADMIN)` | 台账管理写操作（台账记录与标签） |
-| `WorkWriter` | `require_roles(SUPER_ADMIN, WORK_ADMIN)` | 工作管理写操作（任务、工作记录与任务图片） |
-| `SuperAdmin` | `require_roles(SUPER_ADMIN)` | 系统配置、用户、文件治理 |
-| `CurrentMiniProgramUser` | `depends(get_current_mini_program_user)` | 小程序用户；未审核（`enabled=False`）抛 `ACCOUNT_DISABLED`（403） |
-| `MiniProgramRegistrationOpenId` | `depends(get_mini_program_registration_openid)` | 返回 `(app_id, openid)`，供注册/绑定用 |
-| `DbSession` | `depends(get_db)` | 请求级 `AsyncSession` |
-| `RequireFullSecondaryWarehouse` | `depends(_require_full_secondary_warehouse)` | 二级库精简模式下拦截写接口，抛 `SECONDARY_WAREHOUSE_LITE_MODE`（403） |
-| `IfMatchVersion` | `depends(get_if_match_version)` | 从 `If-Match` 头读乐观锁版本 |
-各接口模块使用的权限/身份依赖与路由数：
+| 角色 | `domain.RoleSuperAdmin` / `RoleWarehouseAdmin` / `RolePurchaseAdmin` / `RoleHazardAdmin` / `RoleLedgerAdmin` / `RoleWorkAdmin` / `RoleReadOnly` | 七个字符串常量（`SUPER_ADMIN` … `READ_ONLY`），存 `user.role`（PostgreSQL 枚举类型 `role`） |
+| `auth.Roles(roles...)` | 依赖工厂 | 先确保 `CurrentUser`，角色不在集合内返回 `FORBIDDEN`（403） |
+| `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
+| `auth.WarehouseWriter` | `auth.Roles(SUPER_ADMIN, WAREHOUSE_ADMIN)` | 库存写操作 |
+| `auth.PurchaseWriter` | `auth.Roles(SUPER_ADMIN, PURCHASE_ADMIN)` | 申购写操作 |
+| `auth.HazardWriter` | `auth.Roles(SUPER_ADMIN, HAZARD_ADMIN)` | 隐患管理写操作（台账与两张字典表） |
+| `auth.LedgerWriter` | `auth.Roles(SUPER_ADMIN, LEDGER_ADMIN)` | 台账管理写操作（台账记录与标签） |
+| `auth.WorkWriter` | `auth.Roles(SUPER_ADMIN, WORK_ADMIN)` | 工作管理写操作（任务、工作记录与任务图片） |
+| `auth.SuperAdmin` | `auth.Roles(SUPER_ADMIN)` | 系统配置、用户、文件治理 |
+| 图片上传角色 | `api/files` 的 `auth.Roles(...)`（除 `READ_ONLY` 外的六个角色） | 图片上传与上传前查重 |
+| `auth.MiniProgramUser` | 依赖 | 小程序用户；未审核（`enabled=false`）返回 `ACCOUNT_DISABLED`（403）；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
+| `auth.MiniProgramRegistration` | 依赖 | 校验注册凭证，`auth.Registration(c)` 返回 `(app_id, openid)`，供注册 / 绑定用 |
+| `auth.RequireProject` | 依赖 | 校验 `X-Project-Id` 并设为本请求会话的项目上下文（见「项目隔离与数据库」） |
+| `auth.SystemScope` | 依赖 | 把整个请求切到系统（跨项目）上下文，用于全局附件池接口 |
+| `deps.RequireFullSecondaryWarehouse` | 依赖 | 二级库精简模式下拦截写接口，返回 `SECONDARY_WAREHOUSE_LITE_MODE`（403） |
+| `c.DB` | `*db.Session` | 请求级会话，由 `web.H` 创建 |
+| `p.IfMatch()` | 参数读取 | 从 `If-Match` 头读乐观锁版本 |
 
-| 模块 | 权限/身份依赖 | 路由数 |
-| --- | --- | --- |
-| `api/v1/auth.py` | `CurrentUser` | 3 |
-| `api/v1/ai_search.py` | `SuperAdmin`、`CurrentUser` | 5 |
-| `api/v1/system_settings.py` | `SuperAdmin` | 5 |
-| `api/v1/dictionaries.py` | `SuperAdmin` | 5 |
-| `api/v1/files.py` | `SuperAdmin`、`FileWriter`（含 `HAZARD_ADMIN`、`LEDGER_ADMIN`、`WORK_ADMIN`） | 5 |
-| `api/v1/inventory.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse` | 12 |
-| `api/v1/stock_materials.py` | `CurrentUser`、`WarehouseWriter`、`RequireFullSecondaryWarehouse`、`IfMatchVersion` | 8 |
-| `api/v1/secondary_warehouse.py` | `CurrentUser`、`WarehouseWriter` | 4 |
-| `api/v1/huaxing_inventory.py` | `CurrentUser`、`WarehouseWriter` | 5 |
-| `api/v1/material_code_library.py` | `CurrentUser`、`PurchaseWriter` | 5 |
-| `api/v1/memos.py` | `CurrentUser` | 4 |
-| `api/v1/purchase_materials.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 14 |
-| `api/v1/purchase_plan_templates.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 7 |
-| `api/v1/purchase_requests.py` | `CurrentUser`、`PurchaseWriter`、`IfMatchVersion` | 7 |
-| `api/v1/purchase_record_sync.py` | `PurchaseWriter` | 4 |
-| `api/v1/hazards.py` | `CurrentUser`、`HazardWriter`、`IfMatchVersion` | 13 |
-| `api/v1/ledger.py` | `CurrentUser`、`LedgerWriter`、`IfMatchVersion` | 9 |
-| `api/v1/work.py` | `CurrentUser`、`WorkWriter`、`IfMatchVersion` | 12 |
-| `api/v1/share.py` | `CurrentUser` | 5 |
-| `api/v1/excel_export_jobs.py` | `CurrentUser` | 2 |
-| `api/v1/mini_program.py` | `CurrentMiniProgramUser`、`SuperAdmin`、`MiniProgramRegistrationOpenId`、`IfMatchVersion` | 35（管理端 4 + 小程序 31） |
-| `api/v1/version.py` | 无（公开） | 1 |
 #### 接口令牌（`X-API-Token`）与双列存储
 | 项 | 规则 |
 | --- | --- |
-| 取用顺序 | `APIKeyHeader(name="X-API-Token")`；`authenticate_management_user` 依次尝试 `X-API-Token` → Bearer 值（长度 ≤ 36 时先按接口令牌试）→ 按 JWT 解析 |
-| 查找 | 令牌为 36 位；`find_user_by_api_token` 先用 `len(api_token) != 36` 快速排除，再按 `sha256` 命中 `user.api_token_hash` |
-| 懒迁移回写 | 命中且 `user.api_token_enc` 为空时，用该明文令牌 `encrypt_secret()` 回写密文再 `flush()`，使管理界面之后可解密回显（`api_token_hash` 认证 + `api_token_enc` 可逆回显双列） |
-| MCP 入口 | `McpTokenAuthMiddleware` 同样走 `find_user_by_api_token`，取令牌顺序 `?token=` → `X-API-Token` → `Authorization: Bearer`，并 `commit()` 持久化懒迁移结果 |
-#### JWT `token_type` 取值（`server/app/core/security.py` 生成，`permissions.py` / `api/v1/auth.py` 校验）
+| 取用顺序 | `auth.AuthenticateManagementUser` 依次尝试 `X-API-Token` → Bearer 值（长度 ≤ 36 时先按接口令牌试，命中停用用户直接报 `USER_DISABLED`）→ 按 JWT 解析 |
+| 查找 | 令牌为 36 位；`auth.FindUserByAPIToken` 先用长度 ≠ 36 快速排除，再按 SHA-256 命中 `user.api_token_hash` |
+| 懒迁移回写 | 命中且 `user.api_token_enc` 为空时，用该明文令牌 `security.EncryptSecret()` 回写密文（随请求事务提交），使管理界面之后可解密回显（`api_token_hash` 认证 + `api_token_enc` 可逆回显双列） |
+| MCP 入口 | MCP 认证同样走 `auth.FindUserByAPIToken`，取令牌顺序 `?token=` → `X-API-Token` → `Authorization: Bearer`，并立即提交懒迁移结果 |
+
+#### JWT `token_type` 取值（`server/internal/security` 生成，`server/internal/auth` / `api/system` 校验）
+签名算法取 `APP_JWT_ALGORITHM`（默认 `HS256`），校验时只接受该算法。
+
 | `token_type` | 生成函数 | 有效期 | 校验点 |
 | --- | --- | --- | --- |
-| `management_access` | `create_access_token` | `APP_ACCESS_TOKEN_MINUTES`（默认 30 分钟） | `authenticate_management_user`，同时兼容历史值 `management` 与缺失 |
-| `management_refresh` | `create_refresh_token` | `APP_REFRESH_TOKEN_DAYS`（默认 7 天），带 `version` 声明 | `api/v1/auth.py` 续期接口 |
-| `mini_program` | `create_mini_program_access_token` | `APP_ACCESS_TOKEN_MINUTES` | `get_current_mini_program_user` |
-| `mini_program_registration` | `create_mini_program_registration_token` | 固定 10 分钟，带 `app_id` 声明 | `get_mini_program_registration_openid` |
-三类凭据互不通用；注册令牌只能用于绑定/注册接口（`token_type` 不匹配即 `INVALID_TOKEN`）。
+| `management_access` | `security.CreateAccessToken` | `APP_ACCESS_TOKEN_MINUTES`（默认 30 分钟） | `auth.AuthenticateManagementUser`，同时兼容历史值 `management` 与缺失 |
+| `management_refresh` | `security.CreateRefreshToken` | `APP_REFRESH_TOKEN_DAYS`（默认 7 天），带 `version` 与 `jti` 声明 | `api/system` 续期接口 |
+| `mini_program` | `security.CreateMiniProgramAccessToken` | `APP_ACCESS_TOKEN_MINUTES` | `auth.MiniProgramUser` |
+| `mini_program_registration` | `security.CreateMiniProgramRegistrationToken` | 固定 10 分钟，带 `app_id` 声明 | `auth.MiniProgramRegistration` |
+三类凭据互不通用；注册令牌只能用于绑定/注册接口（`token_type` 不匹配即 `INVALID_TOKEN`）。密码哈希为 argon2id（PHC 字符串，`t=3, m=65536, p=4`），同时能校验 argon2i 格式。
+
 #### 乐观锁版本（`If-Match`）
-所有带乐观锁的写操作（PATCH/PUT/DELETE/restore）版本号放 `If-Match` 头而非 query 参数，**避免版本号进入访问日志**（`permissions.get_if_match_version`）；缺失或非整数时返回 `None`，由 service 决定是否强制（`common.validate_version` → `VERSION_CONFLICT`，`details` 带 `expected`/`actual`）。
-
-
+所有带乐观锁的写操作（PATCH/PUT/DELETE/restore）版本号放 `If-Match` 头而非 query 参数，**避免版本号进入访问日志**（`web.Params.IfMatch`，允许带引号）；缺失或非整数时返回 `nil`，由 service 决定是否强制（`apperr.ValidateVersion` → `VERSION_CONFLICT`，`details` 带 `expected`/`actual`）。
 
 #### 角色、权限点与能力
 
-`Role`（`server/app/domain/enums.py`）只有一个字段一个角色，无多角色组合；权限点为 `web/src/types/navigation.ts` 的 `rolePermissions`。
+`domain` 里的角色只有一个字段一个角色，无多角色组合；权限点为 `web/src/types/navigation.ts` 的 `rolePermissions`。
 
 | 角色 | 权限点 | 能力 |
 | --- | --- | --- |
@@ -513,15 +570,19 @@ server/app/
 
 | 越权场景 | 结果 | 实现 |
 | --- | --- | --- |
-| 写接口权限不足 | `403 FORBIDDEN` | `core.permissions.require_roles` |
-| 查询已归档申购计划 | `403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | `api/v1/purchase_materials.py` |
-| 精简模式下调用完整模式写接口 | `403 SECONDARY_WAREHOUSE_LITE_MODE` | `api/deps._require_full_secondary_warehouse` |
+| 写接口权限不足 | `403 FORBIDDEN` | `auth.Roles` |
+| 查询已归档申购计划 | `403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | `api/purchase` |
+| 精简模式下调用完整模式写接口 | `403 SECONDARY_WAREHOUSE_LITE_MODE` | `deps.RequireFullSecondaryWarehouse` |
 
 前端按 `auth.can(permission)` 隐藏入口（`layouts/AppLayout.vue`、`router/index.ts` 的 `meta.permission`），**权限的最终判定在后端**。
 
+</TabsContent>
+
+<TabsContent id="be-errors">
+
 ### 错误处理与响应头
-#### 错误码 → 默认 HTTP 状态码（`server/app/core/errors.py`）
-`AppError(code, message, status_code=None, details=None)`：显式传 `status_code` 时以显式值为准，否则查下表；表中没有的 code 兜底为 `400`。
+#### 错误码 → 默认 HTTP 状态码（`server/internal/apperr`）
+`apperr.New(code, message)` 按下表推断状态码，表中没有的 code 兜底为 `400`；`WithStatus(n)` 显式指定时以显式值为准，`WithDetails(...)` 附带结构化详情。
 
 | code | 默认 HTTP | code | 默认 HTTP |
 | --- | --- | --- | --- |
@@ -532,161 +593,181 @@ server/app/
 | `VALIDATION_ERROR` | 422 | `USER_DISABLED` | 401 |
 | `DUPLICATE_HAZARD_UNIT` | 409 | `DUPLICATE_HAZARD_TYPE` | 409 |
 | `HAZARD_UNIT_IN_USE` | 409 | `HAZARD_TYPE_IN_USE` | 409 |
-| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | — | — |
-错误响应体统一为 `{code, message, details, request_id}`（`exception_handlers.error_response`），`request_id` 取 `request.state.request_id`。全量业务错误码清单见 [/api-error-codes](/api-error-codes)，约定背景见 [接口约定](/api-conventions)。
-#### 全局异常处理器（`register_exception_handlers`）
-| 注册的异常类型 | handler | 返回 code / status |
-| --- | --- | --- |
-| `AppError` | `handle_app_error` | 用异常自身的 `code` 与 `status_code`；`details` 原样透出 |
-| `StarletteHTTPException` | `handle_http_exception` | 原状态码为 404 时重映射为 `400 ROUTE_NOT_FOUND`；其余原状态码 + `HTTP_ERROR` |
-| `RequestValidationError` | `handle_validation_error` | `422 VALIDATION_ERROR`，`details.errors` 为 pydantic 错误列表 |
-| `IntegrityError` | `handle_integrity_error` | `409 DATA_CONFLICT`（`logger.warning` + 堆栈） |
-| `ProgrammingError` | `handle_database_programming_error` | `500 DATABASE_QUERY_ERROR` |
-| `OperationalError` / `InterfaceError` / `DisconnectionError` / `SQLAlchemyTimeoutError` | `handle_database_unavailable` | 若 `exc.orig.sqlstate` 以 `42` 开头（PostgreSQL 语法错误 / 未定义列 / 未定义表 / 列名歧义）→ `500 DATABASE_QUERY_ERROR`，否则 `503 DATABASE_UNAVAILABLE` |
-| `SQLAlchemyError` | `handle_database_error` | `500 DATABASE_ERROR` |
-| `Exception` | `handle_unexpected_error` | `500 INTERNAL_SERVER_ERROR`（`logger.exception`） |
-禁止 HTTP 404：资源不存在时 service 用 `errors.not_found(resource)` → `400 NOT_FOUND`（message「<资源>不存在」）；未匹配路由由 `handle_http_exception` 改为 `400 ROUTE_NOT_FOUND`（message「接口路径不存在」）；后端对外不产生 404，文件类接口同样遵循。
-#### 中间件与性能响应头（`server/app/core/middleware.py`）
-`request_context` 为每个请求注入 `request_id`（取 `X-Request-ID`，截断到 128 字符，否则 `uuid4`）并写访问日志；响应头均只计量服务端时间。
+| `HAZARD_UNIT_PERSON_REQUIRED` | 400 | `DUPLICATE_LEDGER_TAG` | 409 |
+| `LEDGER_TAG_HAS_CHILDREN` | 409 | `LEDGER_TAG_IN_USE` | 409 |
+| `LEDGER_TAG_MAX_LEVEL` | 400 | `INVALID_TAG_ID` | 400 |
+| `DUPLICATE_WORK_TASK` | 409 | `WORK_TASK_HAS_RECORDS` | 409 |
+| `WORK_DATE_RANGE` | 400 | `WORK_RANGE_TOO_LONG` | 400 |
+| `INVALID_WORK_TASK_ID` | 400 | `PROJECT_REQUIRED` | 400 |
+| `PROJECT_NOT_FOUND` | 400 | `PROJECT_DISABLED` | 400 |
+| `PROJECT_MISMATCH` | 409 | `PROJECT_IS_DEFAULT` | 409 |
+| `PROJECT_IN_USE` | 409 | `DUPLICATE_PROJECT_NAME` | 409 |
+错误响应体统一为 `{code, message, details, request_id}`（`web.ErrorBody`，`details` 为空时输出 `{}`），`request_id` 取请求上下文里的 request_id。全量业务错误码清单见 [/api-error-codes](/api-error-codes)，约定背景见 [接口约定](/api-conventions)。
+#### 错误映射（`web.WriteError`）
+| 错误类型 | 返回 code / status |
+| --- | --- |
+| `*apperr.Error` | 用错误自身的 `Code` 与 `Status`；`Details` 原样透出 |
+| `*web.ValidationError` | `422 VALIDATION_ERROR`（message「请求参数校验失败」），`details.errors` 为字段错误列表（`type` / `loc` / `msg` / `input`，部分带 `ctx`） |
+| SQLSTATE `23` 类（唯一键 / 外键 / 非空 / CHECK） | `409 DATA_CONFLICT`（记 warning 日志） |
+| SQLSTATE `42` 类（语法错误 / 未定义列 / 未定义表 / 列名歧义） | `500 DATABASE_QUERY_ERROR` |
+| SQLSTATE `08` / `53` 类、`57P*`，以及连接被拒、连接已关闭、超时等驱动层错误 | `503 DATABASE_UNAVAILABLE` |
+| 其它带 SQLSTATE 的数据库错误 | `500 DATABASE_ERROR` |
+| 其余错误（含处理函数 panic） | `500 INTERNAL_SERVER_ERROR`（记 error 日志） |
+禁止 HTTP 404：资源不存在时 service 用 `apperr.NotFound(resource)` → `400 NOT_FOUND`（message「<资源>不存在」）；未匹配路由由 Gin 的 `NoRoute` 返回 `400 ROUTE_NOT_FOUND`（message「接口路径不存在」）；方法不匹配由 `NoMethod` 返回 `405 HTTP_ERROR`（message `Method Not Allowed`）；后端对外不产生 404，文件类接口同样遵循。
+#### 中间件与性能响应头（`server/internal/middleware`）
+`RequestContext` 为每个请求注入 `request_id`（取第一个 `X-Request-ID` 请求头，截断到 128 个字符，否则生成 UUIDv4）并写访问日志；耗时响应头在**响应头写出前一刻**补上（包住 `ResponseWriter`），因此包含事务提交耗时，只计量服务端时间。
 
 | 响应头 | 含义 |
 | --- | --- |
 | `X-Request-ID` | 本次请求标识，与日志 `request_id` 一致 |
-| `X-Response-Time` | 服务端处理总耗时（毫秒），`time.perf_counter()` 从进入中间件到生成响应 |
+| `X-Response-Time` | 服务端处理总耗时（毫秒），从进入中间件到写出响应头 |
 | `X-DB-Time` | 数据库语句执行耗时合计（毫秒），取 `min(采集值, 总耗时)` |
 | `X-Compute-Time` | `总耗时 - DB 耗时`（毫秒），含校验/权限/序列化 |
-| `X-DB-Queries` | 本次请求执行的 SQL 条数，用于识别 N+1 |
-这 5 个头（加 `Content-Disposition`）都在 `RefererCORSMiddleware._expose_headers` 中，跨域时通过 `Access-Control-Expose-Headers` 暴露。
+| `X-DB-Queries` | 本次请求执行的 SQL 条数（含提交），用于识别 N+1 |
+这 5 个头（加 `Content-Disposition`）都在 CORS 中间件的 `Access-Control-Expose-Headers` 中，跨域时可读。
 
 | 中间件 | 规则 |
 | --- | --- |
-| `CommitBeforeResponseMiddleware` | 在响应头（`http.response.start`）发出**之前**提交当前请求的事务，让「接口返回 2xx」与「写库可见」在客户端看来是同一时刻。必须是**最内层**中间件（因此也是第一个注册的）：只有与路由处理跑在同一个任务里，提交才不会与依赖收尾跨任务并发抢同一个会话，也必然早于响应字节发出 |
-| `RealIPMiddleware` | 把 `scope["client"]` 改写为可信边缘代理给出的真实 IP，取值优先级 `EO-Connecting-IP` → `X-Real-IP` → `X-Forwarded-For` 的第一段；候选值需能被 `ipaddress.ip_address()` 解析，全部无效则不改写 |
-| `RefererCORSMiddleware` | **Referer 优先**（兼容不发 `Origin` 的内嵌 WebView/微信），无效或缺失回退 `Origin`；`Referer: null` 原样返回 `null`。白名单为空表示不限制；否则需 `origin` 精确命中、或 `*`、或 `allowed` 以 `.` 开头时按 host 后缀匹配（`.example.com` 匹配 `app.example.com`）；未命中不回显 CORS 头。预检（`OPTIONS` + `Access-Control-Request-Method`）直接 200，方法白名单 `DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT`，回显请求的 `Access-Control-Request-Headers`，`Access-Control-Request-Private-Network: true` 时回私有网络头；正常响应补 `Vary: Origin, Referer` |
-注册顺序（`main.py`，后注册的中间件更外层）：`CommitBeforeResponseMiddleware` → `RefererCORSMiddleware` → `project_context` → `request_context` → `RealIPMiddleware`；即最外层 `RealIPMiddleware`，最内层 `CommitBeforeResponseMiddleware`，`request_context` 位于 RealIP 内层以便读到改写后的真实 IP，`project_context` 在 `request_context` 内层、业务处理之前把 `X-Project-Id` 落进项目上下文；`CommitBeforeResponseMiddleware` 必须在所有 `BaseHTTPMiddleware`（`request_context`、`project_context`）**之内**，`server/tests/test_middleware.py` 会校验这个顺序。
+| `RealIP` | 取可信边缘代理给出的真实 IP，优先级 `EO-Connecting-IP` → `X-Real-IP` → `X-Forwarded-For` 的第一段；候选值需能被 `net.ParseIP` 解析，全部无效则用连接的远端地址 |
+| `RequestContext` | request_id、DB 计时器、耗时响应头、访问日志（见「日志与 request_id」） |
+| `Recovery` | 兜底中间件层未捕获的 panic，响应尚未写出时返回 `500 INTERNAL_SERVER_ERROR` |
+| `ProjectHeader` | 把可解析的正整数 `X-Project-Id` 落进请求上下文（只解析、不查库）；`web.H` 新建会话时据此设定项目，真正的校验由 `auth.RequireProject` 完成 |
+| `CORS` | **Referer 优先**（兼容不发 `Origin` 的内嵌 WebView/微信），无效或缺失回退 `Origin`；`Referer: null` 原样返回 `null`。白名单（`APP_CORS_ORIGINS`）为空表示不限制；否则需 `origin` 精确命中、或 `*`、或与 host 相同、或 `allowed` 以 `.` 开头时按 host 后缀匹配（`.example.com` 匹配 `app.example.com`）；未命中不回显 CORS 头。预检（`OPTIONS` + `Access-Control-Request-Method`）直接 200，方法白名单 `DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT`，回显请求的 `Access-Control-Request-Headers`，`Access-Control-Request-Private-Network: true` 时回私有网络头；正常响应补 `Vary: Origin, Referer` |
+`internal/middleware` 的单元测试覆盖真实 IP、request_id 与耗时头、CORS 白名单与预检。
 
+</TabsContent>
 
+<TabsContent id="be-data">
 
-### 项目隔离（`server/app/core/project_scope.py`）
+### 项目隔离（`server/internal/db` + `server/internal/auth`）
 
-业务数据按项目隔离，但**不是**多租户：没有用户-项目授权表，任何登录用户都能访问全部项目，只是同一请求只能处于一个项目。隔离在 ORM 层统一实现，service 里不再逐个写过滤条件。
+业务数据按项目隔离，但**不是**多租户：没有用户-项目授权表，任何登录用户都能访问全部项目，只是同一请求只能处于一个项目。隔离由「会话上的项目上下文 + 业务 SQL 显式按 `project_id` 过滤」实现。
 
 | 机制 | 实现 |
 | --- | --- |
-| 读过滤 | `Session` 的 `do_orm_execute` 事件：语句里出现项目域表时，用 `with_loader_criteria` 给这些实体注入 `project_id = 当前项目`；SQLAlchemy 会把它带到所有出现该实体的位置（子查询、别名、`select(func.count())` 聚合、`Session.get()` 的按主键加载、ORM 的 `UPDATE` / `DELETE`） |
-| 写守卫 | `Session` 的 `before_flush` 事件：新建的项目域对象自动补 `project_id`；与当前项目不一致的写入/删除直接抛 `PROJECT_MISMATCH`(409) |
-| 语句识别 | 用 `sqlalchemy.sql.util.find_tables()` 判断语句是否涉及项目域表（约 5–20µs）；纯全局语句（`user`、`project`、`system_setting` 等）不参与过滤，因此登录、项目列表不需要项目上下文 |
-| fail-closed | 涉及项目域表却没有项目上下文时抛 400 `PROJECT_REQUIRED`，绝不静默放行成「看到全部项目」；确实跨项目的系统级入口必须显式 `system_scope()` |
-| 缓存安全 | `with_loader_criteria` 的项目 id 以**闭包变量**传入（lambda SQL 不允许在 lambda 内调用函数）；SQLAlchemy 把闭包值计入缓存键，项目切换会重新编译，不会串用别的项目的条件 |
+| 项目上下文 | `db.Session` 携带项目 id 与「系统上下文」标记；`auth.RequireProject` 校验 `X-Project-Id`（缺头 400 `PROJECT_REQUIRED`，非整数 422，项目不存在 / 停用 400 `PROJECT_NOT_FOUND` / `PROJECT_DISABLED`）后 `c.DB.SetProject(id)` |
+| 读写过滤 | 项目域表的每条 SQL 都显式写 `project_id = ?`，项目 id 一律取 `s.ProjectID()`；列表查询用 `common.Where.Scope(s, alias)` / `s.ScopeFilter(alias)` 追加条件；INSERT 写入当前项目 id |
+| fail-closed | `s.ProjectID()` 在未设定项目时返回 400 `PROJECT_REQUIRED`，绝不静默放行成「看到全部项目」 |
+| 系统上下文 | 确实跨项目的入口显式进入系统上下文：`s.System()`（共享同一事务的副本）、`db.SystemSession(ctx)`（独立会话）、`auth.SystemScope`（整个请求）；系统上下文里 `ScopeFilter` 不加项目条件 |
+| 切换项目 | `s.WithProject(pid)` 返回共享同一事务、处于指定项目的副本；后台任务用 `db.ProjectSession(ctx, job.ProjectID)` 按任务行恢复项目 |
+| 唯一键 | 项目域唯一键都带 `project_id`（如 `(project_id, plan_no)`），编号按项目生成 |
 
 ```mermaid
 flowchart LR
-    H["请求头 X-Project-Id"] --> M["project_context 中间件：落进 ContextVar"]
-    M --> D["业务路由依赖 require_current_project：校验项目存在且启用"]
-    D --> ORM["do_orm_execute：注入 project_id 条件"]
-    D --> F["before_flush：补项目 / 拦跨项目写入"]
-    ORM --> DB[("PostgreSQL")]
-    F --> DB
+    H["请求头 X-Project-Id"] --> M["ProjectHeader 中间件：解析进请求上下文"]
+    M --> S["web.H：新建会话并设定项目"]
+    S --> D["业务路由依赖 auth.RequireProject：校验项目存在且启用"]
+    D --> Q["service：s.ProjectID() + SQL 显式 project_id = ?"]
+    Q --> DB[("PostgreSQL")]
+    SYS["系统级入口：s.System() / db.SystemSession / auth.SystemScope"] --> DB
 ```
 
-项目域表清单在 `server/app/models/__init__.py` 的 `PROJECT_SCOPED_MODELS`（28 张），列/索引/外键由 `ProjectScoped` 混入统一下发；新增业务表必须同时继承 `ProjectScoped` 并登记进该元组，否则不会被隔离（`AGENTS.md` 已写成约定）。
+项目域表清单在 `server/internal/model` 的 `ProjectScopedTables`（32 张，删除项目前的数据统计依赖它）；新增业务表必须带 `project_id` 并登记进该清单，同时改 `init.sql` 与 Go 模型（`AGENTS.md` 已写成约定）。
 
 上下文来源：
 
 | 入口 | 项目从哪来 |
 | --- | --- |
-| 网页端业务接口 | `X-Project-Id`（前端 `web/src/api/client.ts` 统一注入；右上角切换项目后整页刷新） |
-| 小程序 | 同上；不带时落默认项目（`get_current_mini_program_user` 内统一解析，端点无需各自声明） |
+| 网页端业务接口 | `X-Project-Id`（前端 `web/src/api/client.ts` 统一注入；右上角切换项目后整页刷新），由 `auth.RequireProject` 校验 |
+| `/shares`、`/excel-export-jobs` 管理端接口 | 不挂 `RequireProject`（同组有匿名端点）：会话项目取自 `ProjectHeader` 解析的 `X-Project-Id`，用到项目 id 时缺失即 `PROJECT_REQUIRED` |
+| 小程序 | 同上请求头；不带时落默认项目（`auth.MiniProgramUser` 内统一解析，端点无需各自声明） |
 | MCP | 请求头 `X-Project-Id` 优先，其次 MCP 链接上的 `?project_id=`，都缺省时用系统默认项目（`system_whoami` 回显项目与 `project_source`）；`operation_call` 转发时带上项目头 |
-| 匿名分享页 | 先在全项目上下文里按 token 取 `share_link`，再切到该分享所属项目读数据 |
-| 导入 / 导出任务 | 任务行记录 `project_id`，后台任务用 `project_scope(job.project_id)` 恢复上下文 |
-| 清理任务、附件引用统计、匿名导出下载 | 显式 `system_scope()` / `system_session()`（这些入口本就不属于单个项目） |
+| 匿名分享页 | 先在系统上下文里按 token 取 `share_link`，再 `s.WithProject(link.ProjectID)` 读数据 |
+| 导入 / 导出任务 | 任务行记录 `project_id`，后台 goroutine 用 `db.ProjectSession(ctx, job.ProjectID)` 恢复上下文 |
+| 清理任务、附件引用统计、匿名导出下载 | 显式 `db.SystemSession(ctx)` / `s.System()` / `auth.SystemScope`（这些入口本就不属于单个项目） |
 
 ### 数据库会话与事务
-| 项 | 真实配置（`server/app/core/database.py`） |
+| 项 | 真实配置（`server/internal/db`） |
 | --- | --- |
-| engine | `create_async_engine(settings.database_url, pool_pre_ping=True)`；`database_url` 以 `sqlite+aiosqlite:///:memory:` 开头时改用 `StaticPool` |
-| 连接池 | 未显式设置 `pool_size`/`max_overflow`/`pool_recycle`/`connect_args`，使用 SQLAlchemy 默认 |
-| 会话工厂 | `async_sessionmaker(engine, expire_on_commit=False, autoflush=False)` |
-| `Base` | `AsyncAttrs + DeclarativeBase`，`MetaData` 带命名约定（`ix_/uq_/ck_/fk_/pk_`） |
-| SQL 计时 | 创建引擎后立即 `register_database_timing(engine)` |
-| 当前请求会话 | `get_db` 建立会话时登记到 `ContextVar`，`commit_current_session()` 用它提交（由 `CommitBeforeResponseMiddleware` 调用）；后台任务不走 `get_db`，取不到会话，`commit_current_session()` 直接返回 |
-`get_db` 依赖：`yield` 会话 → 正常路径 `await session.commit()` → 异常路径 `await session.rollback()` 并重新抛出。**请求事务的提交由 `CommitBeforeResponseMiddleware` 提前到响应头发出之前**（FastAPI 的 `yield` 依赖在响应发送之后才收尾，不提前提交的话客户端拿到 201 立刻回读会读到旧值）；`get_db` 收尾的 `commit()` 作为兜底，负责响应发出后才写库的部分（响应上挂的后台任务）。需要「先落库再返回/再抛错」的 service 会自行提交：
+| 连接池 | `sqlx.Open("pgx", dsn)`：`MaxOpenConns=50`、`MaxIdleConns=20`、`ConnMaxLifetime=30m`、`ConnMaxIdleTime=5m` |
+| DSN | `config.PostgresDSN()` 把 `postgresql+asyncpg://…` / `postgresql://…` 统一转成 `postgres://…`，未指定时追加 `timezone=UTC`（时间按 UTC 存取），`ssl=` 参数映射为 `sslmode=` |
+| 会话 | `db.Session` 是工作单元：第一条语句时惰性 `BEGIN`，`Commit()` / `Rollback()` 后仍可继续使用（下一条语句开启新事务）；`Close()` 回滚未提交的事务 |
+| 请求会话 | `web.H` 为每个请求 `db.NewSession(ctx)`，处理成功后先提交再写响应，失败回滚（见「分层与请求链」） |
+| 提交回调 | `AfterCommit(fn)`：提交成功后执行（如提交后才回收的磁盘文件）；`AfterRollback(fn)`：回滚后执行（如回收本次已写入磁盘、记录却没落库的文件） |
+| SQL 方言 | 业务 SQL 写 `?` 占位符与反引号标识符，`db.Translate` 转成 PostgreSQL 的 `$n` 与双引号（跳过字符串字面量，结果缓存）；`IN (?)` 由 `SelectIn` / `ExecIn` 展开；`Insert` 自动追加 `RETURNING id` |
+| 错误分类 | `db.IsIntegrity` / `IsDuplicate` / `IsForeignKey` / `IsQueryError` / `IsConnectionError` 按 SQLSTATE 判断，供 `web.WriteError` 与 service 使用 |
+需要「先落库再返回 / 再继续」的 service 会在请求中途自行提交：
 
 | 自行提交的示例 | 说明 |
 | --- | --- |
-| `file_service` 上传 | 上传是独立事务，只有数据库记录真正提交后才返回成功；失败回滚并删除已写磁盘文件 |
-| `excel_export_job_service._run_job`、`webhook_service`、`import_job_service.enqueue_import`、`share_link_service.cleanup_expired` | 同上，各自显式 `commit()` |
-| 后台任务（worker、导入/导出子任务） | **不使用 `get_db`**，而是 `async with SessionLocal() as session:` 自建会话并自行 `commit()` |
-| 并发控制 | 锁定查询在仓储层构造 `with_for_update()`（如 `inventory_repository` 的余额/流水查询，`inventory_service` 在写路径内调用）；申购计划清理用 `with_for_update(skip_locked=True)` 逐批抢锁 |
-| 事务块 | 未使用 `async with session.begin()`（`session.begin` 仅命中 `material_service` 的 `session.begin_nested()` 保存点用法） |
-#### DB 计时实现（`server/app/core/db_timing.py`）
+| `service/file` 上传 | 上传是独立提交，只有数据库记录真正提交后才返回成功；提交失败回收已写磁盘文件。软删除 / 撤销删除 / 清理悬空文件同样自行提交 |
+| `service/importjob.EnqueueImport`、`service/exportjob` 登记任务 | 在独立的 `db.ProjectSession` 里登记任务并立即提交，再启动后台 goroutine |
+| 后台任务（常驻任务、导入 / 导出子任务、Webhook 投递） | 不使用请求会话，而是 `db.SystemSession` / `db.ProjectSession` 自建会话并自行 `Commit()` |
+| 并发控制 | 行锁写在 service 的 SQL 里：库存余额 / 物资按 id 升序 `FOR UPDATE`（固定加锁顺序避免死锁），申购计划 / 记录批量操作同样按 id 加锁；Webhook 投递认领、申购计划清理、附件清理用 `FOR UPDATE SKIP LOCKED` 逐批抢锁 |
+| 保存点 | 申购计划号冲突重试用 `SAVEPOINT purchase_plan_no` / `ROLLBACK TO SAVEPOINT`（`service/material`） |
+#### DB 计时实现（`server/internal/db` 的 `Timing`）
 | 阶段 | 行为 |
 | --- | --- |
-| 传递 | `contextvars.ContextVar` 携带 `DatabaseTiming(total_ms, statement_count)` |
-| 请求开始 | `request_context` 调 `begin_database_timing()` |
-| 响应前 | `finish_database_timing()` |
-| SQL 计时 | SQLAlchemy `before_cursor_execute` / `after_cursor_execute` 入栈出栈 `perf_counter()`，出栈累加耗时并 `statement_count += 1` |
-| 只统计请求内 SQL | 启动清理与常驻 worker 的 SQL 不计入；并发请求互不干扰 |
-| 边界情况 | 请求内派生的后台任务会继承采集器（窗口极短） |
-
-
+| 传递 | `RequestContext` 新建 `db.Timing`，经 `db.WithTiming` 放进请求的 `context.Context` |
+| 采集 | `db.NewSession(ctx)` 取出计时器；`Get` / `Select` / `Exec` / `Query` 与 `Commit` 每次执行后原子累加耗时并 `count += 1` |
+| 响应前 | 写响应头前一刻读出合计，生成 `X-DB-Time` / `X-DB-Queries` |
+| 只统计请求内 SQL | 启动清理、常驻任务与请求派生的导入 / 导出 goroutine 都以 `context.Background()` 建会话，不携带计时器，不计入任何请求；并发请求互不干扰 |
 
 ### 分页与排序约定
 | 项 | 约定 |
 | --- | --- |
-| 响应模型 | 列表统一为 `Page[T]`（`server/app/schemas/__init__.py`）：`items` / `page` / `page_size` / `total` |
-| 参数与常量 | 经 `server/app/api/deps.py` 注入：`PageNo = Query(ge=1)`、`PageSize = Query(ge=1, le=200)`；路由默认 `page=1`、`page_size=20`。`server/app/core/constants.py` 定义 `DEFAULT_PAGE_SIZE = 20`、`MAX_PAGE_SIZE = 200`，但 `server/app/api/deps.py` 直接写死 `le=200`，**这两个常量当前未被引用** |
-| 通用实现 | `services/common.paginate()`：先 `select(func.count()).select_from(query.order_by(None).subquery())` 取 `total`，再 `offset((page-1)*page_size).limit(page_size)` 并 `unique()` 去重；`common.page_result()` 组装 `Page` |
-| 导出上限 | `EXPORT_ROW_LIMIT = 10_000`：导出发起前以 `page_size=EXPORT_ROW_LIMIT + 1` 试探，超限抛 `VALIDATION_ERROR`（`details` 带 `total`/`limit`） |
-| 排序参数 | `sort_by` + `sort_order`；`sort_order` 用 `deps.SortOrder`（`Literal["asc","desc"]`，默认 `"asc"`）；`sort_by` 类型随接口不同——申购计划/申购记录用 `Literal` 列名（`PurchasePlanResultColumn` 15 值、`PurchaseRecordResultColumn` 24 值），周期性计划用 `str \| None` |
-| 排序列白名单 | 仓储层 `PURCHASE_MATERIAL_SORT_COLUMNS`、`PURCHASE_PLAN_TEMPLATE_SORT_COLUMNS`、`PURCHASE_RECORD_SORT_COLUMNS`（注释写明「防止任意属性注入」）；`sort_by` 不在白名单时回退默认排序，固定次级排序键 `id desc`（如 `purchase_plan_template_repository.search_templates`） |
-| 关键词 OR 搜索 | `OrSearch`/`OrSearch128`/`OrSearch255`/`OrSearch500` 用 `|` 或 `｜` 分隔，`common.contains_any` 生成 `OR ... contains(..., autoescape=True)` |
+| 响应模型 | 列表统一为 `schema.Page[T]`：`items` / `page` / `page_size` / `total` |
+| 参数 | `p.Page()` 读取 `page`（`ge=1`，默认 1）与 `page_size`（`ge=1,le=200`，默认 20）；个别接口用 `p.PageWithDefault(n)` 改默认页大小 |
+| 通用实现 | service 先 `SELECT COUNT(*)` 取 `total`，再按 `LIMIT ? OFFSET ?`（`common.Offset(page, pageSize)`）取当页；列表避免 N+1：主表一次查询 + 每个关系一次 `IN` 查询 |
+| 导出上限 | `common.ExportRowLimit = 10_000`：导出发起前以 `page_size=ExportRowLimit + 1` 试探，超限返回 `EXPORT_RESULT_LIMIT_EXCEEDED`（`details` 带 `total`/`limit`） |
+| 排序参数 | `sort_by` + `sort_order`；`sort_order` 为 `oneof=asc\|desc`（默认 `asc`）；申购计划 / 申购记录的 `sort_by` 限定为结果列（`schema.PurchasePlanResultColumns` 15 值、`schema.PurchaseRecordResultColumns` 24 值，不在集合内即 422），周期性计划的 `sort_by` 为任意字符串 |
+| 排序列白名单 | `material.PurchaseSortColumns`、`plantemplate.SortColumns`、`purchaserequest.PurchaseRecordSortColumns` 把 `sort_by` 映射到 SQL 列（防止任意列注入）；不在白名单时回退默认排序，固定次级排序键 `id DESC` |
+| 关键词 OR 搜索 | 用 `\|` 或 `｜` 分隔，`common.ContainsAny` / `Where.ContainsAny` 生成 `(col LIKE ? ESCAPE '/' OR …)`，通配符按 `/` 转义 |
+
+</TabsContent>
+
+<TabsContent id="be-ops">
+
 ### 日志与 request_id
-| 项 | 实现（`server/app/core/logging.py`） |
+| 项 | 实现（`server/internal/logx`） |
 | --- | --- |
-| 初始化 | `lifespan` 中 `configure_logging(settings.log_dir, settings.log_backup_count)` |
-| 文件 | `<log_dir>/spare-parts-api.log`（默认 `server/data/logs/`），UTF-8，`when="midnight", interval=1, utc=False`，`suffix="%Y-%m-%d"` |
-| 归档 | 自定义 `MonthlyTimedRotatingFileHandler` 把每天轮转出的文件放进 `YYYY-MM` 子目录，删除时跨目录按日期排序，`backupCount`（默认 90）控制保留份数 |
-| 控制台与级别 | `StreamHandler(sys.stdout)`，未设置 `NO_COLOR` 时用 ANSI 彩色格式；控制台 handler 挂 `IgnoreHealthCheckFilter`（消息含 `/health` 则不输出），文件 handler 未过滤。root 级别 INFO 并清空既有 handler；`uvicorn`/`uvicorn.error` 清空自身 handler 改为向 root 传播，`uvicorn.access` 与 `httpx` 提到 WARNING，`logging.captureWarnings(True)` |
-| logger 名 | 统一为 `spare_parts.api`（`main.py` 与各 core 模块） |
-| 访问日志字段 | `method`、`path`、`status`、`elapsed ms`、`db=<ms>/<query 数>`、`compute=<ms>`、`client_ip`、`user`（`request.state.username`，未认证为 `anonymous`，小程序为 `mini:<id>`）、`request_id` |
+| 初始化 | `cmd/server` 启动时 `logx.Configure(APP_LOG_DIR, APP_LOG_BACKUP_COUNT)`，设为 `log/slog` 的默认 handler |
+| 行格式 | `时间 \| 级别 \| logger 名 \| 消息`，级别为 `INFO` / `WARNING` / `ERROR`，附加属性追加为 `key=value` |
+| 文件 | `<log_dir>/spare-parts-api.log`（默认 `server/data/logs/`），本地时间午夜轮转 |
+| 归档 | 轮转出的文件放进 `YYYY-MM/spare-parts-api.YYYY-MM-DD.log`，跨目录按日期排序，只保留最近 `APP_LOG_BACKUP_COUNT`（默认 90）份 |
+| 控制台与级别 | 输出到 stdout，未设置 `NO_COLOR` 时 ANSI 彩色；消息含 `/health` 的行不输出到控制台（文件照写）；最低级别 INFO |
+| logger 名 | 默认 `spare_parts.api`（`logx.Named(name)` 可取指定名称的日志器） |
+| 访问日志字段 | `method`、`path`、`status`、`elapsed ms`、`db=<ms>/<query 数>`、`compute=<ms>`、`client_ip`、`user`（管理端为用户名，未认证为 `anonymous`，小程序为 `mini:<id>`）、`request_id`；`/health` 不写访问日志 |
 | 敏感信息 | 访问日志不打印请求体、查询参数与请求头（`Authorization`/`X-API-Token` 均不出现）；乐观锁版本号刻意放 `If-Match` 头而非 query；代码中没有统一的字段级脱敏黑名单 |
-
-
 
 ### 配置项清单
 | 项 | 值 |
 | --- | --- |
-| 配置类 | `core/config.py` 的 `Settings`，`SettingsConfigDict(env_file=BACKEND_DIR/".env", env_prefix="APP_", extra="ignore")` |
-| 环境文件 | `server/.env` |
-| 变量前缀 | `APP_`（字段名大写：`database_url` → `APP_DATABASE_URL`） |
-| 单例 | `settings = get_settings()`（`@lru_cache`），导入时构造一次 |
+| 配置类 | `server/internal/config` 的 `Settings`，`config.Load()` 启动时读取一次，结果放进进程级单例 `config.S` |
+| 环境文件 | `<APP_BASE_DIR>/.env`（默认当前工作目录，即 `server/.env`）：逐行 `KEY=VALUE`，不覆盖已存在的环境变量 |
+| 变量前缀 | `APP_`（如 `APP_DATABASE_URL`） |
+| 解析失败 | 整数 / 布尔值非法、小于下限，或 `APP_JWT_SECRET` 不足 16 个字符时启动失败并退出 |
 | 必填字段 | 代码层没有必填字段（部署时由 compose 要求 `APP_DATABASE_URL`、`APP_JWT_SECRET`） |
 
 | 字段 | 环境变量 | 类型 | 默认值 | 校验/说明 |
 | --- | --- | --- | --- | --- |
-| `app_name` | `APP_APP_NAME` | `str` | `电气车间备件管理系统` | FastAPI `title` |
-| `environment` | `APP_ENVIRONMENT` | `str` | `development` | 启动日志打印；compose 设 `production` |
-| `database_url` | `APP_DATABASE_URL` | `str` | `postgresql+asyncpg://spare:spare@postgresql:5432/spare_parts` | 引擎 DSN |
-| `jwt_secret` | `APP_JWT_SECRET` | `str` | `change-me-in-production` | `min_length=16`，生产必须替换 |
-| `jwt_algorithm` | `APP_JWT_ALGORITHM` | `str` | `HS256` | JWT 签名算法 |
-| `access_token_minutes` | `APP_ACCESS_TOKEN_MINUTES` | `int` | `30` | `ge=1`；管理端与小程序访问令牌有效期 |
-| `refresh_token_days` | `APP_REFRESH_TOKEN_DAYS` | `int` | `7` | `ge=1` |
-| `fernet_key` | `APP_FERNET_KEY` | `str` | `""` | 为空时由 `jwt_secret` 派生（`server/app/core/security.fernet`），影响接口令牌/API Key 等密文可解密性 |
-| `wechat_mini_program_app_id` | `APP_WECHAT_MINI_PROGRAM_APP_ID` | `str` | `""` | 多个 AppID 逗号分隔，顺序须与 secret 一致（`core/wechat.py` 校验数量与唯一性，否则 503） |
-| `wechat_mini_program_app_secret` | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | `str` | `""` | 同上，仅后端保存 |
-| `upload_dir` | `APP_UPLOAD_DIR` | `Path` | `<server>/data/uploads` | 启动时 `mkdir(parents=True, exist_ok=True)`；图片与导出文件根目录 |
-| `template_dir` | `APP_TEMPLATE_DIR` | `Path` | `<server>/app/templates` | Excel 导出模板目录（`excel_export_service` 读取） |
-| `log_dir` | `APP_LOG_DIR` | `Path` | `<server>/data/logs` | 日志目录 |
-| `log_backup_count` | `APP_LOG_BACKUP_COUNT` | `int` | `90` | `ge=1`，保留的历史日志文件数 |
-| `max_image_bytes` | `APP_MAX_IMAGE_BYTES` | `int` | `10 * 1024 * 1024` | 图片上传上限，比较前多读 1 字节 |
-| `cors_origins` | `APP_CORS_ORIGINS` | `list[str]` | `[]` | `Annotated[..., NoDecode]` + `field_validator(mode="before")` 手工按逗号切分；空表示不限制。因使用 `NoDecode`，环境变量必须是逗号分隔字符串（如 `https://a.example.com,.example.com`），不能写成 JSON 数组 |
-| `cors_allow_credentials` | `APP_CORS_ALLOW_CREDENTIALS` | `bool` | `True` | 是否回 `Access-Control-Allow-Credentials` |
-| `cors_max_age` | `APP_CORS_MAX_AGE` | `int` | `86400` | `ge=0`，预检缓存秒数 |
-| `purchase_plan_cleanup_enabled` | `APP_PURCHASE_PLAN_CLEANUP_ENABLED` | `bool` | `True` | 关闭后不启动申购计划清理 worker |
-| `build_time` | `APP_BUILD_TIME` | `str \| None` | `None` | 构建期注入（Docker ARG/ENV），`/version` 返回 |
-| `git_sha` | `APP_GIT_SHA` | `str \| None` | `None` | 同上 |
+| `AppName` | `APP_APP_NAME` | `string` | `电气车间备件管理系统` | Swagger UI 标题、`/version` 的 `app_name` |
+| `Environment` | `APP_ENVIRONMENT` | `string` | `development` | 启动日志打印；compose 设 `production` |
+| `DatabaseURL` | `APP_DATABASE_URL` | `string` | `postgresql+asyncpg://spare:spare@postgresql:5432/spare_parts` | 连接串，接受 `postgresql+asyncpg://` / `postgresql://` / `postgres://`，由 `PostgresDSN()` 转成 pgx DSN |
+| `JWTSecret` | `APP_JWT_SECRET` | `string` | `change-me-in-production` | 至少 16 个字符，生产必须替换 |
+| `JWTAlgorithm` | `APP_JWT_ALGORITHM` | `string` | `HS256` | JWT 签名算法 |
+| `AccessTokenMinutes` | `APP_ACCESS_TOKEN_MINUTES` | `int` | `30` | `≥1`；管理端与小程序访问令牌有效期 |
+| `RefreshTokenDays` | `APP_REFRESH_TOKEN_DAYS` | `int` | `7` | `≥1` |
+| `FernetKey` | `APP_FERNET_KEY` | `string` | `""` | 为空时由 `APP_JWT_SECRET` 派生（经 SHA-256 定长，`internal/security`），影响接口令牌/API Key 等密文可解密性 |
+| `WechatMiniProgramAppID` | `APP_WECHAT_MINI_PROGRAM_APP_ID` | `string` | `""` | 多个 AppID 逗号分隔，顺序须与 secret 一致（数量或唯一性不符返回 503 `WECHAT_CONFIGURATION_INVALID`） |
+| `WechatMiniProgramAppSecret` | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | `string` | `""` | 同上，仅后端保存 |
+| `WechatAPIBase` | `APP_WECHAT_API_BASE` | `string` | `https://api.weixin.qq.com` | 微信接口根地址（去掉末尾 `/`），测试可指向本地桩服务 |
+| `UploadDir` | `APP_UPLOAD_DIR` | `string` | `<server>/data/uploads` | 启动时自动创建；图片、导入临时文件（`imports/`）与导出文件（`exports/`）根目录 |
+| `TemplateDir` | `APP_TEMPLATE_DIR` | `string` | `<server>/templates` | Excel 导出模板目录（`service/excelexport` 读取）；镜像内为 `/app/templates` |
+| `LogDir` | `APP_LOG_DIR` | `string` | `<server>/data/logs` | 日志目录 |
+| `LogBackupCount` | `APP_LOG_BACKUP_COUNT` | `int` | `90` | `≥1`，保留的历史日志文件数 |
+| `MaxImageBytes` | `APP_MAX_IMAGE_BYTES` | `int64` | `10 * 1024 * 1024` | 图片上传上限 |
+| `CORSOrigins` | `APP_CORS_ORIGINS` | `[]string` | 空 | 逗号分隔字符串（如 `https://a.example.com,.example.com`），空表示不限制 |
+| `CORSAllowCredentials` | `APP_CORS_ALLOW_CREDENTIALS` | `bool` | `true` | 是否回 `Access-Control-Allow-Credentials`；接受 `1/0`、`true/false`、`yes/no`、`on/off` 等写法 |
+| `CORSMaxAge` | `APP_CORS_MAX_AGE` | `int` | `86400` | `≥0`，预检缓存秒数 |
+| `PurchasePlanCleanupEnabled` | `APP_PURCHASE_PLAN_CLEANUP_ENABLED` | `bool` | `true` | 关闭后不启动申购计划清理任务 |
+| `AttachmentCleanupEnabled` | `APP_ATTACHMENT_CLEANUP_ENABLED` | `bool` | `true` | 关闭后不启动附件清理任务 |
+| `BuildTime` | `APP_BUILD_TIME` | `*string` | 未设置 | 构建期注入（Docker ARG/ENV），`/version` 返回 |
+| `GitSHA` | `APP_GIT_SHA` | `*string` | 未设置 | 同上 |
+| `Host` | `APP_HOST` | `string` | `0.0.0.0` | 监听地址 |
+| `Port` | `APP_PORT` | `int` | `8000` | 监听端口；`server healthcheck` 也按它探测 `/health` |
+
+`<server>` 指 `APP_BASE_DIR`（未设置时为进程工作目录，本地即 `server/`；镜像内设为 `/app`）。另有两个只在测试中使用的开关（不进 `Settings`）：`APP_DISABLE_WORKERS`（非空时不启动常驻后台任务）、`APP_TEST_HOOKS=1`（注册 `/__test__/*` 测试钩子）。
 #### 部署方需要配置的变量
 `docs/env/backend.env.example` 模板项（前端对应 `docs/env/frontend.env.example`）：
 
@@ -699,7 +780,9 @@ flowchart LR
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 多个小程序按相同顺序逗号分隔 |
 | `APP_LOG_DIR` / `APP_LOG_BACKUP_COUNT` | `./data/logs` / `90` |
-模板未列出但代码支持的变量：`APP_FERNET_KEY`、`APP_CORS_ORIGINS`、`APP_UPLOAD_DIR`、`APP_TEMPLATE_DIR`、`APP_MAX_IMAGE_BYTES`、`APP_PURCHASE_PLAN_CLEANUP_ENABLED`、`APP_APP_NAME`、`APP_JWT_ALGORITHM`、`APP_BUILD_TIME`、`APP_GIT_SHA`。
+模板未列出但代码支持的变量：`APP_FERNET_KEY`、`APP_CORS_ORIGINS`、`APP_UPLOAD_DIR`、`APP_TEMPLATE_DIR`、`APP_MAX_IMAGE_BYTES`、`APP_PURCHASE_PLAN_CLEANUP_ENABLED`、`APP_ATTACHMENT_CLEANUP_ENABLED`、`APP_APP_NAME`、`APP_JWT_ALGORITHM`、`APP_WECHAT_API_BASE`、`APP_HOST`、`APP_PORT`、`APP_BASE_DIR`、`APP_BUILD_TIME`、`APP_GIT_SHA`。
+`docker-compose.yml` 中后端服务的取值：
+
 | 变量 | 值 |
 | --- | --- |
 | `APP_ENVIRONMENT` | `production` |
@@ -711,63 +794,93 @@ flowchart LR
 | `APP_LOG_DIR` | `/app/data/logs` |
 | `BACKEND_PORT` / `FRONTEND_PORT`（主机侧） | `8000` / `8080` |
 
-
-
 ### 后台定时任务
-#### lifespan 启动时的一次性清理（`server/app/main.py` → `lifespan`）
-| 调用 | 作用 | 保留/阈值 |
-| --- | --- | --- |
-| `settings.upload_dir.mkdir(...)`、`configure_logging(...)` | 准备目录与日志 | — |
-| `import_job_service.mark_stale_jobs_failed()` | 重启前遗留的 `PENDING`/`RUNNING` 导入任务标记失败并删除临时文件 | — |
-| `import_job_service.cleanup_finished_jobs()` | 删除已终态（`SUCCEEDED`/`FAILED`）导入任务行 | `retention_days=30` |
-| `excel_export_job_service.mark_stale_exports_failed()` | 同上，针对导出任务 | — |
-| `excel_export_job_service.cleanup_finished_exports()` | 删除已终态导出任务行及其文件 | `EXPORT_RETENTION_DAYS=3` |
-| `share_link_service.cleanup_expired()` | 删除已过期分享链接行 | `expires_at < now` |
-每次清理命中的条数会打印 `logger.info`（如 `purged N expired share links`）。导入任务的终态清理**只在启动时执行一次**，代码中未定义周期性导入清理 worker。
-#### 常驻 worker（`asyncio.create_task`，name 即任务名）
-| task name | 实现 | 触发/周期 | 关键参数 |
+各 service 在包的 `init()` 里向 `server/internal/lifecycle` 登记：`lifecycle.OnStartup(order, name, fn)`（启动清理）、`lifecycle.Worker(name, enabled, fn)`（常驻任务）、`lifecycle.OnShutdown(fn)`（退出收尾）。`cmd/server` 的启动顺序：
+
+```mermaid
+flowchart LR
+    A["config.Load"] --> B["创建上传目录"]
+    B --> C["logx.Configure"]
+    C --> D["db.Open 连接池"]
+    D --> E["lifecycle.RunStartup<br/>按 order 执行启动清理"]
+    E --> F["lifecycle.StartWorkers<br/>每个常驻任务一个 goroutine"]
+    F --> G["HTTP 服务 app.New()"]
+    G --> H["SIGINT / SIGTERM：取消 ctx → Shutdown(20s) → 等待常驻任务 → OnShutdown → 关闭连接池"]
+```
+
+#### 启动时的一次性清理（`lifecycle.RunStartup`）
+单个任务失败只记 error 日志，不阻止启动。
+
+| order | 调用 | 作用 | 保留/阈值 |
 | --- | --- | --- | --- |
-| `webhook-delivery-worker` | `webhook_service.run_delivery_worker(stop_event)` | 循环投递待发送 webhook，无可投递时 `asyncio.wait_for(stop_event.wait(), timeout=2.0)` 轮询 | `_POLL_INTERVAL_SECONDS=2.0`；`_MAX_ATTEMPTS=5`；退避 `_RETRY_MINUTES=(1,5,15,60,180)`；`_SENDING_LEASE_MINUTES=5`；HTTP 超时 8s/连接 3s |
-| `purchase-plan-cleanup-worker` | `purchase_plan_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理直到无候选 | 仅当 `settings.purchase_plan_cleanup_enabled` 为真时创建；批次 `_BATCH_SIZE=50`；先解绑 `purchase_request_line.purchase_material_id` 再物理删除计划；`with_for_update(skip_locked=True)` |
-| `attachment-cleanup-worker` | `attachment_cleanup_service.run_cleanup_worker(stop_event)` | 睡到下一个北京时间 02:00（`_CLEANUP_HOUR=2`，`SHANGHAI` 时区）后循环清理（一轮什么都没清也没撤销就结束） | 仅当 `settings.attachment_cleanup_enabled` 为真时创建；批次上限 200；对 `file_object.deleted_at` 非空的待删除附件**逐张复查被引用次数**：复查到新增引用即撤销删除（不等保留期），仍无引用且已过 `file_service.attachment_purge_after`（提交删除的完整 7 天后的第一个 2 点，`ATTACHMENT_RETENTION_DAYS=7`）才物理删除数据库行与磁盘文件，保留期未满的继续留着；批量标记（`soft_delete_unreferenced`）另有**新人保护期**：上传未满 `ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS=7` 天且从未被引用过的附件不会被标记，只在回执的 `skipped_recent_count` 里回报；`with_for_update(skip_locked=True)`。物理清除只能由本任务完成，**没有手动物理删除接口** |
-| `excel-export-cleanup-worker` | `excel_export_job_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 终态任务保留 3 天；顺带清理 `upload_dir/exports` 下超过 24 小时的 `.tmp` 孤儿文件 |
-| `share-link-cleanup-worker` | `share_link_service.run_cleanup_worker(stop_event)` | 启动后立即清理一次，随后每 24 小时一次 | 删除 `expires_at < utcnow()` 的行 |
+| 10 | `importjob.MarkStaleJobsFailed` | 重启前遗留的 `PENDING`/`RUNNING` 导入任务标记失败并删除临时文件 | — |
+| 11 | `importjob.CleanupFinishedJobs` | 删除已终态（`SUCCEEDED`/`FAILED`）导入任务行 | `DefaultRetentionDays=30` |
+| 20 | `exportjob.MarkStaleExportsFailed` | 同上，针对导出任务 | — |
+| 21 | `exportjob.CleanupFinishedExports` | 删除已终态导出任务行及其文件 | `RetentionDays=3` |
+| 30 | `share.CleanupExpired` | 删除已过期分享链接行 | `expires_at < now` |
+每次清理命中的条数会打印 info 日志（如 `purged N expired share links`）。导入任务的终态清理**只在启动时执行一次**，代码中未定义周期性导入清理任务。
+#### 常驻任务（`lifecycle.StartWorkers`，每个一个 goroutine，panic 会被记录而不拖垮进程）
+| 任务名 | 实现 | 触发/周期 | 关键参数 |
+| --- | --- | --- | --- |
+| `webhook-delivery-worker` | `webhook.RunDeliveryWorker` | 循环投递待发送 webhook，无可投递时等待 2 秒再轮询 | `pollInterval=2s`；`maxAttempts=5`；退避 `retryMinutes=(1,5,15,60,180)`；`sendingLease=5m`；HTTP 读写超时 8s / 连接 3s，不跟随重定向 |
+| `purchase-plan-cleanup` | `plancleanup.RunCleanupWorker` | 睡到下一个北京时间 02:00（`cleanupHour=2`，`common.Shanghai` 时区）后循环清理直到无候选 | 仅当 `APP_PURCHASE_PLAN_CLEANUP_ENABLED` 为真时启动；批次 `BatchSize=50`；先解绑 `purchase_request_line.purchase_material_id` 再物理删除计划；`FOR UPDATE SKIP LOCKED` |
+| `attachment-cleanup` | `attachment.RunCleanupWorker` | 睡到下一个北京时间 02:00（`file.AttachmentPurgeHour`，`common.Shanghai` 时区）后循环清理（一轮什么都没清也没撤销就结束） | 仅当 `APP_ATTACHMENT_CLEANUP_ENABLED` 为真时启动；批次上限 200；对 `file_object.deleted_at` 非空的待删除附件**逐张复查被引用次数**：复查到新增引用即撤销删除（不等保留期），仍无引用且已过保留期（提交删除的完整 7 天后的第一个 2 点，`file.AttachmentRetentionDays=7`）才物理删除数据库行与磁盘文件，保留期未满的继续留着；批量标记（`file.SoftDeleteUnreferenced`）另有**新人保护期**：上传未满 `file.AttachmentUnreferencedMinAgeDays=7` 天且从未被引用过的附件不会被标记，只在回执的 `skipped_recent_count` 里回报；`FOR UPDATE SKIP LOCKED`。物理清除只能由本任务完成，**没有手动物理删除接口** |
+| `excel-export-cleanup-worker` | `exportjob.RunCleanupWorker` | 启动后立即清理一次，随后每 24 小时一次 | 终态任务保留 3 天；顺带清理 `<upload_dir>/exports` 下超过 24 小时的 `.tmp` 孤儿文件 |
+| `share-link-cleanup-worker` | `share.RunCleanupWorker` | 启动后立即清理一次，随后每 24 小时一次 | 删除 `expires_at < now` 的行 |
 
 | 任务 | 生命周期 |
 | --- | --- |
-| 常驻 worker | 退出时 `finally` 置 `stop_event` 并 `await`，随后关闭 `httpx` 客户端（`webhook_service.close_client()`、`ai_search_service.close_client()`） |
-| MCP | `lifespan` 全程包在 `async with mcp.session_manager.run():` 内 |
-| 请求内派生任务 | `import_job_service.enqueue_import` 与 `excel_export_job_service` 用 `asyncio.create_task(...)` 起 `import-job-{id}` / `export-job-{id}`，引用存模块级 `_running_tasks` 防 GC（单进程有效） |
+| 常驻任务 | 收到退出信号后 ctx 取消，各任务尽快返回；全部结束后执行 `OnShutdown` 收尾（`webhook.CloseClient`、`aisearch.CloseClients` 关闭 HTTP 客户端空闲连接） |
+| 请求内派生任务 | `importjob.EnqueueImport` 与 `exportjob` 登记任务后 `go RunJob(context.Background(), id, processor)`，由包级 `sync.WaitGroup` 跟踪（测试可 `Wait()`），单进程有效；进程重启时由启动清理把中断的任务标记失败 |
+| 测试环境 | 设置 `APP_DISABLE_WORKERS` 时不启动常驻任务（启动清理照常执行），避免与用例并发改写数据 |
+
+</TabsContent>
+
+<TabsContent id="be-mcp">
+
 ### 其它
-#### MCP 服务（`server/app/mcp_server.py`）
+#### MCP 服务（`server/internal/api/mcp`）
 | 项 | 内容 |
 | --- | --- |
-| 挂载 | `MCPServer("spare-parts-management", title="备件管理系统")`，`app.mount("/api/v1/mcp", mcp_http_app, name="mcp")`；传输 Streamable HTTP（`streamable_http_path="/"`、`stateless_http=True`、`json_response=True`、`max_request_body_size=16MB`），并显式关闭 DNS rebinding 保护以适配反向代理的 Host 头 |
+| 挂载 | `mcp.Register` 在 `/api/v1/mcp/` 上接收全部方法；传输为 Streamable HTTP 的**无状态 JSON** 模式：只接受 `POST`（`GET` / `DELETE` 返回 405，不提供 SSE 流与会话），`Content-Type` 必须是 `application/json`，响应为 JSON（支持 JSON-RPC 批量请求，纯通知返回 202）；请求体上限 16 MB；协议版本支持 `2024-11-05` / `2025-03-26` / `2025-06-18` / `2025-11-25`；`serverInfo.name` 为 `spare-parts-management` |
 | 工具 | `system_whoami`（返回令牌对应用户、角色、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
-| 操作目录 | 来自应用自身的 `app.openapi()` 路径，按 `operationId` 索引；排除 `/api/v1/auth/login`、`/api/v1/auth/refresh` 与小程序专用前缀 `/api/v1/mini-program/`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
-| 参数映射 | `operation_describe` 的 `call_arguments` 由 OpenAPI 派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号 String(version)」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。令牌头与项目头由 MCP 层统一设置，不接受调用方传入 |
-| 上限 | 请求体上限 `max_request_body_size=16MB`（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
-| 调用方式 | `operation_call` 通过 `httpx.ASGITransport` 在本进程内回环调用，仍完整经过参数校验、角色权限、乐观锁与事务；超时 60 秒。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`IfMatchVersion`） |
-| 认证 | `McpTokenAuthMiddleware` 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，命中用户后把身份放进 `ContextVar`，失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |
+| 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
+| 参数映射 | `operation_describe` 的 `call_arguments` 由契约派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号（String(version)）；不传则不校验版本」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。`headers` 只接受契约里该操作声明的请求头；令牌头与项目头（`ManagedHeaders`）由 MCP 层统一设置，不接受调用方传入 |
+| 上限 | 请求体上限 16 MB（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
+| 调用方式 | `operation_call` 用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、角色权限、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
+| 认证 | 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，经 `auth.FindUserByAPIToken` 命中启用用户后解析项目（`X-Project-Id` → `?project_id=` → 默认项目），失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |
+| 一致性测试 | `internal/api/mcp` 的 Go 测试校验：目录不含排除项、排除项仍能命中存活路由、目录 + 排除项覆盖契约里的全部操作；改排除清单时同步本小节 |
 #### 健康检查与接口文档
 | 项 | 内容 |
 | --- | --- |
-| `GET /health` | `include_in_schema=False`；执行 `SELECT 1`，成功返回 `{"status":"ok","database":"ok"}`；失败记录 warning 并返回 `503 DATABASE_UNAVAILABLE`；响应体会被 `IgnoreHealthCheckFilter` 从控制台日志略过 |
-| Swagger / OpenAPI | Swagger UI 在 `/api/docs`，OpenAPI JSON 在 `/api/v1/openapi.json`；版本号硬编码 `1.0.0`（`FastAPI(openapi_url=..., docs_url=...)`） |
-| 契约文件 | `docs/openapi.yaml` 由 `server/scripts/export_openapi.py` 从运行中的应用导出（示例补充见同目录 `openapi_examples.py`），前端类型由它生成 |
-| 错误响应声明 | 所有路由的 `responses` 在 `api/v1/__init__.py` 统一声明 `400/401/403/409/422` 使用 `ApiError` 模型 |
+| `GET /health` | 不在契约内；5 秒超时执行 `SELECT 1`，成功返回 `{"status":"ok","database":"ok"}`；失败记录 warning 并返回 `503 DATABASE_UNAVAILABLE`；不写访问日志 |
+| 容器健康检查 | `/app/server healthcheck` 子命令请求 `http://127.0.0.1:$APP_PORT/health`（3 秒超时），200 返回 0，否则 1 |
+| Swagger / OpenAPI | Swagger UI 在 `/api/docs`（页面从 jsDelivr 加载 swagger-ui-dist），OpenAPI JSON 在 `/api/v1/openapi.json`，内容即内嵌契约转成的 JSON（版本号取契约 `info.version`） |
+| 契约文件 | `docs/openapi.yaml` 是**手工维护**的唯一来源：改接口时先改契约，再 `make sync-openapi` 把它复制到 `server/internal/openapi/openapi.yaml`（`go:embed` 内嵌）；`TestEmbeddedSpecMatchesDocs` 校验两份一致。示例数据由 `server/scripts/openapi_examples.py` 补齐，前端类型由契约生成 |
+| 路由一致性 | `internal/app` 的 `TestRoutesMatchOpenAPIContract` 校验契约里的每个操作都有 Gin 路由、且没有契约外的 `/api/v1` 业务路由（MCP、`openapi.json` 与 `/__test__` 除外） |
+| 错误响应声明 | 契约里各操作统一声明 `400/401/403/409/422` 使用 `ApiError` 结构 |
+#### 测试与 CI
+| 层次 | 内容 |
+| --- | --- |
+| 静态检查 | `gofmt -l .`（应无输出）、`go vet ./...` |
+| Go 单元测试 | `go test ./...`：中间件、健康检查与未知路由、契约 / 路由一致性、MCP 目录、各 service 的纯逻辑（Excel 渲染、导入解析、图片重编码、附件保留期、Webhook、AI 搜索等）；少数需要 PostgreSQL 的用例默认连本机 `em_go_test` 库（可用 `GO_TEST_DATABASE_URL` 覆盖，CI 指向服务容器），连不上时跳过 |
+| 黑盒契约测试 | `server/tools/run_contract_tests.sh`：重建本地 PostgreSQL 测试库（导入 `init.sql`）→ 编译并启动 Go 服务（独立上传 / 日志目录，`APP_DISABLE_WORKERS=1`、`APP_TEST_HOOKS=1`）→ 运行 `server/tests/` 下的 pytest 用例，通过 HTTP 调用服务并直连同一数据库校验落库结果；`PGHOST` / `PGPORT` / `PGUSER` / `PGPASSWORD` 可覆盖连接 |
+| CI | `.github/workflows/api-test.yml`：PostgreSQL 16 服务容器 + 静态检查 + `go test ./...` + 黑盒契约测试；`contract-check.yml`：契约与内嵌副本、路由一致，前端生成类型未漂移；`e2e-simulation.yml`：编译后端连真实 PostgreSQL 跑 `server/scripts/e2e_simulation.py` 模拟用户操作 |
 #### Docker 与部署
 | 项 | 内容（`server/Dockerfile`、`docker-compose.yml`） |
 | --- | --- |
-| 基础镜像与目录 | `python:3.12-slim`，`WORKDIR /app`；构建时 `mkdir -p /app/data/uploads /app/data/logs` |
-| 构建参数与安装 | `ARG BUILD_TIME` / `ARG GIT_SHA` → `ENV APP_BUILD_TIME` / `APP_GIT_SHA`；`COPY pyproject.toml` + `COPY app ./app` → `pip install --no-cache-dir .`（构建上下文是 `server/` 自身） |
-| 端口/启动 | `EXPOSE 8000`；`CMD ["uvicorn","app.main:app","--host","0.0.0.0","--port","8000"]` |
-| compose 后端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:server`，端口 `${BACKEND_PORT:-8000}:8000`，卷 `uploads:/app/data/uploads`、`logs:/app/data/logs`，健康检查轮询 `/health`（15s 间隔，30s 起始宽限） |
+| 构建阶段 | `golang:1.26-alpine`，`CGO_ENABLED=0`、`-trimpath`，先 `go mod download` 再 `go build -ldflags="-s -w" -o /out/server ./cmd/server`（构建上下文是 `server/` 自身） |
+| 运行阶段 | `alpine:3.22` + `ca-certificates`、`tzdata`，非 root 用户 `app`；`WORKDIR /app`，复制二进制 `/app/server` 与 `templates/` 到 `/app/templates`，创建 `/app/data/uploads`、`/app/data/logs` |
+| 环境与构建参数 | `ENV APP_BASE_DIR=/app`、`APP_TEMPLATE_DIR=/app/templates`、`APP_UPLOAD_DIR=/app/data/uploads`、`APP_LOG_DIR=/app/data/logs`；`ARG BUILD_TIME` / `ARG GIT_SHA` → `APP_BUILD_TIME` / `APP_GIT_SHA` |
+| 端口/启动 | `EXPOSE 8000`；`ENTRYPOINT ["/app/server"]`；`HEALTHCHECK` 执行 `/app/server healthcheck`（15s 间隔、5s 超时、10s 起始宽限、10 次重试） |
+| compose 后端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:server`，端口 `${BACKEND_PORT:-8000}:8000`，卷 `uploads:/app/data/uploads`、`logs:/app/data/logs`，健康检查 `["CMD", "/app/server", "healthcheck"]`（15s 间隔，30s 起始宽限） |
 | compose 前端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:web`，端口 `${FRONTEND_PORT:-8080}:80`，`depends_on: backend: service_healthy` |
 | 网络 | 外部网络 `1panel-network` |
-运行时依赖见 `server/pyproject.toml`：FastAPI、SQLAlchemy[asyncio]、asyncpg、pyjwt、argon2-cffi、cryptography、httpx、mcp、openpyxl、xlrd、pillow、pydantic-settings、uvicorn；开发依赖含 aiosqlite、pytest、pytest-asyncio、mypy(strict)、ruff、pyyaml；Python 版本要求 `>=3.12,<3.15`。
+运行时依赖全部编译进二进制，镜像内不需要 Go 工具链；依赖清单见 `server/go.mod`。
 
+</TabsContent>
 
+</Tabs>
 
 </TabsContent>
 

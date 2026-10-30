@@ -5,10 +5,10 @@ PostgreSQL 16+，共 **42 张表**，结构出自 `docs/references/database/init
 ```mermaid
 flowchart LR
     SQL["init.sql<br/>结构与种子数据唯一来源"]
-    ORM["ORM 模型<br/>server/app/models/__init__.py"]
-    SQL <-->|"必须完全一致"| ORM
-    CHECK["test_init_sql.py<br/>比对表、列、约束名、索引名、NULL、ENUM、外键与 ON DELETE"] -.->|守护| SQL
-    CHECK -.->|守护| ORM
+    GO["Go 表结构体<br/>server/internal/model/models_gen.go"]
+    SQL <-->|"必须完全一致"| GO
+    CHECK["Go 测试<br/>比对表、列与 NULL 约束"] -.->|守护| SQL
+    CHECK -.->|守护| GO
 ```
 
 <Tabs :tabs="[
@@ -32,7 +32,7 @@ flowchart LR
 | 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting.secondary_warehouse_mode`，影响路由、菜单与写接口 |
 | 后台可见功能 | `WebFeatureVisibility` | 管理端侧栏主 tab 的可见性配置（工作台 / 备忘录 / 二级库 / 华星总库存 / 申购管理 / 隐患管理 / 台账管理 / 工作管理，每项「显示 / 隐藏」）：落在 `system_setting` 的 `ai_search_config.web_features`（JSON），只影响侧栏渲染与落地页推导，不拦路由与接口；系统管理固定显示，不参与该配置 |
 | 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
-| 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放 `inventory_service.replay_materials`；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
+| 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放（`service/inventory` 的 `replayMaterials`）；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
 | 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
 | 冲销 | `SourceType.REVERSAL` + `reversal_of_id` | 以反向类型的新流水抵消原流水，按行记录 `remaining_qty`（剩余可冲数量），累计冲销不得超过原数量 |
 | 初始化 / 小程序出库 | `SourceType.INITIALIZATION` / `SourceType.MINI_PROGRAM` | 初始化库存是首次建账入库（仍是正常入库流水，且只能是入库）；小程序出库落库时 `source_type` 记为 `MANUAL`，以 `mini_program_user_name_snapshot` 非空作为来源判据 |
@@ -53,8 +53,8 @@ flowchart LR
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
 | 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
 | 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏入口）/ `query_only`（只读）/ `read_write`（可写：库存可出库、隐患可登记与跟进）；只作用于小程序前端，后端数据接口不按它鉴权 |
-| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.log_event`） |
-| MCP | `server/app/mcp_server.py` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应的用户角色鉴权 |
+| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.LogEvent`） |
+| MCP | `server/internal/api/mcp` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应的用户角色鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
 | 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气安全 / 电缆敷设不规范`），无父子层级；同一项目内同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
 | 责任单位 | `hazard_unit` | 单位与责任人一一对应；停用后不出现在登记下拉里，历史隐患仍保留名称与责任人快照 |
@@ -146,7 +146,7 @@ erDiagram
 
 `excel_import_job`、`excel_export_job`、`hazard`、`hazard_after_image`、`hazard_before_image`、`hazard_type`、`hazard_unit`、`huaxing_inventory`、`ledger`、`ledger_image`、`ledger_tag`、`ledger_tag_image`、`lite_inventory`、`material_code_library`、`material_price`、`purchase_material`、`purchase_material_image`、`purchase_plan_template`、`purchase_plan_template_image`、`purchase_request`、`purchase_request_line`、`purchase_request_line_image`、`share_link`、`stock_balance`、`stock_material`、`stock_material_image`、`stock_operation`、`stock_operation_line`、`stock_replenishment_policy`、`work_record`、`work_task`、`work_task_image`。
 
-每张表都有 `project_id BIGINT UNSIGNED NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。ORM 侧统一由 `ProjectScoped` 混入声明，清单登记在 `PROJECT_SCOPED_MODELS`（新增业务表必须同时继承与登记）。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
+每张表都有 `project_id BIGINT NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。Go 侧清单登记在 `server/internal/model` 的 `ProjectScopedTables`（新增业务表必须同时改 `init.sql`、Go 表结构体并登记），业务 SQL 显式按 `project_id` 过滤。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
 ### 全局表（10 张，不隔离）
 
@@ -197,11 +197,11 @@ flowchart TD
 
 <TabsContent id="relations">
 
-### 表清单（含 ORM 类名）
+### 表清单（含 Go 结构体名）
 
-ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有该文件）。
+表结构体全部定义在 `server/internal/model/models_gen.go`（同目录的 `cols.go` 放列清单辅助函数）。
 
-| 表名 | ORM 类名（`__tablename__` 同名） | 中文含义 | 所属域 |
+| 表名 | Go 结构体（`model.<名称>`） | 中文含义 | 所属域 |
 | --- | --- | --- | --- |
 | `user` | `User` | 管理端登录账号（含角色与接口令牌双列） | 用户 |
 | `mini_program_user` | `MiniProgramUser` | 小程序用户档案 | 用户 |
@@ -231,7 +231,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `purchase_request_line` | `PurchaseRequestLine` | 申购记录物资行（含计划快照） | 申购 |
 | `purchase_request_line_image` | `PurchaseRequestLineImage` | 申购记录行图片关联 | 申购 |
 | `memo` | `Memo` | 个人备忘录 | 备忘 |
-| `huaxing_inventory` | `HuaXingInventory` | 华兴库存（外部库存导入数据） | 华兴库存 |
+| `huaxing_inventory` | `HuaxingInventory` | 华兴库存（外部库存导入数据） | 华兴库存 |
 | `hazard_unit` | `HazardUnit` | 隐患责任单位（单位与责任人一一对应） | 隐患管理 |
 | `hazard_type` | `HazardType` | 隐患类型（一行一个「大类 + 小类」组合） | 隐患管理 |
 | `hazard` | `Hazard` | 隐患台账主表（检查信息 + 责任人快照 + 整改状态） | 隐患管理 |
@@ -245,7 +245,7 @@ ORM 模型全部定义在 `server/app/models/__init__.py`（该目录下只有�
 | `work_task_image` | `WorkTaskImage` | 任务图片关联 | 工作管理 |
 | `work_record` | `WorkRecord` | 工作记录：任务 + 起止（上午 / 下午）+ 参与人员 + 备注 | 工作管理 |
 
-`MiniProgramIdentity` 与 `SystemSetting` **未列入模型模块的 `__all__`**；`ExcelExportJob.file_uuid` 为派生属性，无独立列。
+每个结构体旁有表名常量 `Table<名称>` 与列清单常量 `Cols<名称>`（SELECT 时直接拼接）；`file_uuid` 由 `schema.ExportFileUUID(file_path)` 在响应里派生，无独立列。
 
 ### 用户与身份
 
@@ -868,8 +868,8 @@ flowchart LR
 | 约定 | 说明 |
 | --- | --- |
 | JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 PostgreSQL `JSON` 类型，不建额外索引 |
-| 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，ORM 侧另有 `default=""` / `server_default=""`；`file_object.mime_type` 同样只在 ORM 侧有 `default="image/png"`（`test_init_sql.py` 不校验默认值） |
-| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入（`psql -f`）；脚本按依赖顺序建表，无需关闭外键检查；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
+| 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，由 `service/memo` 插入时显式写入；`file_object.mime_type` 同样由 `service/file` 上传时显式写 `image/png`（Go 测试不校验默认值） |
+| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入（`psql -f`）；脚本按依赖顺序建表，无需关闭外键检查；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 Go 表结构体（`server/internal/model`） |
 
 
 ### 种子数据
@@ -904,19 +904,19 @@ flowchart LR
 | `work` | 工作管理员 | `WORK_ADMIN` | 1 | `sha256(gen_random_uuid())` |
 | `readonly` | 只读用户 | `READ_ONLY` | 1 | `sha256(gen_random_uuid())` |
 
-七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
-命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
+约束名直接写在 `init.sql` 里，按统一前缀命名，Go 代码不生成 DDL：
 
-| ORM 写法 | 生成的约束名 | 对应 `init.sql` |
+| 约束 | 命名规则 | `init.sql` 示例 |
 | --- | --- | --- |
-| 主键 | `pk_%(table_name)s` | `PRIMARY KEY` |
-| `UniqueConstraint(...)` | `uq_%(table_name)s_%(column_0_name)s` | `UNIQUE`，如 `uq_stock_operation_line_operation_id` |
-| `CheckConstraint(..., name="minimum_nonnegative")` | `ck_%(table_name)s_%(constraint_name)s` | `CHECK`，如 `ck_stock_replenishment_policy_minimum_nonnegative` |
-| `Index(...)` / `mapped_column(..., index=True)` | `ix_%(column_0_label)s` | `CREATE INDEX` 语句，名字一致 |
-| `ForeignKey(..., ondelete="CASCADE")` | `fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s` | 对应 `ON DELETE`；未写 `ondelete` 则 `init.sql` 中同样没有该子句 |
+| 主键 | `pk_<表>` | `PRIMARY KEY` |
+| 唯一约束 | `uq_<表>_<列>`（多列时为业务名） | `uq_stock_operation_line_operation_id` |
+| CHECK 约束 | `ck_<表>_<约束名>` | `ck_stock_replenishment_policy_minimum_nonnegative` |
+| 索引 | `ix_<表>_<列>` | `CREATE INDEX` 语句 |
+| 外键 | `fk_<表>_<列>_<被引用表>` | 写明 `ON DELETE` 的才带该子句 |
 
-`server/tests/test_init_sql.py::test_init_sql_matches_current_model_schema` 逐表比对上述内容。
+`init.sql` 与 `server/internal/model/models_gen.go` 的表、列与 NULL 约束由 Go 测试逐表比对；唯一键、索引、外键等约束名以 `init.sql` 为准。
 
 相关页面：[状态机](/dev-state-machines)、[数据流](/dev-flows)、[架构设计](/dev-architecture)、[接口约定](/api-conventions)
 
