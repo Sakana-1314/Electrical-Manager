@@ -10,7 +10,7 @@
 
 - 项目名称：**HXNI 电气无忧**（英文标识 `Electrical-Manager`）。面向华星镍业检修维护部电气自动化车间，覆盖二级库库存、申购计划、请购与到货、采购跟踪、精简库存、图片附件、表格导入导出、链接分享、用户权限、AI 搜索/MCP 与备忘录；不涉及物资价格和成本核算。
 - 前端（网页端）：Vue 3 + TypeScript + Vite + Naive UI + Pinia，位于 `web/`。
-- 后端（服务端）：FastAPI + SQLAlchemy 异步，位于 `server/`。
+- 后端（服务端）：Go + Gin + pgx（PostgreSQL），位于 `server/`（代码结构见 `server/README.md`）。
 - 小程序：微信小程序，位于 `miniprogram/`。
 - 项目站点：VitePress，位于 `docs/websites/`，由 CI 构建后发布到 `gh-pages` 分支（GitHub Pages）。
 - 前后端契约统一维护在 `docs/openapi.yaml`，前端类型由它生成（`src/api/generated.raw.ts`、`src/api/generated.ts`），**禁止手改生成文件**。
@@ -24,7 +24,7 @@
 
 - `docs/openapi.yaml` — 接口契约；改后端接口时同步契约，并用 `npm run generate:api`（在 `web/` 目录）重新生成前端类型。
 - `docs/websites/pages/ui-design-guidelines.md` — UI 组件与样式约定。
-- `docs/websites/pages/api-conventions.md`（接口约定：错误响应与状态码规则）、`docs/websites/pages/api-error-codes.md`（全部错误码总表，改错误码必须同步，见 `server/tests/test_error_code_docs.py`）。
+- `docs/websites/pages/api-conventions.md`（接口约定：错误响应与状态码规则）、`docs/websites/pages/api-error-codes.md`（全部错误码总表，改错误码必须同步，由 `server` 目录下 `go test ./...` 的文档一致性测试校验）。
 - `.github/workflows/` — CI 流水线（契约一致性校验 / 前端单测 / 后端接口测试 / 构建镜像 / 发布站点）。
 
 ## 项目站点（必须遵守）
@@ -74,8 +74,8 @@ npm run test              # vitest 单测（如有涉及组件）
 npm run build             # 类型检查 + 生产构建
 ```
 
-后端在 `server/` 目录：`pytest`。
-注意 CI 含「校验 openapi / generated.ts 未漂移」：改接口契约后必须重新生成并提交生成文件，否则 CI 失败。
+后端在 `server/` 目录：`gofmt -l .`（应无输出）、`go vet ./...`、`go test ./...`、`tools/run_contract_tests.sh`（黑盒契约测试，需本机 PostgreSQL）。
+注意 CI 含「校验 openapi / generated.ts 未漂移」：`docs/openapi.yaml` 是手工维护的接口契约，改接口时先改契约、`make sync-openapi` 同步后端内嵌副本（`server/internal/openapi/openapi.yaml`），再在 `web/` 重新生成前端类型并提交，否则 CI 失败；后端路由必须与契约逐一对应（`server/internal/app` 的路由一致性测试）。
 
 ## 代码与提交规范
 
@@ -89,7 +89,7 @@ npm run build             # 类型检查 + 生产构建
 
 ## 数据库结构约定（必须遵守）
 
-- **只保留 `docs/references/database/init.sql`**：它是数据库结构与种子数据的唯一来源，`server/tests/test_init_sql.py` 会校验它与 ORM 模型完全一致（表、列、NULL 约束、ENUM、索引、外键）。改模型必须同步改 `init.sql`，否则测试失败。
+- **只保留 `docs/references/database/init.sql`**：它是数据库结构与种子数据的唯一来源，Go 测试会校验它与 `server/internal/model/models_gen.go` 一致（表、列、NULL 约束）。改表结构必须同时改 `init.sql` 与 Go 模型，否则测试失败。
 - **禁止再往仓库提交任何增量迁移脚本**：包括 `migrations/` 目录、`upgrade-*.sql`、按日期命名的 `*.sql`，以及任何"已有库升级步骤"脚本。历史迁移脚本已全部删除，今后**不要再新增**，也不要恢复已删除的文件。
 - **需要帮部署方升级已有库时**：在 PR 描述、issue 或对话里给出一次性 SQL 文本，或让部署方自行按各自流程改库；仓库只维护 init.sql。
 - **不在仓库文档里罗列升级脚本清单**：README 只说明「新库用 init.sql 初始化 + 已有库由部署方自行改库」，不逐条列迁移历史。
@@ -98,33 +98,43 @@ npm run build             # 类型检查 + 生产构建
 
 > 原则：**凭证可以加密（或哈希）入库，但界面必须每次都回显已保存的值，避免每次重新生成 / 重置。**
 
-- **存储**：接口令牌、API Key 等敏感凭证不得明文落库，须加密（如 Fernet 对称加密，参考 `server/app/services/ai_search_service.py` 的 `_encrypt_api_key` / `_decrypt_api_key`，密文存 `*_encrypted` 字段）或哈希后存储；需要界面回显的凭证必须**加密**（可逆）入库，哈希仅用于纯认证查找。
+- **存储**：接口令牌、API Key 等敏感凭证不得明文落库，须加密（如 Fernet 对称加密，参考 `server/internal/security` 的 `EncryptSecret` / `DecryptSecret` 与 `server/internal/service/aisearch`，密文存 `*_encrypted` 字段）或哈希后存储；需要界面回显的凭证必须**加密**（可逆）入库，哈希仅用于纯认证查找。
 - **回显**：读取接口必须解密回显明文凭证，前端每次进入页面都能看到已保存的值（如 AI 搜索配置读取时 `api_key` 字段始终回显，用户无需每次重置）。**禁止**让界面出现「库中只存哈希，请重新生成后再复制」之类需要用户每次重新生成 / 输入的提示。
-- **用户接口令牌（已按约定改造）**：`user` 表双列存储——`api_token_hash`（SHA-256，认证快速查找）+ `api_token_enc`（Fernet 密文，可逆回显）；`/users` 读取与 PATCH 每次解密回显（见 `dictionary_service._echo_api_token`）。仅存哈希的历史数据在令牌下次成功用于接口调用时由认证路径自动加密回写（见 `core.permissions.find_user_by_api_token`），此后持续回显，无需用户重新生成。
+- **用户接口令牌（已按约定改造）**：`user` 表双列存储——`api_token_hash`（SHA-256，认证快速查找）+ `api_token_enc`（Fernet 密文，可逆回显）；`/users` 读取与 PATCH 每次解密回显（见 `server/internal/service/dictionary` 的 `echoAPIToken`）。仅存哈希的历史数据在令牌下次成功用于接口调用时由认证路径自动加密回写（见 `server/internal/auth` 的 `FindUserByAPIToken`），此后持续回显，无需用户重新生成。
 - **涉及此类存储 / 回显改动时**：同步更新 `docs/openapi.yaml` 契约并重新生成前端类型（在 `web/` 目录执行 `npm run generate:api`），在 PR 描述中说明加解密与回显方案。
 
 ## 项目隔离约定（必须遵守）
 
-业务数据按「项目」隔离（现有项目 + 后续可继续新增项目），实现集中在 `server/app/core/project_scope.py`：
-请求头 `X-Project-Id` + `ContextVar` + ORM 事件（读过滤 / 写守卫）。改代码时遵守以下约定：
+业务数据按「项目」隔离（现有项目 + 后续可继续新增项目），实现集中在 `server/internal/db`（会话上的项目上下文）
+与 `server/internal/auth`（`RequireProject` 依赖）：请求头 `X-Project-Id` → 请求会话的项目上下文 → 业务 SQL 显式按 `project_id` 过滤。改代码时遵守以下约定：
 
-- **新增业务表必须继承 `ProjectScoped` 并登记到 `app.models.PROJECT_SCOPED_MODELS`**（同时改 `init.sql`、ORM 与 `test_init_sql.py` 能过），否则该表不会被隔离。
-- **业务路由必须声明项目依赖**：`APIRouter(..., dependencies=[Depends(require_current_project)])`（`share` / `excel_export_jobs` 这类含匿名端点的路由按端点声明），让缺项目头时返回 400 `PROJECT_REQUIRED`。
-- **service 不要逐个写 `project_id` 过滤**：读过滤由全局事件注入；只有显式跨项目语义的地方（按 id 反查任意项目的数据）才写 `Model.project_id == ...`，并放在 `system_scope()` 内。
-- **后台任务与匿名入口必须显式声明上下文**：按行记录恢复用 `project_scope(job.project_id)` / `async with project_session(...)`；系统级（清理、附件引用统计、匿名导出下载）用 `system_scope()` / `async with system_session()`。调用 `SessionLocal()` 而不设上下文会 fail-closed 报 `PROJECT_REQUIRED`。
+- **新增业务表必须带 `project_id` 并登记到 `server/internal/model` 的 `ProjectScopedTables`**（同时改 `init.sql` 与 Go 模型，Go 测试能过），否则删除项目前的数据统计会漏掉该表。
+- **业务路由必须声明项目依赖**：路由分组挂 `auth.RequireProject`（`share` / `excel_export_jobs` 这类含匿名端点的路由按端点声明），让缺项目头时返回 400 `PROJECT_REQUIRED`。
+- **项目域表的每条 SQL 都显式带 `project_id = ?`**：项目 id 一律取 `s.ProjectID()`（未设定上下文时返回 `PROJECT_REQUIRED`，fail-closed），INSERT 时写入当前项目；只有显式跨项目语义的地方（按 id 反查任意项目的数据）才不加过滤，并放在系统上下文（`s.System()` / `db.SystemSession`）里。
+- **后台任务与匿名入口必须显式声明上下文**：按行记录恢复用 `db.ProjectSession(ctx, job.ProjectID)` / `s.WithProject(pid)`；系统级（清理、附件引用统计、匿名导出下载）用 `db.SystemSession(ctx)` / `s.System()`。
 - **项目域唯一键要带 `project_id`**（如 `(project_id, plan_no)`）：编号/编码按项目生成，跨项目必须允许同号。
-- **不隔离的全局表**（`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`）新增字段时不受隔离层影响。
-- **匿名分享/导出下载按记录自身解析项目**：分享页先在全项目上下文取 `share_link`，再切到该分享的项目读数据。
+- **不隔离的全局表**（`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`）不加 `project_id` 过滤。
+- **匿名分享/导出下载按记录自身解析项目**：分享页先在系统上下文取 `share_link`，再切到该分享的项目读数据。
 - **老库升级**：仓库不提交迁移脚本；已有库的升级 SQL 放在 PR 描述或对话里（`outputs/` 下的脚本不入库），新库直接用 `init.sql`。
 
 ## MCP 可调用性约定（必须遵守）
 
-MCP 工具目录由 `app.openapi()` 自动生成（`server/app/mcp_server.py`），**默认要求每个管理端接口都能被 `operation_call` 完整操作**：
+MCP 工具目录由内嵌的接口契约自动生成（`server/internal/api/mcp`，契约副本见 `server/internal/openapi`），**默认要求每个管理端接口都能被 `operation_call` 完整操作**：
 
 - **参数位置只用** 路径 / 查询 / 请求头 / JSON 请求体；文件上传只能单文件 multipart 且表单字段名必须是 `file`（cookie、多文件或其它表单字段 MCP 传不进去，新增这类接口必须同时扩展 `operation_call`）。
-- **乐观锁版本号走 `If-Match` 请求头**（`IfMatchVersion`）：网页端由 `web/src/api/*.ts` 按需传，MCP 端用 `operation_call` 的 `headers` 传（如 `{"If-Match": "3"}`）；`X-API-Token` 与 `X-Project-Id` 由 MCP 层统一设置，不接受调用方传入。
-- **排除项必须显式且同步**：需要排除的接口（登录/刷新、小程序专用前缀等）写进 `mcp_server.py` 的 `EXCLUDED_PATHS` / `EXCLUDED_PREFIXES`，同时更新 `docs/websites/pages/dev-architecture.md` 的 MCP 小节；排除项必须仍能命中存活路由（端点删除后要清理），由 `server/tests/test_mcp_docs.py` 与 `server/tests/unit/test_mcp_server.py` 校验。
+- **乐观锁版本号走 `If-Match` 请求头**：网页端由 `web/src/api/*.ts` 按需传，MCP 端用 `operation_call` 的 `headers` 传（如 `{"If-Match": "3"}`）；`X-API-Token` 与 `X-Project-Id` 由 MCP 层统一设置，不接受调用方传入。
+- **排除项必须显式且同步**：需要排除的接口（登录/刷新、小程序专用前缀等）写进 `server/internal/api/mcp` 的 `ExcludedPaths` / `ExcludedPrefixes`，同时更新 `docs/websites/pages/dev-architecture.md` 的 MCP 小节；排除项必须仍能命中存活路由（端点删除后要清理），由 `server` 目录下的 Go 测试校验。
 - **文档同步**：改工具清单、排除清单或 MCP 链接参数（`project_id` 在 `token` 之前）时必须同步文档，否则 CI 的文档一致性测试失败。
+
+## 后端（Go）编码约定
+
+- 分层：`internal/api/<模块>`（路由、依赖、参数）→ `internal/service/<模块>`（业务与 SQL）→ `internal/schema`（请求/响应结构体）/ `internal/model`（表结构体）。service 之间单向依赖，不得循环导入。
+- 处理函数用 `web.Router` 注册，依赖（`auth.RequireProject`、`auth.CurrentUser`、`auth.SuperAdmin` 等）按需列出、先于参数校验执行；路径 / 查询 / 请求头 / 请求体统一经 `c.Params()` 校验，所有错误合并为一次 422 `VALIDATION_ERROR`。
+- 处理函数返回后框架先提交事务再写响应（返回 2xx 时写库已可见），出错回滚；不要在处理函数里手动提交，提交后才做的事用 `c.DB.AfterCommit`。
+- 业务 SQL 写 `?` 占位符（会话层自动转换为 PostgreSQL 的 `$n`），布尔列绑定 Go bool，不写数据库方言特有函数；列表接口避免 N+1（主表一次查询 + 每个关系一次 `IN` 查询）。
+- 业务错误用 `apperr.New(code, msg)`（状态码按错误码表推断，可 `WithStatus` / `WithDetails`）；新增错误码必须同步 `api-error-codes.md`。
+- 响应时间格式：`jtype.UTCTime`（带 `+00:00`）/ `jtype.Date`；数量与金额用 `jtype.Decimal`（规范化字符串输出）。
+- 数据库枚举列存枚举**名称**、接口输出**值**，名称与值不同的枚举用 `domain.<Enum>.ToDB` / `FromDB` 转换。
 
 ## 标准开发与发布工作流（必须遵守）
 
