@@ -42,16 +42,23 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 配置 Python
+      - name: 配置 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: 编译后端
+        working-directory: server
+        run: go build -o /tmp/spare-parts-server ./cmd/server
+
+      - name: 配置 Python（模拟脚本）
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: server/pyproject.toml
 
-      - name: 安装后端依赖
-        working-directory: server
-        run: pip install -e ".[dev]"
+      - name: 安装模拟脚本依赖
+        run: pip install httpx
 
       - name: 安装 PostgreSQL 客户端
         run: |
@@ -73,10 +80,13 @@ jobs:
           APP_WECHAT_MINI_PROGRAM_APP_SECRET: "test-primary-secret,test-secondary-secret"
           APP_UPLOAD_DIR: "/tmp/e2e-uploads"
           APP_LOG_DIR: "/tmp/e2e-logs"
+          APP_TEMPLATE_DIR: "${{ github.workspace }}/server/templates"
+          APP_HOST: "127.0.0.1"
+          APP_PORT: "8000"
           E2E_BASE_URL: "http://127.0.0.1:8000"
         run: |
           set -e
-          uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/uvicorn.log 2>&1 &
+          /tmp/spare-parts-server > /tmp/server.log 2>&1 &
           BACKEND_PID=$!
           for i in $(seq 1 60); do
             if curl -sf http://127.0.0.1:8000/health > /dev/null; then
