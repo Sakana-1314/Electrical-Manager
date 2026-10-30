@@ -10,8 +10,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/api"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/mcp"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/middleware"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/openapi"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -36,7 +39,20 @@ func New() *gin.Engine {
 	})
 
 	r.GET("/health", health)
+	r.GET("/api/v1/openapi.json", func(c *gin.Context) {
+		body, err := openapi.JSON()
+		if err != nil {
+			web.WriteError(c, err)
+			return
+		}
+		c.Data(http.StatusOK, "application/json", body)
+	})
+	r.GET("/api/docs", func(c *gin.Context) {
+		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(openapi.SwaggerHTML(config.S.AppName, "/api/v1/openapi.json")))
+	})
 	api.Register(web.NewRouter(r.Group("/api/v1")))
+	// MCP 的 operation_call 在进程内转发给本引擎。
+	mcp.SetHandler(r)
 	return r
 }
 

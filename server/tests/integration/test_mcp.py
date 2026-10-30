@@ -11,7 +11,7 @@ from app.mcp_server import (
     operation_call,
 )
 from app.models import User
-from tests.conftest import auth_headers, project_session
+from tests.conftest import GO_SERVER_URL, auth_headers, project_session
 
 MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
@@ -185,6 +185,36 @@ async def test_mcp_operation_call_sends_if_match_header(client: AsyncClient) -> 
     )
     assert created.status_code == 201, created.text
     tag = created.json()
+
+    if GO_SERVER_URL:
+        # 独立运行的 Go 服务：经 MCP HTTP 端点调用 operation_call（等价于直接调用工具函数）。
+        async def go_operation_call(operation_id: str, **arguments: object) -> dict:
+            call = await client.post(
+                "/api/v1/mcp/",
+                headers={**MCP_HEADERS, "X-API-Token": token},
+                json=mcp_request(
+                    "tools/call",
+                    {"name": "operation_call", "arguments": {"operation_id": operation_id, **arguments}},
+                ),
+            )
+            assert call.status_code == 200, call.text
+            return call.json()["result"]["structuredContent"]
+
+        conflict = await go_operation_call(
+            "delete_ledger_tag_api_v1_ledger_tags__tag_id__delete",
+            path_params={"tag_id": tag["id"]},
+            headers={"If-Match": str(tag["version"] + 1)},
+        )
+        assert conflict["status_code"] == 409
+        assert conflict["data"]["code"] == "VERSION_CONFLICT"
+        deleted = await go_operation_call(
+            "delete_ledger_tag_api_v1_ledger_tags__tag_id__delete",
+            path_params={"tag_id": tag["id"]},
+            headers={"If-Match": str(tag["version"])},
+        )
+        assert deleted == {"status_code": 204, "data": None}
+        assert (await client.get("/api/v1/ledger-tags", headers=headers)).json() == []
+        return
 
     token_marker = _token_context.set(token)
     project_marker = _project_context.set(1)
