@@ -11,8 +11,8 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 )
 
-// TestEnqueueEventDB 需要一个按 init.sql 建好的 MySQL 库：
-// EM_TEST_DATABASE_URL=mysql+asyncmy://root@127.0.0.1:3306/em_go_settings go test ./internal/service/webhook/
+// TestEnqueueEventDB 需要一个按 init.sql 建好的 PostgreSQL 库：
+// EM_TEST_DATABASE_URL=postgresql://postgres@127.0.0.1:5432/em_go_test go test ./internal/service/webhook/
 // 全部写入在同一事务内完成并回滚，不污染库。
 func TestEnqueueEventDB(t *testing.T) {
 	url := os.Getenv("EM_TEST_DATABASE_URL")
@@ -20,7 +20,7 @@ func TestEnqueueEventDB(t *testing.T) {
 		t.Skip("EM_TEST_DATABASE_URL 未设置")
 	}
 	config.S.DatabaseURL = url
-	dsn, err := config.S.MySQLDSN()
+	dsn, err := config.S.PostgresDSN()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,10 +34,7 @@ func TestEnqueueEventDB(t *testing.T) {
 			t.Fatalf("%s: %v", q, err)
 		}
 	}
-	mustExec("SET FOREIGN_KEY_CHECKS = 0")
-	mustExec("DELETE FROM webhook_delivery")
-	mustExec("DELETE FROM webhook_channel")
-	mustExec("DELETE FROM project")
+	mustExec("TRUNCATE TABLE webhook_delivery, webhook_channel, project RESTART IDENTITY CASCADE")
 	mustExec("INSERT INTO project (id, name, enabled, is_default, created_at, updated_at, version) VALUES (1, '默认项目', TRUE, TRUE, NOW(), NOW(), 1), (2, '二期', TRUE, FALSE, NOW(), NOW(), 1)")
 	mustExec(`INSERT INTO webhook_channel (platform, enabled, webhook_url_encrypted, secret_encrypted, subscribed_events, created_at, updated_at, version) VALUES
 		('FEISHU', TRUE, '', '', '["stock.outbound.created","mini_program.user.bound"]', NOW(), NOW(), 1),

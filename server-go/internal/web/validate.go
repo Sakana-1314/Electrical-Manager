@@ -33,7 +33,7 @@ func (v *ValidationError) Error() string {
 
 // ValueError 构造模型 / 字段自定义校验错误（等价 Pydantic 的 ValueError）。
 func ValueError(loc []any, msg string, input any) FieldError {
-	return FieldError{Type: "value_error", Loc: loc, Msg: "Value error, " + msg, Input: input, Ctx: map[string]any{"error": msg}}
+	return FieldError{Type: "value_error", Loc: loc, Msg: "Value error, " + msg, Input: input, Ctx: map[string]any{"error": map[string]any{}}}
 }
 
 // Validatable 由请求结构体实现，用于字段约束之外的自定义校验（Pydantic model_validator / field_validator）。
@@ -363,10 +363,11 @@ func (d *decoder) value(v reflect.Value, in any, loc []any, r *rules) {
 			d.add("string_type", loc, "Input should be a valid string", in, nil)
 			return
 		}
+		orig := s
 		if !r.nostrip {
 			s = strings.TrimSpace(s)
 		}
-		d.checkString(s, loc, r)
+		d.checkStringInput(s, orig, loc, r)
 		v.SetString(s)
 	case reflect.Bool:
 		b, ok := parseBoolAny(in)
@@ -517,19 +518,22 @@ func (d *decoder) nullError(t reflect.Type, loc []any) {
 	}
 }
 
-func (d *decoder) checkString(s string, loc []any, r *rules) {
+func (d *decoder) checkString(s string, loc []any, r *rules) { d.checkStringInput(s, s, loc, r) }
+
+// checkStringInput 按去空白后的值校验，错误里的 input 报原始输入（与 Pydantic 一致）。
+func (d *decoder) checkStringInput(s, orig string, loc []any, r *rules) {
 	n := utf8.RuneCountInString(s)
 	if r.min != nil && n < *r.min {
-		d.add("string_too_short", loc, fmt.Sprintf("String should have at least %d character%s", *r.min, plural(*r.min)), s, map[string]any{"min_length": *r.min})
+		d.add("string_too_short", loc, fmt.Sprintf("String should have at least %d character%s", *r.min, plural(*r.min)), orig, map[string]any{"min_length": *r.min})
 	}
 	if r.max != nil && n > *r.max {
-		d.add("string_too_long", loc, fmt.Sprintf("String should have at most %d character%s", *r.max, plural(*r.max)), s, map[string]any{"max_length": *r.max})
+		d.add("string_too_long", loc, fmt.Sprintf("String should have at most %d character%s", *r.max, plural(*r.max)), orig, map[string]any{"max_length": *r.max})
 	}
 	if r.pattern != nil && !r.pattern.MatchString(s) {
-		d.add("string_pattern_mismatch", loc, fmt.Sprintf("String should match pattern '%s'", r.patternSrc), s, map[string]any{"pattern": r.patternSrc})
+		d.add("string_pattern_mismatch", loc, fmt.Sprintf("String should match pattern '%s'", r.patternSrc), orig, map[string]any{"pattern": r.patternSrc})
 	}
 	if len(r.oneof) > 0 && !contains(r.oneof, s) {
-		d.add("enum", loc, "Input should be "+describeOneOf(r.oneof), s, map[string]any{"expected": describeOneOf(r.oneof)})
+		d.add("enum", loc, "Input should be "+describeOneOf(r.oneof), orig, map[string]any{"expected": describeOneOf(r.oneof)})
 	}
 }
 
