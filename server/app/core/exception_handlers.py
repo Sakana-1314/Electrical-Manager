@@ -29,20 +29,16 @@ from app.core.errors import AppError
 
 logger = logging.getLogger("spare_parts.api")
 
-MYSQL_QUERY_ERROR_CODES = {
-    1052,  # Column is ambiguous.
-    1054,  # Unknown column.
-    1064,  # SQL syntax error.
-    1066,  # Duplicate table alias.
-    1109,  # Unknown table.
-    1146,  # Table does not exist.
-}
+# PostgreSQL SQLSTATE 42 类（语法错误或访问规则违例）：语法错误、未定义列、未定义表、
+# 列名歧义等。这类错误说明 SQL 本身写错，服务与连接都正常，按「查询执行失败」返回 500；
+# 其余连接类错误（如 08 类）才按「数据库暂时不可用」返回 503。
+QUERY_ERROR_SQLSTATE_PREFIX = "42"
 
 
 def is_database_query_error(exc: SQLAlchemyError) -> bool:
     original = getattr(exc, "orig", None)
-    args = getattr(original, "args", ())
-    return bool(args and isinstance(args[0], int) and args[0] in MYSQL_QUERY_ERROR_CODES)
+    sqlstate = getattr(original, "sqlstate", None) or getattr(original, "pgcode", None)
+    return isinstance(sqlstate, str) and sqlstate.startswith(QUERY_ERROR_SQLSTATE_PREFIX)
 
 
 def error_response(

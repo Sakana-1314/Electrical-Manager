@@ -15,13 +15,13 @@
 
 ## Docker 部署
 
-前提：外部 MySQL 8.0+（库先建好）与外部网络 `1panel-network`。
+前提：外部 PostgreSQL 16+（库先建好）与外部网络 `1panel-network`。
 
 ```bash
 git clone https://github.com/Sakana-1314/Electrical-Manager.git
 cd Electrical-Manager
 cp docs/env/.env.example .env          # 按注释填写
-mysql -h <host> -u <user> -p <database> < docs/references/database/init.sql
+psql -h <host> -U <user> -d <database> -f docs/references/database/init.sql
 docker compose pull
 docker compose up -d
 ```
@@ -34,7 +34,7 @@ docker compose up -d
 
 | 变量 | 说明 |
 | --- | --- |
-| `APP_DATABASE_URL` | 如 `mysql+asyncmy://user:pass@mysql:3306/db?charset=utf8mb4`，密码需 URL 编码。 |
+| `APP_DATABASE_URL` | 如 `postgresql+asyncpg://user:pass@postgresql:5432/db`，密码需 URL 编码。 |
 | `APP_JWT_SECRET` | 至少 32 位随机字符串，生产环境必须修改。 |
 | `APP_ACCESS_TOKEN_MINUTES` | 登录有效期（分钟），默认 480。 |
 | `APP_FERNET_KEY` | 可选，加密 API Key / Webhook 密钥的专用密钥；留空则从 `APP_JWT_SECRET` 派生。 |
@@ -50,7 +50,7 @@ docker compose up -d
 | --- | --- | --- |
 | 后端 | 8000 | `/health`（含 DB 探测）、`/api/docs`（Swagger）、`/api/v1/openapi.json`、`/api/v1/*`、`/api/v1/mcp` |
 | 前端 | 容器 80，宿主默认 8080 | Nginx 托管静态资源并代理 `/api` 到后端 |
-| 数据库 | 外部 MySQL 8.0 | 由部署方用 `docs/references/database/init.sql` 初始化；容器不自动执行脚本 |
+| 数据库 | 外部 PostgreSQL 16+ | 由部署方用 `docs/references/database/init.sql` 初始化；容器不自动执行脚本 |
 | 持久化 | `uploads`、`logs` 两个命名卷 | 图片、导入临时文件、导出文件与日志 |
 
 ## 数据库

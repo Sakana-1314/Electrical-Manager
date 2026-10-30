@@ -212,8 +212,8 @@ async def test_concurrent_outbound_allows_negative_without_lost_updates(
             | {"receiver_name": "测试领用人"},
         )
 
-    if engine.dialect.name == "mysql":
-        # MySQL/InnoDB 分支验证 SELECT ... FOR UPDATE 串行化后不会丢失扣减。
+    if engine.dialect.name in {"mysql", "postgresql"}:
+        # MySQL/InnoDB 与 PostgreSQL 分支验证 SELECT ... FOR UPDATE 串行化后不会丢失扣减。
         responses = await asyncio.gather(outbound("concurrent-a"), outbound("concurrent-b"))
     else:
         # SQLite 不提供行级 FOR UPDATE；本地快速测试顺序执行相同业务。

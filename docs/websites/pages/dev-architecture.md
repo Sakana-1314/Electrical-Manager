@@ -7,7 +7,7 @@ flowchart LR
     Web["网页端<br/>Vue 3 + Naive UI"] --> API["服务端<br/>FastAPI"]
     MP["微信小程序"] --> API
     Agent["AI Agent / MCP"] --> API
-    API --> DB[("MySQL 8.0")]
+    API --> DB[("PostgreSQL 16+")]
     API --> WeChat["微信接口<br/>登录 / 小程序码"]
     API --> Ext["外部物资平台<br/>采购进度"]
     API --> Hook["飞书 / 钉钉<br/>Webhook"]
@@ -17,8 +17,8 @@ flowchart LR
 
 | 部分 | 技术 | 版本约束 |
 | --- | --- | --- |
-| 服务端语言与框架 | Python（镜像 `python:3.12-slim`）+ FastAPI + SQLAlchemy（asyncio）+ asyncmy | Python `>=3.12,<3.15`；FastAPI `>=0.141,<1`；SQLAlchemy `>=2.0.36,<3`；asyncmy `>=0.2.10,<1`（`server/pyproject.toml`、`server/Dockerfile`） |
-| 服务端依赖与数据库 | pydantic-settings（`APP_` 前缀 + `server/.env`）；PyJWT + argon2-cffi（密码哈希）；cryptography（Fernet 凭证加密）；Pillow；openpyxl / xlrd；httpx；mcp；pytest / pytest-asyncio / aiosqlite、ruff、mypy(strict)；MySQL / InnoDB / `utf8mb4_0900_ai_ci` | pydantic-settings `>=2.7,<3`；PyJWT `>=2.10,<3`、argon2-cffi `>=23.1,<26`；cryptography `>=44,<47`；Pillow `>=11,<13`；openpyxl `>=3.1.5,<4`、xlrd `>=2.0,<3`；httpx `>=0.28,<1`；mcp `>=2,<3`；pytest `>=8.3,<9`、pytest-asyncio `>=0.25,<1`；MySQL 8.0（`server/app/core/config.py`、`server/app/core/security.py`、`server/app/services/file_service.py`、`server/app/services/import_file_reader.py`、`server/app/mcp_server.py`） |
+| 服务端语言与框架 | Python（镜像 `python:3.12-slim`）+ FastAPI + SQLAlchemy（asyncio）+ asyncpg | Python `>=3.12,<3.15`；FastAPI `>=0.141,<1`；SQLAlchemy `>=2.0.36,<3`；asyncpg `>=0.30,<1`（`server/pyproject.toml`、`server/Dockerfile`） |
+| 服务端依赖与数据库 | pydantic-settings（`APP_` 前缀 + `server/.env`）；PyJWT + argon2-cffi（密码哈希）；cryptography（Fernet 凭证加密）；Pillow；openpyxl / xlrd；httpx；mcp；pytest / pytest-asyncio / aiosqlite、ruff、mypy(strict)；PostgreSQL 16+ | pydantic-settings `>=2.7,<3`；PyJWT `>=2.10,<3`、argon2-cffi `>=23.1,<26`；cryptography `>=44,<47`；Pillow `>=11,<13`；openpyxl `>=3.1.5,<4`、xlrd `>=2.0,<3`；httpx `>=0.28,<1`；mcp `>=2,<3`；pytest `>=8.3,<9`、pytest-asyncio `>=0.25,<1`；PostgreSQL 16+（`server/app/core/config.py`、`server/app/core/security.py`、`server/app/services/file_service.py`、`server/app/services/import_file_reader.py`、`server/app/mcp_server.py`） |
 | 网页端 | Vue、Vue Router、Pinia、Naive UI、Axios、VueUse | `^3.5.17`、`^4.5.1`、`^3.0.3`、`^2.42.0`、`^1.10.0`、`^13.5.0` |
 | 网页端构建与测试 | Vite、TypeScript、vue-tsc；Vitest、Vue Test Utils、jsdom；openapi-typescript（契约生成） | Vite `^7.0.4`、TypeScript `~5.8.3`、vue-tsc `^3.0.3`；Vitest `^3.2.4`、Vue Test Utils `^2.4.6`、jsdom `^26.1.0`；openapi-typescript `^7.8.0`（`web/package.json`） |
 | 小程序与站点 | 微信小程序原生（WXML/WXSS/JS）+ tdesign-miniprogram、miniprogram-ci；VitePress 站点（`srcDir: pages`、`base: /Electrical-Manager/`） | tdesign `^1.15.3`、miniprogram-ci `2.1.31`；VitePress `^1.6.4`（`miniprogram/package.json`、`docs/websites/package.json`、`docs/websites/.vitepress/config.ts`） |
@@ -380,7 +380,7 @@ Apifox 智能 Mock，按字段名自己编数据（见 [/api](/api)）。
 
 <TabsContent id="backend">
 
-FastAPI + SQLAlchemy 2.x async 单进程应用（MySQL 8.0 / asyncmy），源码在 `server/`，包名 `app`。
+FastAPI + SQLAlchemy 2.x async 单进程应用（PostgreSQL 16+ / asyncpg），源码在 `server/`，包名 `app`。
 
 | 入口 | 路径 |
 | --- | --- |
@@ -542,7 +542,7 @@ server/app/
 | `RequestValidationError` | `handle_validation_error` | `422 VALIDATION_ERROR`，`details.errors` 为 pydantic 错误列表 |
 | `IntegrityError` | `handle_integrity_error` | `409 DATA_CONFLICT`（`logger.warning` + 堆栈） |
 | `ProgrammingError` | `handle_database_programming_error` | `500 DATABASE_QUERY_ERROR` |
-| `OperationalError` / `InterfaceError` / `DisconnectionError` / `SQLAlchemyTimeoutError` | `handle_database_unavailable` | 若 `exc.orig.args[0]` 落在 MySQL 查询错误码集合（1052/1054/1064/1066/1109/1146）→ `500 DATABASE_QUERY_ERROR`，否则 `503 DATABASE_UNAVAILABLE` |
+| `OperationalError` / `InterfaceError` / `DisconnectionError` / `SQLAlchemyTimeoutError` | `handle_database_unavailable` | 若 `exc.orig.sqlstate` 以 `42` 开头（PostgreSQL 语法错误 / 未定义列 / 未定义表 / 列名歧义）→ `500 DATABASE_QUERY_ERROR`，否则 `503 DATABASE_UNAVAILABLE` |
 | `SQLAlchemyError` | `handle_database_error` | `500 DATABASE_ERROR` |
 | `Exception` | `handle_unexpected_error` | `500 INTERNAL_SERVER_ERROR`（`logger.exception`） |
 禁止 HTTP 404：资源不存在时 service 用 `errors.not_found(resource)` → `400 NOT_FOUND`（message「<资源>不存在」）；未匹配路由由 `handle_http_exception` 改为 `400 ROUTE_NOT_FOUND`（message「接口路径不存在」）；后端对外不产生 404，文件类接口同样遵循。
@@ -585,7 +585,7 @@ flowchart LR
     M --> D["业务路由依赖 require_current_project：校验项目存在且启用"]
     D --> ORM["do_orm_execute：注入 project_id 条件"]
     D --> F["before_flush：补项目 / 拦跨项目写入"]
-    ORM --> DB[("MySQL")]
+    ORM --> DB[("PostgreSQL")]
     F --> DB
 ```
 
@@ -668,7 +668,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `app_name` | `APP_APP_NAME` | `str` | `电气车间备件管理系统` | FastAPI `title` |
 | `environment` | `APP_ENVIRONMENT` | `str` | `development` | 启动日志打印；compose 设 `production` |
-| `database_url` | `APP_DATABASE_URL` | `str` | `mysql+asyncmy://spare:spare@mysql:3306/spare_parts?charset=utf8mb4` | 引擎 DSN |
+| `database_url` | `APP_DATABASE_URL` | `str` | `postgresql+asyncpg://spare:spare@postgresql:5432/spare_parts` | 引擎 DSN |
 | `jwt_secret` | `APP_JWT_SECRET` | `str` | `change-me-in-production` | `min_length=16`，生产必须替换 |
 | `jwt_algorithm` | `APP_JWT_ALGORITHM` | `str` | `HS256` | JWT 签名算法 |
 | `access_token_minutes` | `APP_ACCESS_TOKEN_MINUTES` | `int` | `30` | `ge=1`；管理端与小程序访问令牌有效期 |
@@ -693,7 +693,7 @@ flowchart LR
 | 模板中的变量 | 示例/说明 |
 | --- | --- |
 | `APP_ENVIRONMENT` | `development` |
-| `APP_DATABASE_URL` | `mysql+asyncmy://user:pass@host:3306/spare_parts?charset=utf8mb4` |
+| `APP_DATABASE_URL` | `postgresql+asyncpg://user:pass@host:5432/spare_parts` |
 | `APP_JWT_SECRET` | `replace-with-at-least-32-random-characters` |
 | `APP_ACCESS_TOKEN_MINUTES` / `APP_REFRESH_TOKEN_DAYS` | `30` / `7` |
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
@@ -703,7 +703,7 @@ flowchart LR
 | 变量 | 值 |
 | --- | --- |
 | `APP_ENVIRONMENT` | `production` |
-| `APP_DATABASE_URL` | 必填，指向外部 MySQL |
+| `APP_DATABASE_URL` | 必填，指向外部 PostgreSQL |
 | `APP_JWT_SECRET` | 必填 |
 | `APP_ACCESS_TOKEN_MINUTES` | 默认 `480` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 默认空 |
@@ -765,7 +765,7 @@ flowchart LR
 | compose 后端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:server`，端口 `${BACKEND_PORT:-8000}:8000`，卷 `uploads:/app/data/uploads`、`logs:/app/data/logs`，健康检查轮询 `/health`（15s 间隔，30s 起始宽限） |
 | compose 前端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:web`，端口 `${FRONTEND_PORT:-8080}:80`，`depends_on: backend: service_healthy` |
 | 网络 | 外部网络 `1panel-network` |
-运行时依赖见 `server/pyproject.toml`：FastAPI、SQLAlchemy[asyncio]、asyncmy、pyjwt、argon2-cffi、cryptography、httpx、mcp、openpyxl、xlrd、pillow、pydantic-settings、uvicorn；开发依赖含 aiosqlite、pytest、pytest-asyncio、mypy(strict)、ruff、pyyaml；Python 版本要求 `>=3.12,<3.15`。
+运行时依赖见 `server/pyproject.toml`：FastAPI、SQLAlchemy[asyncio]、asyncpg、pyjwt、argon2-cffi、cryptography、httpx、mcp、openpyxl、xlrd、pillow、pydantic-settings、uvicorn；开发依赖含 aiosqlite、pytest、pytest-asyncio、mypy(strict)、ruff、pyyaml；Python 版本要求 `>=3.12,<3.15`。
 
 
 
@@ -835,7 +835,7 @@ sequenceDiagram
     participant U as 小程序用户
     participant App as 小程序
     participant API as 服务端
-    participant DB as MySQL
+    participant DB as PostgreSQL
     U->>App: 打开小程序
     App->>App: wx.login 取 code（附 wx.getAccountInfoSync 的 AppID）
     App->>API: 静默登录（auth=false，不参与重登重试）

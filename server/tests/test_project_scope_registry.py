@@ -5,7 +5,7 @@
 1. `project_service.count_project_rows` 遍历 `PROJECT_SCOPED_MODELS` 统计项目下是否有数据，
    有数据即 409 `PROJECT_IN_USE`；清单漏登记一张表，该表的数据就统计不到。
 2. `project` 的外键无 `ON DELETE` 级联（RESTRICT）：只要项目下任何一张项目域表还有行，
-   `DELETE FROM project` 就会被 MySQL 拒绝，service 把 `IntegrityError` 也映射成 `PROJECT_IN_USE`。
+   `DELETE FROM project` 就会被数据库拒绝，service 把 `IntegrityError` 也映射成 `PROJECT_IN_USE`。
 3. `PROJECT_IS_DEFAULT`：默认项目不论有没有数据都不允许删除。
 
 因此这里断言「继承 ProjectScoped 的表 == 登记表清单」，以及「项目域表到 project 的外键都是
@@ -22,9 +22,10 @@ from app.models import PROJECT_SCOPED_MODELS, Project, ProjectScoped
 
 INIT_SQL = Path(__file__).parents[2] / "docs" / "references" / "database" / "init.sql"
 CREATE_TABLE = re.compile(
-    r"CREATE TABLE IF NOT EXISTS `([^`]+)` \((.*?)\) ENGINE=",
+    r'CREATE TABLE IF NOT EXISTS "?([^"\s(]+)"? \((.*?)\n\);',
     re.DOTALL,
 )
+COLUMN = re.compile(r'^  "?([^"\s]+)"? ', re.MULTILINE)
 
 
 def _table_blocks() -> dict[str, str]:
@@ -46,7 +47,7 @@ def test_every_project_scoped_model_is_registered_for_delete_guard() -> None:
 def test_every_project_scoped_model_has_project_id_column() -> None:
     blocks = _table_blocks()
     for model in PROJECT_SCOPED_MODELS:
-        columns = set(re.findall(r"^  `([^`]+)`", blocks[model.__tablename__], re.MULTILINE))
+        columns = set(COLUMN.findall(blocks[model.__tablename__])) - {"CONSTRAINT"}
         assert "project_id" in columns, f"{model.__tablename__} 缺少 project_id 列"
         assert "project_id" in {column.name for column in model.__table__.columns}
 
@@ -57,7 +58,7 @@ def test_project_foreign_keys_never_cascade() -> None:
     for model in PROJECT_SCOPED_MODELS:
         block = blocks[model.__tablename__]
         match = re.search(
-            r"FOREIGN KEY \(`project_id`\) REFERENCES `project` \(`id`\)"
+            r'FOREIGN KEY \("?project_id"?\) REFERENCES "?project"? \("?id"?\)'
             r"(?: ON DELETE ([A-Z]+(?: [A-Z]+)?))?",
             block,
         )
@@ -88,6 +89,6 @@ def test_delete_guard_counts_every_registered_table() -> None:
 def test_project_table_has_no_code_column() -> None:
     """项目只对外显示名称：编码列已删除，标识是内部自增 id。"""
     block = _table_blocks()["project"]
-    assert "`code`" not in block
+    assert "\n  code " not in block
     assert not hasattr(Project, "code")
     assert "uq_project_name" in block

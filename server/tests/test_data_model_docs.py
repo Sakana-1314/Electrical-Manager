@@ -52,7 +52,9 @@ def test_documented_table_counts_and_lists_match_schema() -> None:
     declared_global = int(re.search(r"### 全局表（(\d+) 张", doc).group(1))
 
     sql_text = INIT_SQL.read_text(encoding="utf-8")
-    sql_tables = set(re.findall(r"CREATE TABLE IF NOT EXISTS `([a-z_0-9]+)`", sql_text))
+    sql_tables = set(
+        re.findall(r'CREATE TABLE IF NOT EXISTS "?([a-z_0-9]+)"?', sql_text)
+    )
     scoped_names = {model.__tablename__ for model in PROJECT_SCOPED_MODELS}
     all_names = set(Base.metadata.tables)
 

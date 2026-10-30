@@ -391,7 +391,9 @@ async def _claim_delivery() -> ClaimedDelivery | None:
             )
             .order_by(WebhookDelivery.id)
             .limit(1)
-            .with_for_update(skip_locked=True)
+            # channel 是 joined 加载，会带出 LEFT OUTER JOIN；PostgreSQL 不允许锁外连接的
+            # 可空一侧，用 of= 明确只锁 webhook_delivery 行。
+            .with_for_update(skip_locked=True, of=WebhookDelivery)
         )
         if delivery is None:
             return None
