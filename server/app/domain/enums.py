@@ -7,7 +7,7 @@ class Role(StrEnum):
     PURCHASE_ADMIN = "PURCHASE_ADMIN"
     HAZARD_ADMIN = "HAZARD_ADMIN"
     READ_ONLY = "READ_ONLY"
-    # 台账管理员：新值一律追加在末尾，MySQL 枚举追加值可在线完成、不重排既有值序数。
+    # 台账管理员：新值一律追加在末尾：库内保存枚举「名」，追加不影响既有行的取值与顺序。
     LEDGER_ADMIN = "LEDGER_ADMIN"
     # 工作管理员：维护工作管理模块的任务、工作记录与任务图片。
     WORK_ADMIN = "WORK_ADMIN"

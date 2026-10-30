@@ -43,7 +43,7 @@ MCP 不接受 SQL、数据库表名或任意 URL，只能按 OpenAPI 中登记�
 仓库只保留 init.sql，不保存增量迁移脚本；已有数据库的结构调整由部署方自行完成（先备份，再参照
 init.sql 与 ORM 模型改库）。
 
-FastAPI + SQLAlchemy 2.x async + MySQL 8.0，实现细节见 [架构设计](../docs/websites/pages/dev-architecture.md)。
+FastAPI + SQLAlchemy 2.x async + PostgreSQL 16+，实现细节见 [架构设计](../docs/websites/pages/dev-architecture.md)。
 
 ## 接口性能响应头
 
@@ -72,13 +72,13 @@ FastAPI + SQLAlchemy 2.x async + MySQL 8.0，实现细节见 [架构设计](../d
 
 ## 本地启动
 
-要求 Python 3.12 和 MySQL 8.0：
+要求 Python 3.12 和 PostgreSQL 16+：
 
 ```bash
 python -m venv .venv
 .venv/Scripts/pip install -e ".[dev]"
 copy ..\docs\env\backend.env.example .env
-mysql -h <数据库地址> -u <用户名> -p <数据库名> < ../docs/references/database/init.sql
+psql -h <数据库地址> -U <用户名> -d <数据库名> -f ../docs/references/database/init.sql
 mkdir data\template
 copy app\templates\*.json data\template\
 .venv/Scripts/uvicorn app.main:app --reload
@@ -101,7 +101,7 @@ python scripts/export_openapi.py
 `APP_WECHAT_MINI_PROGRAM_APP_ID` 和 `APP_WECHAT_MINI_PROGRAM_APP_SECRET`。多个小程序分别按
 相同顺序用英文逗号分隔，例如 `wx-app-1,wx-app-2` 和 `secret-1,secret-2`，两边数量必须一致，
 并可继续追加。AppSecret 只能保存在后端。
-图片位于 `server/data/uploads/`，应与 MySQL 使用相同备份周期。
+图片位于 `server/data/uploads/`，应与 PostgreSQL 使用相同备份周期。
 
 运行日志默认写入 `server/data/logs/spare-parts-api.log`。日志每天轮转，历史文件按
 `YYYY-MM` 目录归档并保留 90 天；可通过 `APP_LOG_DIR` 和 `APP_LOG_BACKUP_COUNT` 调整。

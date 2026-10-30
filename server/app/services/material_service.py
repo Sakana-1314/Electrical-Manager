@@ -259,17 +259,18 @@ async def next_purchase_plan_no(session: AsyncSession, plan_date: date) -> str:
     prefix = f"PLAN-{plan_date:%Y%m%d}-"
     # 计划号同时存在于 purchase_material 与记录行快照 plan_no_snapshot，
     # 取两者最大值，保证新建计划号与已清理计划留下的快照号不冲突。
-    # with_for_update()：锁读（current read）让并发创建时后到的事务能看到
-    # 已提交的撞号行，配合 create_purchase_material 的保存点重试避免 MAX+1 竞态。
+    # 这里不能加 FOR UPDATE：PostgreSQL 不允许聚合查询加行锁。PostgreSQL 默认
+    # READ COMMITTED，每条 SELECT 都读最新已提交数据，并发撞号由
+    # create_purchase_material 的保存点重试兜底。
     material_max = await session.scalar(
-        select(func.max(PurchaseMaterial.plan_no))
-        .where(PurchaseMaterial.plan_no.like(prefix + "%"))
-        .with_for_update()
+        select(func.max(PurchaseMaterial.plan_no)).where(
+            PurchaseMaterial.plan_no.like(prefix + "%")
+        )
     )
     snapshot_max = await session.scalar(
-        select(func.max(PurchaseRequestLine.plan_no_snapshot))
-        .where(PurchaseRequestLine.plan_no_snapshot.like(prefix + "%"))
-        .with_for_update()
+        select(func.max(PurchaseRequestLine.plan_no_snapshot)).where(
+            PurchaseRequestLine.plan_no_snapshot.like(prefix + "%")
+        )
     )
     previous = max((value for value in (material_max, snapshot_max) if value), default=None)
     index = int(previous.rsplit("-", 1)[-1]) + 1 if previous else 1

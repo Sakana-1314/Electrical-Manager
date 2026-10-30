@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     app_name: str = "电气车间备件管理系统"
     environment: str = "development"
-    database_url: str = "mysql+asyncmy://spare:spare@mysql:3306/spare_parts?charset=utf8mb4"
+    database_url: str = "postgresql+asyncpg://spare:spare@postgresql:5432/spare_parts"
     jwt_secret: str = Field(default="change-me-in-production", min_length=16)
     jwt_algorithm: str = "HS256"
     access_token_minutes: int = Field(default=30, ge=1)

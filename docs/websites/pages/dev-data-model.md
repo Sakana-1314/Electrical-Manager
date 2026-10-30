@@ -1,6 +1,6 @@
 # 数据模型
 
-MySQL 8.0 / InnoDB / `utf8mb4_0900_ai_ci`，共 **42 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+PostgreSQL 16+，共 **42 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -845,7 +845,7 @@ flowchart LR
 sequenceDiagram
     participant U as 管理端界面
     participant S as 服务端
-    participant DB as MySQL
+    participant DB as PostgreSQL
     U->>S: 生成或保存接口令牌 / Webhook 地址与密钥
     S->>S: 计算哈希（用于认证查找）并加密（用于回显）
     S->>DB: 写入哈希列与密文列
@@ -867,9 +867,9 @@ flowchart LR
 
 | 约定 | 说明 |
 | --- | --- |
-| JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 MySQL `JSON` 类型，不建额外索引 |
+| JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 PostgreSQL `JSON` 类型，不建额外索引 |
 | 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，ORM 侧另有 `default=""` / `server_default=""`；`file_object.mime_type` 同样只在 ORM 侧有 `default="image/png"`（`test_init_sql.py` 不校验默认值） |
-| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入，导入期间临时 `SET FOREIGN_KEY_CHECKS = 0`；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
+| DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入（`psql -f`）；脚本按依赖顺序建表，无需关闭外键检查；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 ORM 模型 |
 
 
 ### 种子数据
@@ -892,28 +892,28 @@ flowchart LR
 
 #### 初始账号
 
-`user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON DUPLICATE KEY UPDATE display_name/role/enabled`）：
+`user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON CONFLICT (username) DO UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
-| `admin` | 系统管理员 | `SUPER_ADMIN` | 1 | `SHA2(@admin_api_token, 256)` |
-| `warehouse` | 仓库管理员 | `WAREHOUSE_ADMIN` | 1 | `SHA2(@warehouse_api_token, 256)` |
-| `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `SHA2(@purchase_api_token, 256)` |
-| `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `SHA2(@hazard_api_token, 256)` |
-| `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `SHA2(@ledger_api_token, 256)` |
-| `work` | 工作管理员 | `WORK_ADMIN` | 1 | `SHA2(@work_api_token, 256)` |
-| `readonly` | 只读用户 | `READ_ONLY` | 1 | `SHA2(@readonly_api_token, 256)` |
+| `admin` | 系统管理员 | `SUPER_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `warehouse` | 仓库管理员 | `WAREHOUSE_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `work` | 工作管理员 | `WORK_ADMIN` | 1 | `sha256(gen_random_uuid())` |
+| `readonly` | 只读用户 | `READ_ONLY` | 1 | `sha256(gen_random_uuid())` |
 
-七个接口令牌由 `RANDOM_BYTES` 生成的 UUID v4 形式字符串经 `SHA2(..., 256)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/app/core/permissions.py`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 命名与约束由 `server/app/core/database.py` 的 `NAMING_CONVENTION` 统一下发，ORM 不必手写名字：
 
 | ORM 写法 | 生成的约束名 | 对应 `init.sql` |
 | --- | --- | --- |
 | 主键 | `pk_%(table_name)s` | `PRIMARY KEY` |
-| `UniqueConstraint(...)` | `uq_%(table_name)s_%(column_0_name)s` | `UNIQUE KEY`，如 `uq_stock_operation_line_operation_id` |
+| `UniqueConstraint(...)` | `uq_%(table_name)s_%(column_0_name)s` | `UNIQUE`，如 `uq_stock_operation_line_operation_id` |
 | `CheckConstraint(..., name="minimum_nonnegative")` | `ck_%(table_name)s_%(constraint_name)s` | `CHECK`，如 `ck_stock_replenishment_policy_minimum_nonnegative` |
-| `Index(...)` / `mapped_column(..., index=True)` | `ix_%(column_0_label)s` | `INDEX` 行，名字一致 |
+| `Index(...)` / `mapped_column(..., index=True)` | `ix_%(column_0_label)s` | `CREATE INDEX` 语句，名字一致 |
 | `ForeignKey(..., ondelete="CASCADE")` | `fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s` | 对应 `ON DELETE`；未写 `ondelete` 则 `init.sql` 中同样没有该子句 |
 
 `server/tests/test_init_sql.py::test_init_sql_matches_current_model_schema` 逐表比对上述内容。

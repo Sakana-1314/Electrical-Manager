@@ -279,8 +279,8 @@ class MemoRead(ReadModel):
     version: int
 
 
-# 单条备忘录纯文本正文上限（字符）。MySQL TEXT 列（utf8mb4）最坏 4 字节/字符，
-# 配 10000 上限可保证落入 64KB 内且足够长文备忘录使用。
+# 单条备忘录纯文本正文上限（字符）：PostgreSQL 的 TEXT 无固定长度上限，
+# 这里只是产品级上限，足够长文备忘录使用，也避免单行过大拖慢列表查询。
 MEMO_CONTENT_MAX_LENGTH = 10000
 
 

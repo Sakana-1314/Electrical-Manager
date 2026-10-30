@@ -2526,7 +2526,6 @@ paths:
           anyOf:
           - type: number
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Min Qty
       - name: max_qty
@@ -2536,7 +2535,6 @@ paths:
           anyOf:
           - type: number
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Max Qty
       - name: low_stock
@@ -23648,7 +23646,6 @@ components:
           - type: number
             minimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
           - type: 'null'
           title: Unit Price
         purchase_date:
@@ -24768,7 +24765,6 @@ components:
         quantity:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Quantity
         unit_name:
@@ -24904,12 +24900,10 @@ components:
           title: Unit Name
         current_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Current Qty
         minimum_qty:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Minimum Qty
         is_low_stock:
@@ -24917,7 +24911,6 @@ components:
           title: Is Low Stock
         suggested_purchase_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Suggested Purchase Qty
         updated_at:
           type: string
@@ -25446,7 +25439,6 @@ components:
         quantity:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Quantity
         remark:
@@ -25566,7 +25558,6 @@ components:
         unit_price:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Unit Price
       type: object
@@ -25932,7 +25923,6 @@ components:
         quantity:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Quantity
         unit_name:
@@ -26015,7 +26005,6 @@ components:
           title: Unit Name
         current_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Current Qty
         stock_status:
           $ref: '#/components/schemas/MiniProgramStockStatus'
@@ -26169,7 +26158,6 @@ components:
         quantity:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Quantity
       type: object
@@ -26285,14 +26273,12 @@ components:
           title: Unit Name
         current_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Current Qty
         stock_status:
           $ref: '#/components/schemas/MiniProgramStockStatus'
         minimum_qty:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Minimum Qty
         remark:
@@ -26357,15 +26343,12 @@ components:
           title: Unit Name
         quantity:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Quantity
         before_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Before Qty
         after_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: After Qty
         occurred_at:
           type: string
@@ -26448,7 +26431,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Quantity
         business_reason:
           type: string
@@ -26506,15 +26488,12 @@ components:
           title: Unit Name
         quantity:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Quantity
         before_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Before Qty
         after_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: After Qty
         occurred_at:
           type: string
@@ -26664,7 +26643,6 @@ components:
           title: Unit Name
         planned_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Planned Qty
         actual_demand_person:
           type: string
@@ -26800,7 +26778,6 @@ components:
           title: Unit Name
         planned_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Planned Qty
         actual_demand_person:
           type: string
@@ -26891,7 +26868,6 @@ components:
           title: Unit Name
         purchase_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Purchase Qty
         plan_date:
           type: string
@@ -26979,7 +26955,6 @@ components:
         unit_price:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Unit Price
         images:
@@ -27347,7 +27322,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Quantity
       additionalProperties: false
       type: object
@@ -31987,7 +31961,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Planned Qty
         usage:
           type: string
@@ -32094,7 +32067,6 @@ components:
           title: Purchase Responsible
         planned_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Planned Qty
         usage:
           type: string
@@ -32254,7 +32226,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Planned Qty
         usage:
           type: string
@@ -32530,7 +32501,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Planned Qty
         usage:
           type: string
@@ -32660,7 +32630,6 @@ components:
           title: Purchase Responsible
         planned_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Planned Qty
         usage:
           type: string
@@ -32801,7 +32770,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Planned Qty
         usage:
           type: string
@@ -33014,7 +32982,6 @@ components:
         unit_price:
           anyOf:
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           - type: 'null'
           title: Unit Price
         status:
@@ -33044,7 +33011,6 @@ components:
           title: Unit Name
         purchase_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Purchase Qty
         actual_demand_person:
           type: string
@@ -33470,7 +33436,6 @@ components:
           - type: number
             minimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
           - type: 'null'
           title: Unit Price
         status:
@@ -33613,7 +33578,6 @@ components:
           - type: number
             minimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
           - type: 'null'
           title: Unit Price
         status:
@@ -33691,7 +33655,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Purchase Qty
         usage:
           type: string
@@ -33778,7 +33741,6 @@ components:
           - type: number
             minimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,16}|(?=[\d.]{1,19}0*$)\d{0,16}\.\d{0,2}0*$)
           - type: 'null'
           title: Unit Price
         purchase_date:
@@ -33907,7 +33869,6 @@ components:
           - type: number
             exclusiveMinimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Planned Qty
         demand_date:
           anyOf:
@@ -33958,7 +33919,6 @@ components:
       properties:
         minimum_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Minimum Qty
         enabled:
           type: boolean
@@ -33983,7 +33943,6 @@ components:
           - type: number
             minimum: 0.0
           - type: string
-            pattern: ^(?!^[-+.]*$)[+-]?0*(?:\d{0,17}|(?=[\d.]{1,19}0*$)\d{0,17}\.\d{0,1}0*$)
           title: Minimum Qty
         enabled:
           type: boolean
@@ -34411,7 +34370,6 @@ components:
           title: Remark
         current_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Current Qty
         images:
           items:
@@ -34571,19 +34529,15 @@ components:
           title: Unit Name
         quantity:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Quantity
         remaining_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Remaining Qty
         before_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: Before Qty
         after_qty:
           type: string
-          pattern: ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
           title: After Qty
       type: object
       required:

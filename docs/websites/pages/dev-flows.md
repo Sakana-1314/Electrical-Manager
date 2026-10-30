@@ -124,7 +124,7 @@ sequenceDiagram
     participant W as 网页端 / 小程序
     participant API as 库存接口
     participant S as 库存服务
-    participant DB as MySQL
+    participant DB as PostgreSQL
     W->>API: 幂等键 + 发生时间 + 来源 + 用途 + 明细
     API->>S: 按单据类型校验身份与权限
     S->>DB: 先按幂等键查单据（命中直接返回，快路径）
@@ -157,7 +157,7 @@ sequenceDiagram
     participant U as 网页端
     participant API as 冲销接口
     participant S as 库存服务
-    participant DB as MySQL
+    participant DB as PostgreSQL
     U->>API: 原单据 + 每行冲销数量
     API->>S: 校验权限与版本号
     S->>DB: 锁定原单据与明细行
@@ -208,7 +208,7 @@ flowchart LR
 sequenceDiagram
     participant P as 申购管理员
     participant API as 申购接口
-    participant DB as MySQL
+    participant DB as PostgreSQL
     participant X as 外部物资平台脚本
     participant W as 仓库管理员
     P->>API: 补录物料编码并保存计划
@@ -240,7 +240,7 @@ sequenceDiagram
     participant API as 导入接口
     participant S as 导入服务
     participant BG as 后台协程
-    participant DB as MySQL
+    participant DB as PostgreSQL
     U->>API: 上传文件（不超过 50MB，支持 xlsx / xlsm / xls / csv）
     API->>S: 分块流式写入临时目录
     API->>S: 按导入类型加协程锁后登记任务
@@ -411,7 +411,7 @@ flowchart LR
 sequenceDiagram
     participant X as 外部平台脚本
     participant API as 同步接口
-    participant DB as MySQL
+    participant DB as PostgreSQL
     X->>API: 拉取待补字段的目标（游标分页 + 字段白名单）
     API->>DB: 按追溯号或申购单号统计仍待补字段的记录行
     API-->>X: 目标列表与下一页游标
@@ -513,7 +513,7 @@ flowchart LR
 sequenceDiagram
     participant M as 小程序 / 网页端
     participant S as 服务端
-    participant DB as MySQL
+    participant DB as PostgreSQL
     M->>S: 登记隐患（小程序带 client_request_id）
     S->>DB: 查幂等键；命中则直接返回原隐患
     S->>DB: 按责任单位取责任人快照；要求完成时间缺省 = 检查日期 + 7 天
@@ -546,7 +546,7 @@ sequenceDiagram
 sequenceDiagram
     participant W as 网页端
     participant S as 服务端
-    participant DB as MySQL
+    participant DB as PostgreSQL
     W->>S: 新增 / 编辑标签（名称、备注、图片、上级标签；编辑带 version）
     S->>S: 校验上级存在、改后子树不超过 3 层、未移入自身子孙，且同级名称唯一
     S->>DB: 写 ledger_tag（含 parent_id），并整表替换 ledger_tag_image 关联
@@ -568,7 +568,7 @@ sequenceDiagram
 | --- | --- |
 | 标签层级 | 至多 3 层：在已到第 3 层的节点下新增子标签直接拒绝（`LEDGER_TAG_MAX_LEVEL`）；层级由祖先链实时算出，不落库 |
 | 改上级 | 标签可以改上级：`PATCH` 带 `parent_id`——传具体 id 换父节点，传 `null` 移为一级标签，**不传该字段表示不动层级**（只改名称 / 备注 / 图片的调用照旧）。改后整棵子树重新计入层级：「会超过 3 层」与「移到自己子孙下（成环）」都被 `LEDGER_TAG_MAX_LEVEL` 拒绝（400），同级重名按**落库后的父节点**判断（`DUPLICATE_LEDGER_TAG`）。页面上的上级选择器把第 3 层节点与自身子树置灰，服务端仍会再校验一次 |
-| 同级名称唯一 | 同一 `parent_id` 下名称唯一（`DUPLICATE_LEDGER_TAG`）；根节点的 `parent_id` 为 NULL，MySQL 唯一索引对 NULL 不去重，因此这条由服务端校验 |
+| 同级名称唯一 | 同一 `parent_id` 下名称唯一（`DUPLICATE_LEDGER_TAG`）；根节点的 `parent_id` 为 NULL，唯一索引对 NULL 不去重（默认 NULLS DISTINCT），因此这条由服务端校验 |
 | 删除保护 | 有子标签 → `LEDGER_TAG_HAS_CHILDREN`；自身或子孙被台账记录引用 → `LEDGER_TAG_IN_USE`（都按子树展开检查），均返回 409，未被引用则物理删除 |
 | 标签使用数量 | 读接口回填 `item_count`：**直接**引用该标签的台账记录数（不含子标签的使用量，按 `ledger.tag_ids` 逗号串匹配统计，与删除保护的引用判定同口径），标签管理页把它作为节点上的数字徽标（含 0，含义放 tooltip） |
 | 标签存储 | 台账记录的标签是 `ledger.tag_ids` 里的逗号分隔 id（写入时去重、升序规范化），没有关联表；写接口校验存在性，读接口回填标签名称与完整层级路径 |
@@ -586,7 +586,7 @@ sequenceDiagram
 sequenceDiagram
     participant W as 网页端（任务 / 人员视图）
     participant S as 服务端
-    participant DB as MySQL
+    participant DB as PostgreSQL
     W->>S: 新增 / 编辑任务（名称、状态、计划起止、工作内容、图片；编辑带 version）
     S->>S: 校验项目内名称唯一（DUPLICATE_WORK_TASK）与计划结束不早于开始
     S->>DB: 写 work_task，并整表替换 work_task_image 关联

@@ -41,19 +41,25 @@ async def cleanup_moved_plans_once() -> int:
     系统级维护：本任务按日期跨项目批量清理，需显式 `system_scope()`。
     """
     async with system_session() as session:
+        # PostgreSQL 不允许 FOR UPDATE 与 DISTINCT 同时出现：先在子查询里取去重后的
+        # 候选 id，再在外层按 id 锁行（锁的仍是 purchase_material 行，SKIP LOCKED 语义不变）。
+        candidate_query = (
+            select(PurchaseMaterial.id)
+            .join(
+                PurchaseRequestLine,
+                PurchaseRequestLine.purchase_material_id == PurchaseMaterial.id,
+            )
+            .where(
+                PurchaseRequestLine.plan_no_snapshot.is_not(None),
+                func.trim(PurchaseRequestLine.plan_no_snapshot) != "",
+            )
+            .distinct()
+        )
         candidate_ids = list(
             (
                 await session.scalars(
                     select(PurchaseMaterial.id)
-                    .join(
-                        PurchaseRequestLine,
-                        PurchaseRequestLine.purchase_material_id == PurchaseMaterial.id,
-                    )
-                    .where(
-                        PurchaseRequestLine.plan_no_snapshot.is_not(None),
-                        func.trim(PurchaseRequestLine.plan_no_snapshot) != "",
-                    )
-                    .distinct()
+                    .where(PurchaseMaterial.id.in_(candidate_query))
                     .order_by(PurchaseMaterial.id)
                     .limit(_BATCH_SIZE)
                     .with_for_update(skip_locked=True)

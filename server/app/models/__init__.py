@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -26,8 +27,6 @@ from sqlalchemy import (
 from sqlalchemy import (
     Enum as SAEnum,
 )
-from sqlalchemy.dialects.mysql import BIGINT, DATETIME, TINYINT
-from sqlalchemy.dialects.mysql import INTEGER as MYSQL_INTEGER
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.core.database import Base
@@ -50,10 +49,13 @@ from app.domain.enums import (
     WorkTaskStatus,
 )
 
-BIGINT_ID = BIGINT(unsigned=True).with_variant(Integer, "sqlite")
-UINT = MYSQL_INTEGER(unsigned=True).with_variant(Integer, "sqlite")
-UTINYINT = TINYINT(unsigned=True).with_variant(SmallInteger, "sqlite")
-UTC_DATETIME = DATETIME(fsp=6).with_variant(DateTime(timezone=False), "sqlite")
+# 数据库统一使用 PostgreSQL：自增主键用 BIGSERIAL（BIGINT + 自增），
+# SQLite 只用于本地/CI 的快速测试，需要退化成 INTEGER 才能走自增主键。
+BIGINT_ID = BigInteger().with_variant(Integer, "sqlite")
+UINT = Integer
+UTINYINT = SmallInteger
+# PostgreSQL 的 TIMESTAMP 本身就是微秒精度、无时区（与历史上的 DATETIME(6) 口径一致）。
+UTC_DATETIME = DateTime()
 QTY = Numeric(18, 1)
 
 
@@ -949,7 +951,8 @@ class Hazard(ProjectScoped, AuditMixin, Base):
         SAEnum(HazardStatus),
         nullable=False,
         default=HazardStatus.PENDING,
-        server_default=HazardStatus.PENDING.value,
+        # 库里存枚举「名」（与工作状态同一口径），接口按枚举「值」输出中文。
+        server_default=HazardStatus.PENDING.name,
     )
     hazard_type_id: Mapped[int] = mapped_column(
         BIGINT_ID, ForeignKey("hazard_type.id"), nullable=False
@@ -958,7 +961,7 @@ class Hazard(ProjectScoped, AuditMixin, Base):
         SAEnum(HazardLevel),
         nullable=False,
         default=HazardLevel.GENERAL,
-        server_default=HazardLevel.GENERAL.value,
+        server_default=HazardLevel.GENERAL.name,
     )
     remark: Mapped[str | None] = mapped_column(Text)
     # 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）：手机端弱网重试时避免重复登记；
@@ -1012,9 +1015,10 @@ class HazardAfterImage(ProjectScoped, Base):
 class LedgerTag(ProjectScoped, AuditMixin, Base):
     """台账标签节点：自引用邻接表，至多 3 层（根节点 `parent_id IS NULL`）。
 
-    层级上限与「同级名称唯一」都由 service 校验：MySQL 唯一索引对 `parent_id IS NULL`
-    不去重，覆盖不到根节点，所以不建库级唯一索引，让这两条规则只有一处实现。
-    节点为物理删除，有子节点或已被台账记录引用时由 service 返回 409 拦截。
+    层级上限与「同级名称唯一」都由 service 校验：唯一索引对 `parent_id IS NULL`
+    不去重（PostgreSQL 默认 NULLS DISTINCT），覆盖不到根节点，所以不建库级唯一索引，
+    让这两条规则只有一处实现。节点为物理删除，有子节点或已被台账记录引用时由 service
+    返回 409 拦截。
     """
 
     __tablename__ = "ledger_tag"
@@ -1065,7 +1069,8 @@ class Ledger(ProjectScoped, AuditMixin, Base):
 
     `tag_ids` 是英文逗号分隔的标签 id（如 `3,12,15`），由 service 统一规范化写入
     （去重、升序、无空格；空串表示未挂标签）。按标签筛选时用「左右补逗号再精确命中」
-    表达集合成员关系，MySQL 与测试库 SQLite 能编译出同一条语义的 SQL，不依赖 FIND_IN_SET。
+    表达集合成员关系，PostgreSQL 与测试库 SQLite 能编译出同一条语义的 SQL，不依赖
+    数据库特有的集合函数。
     """
 
     __tablename__ = "ledger"

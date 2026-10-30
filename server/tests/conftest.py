@@ -13,6 +13,7 @@ os.environ["APP_WECHAT_MINI_PROGRAM_APP_SECRET"] = (
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import Base, engine, system_session  # noqa: F401  (测试复用)
@@ -111,6 +112,16 @@ async def client(tmp_path) -> AsyncIterator[AsyncClient]:
             ]
         )
         await session.commit()
+        # PostgreSQL 的自增序列不会因为显式插入 id=1/2 而前进，这里把 project 序列推到
+        # MAX(id)，否则后续创建项目会撞主键（SQLite 会自己取 MAX+1，无需处理）。
+        if engine.dialect.name == "postgresql":
+            await session.execute(
+                text(
+                    "SELECT setval(pg_get_serial_sequence('project', 'id'), "
+                    "(SELECT MAX(id) FROM project))"
+                )
+            )
+            await session.commit()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
         # 默认项目：业务接口都要求项目上下文，这样既有测试不用逐个加请求头。

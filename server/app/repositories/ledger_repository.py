@@ -4,8 +4,8 @@
 
 台账记录上的标签是 `ledger.tag_ids` 里的英文逗号分隔 id 串（如 `3,12,15`），命中判断统一走
 `tag_id_match()`：左右各补一个逗号再做 LIKE，`12` 不会被 `1` 误命中。这样写出来的是
-MySQL（`concat()`）与测试库 SQLite（`||`）都能编译的同一条语义，不依赖 MySQL 独有的
-`FIND_IN_SET`。
+PostgreSQL（`concat()`）与测试库 SQLite（`||`）都能编译的同一条语义，不依赖数据库独有的
+集合函数。
 """
 
 from __future__ import annotations
