@@ -10,7 +10,8 @@ from sqlalchemy import select
 
 from app.models import BusinessEventLog, SystemSetting
 from app.services import ai_search_service
-from tests.conftest import auth_headers, project_session
+from tests.conftest import GO_SERVER_URL, auth_headers, project_session
+from tests.go_upstream import StartUpstream, go_upstream  # noqa: F401  (GO_SERVER_URL 下的上游桩)
 from tests.integration.test_procurement import create_purchase_plan, move_to_record
 
 
@@ -193,11 +194,17 @@ async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypte
 
 @pytest.mark.asyncio
 async def test_ai_expansion_applies_to_plans_and_records(
-    client: AsyncClient, monkeypatch: MonkeyPatch
+    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
     purchase = await auth_headers(client, "purchase")
-    monkeypatch.setattr(ai_search_service, "_client", FakeAiClient())
+    if GO_SERVER_URL:
+        # Go 服务：AI 上游改投到本地桩服务，返回与 FakeAiClient 相同的内容。
+        await go_upstream(
+            "ai-search", lambda _request: httpx.Response(200, json=FakeResponse().json())
+        )
+    else:
+        monkeypatch.setattr(ai_search_service, "_client", FakeAiClient())
 
     configured = await client.put(
         "/api/v1/ai-search/settings",
@@ -255,10 +262,20 @@ async def test_ai_expansion_applies_to_plans_and_records(
 
 @pytest.mark.asyncio
 async def test_ai_response_timeout_returns_specific_bad_request(
-    client: AsyncClient, monkeypatch: MonkeyPatch
+    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
-    monkeypatch.setattr(ai_search_service, "_client", TimeoutAiClient())
+    if GO_SERVER_URL:
+        # Go 服务：桩服务迟迟不返回；实际等待缩短为 0.3 秒（文案与 details 仍按 30 秒）。
+        async def slow_handler(_request: httpx.Request) -> httpx.Response:
+            import asyncio
+
+            await asyncio.sleep(2)
+            return httpx.Response(200, json=FakeResponse().json())
+
+        await go_upstream("ai-search", slow_handler, response_timeout_seconds=0.3)
+    else:
+        monkeypatch.setattr(ai_search_service, "_client", TimeoutAiClient())
 
     response = await client.post(
         "/api/v1/ai-search/settings/test",
@@ -280,11 +297,19 @@ async def test_ai_response_timeout_returns_specific_bad_request(
 
 @pytest.mark.asyncio
 async def test_glm_models_disable_thinking_and_request_json_output(
-    client: AsyncClient, monkeypatch: MonkeyPatch
+    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
     glm_client = GlmAiClient()
-    monkeypatch.setattr(ai_search_service, "_client", glm_client)
+    if GO_SERVER_URL:
+        # Go 服务：桩服务返回 GlmResponse，并记录 Go 发出的请求体。
+        def glm_handler(request: httpx.Request) -> httpx.Response:
+            glm_client.request_json = __import__("json").loads(request.content)
+            return httpx.Response(200, json=GlmResponse().json())
+
+        await go_upstream("ai-search", glm_handler)
+    else:
+        monkeypatch.setattr(ai_search_service, "_client", glm_client)
 
     response = await client.post(
         "/api/v1/ai-search/settings/test",

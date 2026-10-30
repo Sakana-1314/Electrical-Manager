@@ -11,7 +11,12 @@ from app.core.security import create_mini_program_registration_token
 from app.domain.enums import WebhookDeliveryStatus, WebhookPlatform
 from app.models import WebhookChannel, WebhookDelivery
 from app.services import webhook_service
-from tests.conftest import auth_headers, create_stock, project_session
+from tests.conftest import GO_SERVER_URL, auth_headers, create_stock, project_session
+from tests.go_upstream import (  # noqa: F401  (GO_SERVER_URL 下的上游桩)
+    StartUpstream,
+    deliver_pending_once,
+    go_upstream,
+)
 
 
 async def configure_channel(
@@ -48,7 +53,7 @@ async def configure_channel(
 
 @pytest.mark.asyncio
 async def test_webhook_settings_permissions_and_validation(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, go_upstream: StartUpstream
 ) -> None:
     unauthorized = await client.get("/api/v1/system-settings/webhooks")
     assert unauthorized.status_code == 401
@@ -105,16 +110,24 @@ async def test_webhook_settings_permissions_and_validation(
         captured.append(request)
         return httpx.Response(200, json={"code": 0, "msg": "success"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
-        monkeypatch.setattr(webhook_service, "_client", mock_client)
+    test_request = {
+        "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/unsaved-token",
+        "secret": "unsaved-secret",
+    }
+    if GO_SERVER_URL:
+        # Go 服务：推送改投到本地桩服务，由同一个 handler 记录请求。
+        await go_upstream("webhook", handler)
         tested = await client.post(
-            "/api/v1/system-settings/webhooks/FEISHU/test",
-            headers=admin,
-            json={
-                "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/unsaved-token",
-                "secret": "unsaved-secret",
-            },
+            "/api/v1/system-settings/webhooks/FEISHU/test", headers=admin, json=test_request
         )
+    else:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
+            monkeypatch.setattr(webhook_service, "_client", mock_client)
+            tested = await client.post(
+                "/api/v1/system-settings/webhooks/FEISHU/test",
+                headers=admin,
+                json=test_request,
+            )
     assert tested.status_code == 200, tested.text
     assert len(captured) == 1
     test_body = __import__("json").loads(captured[0].content)
@@ -180,7 +193,7 @@ def test_notification_message_format() -> None:
 
 @pytest.mark.asyncio
 async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient, monkeypatch: pytest.MonkeyPatch, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
     warehouse = await auth_headers(client, "warehouse")
@@ -302,10 +315,16 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
             return httpx.Response(200, json={"code": 0, "msg": "success"})
         return httpx.Response(200, json={"errcode": 0, "errmsg": "ok"})
 
-    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
-        monkeypatch.setattr(webhook_service, "_client", mock_client)
-        while await webhook_service.deliver_pending_once():
+    if GO_SERVER_URL:
+        # Go 服务：推送改投到本地桩服务，再用测试钩子逐条触发投递。
+        await go_upstream("webhook", handler)
+        while await deliver_pending_once(client):
             pass
+    else:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as mock_client:
+            monkeypatch.setattr(webhook_service, "_client", mock_client)
+            while await webhook_service.deliver_pending_once():
+                pass
 
     assert len(captured) == 5
     feishu_requests = [item for item in captured if item.url.host == "open.feishu.cn"]
