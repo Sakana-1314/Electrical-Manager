@@ -17,6 +17,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 from datetime import UTC, datetime
 
 import httpx
@@ -45,11 +46,20 @@ def seed(base: str, materials: int) -> None:
         for start in range(0, len(ids), 20):
             chunk = ids[start:start + 20]
             r = client.post("/api/v1/inventory/inbounds", json={
-                "occurred_at": now, "source_type": "MANUAL", "business_reason": "压测入库",
+                "client_request_id": str(uuid.uuid4()), "occurred_at": now, "source_type": "MANUAL", "business_reason": "压测入库",
                 "lines": [{"stock_material_id": mid, "quantity": "10"} for mid in chunk],
             })
             if r.status_code >= 400:
                 print("inbound failed:", r.text, file=sys.stderr)
+                break
+        for i in range(0, len(ids), 3):
+            r = client.post("/api/v1/inventory/outbounds", json={
+                "client_request_id": str(uuid.uuid4()), "occurred_at": now, "source_type": "MANUAL",
+                "business_reason": "压测出库", "receiver_name": "张三",
+                "lines": [{"stock_material_id": ids[i], "quantity": "9"}],
+            })
+            if r.status_code >= 400:
+                print("outbound failed:", r.text[:300], file=sys.stderr)
                 break
         for i in range(materials):
             r = client.post("/api/v1/purchase-materials", json={

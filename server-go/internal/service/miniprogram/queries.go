@@ -13,6 +13,8 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/huaxing"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/ledger"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/lite"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/purchaserequest"
 )
 
 func pyStrip(v string) string { return strings.TrimFunc(v, common.PyIsSpace) }
@@ -189,66 +191,32 @@ func PurchasePlanDetail(s *db.Session, materialID int64) (schema.MiniProgramPurc
 
 // ListPurchaseRecords 对应 list_purchase_records：keyword 仅 OR 匹配 名称 / 型号 / 追溯号 / 申购单号，id 倒序分页。
 func ListPurchaseRecords(s *db.Session, keyword, status, subitemNo *string, page, pageSize int64) ([]schema.MiniProgramPurchaseRecordItemRead, int64, error) {
-	lines, total, err := searchMiniProgramPurchaseRecords(s, keyword, status, subitemNo, page, pageSize)
+	lines, total, err := purchaserequest.SearchMiniProgramPurchaseRecords(s, keyword, status, subitemNo, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
-	reads, err := purchaseRecordItemReads(s, lines)
-	if err != nil {
-		return nil, 0, err
-	}
-	return reads, total, nil
+	return purchaseRecordItemReads(lines), total, nil
 }
 
 // ListPurchaseRecordFilterOptions 对应 list_purchase_record_filter_options：(状态, 子项号) 去重升序。
 func ListPurchaseRecordFilterOptions(s *db.Session) ([]string, []string, error) {
-	statuses, err := purchaseStatusOptions(s)
+	statuses, err := purchaserequest.PurchaseStatusOptions(s)
 	if err != nil {
 		return nil, nil, err
 	}
-	subitemNos, err := purchaseSubitemOptions(s)
+	subitemNos, err := purchaserequest.PurchaseSubitemOptions(s)
 	if err != nil {
 		return nil, nil, err
 	}
 	return statuses, subitemNos, nil
 }
 
-// purchaseRecordItemReads 对应 purchase_record_item_read（批量加载申购单头与图片）。
-func purchaseRecordItemReads(s *db.Session, lines []model.PurchaseRequestLine) ([]schema.MiniProgramPurchaseRecordItemRead, error) {
+// purchaseRecordItemReads 对应 purchase_record_item_read（行上已加载申购单头与图片）。
+func purchaseRecordItemReads(lines []*purchaserequest.Line) []schema.MiniProgramPurchaseRecordItemRead {
 	out := make([]schema.MiniProgramPurchaseRecordItemRead, 0, len(lines))
-	if len(lines) == 0 {
-		return out, nil
-	}
-	lineIDs := make([]int64, len(lines))
-	requestIDSet := map[int64]bool{}
-	requestIDs := []int64{}
-	for i, l := range lines {
-		lineIDs[i] = l.ID
-		if !requestIDSet[l.PurchaseRequestID] {
-			requestIDSet[l.PurchaseRequestID] = true
-			requestIDs = append(requestIDs, l.PurchaseRequestID)
-		}
-	}
-	scope, sargs, err := scopeAnd(s, "")
-	if err != nil {
-		return nil, err
-	}
-	var requests []model.PurchaseRequest
-	if err := s.SelectIn(&requests, "SELECT "+model.ColsPurchaseRequest+" FROM purchase_request WHERE id IN (?)"+scope,
-		append([]any{requestIDs}, sargs...)...); err != nil {
-		return nil, err
-	}
-	requestBy := map[int64]*model.PurchaseRequest{}
-	for i := range requests {
-		requestBy[requests[i].ID] = &requests[i]
-	}
-	images, err := loadImages(s, "purchase_request_line_image", "line_id", lineIDs)
-	if err != nil {
-		return nil, err
-	}
-	for i := range lines {
-		l := &lines[i]
-		r := requestBy[l.PurchaseRequestID]
+	for _, line := range lines {
+		l := &line.PurchaseRequestLine
+		r := line.Request
 		if r == nil {
 			r = &model.PurchaseRequest{}
 		}
@@ -261,32 +229,22 @@ func purchaseRecordItemReads(s *db.Session, lines []model.PurchaseRequestLine) (
 			PurchaseResponsible: l.PurchaseResponsibleSnapshot, Usage: l.Usage, Remark: r.Remark,
 			PurchaseDate: r.PurchaseDate, Salesperson: l.Salesperson, ContractNo: r.ContractNo, VesselNo: r.VesselNo,
 			ConsolidationDate: r.ConsolidationDate, ConsolidationPort: r.ConsolidationPort, SailingDate: r.SailingDate,
-			ContractSignDate: l.ContractSignDate, UnitPrice: l.UnitPrice, Images: imagesOf(images, l.ID),
+			ContractSignDate: l.ContractSignDate, UnitPrice: l.UnitPrice, Images: material.FileReads(line.Images),
 		})
 	}
-	return out, nil
+	return out
 }
 
 // PurchaseRecordDetail 对应 purchase_record_detail：按行 id 返回完整记录，不存在报「申购记录不存在」。
 func PurchaseRecordDetail(s *db.Session, lineID int64) (schema.MiniProgramPurchaseRecordItemRead, error) {
-	scope, sargs, err := scopeAnd(s, "")
+	line, err := purchaserequest.FindPurchaseRecord(s, lineID, false)
 	if err != nil {
 		return schema.MiniProgramPurchaseRecordItemRead{}, err
 	}
-	var line model.PurchaseRequestLine
-	ok, err := s.Find(&line, "SELECT "+model.ColsPurchaseRequestLine+" FROM purchase_request_line WHERE id = ?"+scope,
-		append([]any{lineID}, sargs...)...)
-	if err != nil {
-		return schema.MiniProgramPurchaseRecordItemRead{}, err
-	}
-	if !ok {
+	if line == nil {
 		return schema.MiniProgramPurchaseRecordItemRead{}, apperr.NotFound("申购记录")
 	}
-	reads, err := purchaseRecordItemReads(s, []model.PurchaseRequestLine{line})
-	if err != nil {
-		return schema.MiniProgramPurchaseRecordItemRead{}, err
-	}
-	return reads[0], nil
+	return purchaseRecordItemReads([]*purchaserequest.Line{line})[0], nil
 }
 
 // ---------------- 编码库 / 台账 / 华星库存 / 精简库存 ----------------
