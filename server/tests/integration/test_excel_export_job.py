@@ -497,7 +497,15 @@ async def test_export_limit_exceeded_surfaces_as_job_failure(
     async def fake_search(session, **kwargs) -> tuple[list[PurchaseMaterial], int]:
         return [], EXPORT_ROW_LIMIT + 1
 
-    monkeypatch.setattr(record_service, "search_purchase_records", fake_search)
+    if GO_SERVER_URL:
+        # Go 契约测试：等价 monkeypatch 的一次性测试钩子（下一次记录导出查询总数超限）。
+        hooked = await client.post(
+            "/api/v1/__test__/purchase/fake-record-export-total",
+            json={"total": EXPORT_ROW_LIMIT + 1},
+        )
+        assert hooked.status_code == 200, hooked.text
+    else:
+        monkeypatch.setattr(record_service, "search_purchase_records", fake_search)
 
     created = await client.post(
         "/api/v1/purchase-records/export-results",

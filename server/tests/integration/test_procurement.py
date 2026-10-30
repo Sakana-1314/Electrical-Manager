@@ -22,12 +22,24 @@ from app.models import (
     PurchaseRequestLine,
 )
 from tests.conftest import (
+    GO_SERVER_URL,
     SECOND_PROJECT_ID,
     auth_headers,
     await_export_job,
     create_stock,
     project_session,
 )
+
+
+async def cleanup_moved_plans_once(client: AsyncClient) -> int:
+    """手动触发一次申购计划清理；Go 契约测试模式下改走 APP_TEST_HOOKS 测试钩子。"""
+    if GO_SERVER_URL:
+        response = await client.post("/api/v1/__test__/purchase/plan-cleanup-once")
+        assert response.status_code == 200, response.text
+        return int(response.json()["count"])
+    from app.services import purchase_plan_cleanup_service
+
+    return await purchase_plan_cleanup_service.cleanup_moved_plans_once()
 
 
 async def create_purchase_plan(
@@ -957,9 +969,7 @@ async def test_record_keeps_purchase_plan_attachments(client: AsyncClient) -> No
     assert detail.status_code == 200, detail.text
     assert [image["id"] for image in detail.json()["images"]] == [file_id]
 
-    from app.services import purchase_plan_cleanup_service
-
-    deleted = await purchase_plan_cleanup_service.cleanup_moved_plans_once()
+    deleted = await cleanup_moved_plans_once(client)
     assert deleted == 1
     detail = await client.get(f"/api/v1/purchase-records/{record['line_id']}", headers=headers)
     assert detail.status_code == 200, detail.text
@@ -1247,15 +1257,13 @@ async def test_purchase_record_can_restore_to_purchase_plan(client: AsyncClient)
 @pytest.mark.asyncio
 async def test_restore_rebuilds_plan_after_cleanup(client: AsyncClient) -> None:
     """计划被定时清理后，恢复为申购计划从快照重建新计划但保留原计划号。"""
-    from app.services import purchase_plan_cleanup_service
-
     headers = await auth_headers(client, "purchase")
     plan = await create_purchase_plan(
         client, headers, "已清理后恢复", code="DQ-RESTORE-CLEANED", category="工具"
     )
     record = await move_to_record(client, headers, int(plan["id"]))
 
-    deleted = await purchase_plan_cleanup_service.cleanup_moved_plans_once()
+    deleted = await cleanup_moved_plans_once(client)
     assert deleted == 1
     async with project_session() as session:
         # 清理后记录行已解绑外键（指向已删计划）
@@ -2450,9 +2458,26 @@ async def test_missing_excel_template_returns_readable_400(
     client: AsyncClient, monkeypatch, tmp_path
 ) -> None:
     headers = await auth_headers(client, "purchase")
-    monkeypatch.setattr(settings, "template_dir", tmp_path)
+    previous_template_dir = None
+    if GO_SERVER_URL:
+        hooked = await client.post(
+            "/api/v1/__test__/purchase/template-dir", json={"template_dir": str(tmp_path)}
+        )
+        assert hooked.status_code == 200, hooked.text
+        previous_template_dir = hooked.json()["previous"]
+    else:
+        monkeypatch.setattr(settings, "template_dir", tmp_path)
 
-    response = await client.get("/api/v1/purchase-materials/export-uncoded", headers=headers)
+    try:
+        response = await client.get(
+            "/api/v1/purchase-materials/export-uncoded", headers=headers
+        )
+    finally:
+        if GO_SERVER_URL:
+            await client.post(
+                "/api/v1/__test__/purchase/template-dir",
+                json={"template_dir": previous_template_dir},
+            )
 
     assert response.status_code == 400
     assert response.json()["code"] == "EXPORT_TEMPLATE_MISSING"

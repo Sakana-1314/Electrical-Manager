@@ -9,7 +9,11 @@ from app.core.constants import SHANGHAI
 from app.models import PurchaseMaterial, PurchaseRequestLine
 from app.services import purchase_plan_cleanup_service
 from tests.conftest import auth_headers, project_session
-from tests.integration.test_procurement import create_purchase_plan, move_to_record
+from tests.integration.test_procurement import (
+    cleanup_moved_plans_once,
+    create_purchase_plan,
+    move_to_record,
+)
 
 
 @pytest.mark.asyncio
@@ -18,7 +22,7 @@ async def test_cleanup_removes_moved_plans_and_keeps_record(client: AsyncClient)
     plan = await create_purchase_plan(client, headers, "待清理计划", code="DQ-CLEAN-1")
     record = await move_to_record(client, headers, int(plan["id"]))
 
-    deleted = await purchase_plan_cleanup_service.cleanup_moved_plans_once()
+    deleted = await cleanup_moved_plans_once(client)
     assert deleted == 1
 
     async with project_session() as session:
@@ -42,8 +46,8 @@ async def test_cleanup_is_idempotent(client: AsyncClient) -> None:
     plan = await create_purchase_plan(client, headers, "幂等计划", code="DQ-IDEMP-1")
     await move_to_record(client, headers, int(plan["id"]))
 
-    assert await purchase_plan_cleanup_service.cleanup_moved_plans_once() == 1
-    assert await purchase_plan_cleanup_service.cleanup_moved_plans_once() == 0
+    assert await cleanup_moved_plans_once(client) == 1
+    assert await cleanup_moved_plans_once(client) == 0
 
 
 @pytest.mark.asyncio
@@ -59,7 +63,7 @@ async def test_cleanup_skips_unmigrated_snapshot(client: AsyncClient) -> None:
         line.plan_no_snapshot = ""  # 模拟旧库未回填（NULL 或空值）
         await session.commit()
 
-    assert await purchase_plan_cleanup_service.cleanup_moved_plans_once() == 0
+    assert await cleanup_moved_plans_once(client) == 0
     async with project_session() as session:
         assert await session.get(PurchaseMaterial, int(plan["id"])) is not None
 
@@ -76,7 +80,7 @@ async def test_cleanup_batches_over_limit(client: AsyncClient) -> None:
         await move_to_record(client, headers, int(plan["id"]))
 
     total_deleted = 0
-    while (deleted := await purchase_plan_cleanup_service.cleanup_moved_plans_once()) > 0:
+    while (deleted := await cleanup_moved_plans_once(client)) > 0:
         total_deleted += deleted
         assert deleted <= purchase_plan_cleanup_service._BATCH_SIZE
     assert total_deleted == len(plan_ids)

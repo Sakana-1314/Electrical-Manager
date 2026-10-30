@@ -10,7 +10,7 @@ from app.domain.enums import ShareType
 from app.models import ShareLink
 from app.services import share_link_service
 from app.services.common import utcnow
-from tests.conftest import auth_headers, project_session
+from tests.conftest import GO_SERVER_URL, auth_headers, project_session
 from tests.integration.test_procurement import (
     create_purchase_plan,
     move_to_record,
@@ -203,7 +203,13 @@ async def test_cleanup_expired_deletes_only_expired_rows(client: AsyncClient) ->
         )
         await session.commit()
 
-    purged = await share_link_service.cleanup_expired()
+    if GO_SERVER_URL:
+        # Go 契约测试：后台清理函数无法在进程内直接调用，改走 APP_TEST_HOOKS 测试钩子。
+        response = await client.post("/api/v1/__test__/share/cleanup-expired")
+        assert response.status_code == 200, response.text
+        purged = response.json()["count"]
+    else:
+        purged = await share_link_service.cleanup_expired()
     assert purged == 1
 
     async with project_session() as session:
