@@ -5,19 +5,17 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/miniprogram"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
 // generateUnlimitedMaterialCode 对应 mini_program_service.generate_unlimited_material_code(material_uuid, env, app_id)。
-//
-// TODO(mini-program)：小程序模块移植后改为调用其导出函数（返回 PNG 字节）。在此之前统一报 503。
 var generateUnlimitedMaterialCode = func(s *db.Session, materialUUID, env, appID string) ([]byte, error) {
-	return nil, apperr.New("MINI_PROGRAM_CODE_UNAVAILABLE", "小程序码生成尚未接入").WithStatus(503)
+	return miniprogram.GenerateUnlimitedMaterialCode(s.Ctx(), materialUUID, env, appID)
 }
 
 // materialMiniProgramCode GET /stock-materials/mini-program-codes/{material_uuid}?env=&appid=

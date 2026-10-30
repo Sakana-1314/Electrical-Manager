@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import json
 import threading
 from collections.abc import AsyncIterator, Awaitable, Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -55,6 +56,8 @@ class UpstreamStub:
                     self.wfile.write(body)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
+
+            do_GET = do_POST  # noqa: N815  (微信 code2session / access_token 是 GET)
 
             def log_message(self, *_args: Any) -> None:
                 return None
@@ -112,3 +115,65 @@ async def deliver_pending_once(client: AsyncClient) -> bool:
     response = await client.post("/__test__/webhook/deliver-once")
     assert response.status_code == 200, response.text
     return bool(response.json()["delivered"])
+
+
+# ---------------- 微信接口桩（小程序用例） ----------------
+
+ExchangeFake = Callable[..., Awaitable[tuple[str, str]]]
+CodeFake = Callable[[dict[str, Any]], bytes | Awaitable[bytes]]
+StartWechat = Callable[..., Awaitable[UpstreamStub]]
+
+
+def wechat_handler(
+    exchange: ExchangeFake | None = None, material_code: CodeFake | None = None
+) -> Handler:
+    """把用例里伪造的 `exchange_wechat_code` / 小程序码生成函数包装成微信接口桩。
+
+    - `GET /sns/jscode2session`：调用 `exchange(js_code, appid)`，返回 `{"openid": ...}`；
+    - `GET /cgi-bin/token`：返回固定的 access_token；
+    - `POST /wxa/getwxacodeunlimit`：调用 `material_code(请求体)`，以 image/png 返回其字节。
+    """
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        params = request.url.params
+        if path == "/sns/jscode2session" and exchange is not None:
+            _app_id, openid = await exchange(params["js_code"], params.get("appid"))
+            return httpx.Response(200, json={"openid": openid, "session_key": "stub"})
+        if path == "/cgi-bin/token":
+            return httpx.Response(
+                200, json={"access_token": f"stub-token-{params.get('appid')}", "expires_in": 7200}
+            )
+        if path == "/wxa/getwxacodeunlimit" and material_code is not None:
+            result = material_code(json.loads(request.content))
+            if inspect.isawaitable(result):
+                result = await result
+            return httpx.Response(200, content=result, headers={"content-type": "image/png"})
+        return httpx.Response(200, json={"errcode": 40001, "errmsg": f"unexpected {path}"})
+
+    return handler
+
+
+@pytest_asyncio.fixture
+async def go_wechat(client: AsyncClient) -> AsyncIterator[StartWechat]:
+    """返回 `start(exchange=..., material_code=...)`：启动微信接口桩，并通过
+    `/api/v1/__test__/mini-program/upstream` 让 Go 服务改投；用例结束时恢复并关闭桩服务。"""
+    started: list[UpstreamStub] = []
+
+    async def start(
+        *, exchange: ExchangeFake | None = None, material_code: CodeFake | None = None
+    ) -> UpstreamStub:
+        stub = UpstreamStub(wechat_handler(exchange, material_code))
+        stub.start()
+        response = await client.post(
+            "/api/v1/__test__/mini-program/upstream", json={"base_url": stub.base_url}
+        )
+        assert response.status_code == 200, response.text
+        started.append(stub)
+        return stub
+
+    yield start
+    if started:
+        await client.post("/api/v1/__test__/mini-program/upstream", json={"base_url": ""})
+    for stub in started:
+        stub.stop()
