@@ -80,8 +80,16 @@ func updateHazard(c *web.Ctx) error {
 - 列表为空输出 `[]` 而不是 `null`（初始化切片）。分页用 `schema.NewPage(items, page, size, total)`。
 - 只在 Python 返回裸 dict 时才用 `map[string]any`；dict 键顺序不影响测试，但尽量照抄。
 
-## 数据库
+## 数据库（PostgreSQL 16+，结构见 docs/references/database/init.sql）
 
+- 会话层自动把 `?` 占位符转成 `$n`、反引号转成双引号（跳过字符串字面量），业务 SQL 照常写 `?`。
+  `"user"` 是保留字，必须加引号（`model.ColsXxx` 已带双引号；加表别名用 `model.Prefixed("t", model.ColsXxx)`）。
+- 布尔列用 Go bool 绑定或写 `TRUE/FALSE`，不要 `= 1`；字符串常量用单引号。
+- 不要用 MySQL 特有语法（IFNULL、GROUP_CONCAT、DATE_FORMAT、ON DUPLICATE KEY、INSERT IGNORE、`LIMIT a, b`、
+  多表 UPDATE/DELETE）；PG 不允许聚合查询或 DISTINCT 加 `FOR UPDATE`（照搬上游 #384 对 Python 的同类改动）。
+- `LIKE` 在 PG 区分大小写，Python 版同样如此，照写 `LIKE`（不要擅自改 ILIKE）。
+- 枚举列是 PG 原生 ENUM（存名称），绑定字符串参数即可。JSON 列绑定 JSON 字符串。
+- `s.Insert(...)` 自动追加 `RETURNING id`；完整性错误用 `db.IsIntegrity/IsDuplicate/IsForeignKey`（SQLSTATE 23xxx）。
 - `c.DB`（`*db.Session`）：`Get/Find/Select/Exec/Insert/Query/SelectIn/ExecIn`。第一条语句时自动开事务。
 - **项目隔离**：项目域表（`model.ProjectScopedTables`）的每条 SQL 都必须显式带 `project_id = ?`
   （`pid, err := s.ProjectID()`，未设定时返回 PROJECT_REQUIRED，与 Python fail-closed 一致），
@@ -95,8 +103,10 @@ func updateHazard(c *web.Ctx) error {
   以及 Python 模型里的 `default=`（如 uuid4、identity_hash、状态默认值）。
 - SQLAlchemy `IntegrityError` 被 service 捕获转业务错误的地方，用 `db.IsIntegrity(err)` / `db.IsDuplicate(err)`；
   未捕获的会由框架统一转 409 DATA_CONFLICT。`with_for_update()` → `SELECT ... FOR UPDATE`。
+  **注意 PG 里事务内任何语句出错后整个事务失效**：Python 用 `begin_nested()`（保存点）捕获完整性错误再继续的地方，
+  Go 必须同样用 `SAVEPOINT x` / `ROLLBACK TO SAVEPOINT x` 包住，否则后续语句全部失败。
 - `col.contains(term, autoescape=True)` / `contains_any` → `common.ContainsAny(cols, value)`（`LIKE ? ESCAPE '/'`）。
-  `col.like(f"%{kw}%")`（不转义）照写。MySQL 排序规则 utf8mb4_0900_ai_ci（大小写不敏感）与线上一致。
+  `col.like(f"%{kw}%")`（不转义）照写。
 - selectin 关系（图片、余额等）用批量 `IN (?)` 查询加载，避免 N+1；保持与 Python 相同的排序（如 `sort_order`）。
 - 后台任务（导入/导出/清理/Webhook）使用 `context.Background()` 派生的独立会话，自己 `Commit()`，按行记录的
   `project_id` 恢复项目上下文。启动清理与常驻任务用 `lifecycle.OnStartup(order, name, fn)` /
@@ -119,8 +129,8 @@ func updateHazard(c *web.Ctx) error {
 PYTHON=<含后端依赖的 python> tools/run_contract_tests.sh tests/integration/test_xxx.py [-x -k ...]
 ```
 
-脚本会：重建 MySQL 库（init.sql）→ 编译并启动 Go 服务 → 设置 `GO_SERVER_URL` 跑 pytest（conftest 每个用例清表并写种子数据，
-测试里直接用 ORM 读写同一个 MySQL）。每个代理用不同的 `DB_NAME`、`PORT`、`WORK_DIR`，避免互相干扰：
+脚本会：重建 PostgreSQL 库（init.sql，默认连 127.0.0.1:5432 用户 postgres、免密）→ 编译并启动 Go 服务 → 设置 `GO_SERVER_URL` 跑 pytest（conftest 每个用例清表并写种子数据，
+测试里直接用 ORM 读写同一个 PostgreSQL）。每个代理用不同的 `DB_NAME`、`PORT`、`WORK_DIR`，避免互相干扰：
 `DB_NAME=em_go_<模块> PORT=<唯一端口> WORK_DIR=<自己的临时目录>`。
 
 少数用例通过 monkeypatch 改 Python 进程内部（替换 httpx 客户端、伪造微信接口、直接调用 Python 后台函数等），
