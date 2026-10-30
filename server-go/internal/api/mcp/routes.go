@@ -50,7 +50,7 @@ const instructions = "先调用 operations_list 查找操作，再调用 operati
 	"不得猜测 operation_id 或绕过现有业务接口。"
 
 var (
-	handlerMu sync.RWMutex
+	handlerMu  sync.RWMutex
 	appHandler http.Handler
 )
 

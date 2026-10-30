@@ -70,4 +70,3 @@ func materialMiniProgramCodeRedirect(c *web.Ctx) error {
 	query := "env=" + url.QueryEscape(env) + "&appid=" + url.QueryEscape(appID)
 	return c.Redirect(307, target+"?"+query, map[string]string{"Cache-Control": "no-store"})
 }
-
