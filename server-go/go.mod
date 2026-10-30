@@ -1,6 +1,6 @@
 module github.com/Sakana-1314/Electrical-Manager/server
 
-go 1.27.1
+go 1.26.0
 
 require (
 	github.com/fernet/fernet-go v0.0.0-20240119011108-303da6aec611
