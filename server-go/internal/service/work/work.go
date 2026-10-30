@@ -297,11 +297,7 @@ type recordRow struct {
 }
 
 var recordCols = func() string {
-	parts := strings.Split(strings.ReplaceAll(model.ColsWorkRecord, "`", ""), ", ")
-	for i, p := range parts {
-		parts[i] = "r.`" + p + "`"
-	}
-	return strings.Join(parts, ", ") + ", t.name AS task_name, t.status AS task_status"
+	return model.Prefixed("r", model.ColsWorkRecord) + ", t.name AS task_name, t.status AS task_status"
 }()
 
 // TaskFilter 任务列表筛选条件（nil / 空 表示不限制）。Statuses 为枚举**值**。
