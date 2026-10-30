@@ -1,7 +1,7 @@
 """Python（FastAPI）与 Go（Gin）后端的接口性能对比。
 
 两个服务连同一个 PostgreSQL 库（init.sql + 本脚本写入的种子数据），用 hey 对相同接口压测，
-输出 Markdown 表格。用法（在 server-go 目录）：
+输出 Markdown 表格。用法（在 server 目录）：
 
     python tools/benchmark.py --python-url http://127.0.0.1:18300 --go-url http://127.0.0.1:18301 \
         [--seed] [--duration 10] [--concurrency 20]
