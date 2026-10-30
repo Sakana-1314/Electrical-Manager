@@ -18,7 +18,20 @@ from app.domain.enums import ExcelExportJobStatus
 from app.models import ExcelExportJob, PurchaseMaterial
 from app.services import excel_export_job_service
 from app.services.common import utcnow
-from tests.conftest import DEFAULT_PROJECT_ID, auth_headers, await_export_job, project_session
+from tests.conftest import (
+    DEFAULT_PROJECT_ID,
+    GO_SERVER_URL,
+    auth_headers,
+    await_export_job,
+    project_session,
+)
+
+
+async def _go_hook(client: AsyncClient, name: str, body: dict | None = None) -> dict:
+    """Go 契约测试：后台函数无法在进程内直接调用，改走 APP_TEST_HOOKS 测试钩子。"""
+    response = await client.post(f"/api/v1/__test__/export-jobs/{name}", json=body or {})
+    assert response.status_code == 200, response.text
+    return response.json()
 
 
 async def _insert_job(
@@ -67,7 +80,10 @@ async def test_mark_stale_exports_failed_marks_interrupted_and_unlinks(
             )
         await session.commit()
 
-    count = await excel_export_job_service.mark_stale_exports_failed()
+    if GO_SERVER_URL:
+        count = (await _go_hook(client, "mark-stale"))["count"]
+    else:
+        count = await excel_export_job_service.mark_stale_exports_failed()
 
     assert count == 2
     async with project_session() as session:
@@ -118,7 +134,10 @@ async def test_cleanup_finished_exports_deletes_only_old_terminal_rows_and_files
         session.add_all([old_finished, recent_finished, running])
         await session.commit()
 
-    count = await excel_export_job_service.cleanup_finished_exports(retention_days=30)
+    if GO_SERVER_URL:
+        count = (await _go_hook(client, "cleanup", {"retention_days": 30}))["count"]
+    else:
+        count = await excel_export_job_service.cleanup_finished_exports(retention_days=30)
 
     assert count == 1
     assert not old_path.exists()
@@ -150,7 +169,22 @@ async def test_run_job_success_keeps_file_and_marks_succeeded(
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    await excel_export_job_service._run_job(job_id, ok_processor)
+    if GO_SERVER_URL:
+        await _go_hook(
+            client,
+            "run",
+            {
+                "job_id": job_id,
+                "processor": "ok",
+                "result": {
+                    "download_filename": "申购计划导出.xlsx",
+                    "rows": 3,
+                    "image_count": 2,
+                },
+            },
+        )
+    else:
+        await excel_export_job_service._run_job(job_id, ok_processor)
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -175,7 +209,10 @@ async def test_run_job_app_error_marks_failed_and_unlinks_partial_file(
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    await excel_export_job_service._run_job(job_id, failing_processor)
+    if GO_SERVER_URL:
+        await _go_hook(client, "run", {"job_id": job_id, "processor": "app_error"})
+    else:
+        await excel_export_job_service._run_job(job_id, failing_processor)
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -197,7 +234,12 @@ async def test_run_job_invalid_result_marks_failed(client: AsyncClient, tmp_path
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    await excel_export_job_service._run_job(job_id, empty_processor)
+    if GO_SERVER_URL:
+        await _go_hook(
+            client, "run", {"job_id": job_id, "processor": "ok", "result": {"rows": 1}}
+        )
+    else:
+        await excel_export_job_service._run_job(job_id, empty_processor)
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -220,7 +262,10 @@ async def test_run_job_unexpected_error_marks_failed_and_unlinks(
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    await excel_export_job_service._run_job(job_id, crashing_processor)
+    if GO_SERVER_URL:
+        await _go_hook(client, "run", {"job_id": job_id, "processor": "crash"})
+    else:
+        await excel_export_job_service._run_job(job_id, crashing_processor)
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -240,21 +285,37 @@ async def test_enqueue_export_returns_pending_job_and_job_runs_to_completion(
         return {"download_filename": "enqueued.xlsx", "rows": 1}
 
     # enqueue_export 从请求上下文取项目（真实调用发生在带 X-Project-Id 的接口里）。
-    with project_scope(DEFAULT_PROJECT_ID):
-        job = await excel_export_job_service.enqueue_export(
-            export_type="UNIT",
-            params={"columns": ["name"]},
-            processor=processor,
-            created_by=None,
+    if GO_SERVER_URL:
+        enqueued = await _go_hook(
+            client,
+            "enqueue",
+            {
+                "export_type": "UNIT",
+                "params": {"columns": ["name"]},
+                "result": {"download_filename": "enqueued.xlsx", "rows": 1},
+            },
         )
-    assert job.status == ExcelExportJobStatus.PENDING
-    assert job.export_type == "UNIT"
-    assert job.params == {"columns": ["name"]}
+        assert enqueued["status"] == "PENDING"
+        assert enqueued["export_type"] == "UNIT"
+        assert enqueued["params"] == {"columns": ["name"]}
+        job_id = enqueued["id"]
+    else:
+        with project_scope(DEFAULT_PROJECT_ID):
+            job = await excel_export_job_service.enqueue_export(
+                export_type="UNIT",
+                params={"columns": ["name"]},
+                processor=processor,
+                created_by=None,
+            )
+        assert job.status == ExcelExportJobStatus.PENDING
+        assert job.export_type == "UNIT"
+        assert job.params == {"columns": ["name"]}
+        job_id = job.id
 
     deadline = time.monotonic() + 2.0
     while True:
         async with project_session() as session:
-            row = await session.get(ExcelExportJob, job.id)
+            row = await session.get(ExcelExportJob, job_id)
         if row.status == ExcelExportJobStatus.SUCCEEDED:
             break
         assert time.monotonic() < deadline, row.status
