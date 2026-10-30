@@ -115,7 +115,6 @@
 | `UNSUPPORTED_EXCEL_FILE` | 400 | 仅支持 `.xls`、`.xlsx` 或 `.csv` | `service/importfile` |
 | `INVALID_EXCEL_FILE` | 400 | 无法读取 Excel 文件 | `service/importfile` |
 | `INVALID_CSV_FILE` | 400 | 无法解析 CSV 编码（需 UTF-8 或 GBK） | `service/importfile` |
-| `XLS_SUPPORT_UNAVAILABLE` | 400 | 环境未安装 `.xls` 解析依赖 | `service/importfile`（`.xls` 解析已内置，当前实现不会返回） |
 | `EXCEL_FILE_TOO_LARGE` | 400 | 导入文件超过大小上限 | `service/importjob` |
 | `HUAXING_IMPORT_EMPTY` / `LITE_IMPORT_EMPTY` / `MATERIAL_CODE_IMPORT_EMPTY` / `MATERIAL_PRICE_IMPORT_EMPTY` | 400 | 表格中没有可导入的数据 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
 | `HUAXING_IMPORT_HEADERS_MISSING` / `LITE_IMPORT_HEADERS_MISSING` / `MATERIAL_CODE_IMPORT_HEADERS_MISSING` / `MATERIAL_PRICE_IMPORT_HEADERS_MISSING` | 400 | 缺少必需列（message 列出列名） | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
@@ -132,7 +131,7 @@
 | --- | --- | --- | --- |
 | `EXPORT_FILE_EXPIRED` | 400 | 导出文件已过期或不存在，请重新导出 | `service/exportjob` |
 | `INTERNAL_EXPORT_ERROR` | 400 | 导出任务未返回有效结果 | `service/exportjob` |
-| `EXPORT_TEMPLATE_MISSING` | 400 | 导出模板缺失（检查 `server/templates/`，运行时目录由 `APP_TEMPLATE_DIR` 指定） | `service/excelexport` |
+| `EXPORT_TEMPLATE_MISSING` | 400 | 导出模板缺失（检查 `server/templates/`，运行时目录由环境变量 APP_TEMPLATE_DIR 指定） | `service/excelexport` |
 | `EXPORT_TEMPLATE_INVALID` | 400 | 导出模板编码错误 | `service/excelexport` |
 
 ## 分享链接

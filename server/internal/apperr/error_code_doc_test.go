@@ -40,8 +40,7 @@ var (
 var docNonCodes = map[string]bool{"JPEG": true, "PNG": true, "WEBP": true, "UTF": true, "GBK": true}
 
 // 已知的「文档有、Go 代码没有」的码（Go 与文档不一致，待文档清理；不改业务代码）：
-//   - XLS_SUPPORT_UNAVAILABLE：Python 版在缺少 xlrd 依赖时返回；Go 版内置 .xls 解析，不会再出现此码。
-var knownDocOnlyCodes = map[string]bool{"XLS_SUPPORT_UNAVAILABLE": true}
+var knownDocOnlyCodes = map[string]bool{}
 
 func findRepoFile(t *testing.T, rel string) string {
 	t.Helper()
