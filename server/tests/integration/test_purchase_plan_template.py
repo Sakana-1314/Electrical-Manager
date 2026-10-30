@@ -8,9 +8,9 @@ from httpx import AsyncClient
 from PIL import Image
 from sqlalchemy import select
 
-from app.core.constants import SHANGHAI
-from app.models import PurchaseMaterial, PurchasePlanTemplate
 from tests.conftest import auth_headers, create_stock, project_session
+from tests.testkit.constants import SHANGHAI
+from tests.testkit.models import PurchaseMaterial, PurchasePlanTemplate
 
 BASE = "/api/v1/purchase-plan-templates"
 

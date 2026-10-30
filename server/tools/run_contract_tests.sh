@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# 黑盒契约测试：启动 Go 服务（独立 PostgreSQL 库 + 独立上传目录），用 pytest 集成测试通过 HTTP 校验。
-# 用法：tools/run_contract_tests.sh [pytest 参数...]
-# 环境变量：PYTHON（含测试依赖的解释器）、PGHOST/PGPORT/PGUSER（默认 127.0.0.1/5432/postgres）、DB_NAME、PORT、WORK_DIR
+# 黑盒契约测试：用 init.sql 重建独立的 PostgreSQL 库，编译并启动 Go 服务（独立上传目录、开启测试钩子），
+# 再运行 server/tests 下的 pytest 用例通过 HTTP 校验。
+# 用法：tools/run_contract_tests.sh [pytest 参数...]（不带参数时运行整个 tests/）
+# 环境变量：PYTHON（装好 tests/requirements.txt 的解释器）、PGHOST/PGPORT/PGUSER/PGPASSWORD
+# （默认 127.0.0.1/5432/postgres/空）、DB_NAME、PORT、WORK_DIR
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"   # server/（Go 模块根目录）
 REPO="$(cd "$HERE/.." && pwd)"
@@ -39,8 +41,9 @@ for _ in $(seq 1 50); do
 done
 
 cd "$HERE"
-GO_SERVER_URL="http://127.0.0.1:$PORT" GO_UPLOAD_DIR="$WORK_DIR/uploads" \
-TEST_DATABASE_URL="$APP_DATABASE_URL" \
-  "$PYTHON" -m pytest -p no:cacheprovider -q "$@" || STATUS=$?
+if [ $# -eq 0 ]; then set -- tests; fi
+API_BASE_URL="http://127.0.0.1:$PORT" API_DATABASE_URL="$APP_DATABASE_URL" \
+API_UPLOAD_DIR="$APP_UPLOAD_DIR" API_JWT_SECRET="$APP_JWT_SECRET" \
+  "$PYTHON" -m pytest -c tests/pytest.ini -p no:cacheprovider -q "$@" || STATUS=$?
 echo "server log: $WORK_DIR/server.log"
 exit ${STATUS:-0}

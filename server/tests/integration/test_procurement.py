@@ -12,34 +12,28 @@ from openpyxl import load_workbook
 from PIL import Image
 from sqlalchemy import select
 
-from app.core.config import settings
-from app.core.constants import SHANGHAI
-from app.models import (
-    BusinessEventLog,
-    HuaXingInventory,
-    PurchaseMaterial,
-    PurchaseRequest,
-    PurchaseRequestLine,
-)
 from tests.conftest import (
-    GO_SERVER_URL,
     SECOND_PROJECT_ID,
     auth_headers,
     await_export_job,
     create_stock,
     project_session,
 )
+from tests.testkit.constants import SHANGHAI
+from tests.testkit.models import (
+    BusinessEventLog,
+    HuaXingInventory,
+    PurchaseMaterial,
+    PurchaseRequest,
+    PurchaseRequestLine,
+)
 
 
 async def cleanup_moved_plans_once(client: AsyncClient) -> int:
-    """手动触发一次申购计划清理；Go 契约测试模式下改走 APP_TEST_HOOKS 测试钩子。"""
-    if GO_SERVER_URL:
-        response = await client.post("/api/v1/__test__/purchase/plan-cleanup-once")
-        assert response.status_code == 200, response.text
-        return int(response.json()["count"])
-    from app.services import purchase_plan_cleanup_service
-
-    return await purchase_plan_cleanup_service.cleanup_moved_plans_once()
+    """手动触发一次凌晨的申购计划清理（测试钩子，APP_TEST_HOOKS=1 时注册），返回删除条数。"""
+    response = await client.post("/api/v1/__test__/purchase/plan-cleanup-once")
+    assert response.status_code == 200, response.text
+    return int(response.json()["count"])
 
 
 async def create_purchase_plan(
@@ -2455,29 +2449,24 @@ async def test_result_exports_embed_original_images(client: AsyncClient) -> None
 
 @pytest.mark.asyncio
 async def test_missing_excel_template_returns_readable_400(
-    client: AsyncClient, monkeypatch, tmp_path
+    client: AsyncClient, tmp_path
 ) -> None:
     headers = await auth_headers(client, "purchase")
-    previous_template_dir = None
-    if GO_SERVER_URL:
-        hooked = await client.post(
-            "/api/v1/__test__/purchase/template-dir", json={"template_dir": str(tmp_path)}
-        )
-        assert hooked.status_code == 200, hooked.text
-        previous_template_dir = hooked.json()["previous"]
-    else:
-        monkeypatch.setattr(settings, "template_dir", tmp_path)
-
+    # 测试钩子把模板目录临时指向空目录，用完恢复。
+    hooked = await client.post(
+        "/api/v1/__test__/purchase/template-dir", json={"template_dir": str(tmp_path)}
+    )
+    assert hooked.status_code == 200, hooked.text
+    previous_template_dir = hooked.json()["previous"]
     try:
         response = await client.get(
             "/api/v1/purchase-materials/export-uncoded", headers=headers
         )
     finally:
-        if GO_SERVER_URL:
-            await client.post(
-                "/api/v1/__test__/purchase/template-dir",
-                json={"template_dir": previous_template_dir},
-            )
+        await client.post(
+            "/api/v1/__test__/purchase/template-dir",
+            json={"template_dir": previous_template_dir},
+        )
 
     assert response.status_code == 400
     assert response.json()["code"] == "EXPORT_TEMPLATE_MISSING"

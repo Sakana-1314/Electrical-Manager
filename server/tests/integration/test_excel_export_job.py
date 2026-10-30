@@ -10,25 +10,18 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
-import app.services.purchase_request_service as record_service
-from app.core.constants import EXPORT_ROW_LIMIT
-from app.core.errors import AppError
-from app.core.project_scope import project_scope
-from app.domain.enums import ExcelExportJobStatus
-from app.models import ExcelExportJob, PurchaseMaterial
-from app.services import excel_export_job_service
-from app.services.common import utcnow
-from tests.conftest import (
-    DEFAULT_PROJECT_ID,
-    GO_SERVER_URL,
-    auth_headers,
-    await_export_job,
-    project_session,
-)
+from tests.conftest import auth_headers, await_export_job, project_session
+from tests.testkit.constants import EXPORT_ROW_LIMIT, utcnow
+from tests.testkit.enums import ExcelExportJobStatus
+from tests.testkit.models import ExcelExportJob
 
 
-async def _go_hook(client: AsyncClient, name: str, body: dict | None = None) -> dict:
-    """Go 契约测试：后台函数无法在进程内直接调用，改走 APP_TEST_HOOKS 测试钩子。"""
+async def _test_hook(client: AsyncClient, name: str, body: dict | None = None) -> dict:
+    """后台任务函数通过测试钩子（APP_TEST_HOOKS=1 时注册）触发。
+
+    `run` 用指定的处理器跑一次任务：ok 写出文件并返回给定结果，app_error 写出半截文件后抛
+    EXPORT_RESULT_LIMIT_EXCEEDED「查询结果超过上限」，crash 写出半截文件后发生未预期的异常。
+    """
     response = await client.post(f"/api/v1/__test__/export-jobs/{name}", json=body or {})
     assert response.status_code == 200, response.text
     return response.json()
@@ -80,10 +73,7 @@ async def test_mark_stale_exports_failed_marks_interrupted_and_unlinks(
             )
         await session.commit()
 
-    if GO_SERVER_URL:
-        count = (await _go_hook(client, "mark-stale"))["count"]
-    else:
-        count = await excel_export_job_service.mark_stale_exports_failed()
+    count = (await _test_hook(client, "mark-stale"))["count"]
 
     assert count == 2
     async with project_session() as session:
@@ -134,10 +124,7 @@ async def test_cleanup_finished_exports_deletes_only_old_terminal_rows_and_files
         session.add_all([old_finished, recent_finished, running])
         await session.commit()
 
-    if GO_SERVER_URL:
-        count = (await _go_hook(client, "cleanup", {"retention_days": 30}))["count"]
-    else:
-        count = await excel_export_job_service.cleanup_finished_exports(retention_days=30)
+    count = (await _test_hook(client, "cleanup", {"retention_days": 30}))["count"]
 
     assert count == 1
     assert not old_path.exists()
@@ -161,30 +148,18 @@ async def test_run_job_success_keeps_file_and_marks_succeeded(
 ) -> None:
     target = tmp_path / "job.xlsx"
 
-    async def ok_processor(path: Path) -> dict[str, object]:
-        assert path == target
-        await asyncio.to_thread(path.write_bytes, b"xlsx-bytes")
-        return {"download_filename": "申购计划导出.xlsx", "rows": 3, "image_count": 2}
-
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(
-            client,
-            "run",
-            {
-                "job_id": job_id,
-                "processor": "ok",
-                "result": {
-                    "download_filename": "申购计划导出.xlsx",
-                    "rows": 3,
-                    "image_count": 2,
-                },
-            },
-        )
-    else:
-        await excel_export_job_service._run_job(job_id, ok_processor)
+    await _test_hook(
+        client,
+        "run",
+        {
+            "job_id": job_id,
+            "processor": "ok",
+            "result": {"download_filename": "申购计划导出.xlsx", "rows": 3, "image_count": 2},
+        },
+    )
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -202,17 +177,10 @@ async def test_run_job_app_error_marks_failed_and_unlinks_partial_file(
 ) -> None:
     target = tmp_path / "job.xlsx"
 
-    async def failing_processor(path: Path) -> dict[str, object]:
-        await asyncio.to_thread(path.write_bytes, b"partial")
-        raise AppError("EXPORT_RESULT_LIMIT_EXCEEDED", "查询结果超过上限")
-
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(client, "run", {"job_id": job_id, "processor": "app_error"})
-    else:
-        await excel_export_job_service._run_job(job_id, failing_processor)
+    await _test_hook(client, "run", {"job_id": job_id, "processor": "app_error"})
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -227,19 +195,11 @@ async def test_run_job_app_error_marks_failed_and_unlinks_partial_file(
 async def test_run_job_invalid_result_marks_failed(client: AsyncClient, tmp_path) -> None:
     target = tmp_path / "job.xlsx"
 
-    async def empty_processor(path: Path) -> dict[str, object]:
-        await asyncio.to_thread(path.write_bytes, b"x")
-        return {"rows": 1}  # 缺少 download_filename
-
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(
-            client, "run", {"job_id": job_id, "processor": "ok", "result": {"rows": 1}}
-        )
-    else:
-        await excel_export_job_service._run_job(job_id, empty_processor)
+    # 处理器返回的结果缺少 download_filename
+    await _test_hook(client, "run", {"job_id": job_id, "processor": "ok", "result": {"rows": 1}})
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -255,17 +215,10 @@ async def test_run_job_unexpected_error_marks_failed_and_unlinks(
 ) -> None:
     target = tmp_path / "job.xlsx"
 
-    async def crashing_processor(path: Path) -> dict[str, object]:
-        await asyncio.to_thread(path.write_bytes, b"partial")
-        raise RuntimeError("boom")
-
     job_id = await _insert_job(
         export_type="UNIT", status=ExcelExportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(client, "run", {"job_id": job_id, "processor": "crash"})
-    else:
-        await excel_export_job_service._run_job(job_id, crashing_processor)
+    await _test_hook(client, "run", {"job_id": job_id, "processor": "crash"})
 
     async with project_session() as session:
         job = await session.get(ExcelExportJob, job_id)
@@ -278,39 +231,22 @@ async def test_run_job_unexpected_error_marks_failed_and_unlinks(
 
 @pytest.mark.asyncio
 async def test_enqueue_export_returns_pending_job_and_job_runs_to_completion(
-    client: AsyncClient, tmp_path
+    client: AsyncClient,
 ) -> None:
-    async def processor(path: Path) -> dict[str, object]:
-        await asyncio.to_thread(path.write_bytes, b"xlsx")
-        return {"download_filename": "enqueued.xlsx", "rows": 1}
-
-    # enqueue_export 从请求上下文取项目（真实调用发生在带 X-Project-Id 的接口里）。
-    if GO_SERVER_URL:
-        enqueued = await _go_hook(
-            client,
-            "enqueue",
-            {
-                "export_type": "UNIT",
-                "params": {"columns": ["name"]},
-                "result": {"download_filename": "enqueued.xlsx", "rows": 1},
-            },
-        )
-        assert enqueued["status"] == "PENDING"
-        assert enqueued["export_type"] == "UNIT"
-        assert enqueued["params"] == {"columns": ["name"]}
-        job_id = enqueued["id"]
-    else:
-        with project_scope(DEFAULT_PROJECT_ID):
-            job = await excel_export_job_service.enqueue_export(
-                export_type="UNIT",
-                params={"columns": ["name"]},
-                processor=processor,
-                created_by=None,
-            )
-        assert job.status == ExcelExportJobStatus.PENDING
-        assert job.export_type == "UNIT"
-        assert job.params == {"columns": ["name"]}
-        job_id = job.id
+    # 入队从请求上下文取项目（测试钩子的请求带 X-Project-Id）。
+    enqueued = await _test_hook(
+        client,
+        "enqueue",
+        {
+            "export_type": "UNIT",
+            "params": {"columns": ["name"]},
+            "result": {"download_filename": "enqueued.xlsx", "rows": 1},
+        },
+    )
+    assert enqueued["status"] == "PENDING"
+    assert enqueued["export_type"] == "UNIT"
+    assert enqueued["params"] == {"columns": ["name"]}
+    job_id = enqueued["id"]
 
     deadline = time.monotonic() + 2.0
     while True:
@@ -487,25 +423,19 @@ async def test_download_serves_file_even_when_job_row_missing(
 
 @pytest.mark.asyncio
 async def test_export_limit_exceeded_surfaces_as_job_failure(
-    client: AsyncClient, monkeypatch
+    client: AsyncClient,
 ) -> None:
     from tests.integration.test_procurement import create_purchase_plan
 
     headers = await auth_headers(client, "purchase")
     await create_purchase_plan(client, headers, "超限电机", code="ASYNC-BIG")
 
-    async def fake_search(session, **kwargs) -> tuple[list[PurchaseMaterial], int]:
-        return [], EXPORT_ROW_LIMIT + 1
-
-    if GO_SERVER_URL:
-        # Go 契约测试：等价 monkeypatch 的一次性测试钩子（下一次记录导出查询总数超限）。
-        hooked = await client.post(
-            "/api/v1/__test__/purchase/fake-record-export-total",
-            json={"total": EXPORT_ROW_LIMIT + 1},
-        )
-        assert hooked.status_code == 200, hooked.text
-    else:
-        monkeypatch.setattr(record_service, "search_purchase_records", fake_search)
+    # 一次性测试钩子：下一次记录导出查询到的总数超过上限。
+    hooked = await client.post(
+        "/api/v1/__test__/purchase/fake-record-export-total",
+        json={"total": EXPORT_ROW_LIMIT + 1},
+    )
+    assert hooked.status_code == 200, hooked.text
 
     created = await client.post(
         "/api/v1/purchase-records/export-results",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import io
 import random
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
@@ -12,47 +13,68 @@ from httpx import AsyncClient
 from PIL import Image
 from sqlalchemy import func, select
 
-from app.core.config import settings
-from app.core.constants import SHANGHAI
-from app.models import FileObject, PurchaseRequest, PurchaseRequestLine, PurchaseRequestLineImage
-from app.schemas import AttachmentCleanupRead
-from app.services import attachment_cleanup_service, file_service
-from app.services.common import utcnow
-from tests.conftest import GO_SERVER_URL, auth_headers, project_session
+from tests.conftest import auth_headers, project_session
+from tests.testkit import settings
+from tests.testkit.constants import (
+    ATTACHMENT_PURGE_HOUR,
+    ATTACHMENT_RETENTION_DAYS,
+    ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS,
+    MAX_IMAGE_BYTES,
+    PROBE_WINDOW_BYTES,
+    SHANGHAI,
+    attachment_purge_after,
+    utcnow,
+)
+from tests.testkit.models import (
+    FileObject,
+    PurchaseRequest,
+    PurchaseRequestLine,
+    PurchaseRequestLineImage,
+)
 
 # 免重复上传的阈值是 1MB：测试里调小阈值，用几十 KB 的等价图片覆盖同一条链路。
 SMALL_DEDUP_THRESHOLD = 8 * 1024
 
 
-async def cleanup_once(client: AsyncClient) -> AttachmentCleanupRead:
-    """手动触发一次凌晨清理任务。
+@dataclass(frozen=True)
+class CleanupResult:
+    """凌晨 2 点引用复查的清理结果（后台任务内部结果，只通过测试钩子取得）。"""
 
-    Go 契约测试模式下改为调用 Go 服务的测试钩子（APP_TEST_HOOKS=1 时注册），校验 Go 的实现。
-    """
-    if GO_SERVER_URL:
-        response = await client.post("/api/v1/__test__/attachment-cleanup")
-        assert response.status_code == 200, response.text
-        return AttachmentCleanupRead.model_validate(response.json())
-    return await attachment_cleanup_service.cleanup_deleted_attachments_once()
+    scanned: int
+    purged_file_ids: list[str]
+    purged_file_names: list[str]
+    restored_file_ids: list[str]
 
 
-async def go_file_tuning(
+async def cleanup_once(client: AsyncClient) -> CleanupResult:
+    """手动触发一次凌晨清理任务（测试钩子，APP_TEST_HOOKS=1 时注册）。"""
+    response = await client.post("/api/v1/__test__/attachment-cleanup")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    return CleanupResult(
+        scanned=body["scanned"],
+        purged_file_ids=body["purged_file_ids"],
+        purged_file_names=body["purged_file_names"],
+        restored_file_ids=body["restored_file_ids"],
+    )
+
+
+async def file_service_tuning(
     client: AsyncClient, *, dedup_min_bytes: int, choose_last: bool = False
 ) -> None:
-    """Go 契约测试模式下，等价 monkeypatch DEDUP_MIN_BYTES / secrets.choice 的测试钩子。"""
-    if GO_SERVER_URL:
-        response = await client.post(
-            "/api/v1/__test__/file-service",
-            json={"dedup_min_bytes": dedup_min_bytes, "choose_last": choose_last},
-        )
-        assert response.status_code == 200, response.text
+    """测试钩子：调小免重复上传阈值；choose_last 把「随机挑一个窗口」固定为最后一个。"""
+    response = await client.post(
+        "/api/v1/__test__/file-service",
+        json={"dedup_min_bytes": dedup_min_bytes, "choose_last": choose_last},
+    )
+    assert response.status_code == 200, response.text
 
 
 @pytest.fixture(autouse=True)
-def _reset_go_file_tuning():
+def _reset_file_service_tuning():
     yield
-    if GO_SERVER_URL:
-        httpx.post(f"{GO_SERVER_URL}/api/v1/__test__/file-service", json={}, timeout=10)
+    if settings.API_BASE_URL:
+        httpx.post(f"{settings.API_BASE_URL}/api/v1/__test__/file-service", json={}, timeout=10)
 
 
 def noisy_png(width: int = 96, height: int = 96) -> bytes:
@@ -126,9 +148,9 @@ async def test_uploaded_image_is_reencoded_as_png(client: AsyncClient) -> None:
     )
     assert duplicate.status_code == 201, duplicate.text
     assert duplicate.json()["id"] == body["id"]
-    assert len(list(settings.upload_dir.glob("*.png"))) == 1
+    assert len(list(settings.upload_dir().glob("*.png"))) == 1
 
-    stored_path = settings.upload_dir / f'{body["id"]}.png'
+    stored_path = settings.upload_dir() / f'{body["id"]}.png'
     stored_path.unlink()
     repaired = await client.post(
         "/api/v1/files/images",
@@ -152,7 +174,7 @@ async def test_uploaded_image_is_reencoded_as_png(client: AsyncClient) -> None:
     assert preview.headers["cache-control"] == expected_cache
     with Image.open(io.BytesIO(preview.content)) as image:
         assert image.size == (16, 12)
-    assert not (settings.upload_dir / ".previews").exists()
+    assert not (settings.upload_dir() / ".previews").exists()
 
     linked = await client.post(
         "/api/v1/stock-materials",
@@ -237,7 +259,7 @@ async def test_purchase_request_line_image_is_never_treated_as_orphan(
     )
     assert cleaned.status_code == 200, cleaned.text
     assert file_id not in cleaned.json()["deleted_record_ids"]
-    assert (settings.upload_dir / f"{file_id}.png").exists()
+    assert (settings.upload_dir() / f"{file_id}.png").exists()
 
 
 @pytest.mark.asyncio
@@ -266,7 +288,7 @@ async def test_super_admin_can_report_and_cleanup_orphan_files(client: AsyncClie
     )
     file_id = uploaded.json()["id"]
     untracked_id = "01900000-0000-7000-8000-000000000999"
-    (settings.upload_dir / f"{untracked_id}.png").write_bytes(source.getvalue())
+    (settings.upload_dir() / f"{untracked_id}.png").write_bytes(source.getvalue())
 
     forbidden = await client.get(
         "/api/v1/files/images/orphans?older_than_hours=0", headers=warehouse_headers
@@ -290,8 +312,8 @@ async def test_super_admin_can_report_and_cleanup_orphan_files(client: AsyncClie
         f"{file_id}.png",
         f"{untracked_id}.png",
     }
-    assert not (settings.upload_dir / f"{file_id}.png").exists()
-    assert not (settings.upload_dir / f"{untracked_id}.png").exists()
+    assert not (settings.upload_dir() / f"{file_id}.png").exists()
+    assert not (settings.upload_dir() / f"{untracked_id}.png").exists()
 
 
 @pytest.mark.asyncio
@@ -360,17 +382,17 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
     # 回执给出的清除时刻 = 提交删除的完整 7 天后的第一个凌晨 2 点（北京时间）
     purge_after = datetime.fromisoformat(body["purge_after"])
     deleted_at = datetime.fromisoformat(body["deleted_at"])
-    assert purge_after == file_service.attachment_purge_after(deleted_at)
-    assert purge_after.astimezone(SHANGHAI).hour == file_service.ATTACHMENT_PURGE_HOUR
-    assert purge_after >= deleted_at + timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS)
-    assert purge_after < deleted_at + timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+    assert purge_after == attachment_purge_after(deleted_at)
+    assert purge_after.astimezone(SHANGHAI).hour == ATTACHMENT_PURGE_HOUR
+    assert purge_after >= deleted_at + timedelta(days=ATTACHMENT_RETENTION_DAYS)
+    assert purge_after < deleted_at + timedelta(days=ATTACHMENT_RETENTION_DAYS + 1)
 
     # 记录与文件都还在，只是打上了删除标记。
     async with project_session() as session:
         item = await session.get(FileObject, file_id)
     assert item is not None
     assert item.deleted_at is not None
-    assert (settings.upload_dir / f"{file_id}.png").is_file()
+    assert (settings.upload_dir() / f"{file_id}.png").is_file()
 
     # 保留期内跑清理任务：复查过但没有到期的，原样保留（不物理清除）。
     kept = await cleanup_once(client)
@@ -379,7 +401,7 @@ async def test_delete_unreferenced_image_is_soft_delete(client: AsyncClient) -> 
     assert kept.restored_file_ids == []
     async with project_session() as session:
         assert await session.get(FileObject, file_id) is not None
-    assert (settings.upload_dir / f"{file_id}.png").is_file()
+    assert (settings.upload_dir() / f"{file_id}.png").is_file()
 
     # 待删除（保留期内）仍可读取：附件管理页要展示预览图才能判断是否撤销删除。
     readable = await client.get(f"/api/v1/files/images/{file_id}")
@@ -415,24 +437,24 @@ async def test_purge_only_after_retention_period(client: AsyncClient) -> None:
     async with project_session() as session:
         item = await session.get(FileObject, file_id)
         assert item is not None
-        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS - 1)
+        item.deleted_at = utcnow() - timedelta(days=ATTACHMENT_RETENTION_DAYS - 1)
         await session.commit()
     result = await cleanup_once(client)
     assert result.purged_file_ids == []
-    assert (settings.upload_dir / f"{file_id}.png").is_file()
+    assert (settings.upload_dir() / f"{file_id}.png").is_file()
 
     # 保留期满（超过 7 天）：物理清除数据库行与磁盘文件。
     async with project_session() as session:
         item = await session.get(FileObject, file_id)
         assert item is not None
-        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+        item.deleted_at = utcnow() - timedelta(days=ATTACHMENT_RETENTION_DAYS + 1)
         await session.commit()
     result = await cleanup_once(client)
     assert result.purged_file_ids == [file_id]
     assert result.purged_file_names == [f"{file_id}.png"]
     async with project_session() as session:
         assert await session.get(FileObject, file_id) is None
-    assert not (settings.upload_dir / f"{file_id}.png").exists()
+    assert not (settings.upload_dir() / f"{file_id}.png").exists()
 
     # 物理清除后就不再可读（记录已不存在 → NOT_FOUND）。
     gone = await client.get(f"/api/v1/files/images/{file_id}")
@@ -510,13 +532,13 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
     assert kept.restored_file_ids == [rescued_id]
     async with project_session() as session:
         assert await session.get(FileObject, orphan_id) is not None
-    assert (settings.upload_dir / f"{orphan_id}.png").is_file()
+    assert (settings.upload_dir() / f"{orphan_id}.png").is_file()
 
     # 被引用的那张已撤销删除，所以只剩一张候选；把它放到保留期外再复查 → 物理清除。
     async with project_session() as session:
         item = await session.get(FileObject, orphan_id)
         assert item is not None
-        item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+        item.deleted_at = utcnow() - timedelta(days=ATTACHMENT_RETENTION_DAYS + 1)
         await session.commit()
 
     result = await cleanup_once(client)
@@ -530,8 +552,8 @@ async def test_cleanup_purges_only_unreferenced_attachments(client: AsyncClient)
         rescued = await session.get(FileObject, rescued_id)
     assert rescued is not None
     assert rescued.deleted_at is None
-    assert not (settings.upload_dir / f"{orphan_id}.png").exists()
-    assert (settings.upload_dir / f"{rescued_id}.png").is_file()
+    assert not (settings.upload_dir() / f"{orphan_id}.png").exists()
+    assert (settings.upload_dir() / f"{rescued_id}.png").is_file()
 
     # 幂等：没有待删除附件时再跑一次是空操作。
     assert (await cleanup_once(client)).scanned == 0
@@ -592,7 +614,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
 
     # 把上传时间挪到保护期之外后，才是批量清理的候选。
     for file_id in free_ids:
-        await backdate_upload(file_id, file_service.ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
+        await backdate_upload(file_id, ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
 
     response = await client.post(
         "/api/v1/files/images/attachments/delete-unreferenced", headers=admin_headers
@@ -609,7 +631,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
     assert used is not None and used.deleted_at is None
     assert all(item is not None and item.deleted_at is not None for item in free)
     for file_id in [used_id, *free_ids]:
-        assert (settings.upload_dir / f"{file_id}.png").is_file()
+        assert (settings.upload_dir() / f"{file_id}.png").is_file()
 
     # 再次执行不会重复计数（已软删除的不再是候选）。
     again = await client.post(
@@ -629,7 +651,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
         for file_id in free_ids:
             item = await session.get(FileObject, file_id)
             assert item is not None
-            item.deleted_at = utcnow() - timedelta(days=file_service.ATTACHMENT_RETENTION_DAYS + 1)
+            item.deleted_at = utcnow() - timedelta(days=ATTACHMENT_RETENTION_DAYS + 1)
         await session.commit()
     result = await cleanup_once(client)
     assert sorted(result.purged_file_ids) == sorted(free_ids)
@@ -637,7 +659,7 @@ async def test_delete_unreferenced_soft_deletes_only_unreferenced(client: AsyncC
         assert await session.get(FileObject, used_id) is not None
         for file_id in free_ids:
             assert await session.get(FileObject, file_id) is None
-    assert (settings.upload_dir / f"{used_id}.png").is_file()
+    assert (settings.upload_dir() / f"{used_id}.png").is_file()
 
 
 @pytest.mark.asyncio
@@ -652,11 +674,10 @@ async def test_manual_physical_purge_endpoint_is_gone(client: AsyncClient) -> No
 
 @pytest.mark.asyncio
 async def test_large_upload_records_source_fingerprint_for_dedup(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient
 ) -> None:
     """大于阈值的图片：记原始字节摘要 + 中间片段窗口摘要，且磁盘上仍只有重编码后的 PNG。"""
-    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
-    await go_file_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
+    await file_service_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
     headers = await auth_headers(client, "warehouse")
     raw = noisy_png()
     file_id = await upload_bytes(client, headers, raw)
@@ -677,7 +698,7 @@ async def test_large_upload_records_source_fingerprint_for_dedup(
         assert offset + length <= len(raw) - len(raw) // 4
         assert window["sha256"] == hashlib.sha256(raw[offset : offset + length]).hexdigest()
     # 只留摘要不留原文：磁盘上只有一张重编码的 PNG
-    assert [path.name for path in settings.upload_dir.iterdir()] == [f"{file_id}.png"]
+    assert [path.name for path in settings.upload_dir().iterdir()] == [f"{file_id}.png"]
 
 
 @pytest.mark.asyncio
@@ -695,11 +716,10 @@ async def test_small_upload_records_no_fingerprint(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_dedup_check_returns_reusable_file_and_middle_slice(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient
 ) -> None:
     """摘要命中：返回可复用文件 + 一段中间片段的挑战材料（客户端据此本地二次校验）。"""
-    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
-    await go_file_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
+    await file_service_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
     headers = await auth_headers(client, "warehouse")
     raw = noisy_png()
     file_id = await upload_bytes(client, headers, raw)
@@ -713,7 +733,7 @@ async def test_dedup_check_returns_reusable_file_and_middle_slice(
     assert body["file"]["mime_type"] == "image/png"
     offset, length = body["offset"], body["length"]
     # 窗口长度取「64 KiB」与「文件 1/4」中较小者（测试里阈值调小，图片不到 4×64 KiB）
-    assert length == min(file_service.PROBE_WINDOW_BYTES, len(raw) // 4)
+    assert length == min(PROBE_WINDOW_BYTES, len(raw) // 4)
     assert len(raw) // 4 <= offset
     assert offset + length <= len(raw) - len(raw) // 4
     assert body["slice_sha256"] == hashlib.sha256(raw[offset : offset + length]).hexdigest()
@@ -723,8 +743,7 @@ async def test_dedup_check_returns_reusable_file_and_middle_slice(
         item = await session.get(FileObject, file_id)
     assert item is not None and item.source_probes is not None
     last = item.source_probes["windows"][-1]
-    monkeypatch.setattr(file_service.secrets, "choice", lambda candidates: candidates[-1])
-    await go_file_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD, choose_last=True)
+    await file_service_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD, choose_last=True)
     again = await digest_check(client, headers, sha256=digest.upper(), size_bytes=len(raw))
     assert again.status_code == 200, again.text
     assert again.json()["offset"] == last["offset"]
@@ -734,11 +753,10 @@ async def test_dedup_check_returns_reusable_file_and_middle_slice(
 
 @pytest.mark.asyncio
 async def test_dedup_check_misses_unknown_digest_or_size(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient
 ) -> None:
     """摘要不存在、字节数对不上：都算未命中（客户端退回正常上传），不报错也不返回 404。"""
-    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
-    await go_file_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
+    await file_service_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
     headers = await auth_headers(client, "warehouse")
     raw = noisy_png()
     await upload_bytes(client, headers, raw)
@@ -761,11 +779,10 @@ async def test_dedup_check_misses_unknown_digest_or_size(
 
 @pytest.mark.asyncio
 async def test_dedup_check_skips_deleted_or_missing_files(
-    client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+    client: AsyncClient
 ) -> None:
     """已软删除、磁盘文件缺失的行都不能复用（复用回去的图片会打不开）。"""
-    monkeypatch.setattr(file_service, "DEDUP_MIN_BYTES", SMALL_DEDUP_THRESHOLD)
-    await go_file_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
+    await file_service_tuning(client, dedup_min_bytes=SMALL_DEDUP_THRESHOLD)
     headers = await auth_headers(client, "warehouse")
 
     deleted_raw = noisy_png()
@@ -780,7 +797,7 @@ async def test_dedup_check_skips_deleted_or_missing_files(
 
     other_raw = noisy_png(width=80, height=80)
     missing_id = await upload_bytes(client, headers, other_raw, name="missing.png")
-    (settings.upload_dir / f"{missing_id}.png").unlink()
+    (settings.upload_dir() / f"{missing_id}.png").unlink()
     missing = await digest_check(
         client, headers, sha256=hashlib.sha256(other_raw).hexdigest(), size_bytes=len(other_raw)
     )
@@ -811,7 +828,7 @@ async def test_dedup_check_validates_payload(client: AsyncClient) -> None:
     for payload in (
         {"sha256": "not-a-digest", "size_bytes": 1024},
         {"sha256": "a" * 64, "size_bytes": 0},
-        {"sha256": "a" * 64, "size_bytes": settings.max_image_bytes + 1},
+        {"sha256": "a" * 64, "size_bytes": MAX_IMAGE_BYTES + 1},
     ):
         response = await client.post(
             "/api/v1/files/images/dedup-check", headers=headers, json=payload
@@ -836,7 +853,7 @@ async def test_unreferenced_preview_lists_would_be_deleted_attachments(client: A
     admin_headers = await auth_headers(client, "admin")
     fresh_id = await upload_png(client, headers, name="preview-fresh.png", color="green")
     old_id = await upload_png(client, headers, name="preview-old.png", color="red")
-    await backdate_upload(old_id, file_service.ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
+    await backdate_upload(old_id, ATTACHMENT_UNREFERENCED_MIN_AGE_DAYS + 1)
 
     preview = await client.get(
         "/api/v1/files/images/attachments/delete-unreferenced/preview", headers=admin_headers

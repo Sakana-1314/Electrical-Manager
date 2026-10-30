@@ -1,9 +1,8 @@
-"""Go 黑盒契约测试专用：本地上游桩服务（替代 Python 用例里对 httpx 客户端的 monkeypatch）。
+"""本地上游桩服务：替被测服务扮演外部上游（AI 搜索、飞书 / 钉钉 Webhook、微信接口）。
 
-只在设置了 GO_SERVER_URL 时使用：桩服务把收到的请求还原成 `httpx.Request`（URL 主机取自 Host 头，
-即 Go 服务改投前的原始上游，如 open.feishu.cn），交给用例原有的 handler，再把返回的
-`httpx.Response` 写回。Go 服务通过仅在 APP_TEST_HOOKS=1 时注册的 `/__test__/<kind>/upstream`
-钩子把对应上游（`ai-search` / `webhook`）改投到桩服务。
+桩服务把收到的请求还原成 `httpx.Request`（URL 主机取自 Host 头，即服务改投前的原始上游，
+如 open.feishu.cn），交给用例给的 handler，再把返回的 `httpx.Response` 写回。服务通过仅在
+APP_TEST_HOOKS=1 时注册的 `/__test__/<kind>/upstream` 钩子把对应上游改投到桩服务。
 """
 
 from __future__ import annotations
@@ -111,7 +110,7 @@ async def go_upstream(client: AsyncClient) -> AsyncIterator[StartUpstream]:
 
 
 async def deliver_pending_once(client: AsyncClient) -> bool:
-    """等价 `await webhook_service.deliver_pending_once()`：让 Go 服务投递一条。"""
+    """测试钩子：让服务投递一条待发送的 Webhook，返回是否投递了。"""
     response = await client.post("/__test__/webhook/deliver-once")
     assert response.status_code == 200, response.text
     return bool(response.json()["delivered"])
@@ -157,7 +156,7 @@ def wechat_handler(
 @pytest_asyncio.fixture
 async def go_wechat(client: AsyncClient) -> AsyncIterator[StartWechat]:
     """返回 `start(exchange=..., material_code=...)`：启动微信接口桩，并通过
-    `/api/v1/__test__/mini-program/upstream` 让 Go 服务改投；用例结束时恢复并关闭桩服务。"""
+    `/api/v1/__test__/mini-program/upstream` 让服务改投；用例结束时恢复并关闭桩服务。"""
     started: list[UpstreamStub] = []
 
     async def start(

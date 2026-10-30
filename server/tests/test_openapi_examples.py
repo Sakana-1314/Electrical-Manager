@@ -11,21 +11,27 @@
 3. 带 `enum` 的字段（含 `$ref` 指向的枚举）取值必须落在枚举里；
 4. 分页 schema 的 `total` 必须等于 `items` 长度，且不超过 `page_size`；
 5. 出入库明细的 `before_qty ± quantity == after_qty`；
-6. 每个 JSON 响应都有示例，且错误响应用的是真实错误码与对应文案。
+6. 每个 JSON 响应都有示例，且错误响应用的是真实错误码与对应文案；
+7. 契约没有缺失示例（`scripts/openapi_examples.py --check` 通过），且补示例脚本读入再写出
+   逐字节不变（不会重排手工维护的契约）。
+
+只读 `docs/openapi.yaml`，不依赖被测服务。
 """
 
 from __future__ import annotations
 
+import copy
 import re
 from decimal import Decimal
+from functools import cache
 from typing import Any
 
-from app.main import app
 from scripts.openapi_examples import (
     _ERROR_BY_STATUS,
-    add_examples,
-    add_response_examples,
-    resolve_refs,
+    OPENAPI_PATH,
+    dump_document,
+    fill_missing_examples,
+    load_document,
 )
 
 PLACEHOLDER_SUFFIX = "-示例"
@@ -37,12 +43,9 @@ OPERATION_TYPES = {"INBOUND": Decimal(1), "OUTBOUND": Decimal(-1)}
 OPERATION_METHODS = ("get", "post", "put", "patch", "delete")
 
 
+@cache
 def _document() -> dict[str, Any]:
-    document = app.openapi()
-    add_examples(document)
-    resolve_refs(document)
-    add_response_examples(document)
-    return document
+    return load_document()
 
 
 def _json_responses() -> list[tuple[str, str, str, dict[str, Any]]]:
@@ -243,3 +246,14 @@ def test_uuid_fields_use_a_valid_uuid() -> None:
     walk(document["components"]["schemas"], "schemas")
     walk(document["paths"], "paths")
     assert offenders == []
+
+
+def test_contract_has_no_missing_examples() -> None:
+    """补示例脚本在契约上无事可做：新增的 schema / 响应都已登记示例。"""
+    schemas, responses = fill_missing_examples(copy.deepcopy(_document()))
+    assert (schemas, responses) == ([], 0)
+
+
+def test_example_script_round_trips_contract_unchanged() -> None:
+    """补示例脚本写回契约时用的 YAML 写法与现有文件一致，不会重排手工维护的内容。"""
+    assert dump_document(load_document()) == OPENAPI_PATH.read_text(encoding="utf-8")

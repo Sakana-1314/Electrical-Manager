@@ -1,19 +1,22 @@
-from __future__ import annotations
+"""凌晨清理已转入申购记录的计划：记录自包含快照，删除计划后记录仍可读。
 
-from datetime import datetime, timedelta, timezone
+调度时刻（凌晨 2 点）与批量大小常量的单测在 Go 侧：
+internal/service/plancleanup/plancleanup_test.go。
+"""
+
+from __future__ import annotations
 
 import pytest
 from httpx import AsyncClient
 
-from app.core.constants import SHANGHAI
-from app.models import PurchaseMaterial, PurchaseRequestLine
-from app.services import purchase_plan_cleanup_service
 from tests.conftest import auth_headers, project_session
 from tests.integration.test_procurement import (
     cleanup_moved_plans_once,
     create_purchase_plan,
     move_to_record,
 )
+from tests.testkit.constants import PLAN_CLEANUP_BATCH_SIZE
+from tests.testkit.models import PurchaseMaterial, PurchaseRequestLine
 
 
 @pytest.mark.asyncio
@@ -52,7 +55,7 @@ async def test_cleanup_is_idempotent(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_cleanup_skips_unmigrated_snapshot(client: AsyncClient) -> None:
-    """迁移护栏：plan_no_snapshot 为 NULL（未回填）的计划不被清理。"""
+    """迁移护栏：plan_no_snapshot 为空（未回填）的计划不被清理。"""
     headers = await auth_headers(client, "purchase")
     plan = await create_purchase_plan(client, headers, "未迁移计划", code="DQ-NOMIG-1")
     record = await move_to_record(client, headers, int(plan["id"]))
@@ -72,7 +75,7 @@ async def test_cleanup_skips_unmigrated_snapshot(client: AsyncClient) -> None:
 async def test_cleanup_batches_over_limit(client: AsyncClient) -> None:
     headers = await auth_headers(client, "purchase")
     plan_ids: list[int] = []
-    for index in range(purchase_plan_cleanup_service._BATCH_SIZE + 5):
+    for index in range(PLAN_CLEANUP_BATCH_SIZE + 5):
         plan = await create_purchase_plan(
             client, headers, f"批量清理{index}", code=f"DQ-BATCH-{index:02d}"
         )
@@ -82,19 +85,5 @@ async def test_cleanup_batches_over_limit(client: AsyncClient) -> None:
     total_deleted = 0
     while (deleted := await cleanup_moved_plans_once(client)) > 0:
         total_deleted += deleted
-        assert deleted <= purchase_plan_cleanup_service._BATCH_SIZE
+        assert deleted <= PLAN_CLEANUP_BATCH_SIZE
     assert total_deleted == len(plan_ids)
-
-
-def test_seconds_until_two_am() -> None:
-    shanghai = timezone(timedelta(hours=8))
-    before = datetime(2026, 8, 10, 1, 30, 0, tzinfo=shanghai)
-    assert purchase_plan_cleanup_service._seconds_until_two_am(before) == 1800.0
-    at_two = datetime(2026, 8, 10, 2, 0, 0, tzinfo=shanghai)
-    assert purchase_plan_cleanup_service._seconds_until_two_am(at_two) == 86400.0
-    after = datetime(2026, 8, 10, 14, 0, 0, tzinfo=shanghai)
-    assert purchase_plan_cleanup_service._seconds_until_two_am(after) == 43200.0
-
-
-def test_shanghai_constant() -> None:
-    assert SHANGHAI == timezone(timedelta(hours=8))

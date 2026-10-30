@@ -2,23 +2,20 @@ from __future__ import annotations
 
 from datetime import timedelta
 from io import BytesIO
-from pathlib import Path
 
 import pytest
 from httpx import AsyncClient
 from openpyxl import Workbook
 from sqlalchemy import select
 
-from app.core.errors import AppError
-from app.domain.enums import ExcelImportJobStatus
-from app.models import ExcelImportJob
-from app.services import import_job_service
-from app.services.common import utcnow
-from tests.conftest import GO_SERVER_URL, auth_headers, project_session
+from tests.conftest import auth_headers, project_session
+from tests.testkit.constants import utcnow
+from tests.testkit.enums import ExcelImportJobStatus
+from tests.testkit.models import ExcelImportJob
 
 
-async def _go_hook(client: AsyncClient, name: str, body: dict | None = None) -> dict:
-    """Go 契约测试：后台函数无法在进程内直接调用，改走 APP_TEST_HOOKS 测试钩子。"""
+async def _test_hook(client: AsyncClient, name: str, body: dict | None = None) -> dict:
+    """后台任务函数通过测试钩子（APP_TEST_HOOKS=1 时注册）触发。"""
     response = await client.post(f"/api/v1/__test__/import-jobs/{name}", json=body or {})
     assert response.status_code == 200, response.text
     return response.json()
@@ -80,10 +77,7 @@ async def test_mark_stale_jobs_failed_marks_interrupted_and_unlinks(
             )
         await session.commit()
 
-    if GO_SERVER_URL:
-        count = (await _go_hook(client, "mark-stale"))["count"]
-    else:
-        count = await import_job_service.mark_stale_jobs_failed()
+    count = (await _test_hook(client, "mark-stale"))["count"]
 
     assert count == 2
     async with project_session() as session:
@@ -133,10 +127,7 @@ async def test_cleanup_finished_jobs_deletes_only_old_terminal_rows(
         session.add_all([old_finished, recent_finished, running])
         await session.commit()
 
-    if GO_SERVER_URL:
-        count = (await _go_hook(client, "cleanup", {"retention_days": 30}))["count"]
-    else:
-        count = await import_job_service.cleanup_finished_jobs(retention_days=30)
+    count = (await _test_hook(client, "cleanup", {"retention_days": 30}))["count"]
 
     assert count == 1
     async with project_session() as session:
@@ -176,19 +167,13 @@ async def test_run_job_success_marks_succeeded(client: AsyncClient, tmp_path) ->
     target = tmp_path / "job.xlsx"
     target.write_bytes(b"x")
 
-    async def ok_processor(file_path: Path) -> dict[str, object]:
-        assert file_path == target
-        return {"imported_count": 7}
-
     job_id = await _insert_job(
         import_type="UNIT", status=ExcelImportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(
-            client, "run", {"job_id": job_id, "processor": "ok", "result": {"imported_count": 7}}
-        )
-    else:
-        await import_job_service._run_job(job_id, ok_processor)
+    # 测试钩子用指定的处理器跑一次任务：ok 返回给定结果，app_error / crash 模拟两类失败。
+    await _test_hook(
+        client, "run", {"job_id": job_id, "processor": "ok", "result": {"imported_count": 7}}
+    )
 
     async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)
@@ -204,16 +189,11 @@ async def test_run_job_app_error_marks_failed(client: AsyncClient, tmp_path) -> 
     target = tmp_path / "job.xlsx"
     target.write_bytes(b"x")
 
-    async def failing_processor(file_path: Path) -> dict[str, object]:
-        raise AppError("TEST_APP_ERROR", "模拟解析失败")
-
     job_id = await _insert_job(
         import_type="UNIT", status=ExcelImportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(client, "run", {"job_id": job_id, "processor": "app_error"})
-    else:
-        await import_job_service._run_job(job_id, failing_processor)
+    # 处理器抛业务错误 TEST_APP_ERROR「模拟解析失败」
+    await _test_hook(client, "run", {"job_id": job_id, "processor": "app_error"})
 
     async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)
@@ -229,16 +209,11 @@ async def test_run_job_unexpected_error_marks_failed(client: AsyncClient, tmp_pa
     target = tmp_path / "job.xlsx"
     target.write_bytes(b"x")
 
-    async def crashing_processor(file_path: Path) -> dict[str, object]:
-        raise RuntimeError("boom")
-
     job_id = await _insert_job(
         import_type="UNIT", status=ExcelImportJobStatus.PENDING, file_path=str(target)
     )
-    if GO_SERVER_URL:
-        await _go_hook(client, "run", {"job_id": job_id, "processor": "crash"})
-    else:
-        await import_job_service._run_job(job_id, crashing_processor)
+    # 处理器发生未预期的异常
+    await _test_hook(client, "run", {"job_id": job_id, "processor": "crash"})
 
     async with project_session() as session:
         job = await session.get(ExcelImportJob, job_id)

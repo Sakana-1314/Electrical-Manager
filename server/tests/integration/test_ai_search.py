@@ -1,75 +1,35 @@
 from __future__ import annotations
 
+import asyncio
+import json
 from typing import Any
 
 import httpx
 import pytest
 from httpx import AsyncClient
-from pytest import MonkeyPatch
 from sqlalchemy import select
 
-from app.models import BusinessEventLog, SystemSetting
-from app.services import ai_search_service
-from tests.conftest import GO_SERVER_URL, auth_headers, project_session
-from tests.go_upstream import StartUpstream, go_upstream  # noqa: F401  (GO_SERVER_URL 下的上游桩)
+from tests.conftest import auth_headers, project_session
+from tests.go_upstream import StartUpstream, go_upstream  # noqa: F401  （go_upstream 是 fixture）
 from tests.integration.test_procurement import create_purchase_plan, move_to_record
+from tests.testkit.constants import utcnow
+from tests.testkit.models import BusinessEventLog, SystemSetting
+from tests.testkit.security import encrypt_secret
 
-
-class FakeResponse:
-    def raise_for_status(self) -> None:
-        return None
-
-    def json(self) -> dict[str, Any]:
-        return {
-            "choices": [
-                {"message": {"content": '{"expansions":[["电机","电动机"]]}'}}
-            ]
+# AI 上游桩返回的内容
+AI_EXPANSION_RESPONSE: dict[str, Any] = {
+    "choices": [{"message": {"content": '{"expansions":[["电机","电动机"]]}'}}]
+}
+GLM_RESPONSE: dict[str, Any] = {
+    "choices": [
+        {
+            "message": {
+                "reasoning_content": "需要为电机补充常用规范名称。",
+                "content": '输出如下：\n{"expansions":["电机","电动机"]}',
+            }
         }
-
-
-class FakeAiClient:
-    async def post(self, *_args: object, **_kwargs: object) -> FakeResponse:
-        return FakeResponse()
-
-    async def aclose(self) -> None:
-        return None
-
-
-class TimeoutAiClient:
-    async def post(self, *_args: object, **_kwargs: object) -> FakeResponse:
-        request = httpx.Request("POST", "https://example.test/v1/chat/completions")
-        raise httpx.ReadTimeout("timed out", request=request)
-
-    async def aclose(self) -> None:
-        return None
-
-
-class GlmResponse:
-    def raise_for_status(self) -> None:
-        return None
-
-    def json(self) -> dict[str, Any]:
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "reasoning_content": "需要为电机补充常用规范名称。",
-                        "content": '输出如下：\n{"expansions":["电机","电动机"]}',
-                    }
-                }
-            ]
-        }
-
-
-class GlmAiClient:
-    request_json: dict[str, Any] | None = None
-
-    async def post(self, *_args: object, **kwargs: object) -> GlmResponse:
-        self.request_json = kwargs.get("json") if isinstance(kwargs.get("json"), dict) else None
-        return GlmResponse()
-
-    async def aclose(self) -> None:
-        return None
+    ]
+}
 
 
 # 后台主 tab 可见性的默认值：8 个主 tab 全显示（系统管理不参与开关）。
@@ -194,17 +154,14 @@ async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypte
 
 @pytest.mark.asyncio
 async def test_ai_expansion_applies_to_plans_and_records(
-    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
+    client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
     purchase = await auth_headers(client, "purchase")
-    if GO_SERVER_URL:
-        # Go 服务：AI 上游改投到本地桩服务，返回与 FakeAiClient 相同的内容。
-        await go_upstream(
-            "ai-search", lambda _request: httpx.Response(200, json=FakeResponse().json())
-        )
-    else:
-        monkeypatch.setattr(ai_search_service, "_client", FakeAiClient())
+    # AI 上游改投到本地桩服务。
+    await go_upstream(
+        "ai-search", lambda _request: httpx.Response(200, json=AI_EXPANSION_RESPONSE)
+    )
 
     configured = await client.put(
         "/api/v1/ai-search/settings",
@@ -262,20 +219,16 @@ async def test_ai_expansion_applies_to_plans_and_records(
 
 @pytest.mark.asyncio
 async def test_ai_response_timeout_returns_specific_bad_request(
-    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
+    client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
-    if GO_SERVER_URL:
-        # Go 服务：桩服务迟迟不返回；实际等待缩短为 0.3 秒（文案与 details 仍按 30 秒）。
-        async def slow_handler(_request: httpx.Request) -> httpx.Response:
-            import asyncio
 
-            await asyncio.sleep(2)
-            return httpx.Response(200, json=FakeResponse().json())
+    # 桩服务迟迟不返回；实际等待缩短为 0.3 秒（文案与 details 仍按 30 秒）。
+    async def slow_handler(_request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(2)
+        return httpx.Response(200, json=AI_EXPANSION_RESPONSE)
 
-        await go_upstream("ai-search", slow_handler, response_timeout_seconds=0.3)
-    else:
-        monkeypatch.setattr(ai_search_service, "_client", TimeoutAiClient())
+    await go_upstream("ai-search", slow_handler, response_timeout_seconds=0.3)
 
     response = await client.post(
         "/api/v1/ai-search/settings/test",
@@ -297,19 +250,17 @@ async def test_ai_response_timeout_returns_specific_bad_request(
 
 @pytest.mark.asyncio
 async def test_glm_models_disable_thinking_and_request_json_output(
-    client: AsyncClient, monkeypatch: MonkeyPatch, go_upstream: StartUpstream
+    client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
     admin = await auth_headers(client, "admin")
-    glm_client = GlmAiClient()
-    if GO_SERVER_URL:
-        # Go 服务：桩服务返回 GlmResponse，并记录 Go 发出的请求体。
-        def glm_handler(request: httpx.Request) -> httpx.Response:
-            glm_client.request_json = __import__("json").loads(request.content)
-            return httpx.Response(200, json=GlmResponse().json())
+    sent: list[dict[str, Any]] = []
 
-        await go_upstream("ai-search", glm_handler)
-    else:
-        monkeypatch.setattr(ai_search_service, "_client", glm_client)
+    # 桩服务返回 GLM 风格的响应，并记录服务端发出的请求体。
+    def glm_handler(request: httpx.Request) -> httpx.Response:
+        sent.append(json.loads(request.content))
+        return httpx.Response(200, json=GLM_RESPONSE)
+
+    await go_upstream("ai-search", glm_handler)
 
     response = await client.post(
         "/api/v1/ai-search/settings/test",
@@ -322,13 +273,14 @@ async def test_glm_models_disable_thinking_and_request_json_output(
     )
     assert response.status_code == 200, response.text
     assert response.json()["expanded"] == "电机|电动机"
-    assert glm_client.request_json is not None
-    assert glm_client.request_json["thinking"] == {"type": "disabled"}
-    assert glm_client.request_json["response_format"] == {"type": "json_object"}
-    assert glm_client.request_json["stream"] is False
-    assert glm_client.request_json["messages"][0]["role"] == "system"
-    assert "仅包含 1 个子数组" in glm_client.request_json["messages"][0]["content"]
-    assert glm_client.request_json["messages"][1] == {
+    assert len(sent) == 1
+    request_json = sent[0]
+    assert request_json["thinking"] == {"type": "disabled"}
+    assert request_json["response_format"] == {"type": "json_object"}
+    assert request_json["stream"] is False
+    assert request_json["messages"][0]["role"] == "system"
+    assert "仅包含 1 个子数组" in request_json["messages"][0]["content"]
+    assert request_json["messages"][1] == {
         "role": "user",
         "content": '{"input_terms": ["电机"]}',
     }
@@ -350,12 +302,10 @@ async def test_setting_migrates_from_event_log_to_system_setting_table(
                 business_type="SYSTEM_SETTING",
                 business_id=1,
                 action="AI_SEARCH_CONFIG_UPDATED",
-                occurred_at=ai_search_service.utcnow(),
+                occurred_at=utcnow(),
                 after_data={
                     "endpoint": "https://legacy.test/v1",
-                    "api_key_encrypted": (
-                        ai_search_service._encrypt_api_key("legacy-key")
-                    ),
+                    "api_key_encrypted": encrypt_secret("legacy-key"),
                     "model": "legacy-model",
                     "enabled": True,
                     "mini_program_code_env": "release",
