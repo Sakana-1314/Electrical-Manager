@@ -475,6 +475,13 @@ func RenderPreview(path string, size int) ([]byte, error) {
 }
 
 func renderPreview(path string, size int) ([]byte, error) {
+	// 附件 PNG 优先流式缩放（内存与原图尺寸无关）；不适用时退回整图解码。
+	if img, ok, err := streamThumbnail(path, size); ok {
+		if err != nil {
+			return nil, err
+		}
+		return encodeWebP(img)
+	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err

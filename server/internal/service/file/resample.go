@@ -135,17 +135,22 @@ func (r *raster) clone() *raster {
 // premultiply 等价 Pillow rgba2rgbA。
 func premultiply(im *raster) *raster {
 	out := &raster{w: im.w, h: im.h, alpha: false, pix: make([]byte, len(im.pix))}
-	for i := 0; i < len(im.pix); i += 4 {
-		a := uint32(im.pix[i+3])
-		out.pix[i] = uint8(muldiv255(uint32(im.pix[i]), a))
-		out.pix[i+1] = uint8(muldiv255(uint32(im.pix[i+1]), a))
-		out.pix[i+2] = uint8(muldiv255(uint32(im.pix[i+2]), a))
-		out.pix[i+3] = uint8(a)
-	}
+	premultiplyRow(out.pix, im.pix)
 	// 预乘图按 4 通道参与卷积（含 alpha）：标记为 alpha 以保留第 4 通道。
 	out.alpha = false
 	out.keep4 = true
 	return out
+}
+
+// premultiplyRow 把 RGBA 像素预乘到 dst（dst 可以与 src 是同一块内存）。
+func premultiplyRow(dst, src []byte) {
+	for i := 0; i+3 < len(src); i += 4 {
+		a := uint32(src[i+3])
+		dst[i] = uint8(muldiv255(uint32(src[i]), a))
+		dst[i+1] = uint8(muldiv255(uint32(src[i+1]), a))
+		dst[i+2] = uint8(muldiv255(uint32(src[i+2]), a))
+		dst[i+3] = uint8(a)
+	}
 }
 
 // unpremultiply 等价 Pillow rgbA2rgba。
@@ -187,46 +192,41 @@ func reduceImage(im *raster, fx, fy int, box [4]int) *raster {
 	ow, oh := (bw+fx-1)/fx, (bh+fy-1)/fy
 	out := &raster{w: ow, h: oh, alpha: im.alpha, keep4: im.keep4, pix: make([]byte, ow*oh*4)}
 	channels := im.channels()
-	block := func(ox, oy, x0, y0, xs, ys int) {
+	stride := im.w * 4
+	for oy := 0; oy < oh; oy++ {
+		y0 := by + oy*fy
+		ys := min(fy, by+bh-y0)
+		reduceBand(out.pix[oy*ow*4:(oy+1)*ow*4], im.pix[y0*stride:], stride, bx, bw, fx, ys, channels)
+	}
+	return out
+}
+
+// reduceBand 把 ys 行（band 起始于第一行，行跨度 stride）按 fx 列一组做盒式平均，写出一行结果。
+// 右侧不足 fx 的列与底部不足 fy 的行（ys < fy）同样按实际像素数平均（ImagingReduceCorners）。
+func reduceBand(dst, band []byte, stride, bx, bw, fx, ys, channels int) {
+	ow := (bw + fx - 1) / fx
+	for ox := 0; ox < ow; ox++ {
+		x0 := bx + ox*fx
+		xs := min(fx, bx+bw-x0)
 		n := xs * ys
 		mult := divisionUint32(n)
 		amend := uint32(n / 2)
+		o := dst[ox*4 : ox*4+4]
 		for c := 0; c < 4; c++ {
 			if c >= channels {
-				out.pix[(oy*ow+ox)*4+c] = 255
+				o[c] = 255
 				continue
 			}
 			ss := amend
-			for y := y0; y < y0+ys; y++ {
-				row := y * im.w * 4
+			for y := 0; y < ys; y++ {
+				row := band[y*stride:]
 				for x := x0; x < x0+xs; x++ {
-					ss += uint32(im.pix[row+x*4+c])
+					ss += uint32(row[x*4+c])
 				}
 			}
-			out.pix[(oy*ow+ox)*4+c] = quantize(ss, mult)
+			o[c] = quantize(ss, mult)
 		}
 	}
-	fullW, fullH := bw/fx, bh/fy
-	for oy := 0; oy < fullH; oy++ {
-		for ox := 0; ox < fullW; ox++ {
-			block(ox, oy, bx+ox*fx, by+oy*fy, fx, fy)
-		}
-	}
-	// ImagingReduceCorners：右侧不足一格的列、底部不足一格的行与右下角。
-	if rx := bw % fx; rx != 0 {
-		for oy := 0; oy < fullH; oy++ {
-			block(fullW, oy, bx+fullW*fx, by+oy*fy, rx, fy)
-		}
-	}
-	if ry := bh % fy; ry != 0 {
-		for ox := 0; ox < fullW; ox++ {
-			block(ox, fullH, bx+ox*fx, by+fullH*fy, fx, ry)
-		}
-	}
-	if rx, ry := bw%fx, bh%fy; rx != 0 && ry != 0 {
-		block(fullW, fullH, bx+fullW*fx, by+fullH*fy, rx, ry)
-	}
-	return out
 }
 
 // ---------------- ImagingResample（Lanczos，8 位） ----------------
@@ -356,34 +356,38 @@ func resampleInner(im *raster, xsize, ysize int, box [4]float32) *raster {
 func resampleHorizontal(im *raster, xsize, ysize, offset int, c coeffs) *raster {
 	out := &raster{w: xsize, h: ysize, alpha: im.alpha, keep4: im.keep4, pix: make([]byte, xsize*ysize*4)}
 	channels := im.channels()
-	half := int64(1) << (precisionBits - 1)
 	for yy := 0; yy < ysize; yy++ {
-		row := im.pix[(yy+offset)*im.w*4:]
-		for xx := 0; xx < xsize; xx++ {
-			xmin, xmax := c.bounds[xx*2], c.bounds[xx*2+1]
-			k := c.kk[xx*c.ksize:]
-			var ss [4]int64
-			for ch := range ss {
-				ss[ch] = half
-			}
-			for x := 0; x < xmax; x++ {
-				p := row[(x+xmin)*4:]
-				kv := int64(k[x])
-				ss[0] += int64(p[0]) * kv
-				ss[1] += int64(p[1]) * kv
-				ss[2] += int64(p[2]) * kv
-				ss[3] += int64(p[3]) * kv
-			}
-			o := out.pix[(yy*xsize+xx)*4:]
-			o[0], o[1], o[2] = clip8(ss[0]), clip8(ss[1]), clip8(ss[2])
-			if channels == 4 {
-				o[3] = clip8(ss[3])
-			} else {
-				o[3] = 255
-			}
-		}
+		resampleRow(out.pix[yy*xsize*4:(yy+1)*xsize*4], im.pix[(yy+offset)*im.w*4:], xsize, c, channels)
 	}
 	return out
+}
+
+// resampleRow 是水平方向的 Lanczos 卷积：一行输入 → 一行 xsize 像素（整图与流式缩略图共用）。
+func resampleRow(dst, row []byte, xsize int, c coeffs, channels int) {
+	half := int64(1) << (precisionBits - 1)
+	for xx := 0; xx < xsize; xx++ {
+		xmin, xmax := c.bounds[xx*2], c.bounds[xx*2+1]
+		k := c.kk[xx*c.ksize:]
+		var ss [4]int64
+		for ch := range ss {
+			ss[ch] = half
+		}
+		for x := 0; x < xmax; x++ {
+			p := row[(x+xmin)*4:]
+			kv := int64(k[x])
+			ss[0] += int64(p[0]) * kv
+			ss[1] += int64(p[1]) * kv
+			ss[2] += int64(p[2]) * kv
+			ss[3] += int64(p[3]) * kv
+		}
+		o := dst[xx*4:]
+		o[0], o[1], o[2] = clip8(ss[0]), clip8(ss[1]), clip8(ss[2])
+		if channels == 4 {
+			o[3] = clip8(ss[3])
+		} else {
+			o[3] = 255
+		}
+	}
 }
 
 func resampleVertical(im *raster, ysize int, c coeffs) *raster {

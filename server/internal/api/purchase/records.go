@@ -3,6 +3,7 @@ package purchase
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
@@ -195,11 +196,12 @@ func recordExportProcessor(data schema.PurchaseRecordResultExportRequest) export
 		for i, key := range data.Columns {
 			columns[i] = excelexport.Column{Key: key, Label: recordResultHeaders[key]}
 		}
-		content, filename, err := excelexport.RenderResultExcel("申购记录导出", columns, rows)
-		if err != nil {
-			return nil, err
-		}
-		if err := excelexport.WriteExportFile(target, content); err != nil {
+		var filename string
+		if err := excelexport.WriteExportFileFrom(target, func(w io.Writer) error {
+			var err error
+			filename, err = excelexport.RenderResultExcelTo(w, "申购记录导出", columns, rows)
+			return err
+		}); err != nil {
 			return nil, err
 		}
 		return map[string]any{"download_filename": filename, "rows": len(rows), "image_count": imageCount(rows)}, nil
