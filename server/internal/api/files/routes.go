@@ -235,7 +235,7 @@ func readImage(c *web.Ctx) error {
 	}
 	headers := map[string]string{"Cache-Control": CacheControl}
 	if size != nil {
-		data, err := file.RenderPreview(path, int(*size))
+		data, err := file.RenderPreviewCached(fileID, path, int(*size))
 		if err != nil {
 			return err
 		}

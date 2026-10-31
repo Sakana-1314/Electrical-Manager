@@ -36,6 +36,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "无法初始化日志:", err)
 		os.Exit(1)
 	}
+	// 缩略图缓存是可选的加速目录：创建失败只告警，预览退化为每次渲染。
+	if err := os.MkdirAll(s.PreviewCacheDir, 0o755); err != nil {
+		slog.Warn("无法创建缩略图缓存目录，预览将不使用缓存", "dir", s.PreviewCacheDir, "error", err)
+	}
 	dsn, err := s.PostgresDSN()
 	if err != nil {
 		slog.Error(err.Error())

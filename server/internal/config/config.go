@@ -25,6 +25,8 @@ type Settings struct {
 	// 微信接口根地址（默认官方地址；测试可指向本地桩服务）。
 	WechatAPIBase              string
 	UploadDir                  string
+	PreviewCacheDir            string // 缩略图缓存目录，独立于 UploadDir，便于单独清理
+	PreviewConcurrency         int    // 同时渲染缩略图的上限，超出的请求排队等待
 	TemplateDir                string
 	LogDir                     string
 	LogBackupCount             int
@@ -69,6 +71,7 @@ func Load() (*Settings, error) {
 		WechatMiniProgramAppSecret: env("APP_WECHAT_MINI_PROGRAM_APP_SECRET", ""),
 		WechatAPIBase:              strings.TrimRight(env("APP_WECHAT_API_BASE", "https://api.weixin.qq.com"), "/"),
 		UploadDir:                  env("APP_UPLOAD_DIR", filepath.Join(base, "data", "uploads")),
+		PreviewCacheDir:            env("APP_PREVIEW_CACHE_DIR", filepath.Join(base, "data", "preview-cache")),
 		TemplateDir:                env("APP_TEMPLATE_DIR", filepath.Join(base, "templates")),
 		LogDir:                     env("APP_LOG_DIR", filepath.Join(base, "data", "logs")),
 		Host:                       env("APP_HOST", "0.0.0.0"),
@@ -94,6 +97,9 @@ func Load() (*Settings, error) {
 		return nil, err
 	}
 	s.MaxImageBytes = int64(maxImage)
+	if s.PreviewConcurrency, err = envInt("APP_PREVIEW_CONCURRENCY", 6, 1); err != nil {
+		return nil, err
+	}
 	if s.CORSAllowCredentials, err = envBool("APP_CORS_ALLOW_CREDENTIALS", true); err != nil {
 		return nil, err
 	}

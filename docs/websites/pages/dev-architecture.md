@@ -753,6 +753,8 @@ flowchart LR
 | `WechatMiniProgramAppSecret` | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | `string` | `""` | 同上，仅后端保存 |
 | `WechatAPIBase` | `APP_WECHAT_API_BASE` | `string` | `https://api.weixin.qq.com` | 微信接口根地址（去掉末尾 `/`），测试可指向本地桩服务 |
 | `UploadDir` | `APP_UPLOAD_DIR` | `string` | `<server>/data/uploads` | 启动时自动创建；图片、导入临时文件（`imports/`）与导出文件（`exports/`）根目录 |
+| `PreviewCacheDir` | `APP_PREVIEW_CACHE_DIR` | `string` | `<server>/data/preview-cache` | 缩略图缓存目录，独立于上传目录（可单独清理）；读写失败只告警，预览退化为每次渲染 |
+| `PreviewConcurrency` | `APP_PREVIEW_CONCURRENCY` | `int` | `6` | `≥1`；同时渲染缩略图的上限，超出的请求排队等待 |
 | `TemplateDir` | `APP_TEMPLATE_DIR` | `string` | `<server>/templates` | Excel 导出模板目录（`service/excelexport` 读取）；镜像内为 `/app/templates` |
 | `LogDir` | `APP_LOG_DIR` | `string` | `<server>/data/logs` | 日志目录 |
 | `LogBackupCount` | `APP_LOG_BACKUP_COUNT` | `int` | `90` | `≥1`，保留的历史日志文件数 |
@@ -780,6 +782,7 @@ flowchart LR
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 多个小程序按相同顺序逗号分隔 |
 | `APP_LOG_DIR` / `APP_LOG_BACKUP_COUNT` | `./data/logs` / `90` |
+| `APP_PREVIEW_CONCURRENCY` / `APP_PREVIEW_CACHE_DIR` | `6` / `./data/preview-cache` |
 模板未列出但代码支持的变量：`APP_FERNET_KEY`、`APP_CORS_ORIGINS`、`APP_UPLOAD_DIR`、`APP_TEMPLATE_DIR`、`APP_MAX_IMAGE_BYTES`、`APP_PURCHASE_PLAN_CLEANUP_ENABLED`、`APP_ATTACHMENT_CLEANUP_ENABLED`、`APP_APP_NAME`、`APP_JWT_ALGORITHM`、`APP_WECHAT_API_BASE`、`APP_HOST`、`APP_PORT`、`APP_BASE_DIR`、`APP_BUILD_TIME`、`APP_GIT_SHA`。
 `docker-compose.yml` 中后端服务的取值：
 
@@ -791,6 +794,7 @@ flowchart LR
 | `APP_ACCESS_TOKEN_MINUTES` | 默认 `480` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 默认空 |
 | `APP_UPLOAD_DIR` | `/app/data/uploads` |
+| `APP_PREVIEW_CACHE_DIR` | `/app/data/preview-cache` |
 | `APP_LOG_DIR` | `/app/data/logs` |
 | `BACKEND_PORT` / `FRONTEND_PORT`（主机侧） | `8000` / `8080` |
 
@@ -870,10 +874,10 @@ flowchart LR
 | 项 | 内容（`server/Dockerfile`、`docker-compose.yml`） |
 | --- | --- |
 | 构建阶段 | `golang:1.26-alpine`，`CGO_ENABLED=0`、`-trimpath`，先 `go mod download` 再 `go build -ldflags="-s -w" -o /out/server ./cmd/server`（构建上下文是 `server/` 自身） |
-| 运行阶段 | `alpine:3.22` + `ca-certificates`、`tzdata`，非 root 用户 `app`；`WORKDIR /app`，复制二进制 `/app/server` 与 `templates/` 到 `/app/templates`，创建 `/app/data/uploads`、`/app/data/logs` |
-| 环境与构建参数 | `ENV APP_BASE_DIR=/app`、`APP_TEMPLATE_DIR=/app/templates`、`APP_UPLOAD_DIR=/app/data/uploads`、`APP_LOG_DIR=/app/data/logs`；`ARG BUILD_TIME` / `ARG GIT_SHA` → `APP_BUILD_TIME` / `APP_GIT_SHA` |
+| 运行阶段 | `alpine:3.22` + `ca-certificates`、`tzdata`，非 root 用户 `app`；`WORKDIR /app`，复制二进制 `/app/server` 与 `templates/` 到 `/app/templates`，创建 `/app/data/uploads`、`/app/data/preview-cache`、`/app/data/logs` |
+| 环境与构建参数 | `ENV APP_BASE_DIR=/app`、`APP_TEMPLATE_DIR=/app/templates`、`APP_UPLOAD_DIR=/app/data/uploads`、`APP_PREVIEW_CACHE_DIR=/app/data/preview-cache`、`APP_LOG_DIR=/app/data/logs`；`ARG BUILD_TIME` / `ARG GIT_SHA` → `APP_BUILD_TIME` / `APP_GIT_SHA` |
 | 端口/启动 | `EXPOSE 8000`；`ENTRYPOINT ["/app/server"]`；`HEALTHCHECK` 执行 `/app/server healthcheck`（15s 间隔、5s 超时、10s 起始宽限、10 次重试） |
-| compose 后端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:server`，端口 `${BACKEND_PORT:-8000}:8000`，卷 `uploads:/app/data/uploads`、`logs:/app/data/logs`，健康检查 `["CMD", "/app/server", "healthcheck"]`（15s 间隔，30s 起始宽限） |
+| compose 后端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:server`，端口 `${BACKEND_PORT:-8000}:8000`，卷 `uploads:/app/data/uploads`、`preview-cache:/app/data/preview-cache`、`logs:/app/data/logs`，健康检查 `["CMD", "/app/server", "healthcheck"]`（15s 间隔，30s 起始宽限） |
 | compose 前端 | 镜像 `ghcr.io/sakana-1314/electrical-manager:web`，端口 `${FRONTEND_PORT:-8080}:80`，`depends_on: backend: service_healthy` |
 | 网络 | 外部网络 `1panel-network` |
 运行时依赖全部编译进二进制，镜像内不需要 Go 工具链；依赖清单见 `server/go.mod`。

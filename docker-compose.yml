@@ -12,9 +12,11 @@ services:
       APP_WECHAT_MINI_PROGRAM_APP_ID: ${APP_WECHAT_MINI_PROGRAM_APP_ID:-}
       APP_WECHAT_MINI_PROGRAM_APP_SECRET: ${APP_WECHAT_MINI_PROGRAM_APP_SECRET:-}
       APP_UPLOAD_DIR: /app/data/uploads
+      APP_PREVIEW_CACHE_DIR: /app/data/preview-cache
       APP_LOG_DIR: /app/data/logs
     volumes:
       - uploads:/app/data/uploads
+      - preview-cache:/app/data/preview-cache
       - logs:/app/data/logs
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -45,6 +47,7 @@ services:
 
 volumes:
   uploads:
+  preview-cache:
   logs:
 
 networks:
