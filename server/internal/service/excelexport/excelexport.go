@@ -17,6 +17,7 @@ package excelexport
 
 import (
 	"archive/zip"
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -82,8 +83,33 @@ func ExcelResponse(c *web.Ctx, content []byte, filename string) error {
 
 // WriteExportFile 原子写入导出文件：先写 .tmp 再改名，避免中途失败留下「完成态」文件。
 func WriteExportFile(target string, content []byte) error {
+	return WriteExportFileFrom(target, func(w io.Writer) error {
+		_, err := w.Write(content)
+		return err
+	})
+}
+
+// WriteExportFileFrom 流式原子写入导出文件：write 把内容写进 .tmp，成功后改名为 target，失败删除 .tmp。
+func WriteExportFileFrom(target string, write func(w io.Writer) error) (err error) {
 	tmp := filepath.Join(filepath.Dir(target), filepath.Base(target)+".tmp")
-	if err := os.WriteFile(tmp, content, 0o644); err != nil {
+	f, err := os.Create(tmp)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			f.Close()
+			os.Remove(tmp)
+		}
+	}()
+	bw := bufio.NewWriterSize(f, 256<<10)
+	if err = write(bw); err != nil {
+		return err
+	}
+	if err = bw.Flush(); err != nil {
+		return err
+	}
+	if err = f.Close(); err != nil {
 		return err
 	}
 	return os.Rename(tmp, target)
@@ -214,6 +240,8 @@ type book struct {
 	styles map[styleKey]int
 	// 已写单元格的最大行列（用于 <dimension>，与 openpyxl 一致）。
 	maxRow, maxCol int
+	// 延迟写入的原图（见 media.go）。
+	media *media
 }
 
 // styleCell 设置单元格样式并记录已用区域。
@@ -232,7 +260,7 @@ func newBook(title string) (*book, error) {
 			return nil, &specError{err.Error()}
 		}
 	}
-	return &book{f: f, sheet: title, styles: map[styleKey]int{}}, nil
+	return &book{f: f, sheet: title, styles: map[styleKey]int{}, media: newMedia()}, nil
 }
 
 func (b *book) must(err error) {
@@ -430,13 +458,22 @@ func loadImage(path string) ([]byte, string, int, int, bool) {
 func pyRound(f float64) int { return int(math.RoundToEven(f)) }
 
 // embedRowImages 把一行的一张或多张原图按固定显示尺寸嵌入到指定单元格，返回成功嵌入数量。
+// 原图不缩小：显示尺寸由锚点缩放控制，用户仍可在表格里查看 / 另存原图。
 func (b *book) embedRowImages(row, col int, paths ImagePaths) int {
 	x, added := 0, 0
 	cell, err := excelize.CoordinatesToCellName(col, row)
 	b.must(err)
 	for _, p := range paths {
-		data, ext, w, h, ok := loadImage(p)
+		format, w, h, ok := probeImage(p)
 		if !ok {
+			continue
+		}
+		var data []byte
+		ext := "." + format
+		if format == "png" {
+			// PNG 原图（附件统一存为 PNG）延迟到保存时再从磁盘流式写入，见 media.go。
+			data = b.media.placeholder(p, w, h)
+		} else if data, ext, w, h, ok = loadImage(p); !ok {
 			continue
 		}
 		scale := math.Min(math.Min(float64(imageDisplay)/float64(w), float64(imageDisplay)/float64(h)), 1.0)
@@ -526,7 +563,8 @@ func (b *book) printArea(ref string) {
 	}))
 }
 
-func (b *book) save() []byte {
+// saveTo 把工作簿写到 w：先让 excelize 生成（只含占位图的）包，再改写包内容并流式写出。
+func (b *book) saveTo(w io.Writer) {
 	if b.maxRow > 0 {
 		last, err := excelize.CoordinatesToCellName(b.maxCol, b.maxRow)
 		b.must(err)
@@ -534,9 +572,10 @@ func (b *book) save() []byte {
 	}
 	buf, err := b.f.WriteToBuffer()
 	b.must(err)
-	out, err := normalizeAutoFilter(buf.Bytes())
-	b.must(err)
-	return out
+	// excelize 的工作簿对象不再需要：尽早释放，降低写出阶段的内存峰值。
+	_ = b.f.Close()
+	b.f = nil
+	b.must(rewritePackage(buf.Bytes(), w, b.media))
 }
 
 var (
@@ -545,24 +584,35 @@ var (
 	autoFilterRef  = regexp.MustCompile(`<autoFilter ref="([^"]*)"`)
 )
 
-// normalizeAutoFilter 让自动筛选与 openpyxl 产物一致：ref 用相对引用（A1:B2），且不标记
-// sheetPr filterMode（excelize 会写 $A$1:$B$2 并置 filterMode=true，表示「已应用筛选」）。
-func normalizeAutoFilter(pkg []byte) ([]byte, error) {
+// rewritePackage 改写 excelize 生成的包并写到 w：
+//   - 让自动筛选与 openpyxl 产物一致：ref 用相对引用（A1:B2），且不标记 sheetPr filterMode
+//     （excelize 会写 $A$1:$B$2 并置 filterMode=true，表示「已应用筛选」）；
+//   - 把占位图替换为磁盘原图（流式复制）。
+func rewritePackage(pkg []byte, w io.Writer, m *media) error {
 	zr, err := zip.NewReader(bytes.NewReader(pkg), int64(len(pkg)))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var out bytes.Buffer
-	zw := zip.NewWriter(&out)
+	zw := zip.NewWriter(w)
 	for _, zf := range zr.File {
 		rc, err := zf.Open()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		data, err := io.ReadAll(rc)
 		rc.Close()
 		if err != nil {
-			return nil, err
+			return err
+		}
+		if strings.HasPrefix(zf.Name, "xl/media/") {
+			if token, ok := placeholderToken(data); ok {
+				if path, ok := m.byToken[token]; ok {
+					if err := copyMediaEntry(zw, zip.FileHeader{Name: zf.Name, Modified: zf.Modified}, path); err != nil {
+						return err
+					}
+					continue
+				}
+			}
 		}
 		if strings.HasPrefix(zf.Name, "xl/worksheets/sheet") && strings.HasSuffix(zf.Name, ".xml") {
 			s := string(data)
@@ -571,18 +621,15 @@ func normalizeAutoFilter(pkg []byte) ([]byte, error) {
 			s = autoFilterRef.ReplaceAllStringFunc(s, func(m string) string { return strings.ReplaceAll(m, "$", "") })
 			data = []byte(s)
 		}
-		w, err := zw.CreateHeader(&zip.FileHeader{Name: zf.Name, Method: zip.Deflate, Modified: zf.Modified})
+		fw, err := zw.CreateHeader(&zip.FileHeader{Name: zf.Name, Method: zip.Deflate, Modified: zf.Modified})
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if _, err := w.Write(data); err != nil {
-			return nil, err
+		if _, err := fw.Write(data); err != nil {
+			return err
 		}
 	}
-	if err := zw.Close(); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
+	return zw.Close()
 }
 
 // columnLetter 等价 openpyxl get_column_letter。

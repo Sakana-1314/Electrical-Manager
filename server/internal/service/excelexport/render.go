@@ -1,8 +1,10 @@
 package excelexport
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 	"time"
@@ -21,16 +23,26 @@ var Today = func() time.Time { return time.Now() }
 
 // RenderExcel 按模板渲染 Excel，返回（文件内容, 下载文件名）。
 // 模板缺失 → EXPORT_TEMPLATE_MISSING；编码 / JSON / 内容错误 → EXPORT_TEMPLATE_INVALID。
-func RenderExcel(templateFile string, rows []map[string]any) (content []byte, filename string, err error) {
-	spec, err := loadSpec(templateFile)
+func RenderExcel(templateFile string, rows []map[string]any) ([]byte, string, error) {
+	var buf bytes.Buffer
+	filename, err := RenderExcelTo(&buf, templateFile, rows)
 	if err != nil {
 		return nil, "", err
+	}
+	return buf.Bytes(), filename, nil
+}
+
+// RenderExcelTo 按模板渲染 Excel 并流式写到 w（嵌入的原图从磁盘直接复制，不整体读入内存），返回下载文件名。
+func RenderExcelTo(w io.Writer, templateFile string, rows []map[string]any) (filename string, err error) {
+	spec, err := loadSpec(templateFile)
+	if err != nil {
+		return "", err
 	}
 	defer func() {
 		if r := recover(); r != nil {
 			var se *specError
 			if e, ok := r.(error); ok && errors.As(e, &se) {
-				content, filename = nil, ""
+				filename = ""
 				err = apperr.New("EXPORT_TEMPLATE_INVALID", fmt.Sprintf("Excel 导出模板内容不完整或无效：%s", templateFile)).
 					WithDetails(apperr.D{"template": templateFile})
 				return
@@ -47,10 +59,10 @@ func RenderExcel(templateFile string, rows []map[string]any) (content []byte, fi
 	} else {
 		b = purchaseApplicationWorkbook(spec, rows)
 	}
-	content = b.save()
+	b.saveTo(w)
 	today := Today()
 	filename = formatFilename(asString(req(spec, "output_filename")), today)
-	return content, filename, nil
+	return filename, nil
 }
 
 // formatFilename 对应 str.format(date=..., date_compact=...)（只支持这两个占位符，其它占位符视为模板无效）。
@@ -362,12 +374,22 @@ func resultCellValue(v any) any {
 }
 
 // RenderResultExcel 渲染查询结果导出（可见列 + 斑马纹 + 冻结表头 + 嵌入图片），返回（内容, 文件名）。
-func RenderResultExcel(filenamePrefix string, columns []Column, rows []map[string]any) (content []byte, filename string, err error) {
+func RenderResultExcel(filenamePrefix string, columns []Column, rows []map[string]any) ([]byte, string, error) {
+	var buf bytes.Buffer
+	filename, err := RenderResultExcelTo(&buf, filenamePrefix, columns, rows)
+	if err != nil {
+		return nil, "", err
+	}
+	return buf.Bytes(), filename, nil
+}
+
+// RenderResultExcelTo 渲染查询结果导出并流式写到 w（嵌入的原图从磁盘直接复制），返回下载文件名。
+func RenderResultExcelTo(w io.Writer, filenamePrefix string, columns []Column, rows []map[string]any) (filename string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			var se *specError
 			if e, ok := r.(error); ok && errors.As(e, &se) {
-				content, filename, err = nil, "", e
+				filename, err = "", e
 				return
 			}
 			panic(r)
@@ -376,7 +398,7 @@ func RenderResultExcel(filenamePrefix string, columns []Column, rows []map[strin
 	title := string([]rune(filenamePrefix)[:min(31, len([]rune(filenamePrefix)))])
 	b, err := newBook(title)
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 	b.freezePanes("A2")
 	off, zoom := false, 90.0
@@ -444,7 +466,7 @@ func RenderResultExcel(filenamePrefix string, columns []Column, rows []map[strin
 			value := resultCellValue(raw)
 			nf, err := b.writeValue(cell, value)
 			if err != nil {
-				return nil, "", err
+				return "", err
 			}
 			b.styleCell(cell, dataStyle(alt, nf))
 			widths[ci] = max(widths[ci], displayWidth(pyStrValue(value)))
@@ -470,6 +492,6 @@ func RenderResultExcel(filenamePrefix string, columns []Column, rows []map[strin
 		letter := columnLetter(colIndex)
 		b.must(b.f.SetColWidth(b.sheet, letter, letter, float64(min(max(w+4, 14), capW))))
 	}
-	content = b.save()
-	return content, fmt.Sprintf("%s_%s.xlsx", filenamePrefix, Today().Format("20060102")), nil
+	b.saveTo(w)
+	return fmt.Sprintf("%s_%s.xlsx", filenamePrefix, Today().Format("20060102")), nil
 }
