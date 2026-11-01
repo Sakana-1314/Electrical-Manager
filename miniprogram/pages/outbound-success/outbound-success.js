@@ -3,6 +3,7 @@ const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { extractMaterialUuid } = require('../../utils/material');
 const Toast = toastModule.default || toastModule;
 
 function formatDateTime(value) {
@@ -97,6 +98,24 @@ Page(withTheme({
 
   goHome() {
     wx.reLaunch({ url: '/pages/home/home' });
+  },
+
+  // 仓库现场常常一次领多种料：完成后直接接着扫下一个，不必退回首页再点「开始扫码」。
+  async continueScan() {
+    try {
+      const scanResult = await new Promise((resolve, reject) => {
+        wx.scanCode({ success: resolve, fail: reject });
+      });
+      const materialUuid = extractMaterialUuid(scanResult.path || scanResult.result);
+      if (!materialUuid) {
+        throw new Error(t('materialUuidMissing'));
+      }
+      wx.redirectTo({ url: `/pages/outbound/outbound?uuid=${materialUuid}` });
+    } catch (error) {
+      if (!String(error.errMsg || '').includes('cancel')) {
+        this.showError(error);
+      }
+    }
   },
 
   showError(error) {

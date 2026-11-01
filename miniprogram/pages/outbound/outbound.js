@@ -173,16 +173,45 @@ Page(withTheme({
       return;
     }
     const { quantity, businessReason, subitemNo } = this.data.form;
+    if (this.data.submitting) {
+      return;
+    }
+    // 出库一点即扣库存且没有撤销入口：提交前让用户核对一次物资与数量。
+    const { material } = this.data;
+    const confirmed = await new Promise((resolve) => {
+      wx.showModal({
+        title: t('outboundConfirmTitle'),
+        content: t('outboundConfirmContent', {
+          name: material.name,
+          spec: material.model_spec || '-',
+          quantity,
+          unit: material.unit_name || '',
+        }),
+        confirmText: t('confirm'),
+        cancelText: t('cancel'),
+        success: (res) => resolve(!!res.confirm),
+        fail: () => resolve(false),
+      });
+    });
+    if (!confirmed) {
+      return;
+    }
     this.setData({ submitting: true });
     try {
+      // 幂等键跟着「这一单的内容」走：内容不变（含超时后重试）沿用同一个键，服务端返回原单据、不会重复出库；
+      // 换了物资 / 数量 / 用途后必须换新键，否则服务端会把旧单据当作本次结果静默返回，新的出库根本没记。
+      const fingerprint = [material.uuid, quantity, businessReason.trim(), subitemNo.trim()].join('|');
+      if (!this.data.clientRequestId || this.submitFingerprint !== fingerprint) {
+        this.submitFingerprint = fingerprint;
+        this.setData({ clientRequestId: createClientRequestId() });
+      }
       const result = await request({
         url: '/mini-program/outbound',
         method: 'POST',
         // 带 client_request_id，服务端按键去重：弱网下可自动重发，不会重复出库。
         retry: true,
         data: {
-          client_request_id:
-            this.data.clientRequestId || createClientRequestId(),
+          client_request_id: this.data.clientRequestId,
           material_uuid: this.data.material.uuid,
           occurred_at: new Date().toISOString(),
           quantity,
@@ -193,6 +222,7 @@ Page(withTheme({
       });
       getApp().globalData.lastOutbound = result;
       // 成功后作废幂等 id
+      this.submitFingerprint = '';
       this.setData({ clientRequestId: '' });
       wx.redirectTo({ url: '/pages/outbound-success/outbound-success' });
     } catch (error) {

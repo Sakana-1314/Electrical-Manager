@@ -1,5 +1,9 @@
 <view class="page-shell success-page {{themeClass}}">
-  <view class="success-result">
+  <view wx:if="{{loading}}" class="success-result">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+
+  <view wx:elif="{{result}}" class="success-result">
     <t-result
       theme="success"
       title="{{i18n.outboundSuccessTitle}}"
@@ -78,9 +82,9 @@
       class="success-action finish-action"
       theme="primary"
       size="large"
-      icon="check"
-      bind:tap="goHome"
-    >{{i18n.finish}}</t-button>
+      icon="scan"
+      bind:tap="continueScan"
+    >{{i18n.continueScan}}</t-button>
   </view>
 
   <t-toast id="outbound-success-toast" />
