@@ -1491,6 +1491,10 @@ def _build_schema_examples() -> dict[str, Any]:
                 [row for row in _PLAN_ROWS if row["material_code"] is None]
             ),
             "purchase_record_count": len(_RECORD_ROWS),
+            "pending_purchase_plan_count": 4,
+            "purchase_in_progress_count": 3,
+            "today_inbound_count": 1,
+            "today_outbound_count": 2,
         },
         # —— 隐患管理（隐患台账 / 隐患类型 / 责任单位）——
         "HazardUnitRead": _HAZARD_UNIT_ROWS[0],
@@ -2489,6 +2493,10 @@ _FIELD_EXAMPLES: dict[str, Any] = {
     "low_stock_count": len(_LOW_STOCK_ROWS),
     "uncoded_purchase_material_count": 2,
     "purchase_record_count": len(_RECORD_ROWS),
+    "pending_purchase_plan_count": 4,
+    "purchase_in_progress_count": 3,
+    "today_inbound_count": 1,
+    "today_outbound_count": 2,
     # 筛选与导出参数
     "actual_demand_persons": _DEMAND_PERSONS[:3],
     "purchase_responsibles": _PURCHASE_RESPONSIBLES,

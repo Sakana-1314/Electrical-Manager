@@ -238,6 +238,13 @@ type DashboardSummaryRead struct {
 	LowStockCount                int64 `json:"low_stock_count"`
 	UncodedPurchaseMaterialCount int64 `json:"uncoded_purchase_material_count"`
 	PurchaseRecordCount          int64 `json:"purchase_record_count"`
+	// 状态为「正常」且尚未转入申购记录的申购计划（等待请购的队列）。
+	PendingPurchasePlanCount int64 `json:"pending_purchase_plan_count"`
+	// 尚未「已入库」的申购记录行（在途：已申购 / 已采购 / 部分入库）。
+	PurchaseInProgressCount int64 `json:"purchase_in_progress_count"`
+	// 今天（上海时区自然日）发生的入库 / 出库单据数，不含反向冲销单据。
+	TodayInboundCount  int64 `json:"today_inbound_count"`
+	TodayOutboundCount int64 `json:"today_outbound_count"`
 }
 
 // ---------------- 校验辅助 ----------------

@@ -3086,11 +3086,16 @@ export interface components {
         };
         /**
          * DashboardSummaryRead
+         * @description 工作台概览计数；精简模式下物资数取精简库存行数、低库存计 0。
          * @example {
          *       "stock_material_count": 23,
          *       "low_stock_count": 9,
          *       "uncoded_purchase_material_count": 2,
-         *       "purchase_record_count": 5
+         *       "purchase_record_count": 5,
+         *       "pending_purchase_plan_count": 4,
+         *       "purchase_in_progress_count": 3,
+         *       "today_inbound_count": 1,
+         *       "today_outbound_count": 2
          *     }
          */
         DashboardSummaryRead: {
@@ -3102,6 +3107,26 @@ export interface components {
             uncoded_purchase_material_count: number;
             /** Purchase Record Count */
             purchase_record_count: number;
+            /**
+             * Pending Purchase Plan Count
+             * @description 状态为「正常」且尚未转入申购记录的申购计划数（等待请购）。
+             */
+            pending_purchase_plan_count: number;
+            /**
+             * Purchase In Progress Count
+             * @description 尚未「已入库」的申购记录行数（已申购 / 已采购 / 部分入库）。
+             */
+            purchase_in_progress_count: number;
+            /**
+             * Today Inbound Count
+             * @description 今天（上海时区自然日）发生的入库单据数，不含反向冲销单据。
+             */
+            today_inbound_count: number;
+            /**
+             * Today Outbound Count
+             * @description 今天（上海时区自然日）发生的出库单据数，不含反向冲销单据。
+             */
+            today_outbound_count: number;
         };
         /**
          * ExcelExportJobRead
@@ -18840,7 +18865,11 @@ export interface operations {
                      *       "stock_material_count": 23,
                      *       "low_stock_count": 9,
                      *       "uncoded_purchase_material_count": 2,
-                     *       "purchase_record_count": 5
+                     *       "purchase_record_count": 5,
+                     *       "pending_purchase_plan_count": 4,
+                     *       "purchase_in_progress_count": 3,
+                     *       "today_inbound_count": 1,
+                     *       "today_outbound_count": 2
                      *     }
                      */
                     "application/json": components["schemas"]["DashboardSummaryRead"];
