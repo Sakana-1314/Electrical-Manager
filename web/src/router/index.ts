@@ -7,14 +7,12 @@ import { resolveLandingRouteName } from '@/utils/navigation'
 
 declare module 'vue-router' {
   interface RouteMeta {
-    /** 顶栏面包屑与浏览器标题里展示的页面名（详情页同样用这个短名） */
+    /** 浏览器标题与页面标题使用的页面名（详情页同样用这个短名） */
     title?: string
     /**
-     * 上一级标题：桌面端顶栏面包屑按「上级 / 当前」展示，移动端只展示当前标题（宽度不够）。
-     * 二级条目用所属菜单分组名（二级库 / 申购管理 / 系统管理），详情页与操作页用所属列表页标题，
-     * 让「当前在哪、能返回哪里」一眼可读。
-     * 顶级条目（工作台、备忘录、二级库、华星总库存）不设本字段：顶栏不再挂「备件管理」这类根名称，
-     * 页面只展示自己的标题，只有二级菜单才展示两级。
+     * 上一级标题：只用于浏览器标题的「上级 / 当前」展示（如「申购管理 / 申购记录 - HXNI 电气无忧」）。
+     * 二级条目用所属菜单分组名（二级库 / 申购管理 / 系统管理），详情页与操作页用所属列表页标题；
+     * 顶级条目（工作台、备忘录、二级库、华星总库存）不设本字段，浏览器标题只展示当前页名。
      */
     parent?: string
     permission?: Permission
@@ -290,7 +288,7 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  // 浏览器标题带上级路径（如「申购管理 / 申购记录 - HXNI 电气无忧」），与顶栏面包屑同一套元信息
+  // 浏览器标题带上级路径（如「申购管理 / 申购记录 - HXNI 电气无忧」），与页面标题同一套元信息
   const pageTitle = to.meta.parent
     ? `${to.meta.parent} / ${to.meta.title || '系统'}`
     : to.meta.title

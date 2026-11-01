@@ -202,7 +202,6 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
     Layout: {
       color: palette.bodyColor,
       siderColor: palette.cardColor,
-      headerColor: palette.cardColor,
     },
   }
 }

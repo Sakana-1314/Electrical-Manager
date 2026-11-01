@@ -4,7 +4,7 @@ import type { Project } from '@/api/generated'
 import type { IconRender } from './appearanceMenu'
 
 /**
- * 顶栏用户菜单里的「当前项目」二级菜单（各启用项目）。
+ * 侧栏左下角用户菜单里的「当前项目」二级菜单（各启用项目）。
  *
  * 独立出来便于单测：菜单结构与「哪个 key 属于项目子项」都是纯逻辑，
  * 不需要挂载布局组件；图标渲染沿用 appearanceMenu 的约定（包装成 NIcon）。

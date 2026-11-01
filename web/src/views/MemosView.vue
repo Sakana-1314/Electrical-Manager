@@ -417,10 +417,10 @@ void loadMemos()
 <style scoped>
 /* 页面高度充满窗口（上下保留内容区内边距）。
    内容区容器的高度由内容撑开，百分比无法生效，因此用视口高度减去
-   「顶栏 + 内容区上下内边距」这层固定框架高度（移动端数值更小，见文末媒体查询）；
+   「内容区上下内边距」这层固定框架高度（移动端数值更小，见文末媒体查询）；
    高度确定后，内部抽屉与编辑区才能撑满窗口并在各自区域内滚动。 */
 .memo-page {
-  --memo-page-chrome: 124px;
+  --memo-page-chrome: 56px;
   height: calc(100vh - var(--memo-page-chrome));
   height: calc(100dvh - var(--memo-page-chrome));
   /* 窗口过矮时保住可用的编辑高度，由内容区整体滚动 */
@@ -613,7 +613,7 @@ void loadMemos()
 
 /* 窄屏：抽屉改为内容区上方的横向列表，避免左右挤压。 */
 @media (max-width: 768px) {
-  /* 移动端框架高度：顶栏 56 + 内容区上下内边距 16 / 24 */
+  /* 移动端框架高度：窄导航条 56 + 内容区上下内边距 16 / 24 */
   .memo-page {
     --memo-page-chrome: 96px;
   }

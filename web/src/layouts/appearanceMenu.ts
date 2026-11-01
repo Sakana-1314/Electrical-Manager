@@ -5,7 +5,7 @@ import { CheckmarkOutline, ContrastOutline, MoonOutline, SunnyOutline } from '@v
 import { THEME_MODE_OPTIONS, type ThemeMode } from '@/utils/themeMode'
 
 /**
- * 顶栏用户菜单里的「外观」二级菜单（自动 / 浅色 / 深色）。
+ * 侧栏左下角用户菜单里的「外观」二级菜单（自动 / 浅色 / 深色）。
  *
  * 独立出来便于单测：菜单结构与「哪个 key 属于外观档位」都是纯逻辑，
  * 不需要挂载布局组件；图标渲染按 Naive UI 的 MenuOption 约定包装成 NIcon。
@@ -36,10 +36,10 @@ export function isThemeModeKey(key: string): key is ThemeMode {
 }
 
 /**
- * 构造用户菜单里的「外观」二级菜单：父项鼠标悬浮向左展开三个档位。
+ * 构造用户菜单里的「外观」二级菜单：父项鼠标悬浮时向右展开三个档位。
  *
- * 顶栏账号在页面最右上角，Naive UI 子菜单默认向右展开、空间不足时自动翻转，
- * 因此这里无需额外配置就会朝左浮现。父项图标反映当前实际明暗（`auto` 档按解析结果），
+ * 用户菜单在侧栏左下角，下拉整体向上展开、子菜单默认向右浮现（空间不足时 Naive UI 自动翻转），
+ * 因此这里无需额外配置。父项图标反映当前实际明暗（`auto` 档按解析结果），
  * 让当前是深色还是浅色在菜单里一眼可读；当前档位在前面显示对勾。
  */
 export function buildThemeMenuSubmenu(

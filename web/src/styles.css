@@ -39,7 +39,7 @@
   --color-panel-hover: #eef2f9;
   /* 表单控件在卡片上的底色（半透明覆盖，明暗都不突兀） */
   --color-field-surface: rgb(255 255 255 / 88%);
-  /* 主色系浅边框（顶栏按钮、Hero 卡片） */
+  /* 主色系浅边框（用户菜单按钮、Hero 卡片） */
   --color-primary-border: #dce5ff;
   /* 主色浅底文字（Hero 卡片标题、小程序码 key 等），深色下需要用更亮的蓝 */
   --color-primary-strong-text: #3658c7;
@@ -66,7 +66,7 @@
   --color-work-bar-5-fg: #5745ad;
   /* 页面背景上的主色光晕（工作台、登录页），浅色几乎不可见、深色下做氛围底色 */
   --page-glow: radial-gradient(circle at 100% 0%, rgb(63 99 216 / 7%), transparent 32%);
-  /* 顶栏 / 卡片表面的半透明底色（配合 backdrop-filter） */
+  /* 半透明表面底色（弹窗头部、移动端窄导航条，配合 backdrop-filter） */
   --color-surface-translucent: rgb(255 255 255 / 92%);
   /* 卡片阴影在深色下需要更重才能区分层次 */
   --shadow-card-strong: 0 18px 44px rgb(15 23 42 / 10%);
@@ -526,7 +526,7 @@ a {
   .pagination-bar .n-pagination {
     flex-wrap: nowrap;
   }
-  /* 移动端顶栏面包屑已展示当前页面标题，内容区不再重复标题（详情页标题在顶栏里）；
+  /* 移动端窄导航条已展示当前页面标题，内容区不再重复标题；
      页头只留操作区，下面这些按钮排成同一行，必要时压缩字号与内边距来容纳 */
   .page-title {
     display: none;
