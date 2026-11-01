@@ -11,7 +11,7 @@
   </view>
 
   <view class="action-grid">
-    <view class="action-card" hover-class="action-card-active" bind:tap="openInventory">
+    <view wx:if="{{entryVisible.inventory}}" class="action-card" hover-class="action-card-active" bind:tap="openInventory">
       <view class="action-icon"><t-icon name="view-list" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.allInventory}}</view>
@@ -19,7 +19,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
+    <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
       <view class="action-icon"><t-icon name="layers" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.huaxingInventoryTitle}}</view>
@@ -27,7 +27,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
+    <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
       <view class="action-icon"><t-icon name="file-attachment" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.purchasePlans}}</view>
@@ -35,7 +35,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openPurchaseRecords">
+    <view wx:if="{{entryVisible.purchaseRecords}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchaseRecords">
       <view class="action-icon"><t-icon name="file-copy" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.purchaseRecordsTitle}}</view>
@@ -43,7 +43,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openLedger">
+    <view wx:if="{{entryVisible.ledger}}" class="action-card" hover-class="action-card-active" bind:tap="openLedger">
       <view class="action-icon"><t-icon name="folder" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.ledgerTitle}}</view>
@@ -51,7 +51,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openHazards">
+    <view wx:if="{{entryVisible.hazards}}" class="action-card" hover-class="action-card-active" bind:tap="openHazards">
       <view class="action-icon"><t-icon name="error-circle" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.hazardsTitle}}</view>
@@ -59,7 +59,7 @@
       </view>
     </view>
 
-    <view class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
+    <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
       <view class="action-icon"><t-icon name="tag" size="48rpx" /></view>
       <view class="action-content">
         <view class="action-title">{{i18n.materialCodesTitle}}</view>
