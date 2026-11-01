@@ -172,6 +172,8 @@ type HazardFilter struct {
 	RectifyPerson *string
 	DateFrom      *jtype.Date
 	DateTo        *jtype.Date
+	// Overdue 只看逾期未整改：未「已整改」且整改期限早于今天（今天到期不算逾期，与工作台口径一致）。
+	Overdue bool
 	// 小程序搜索框只匹配「检查区域 + 隐患描述」；网页端关键字匹配更多字段。
 	KeywordAreaDescriptionOnly bool
 }
@@ -218,6 +220,9 @@ func applyFilter(w *common.Where, f HazardFilter) {
 	}
 	if f.DateTo != nil {
 		w.Add("inspection_date <= ?", *f.DateTo)
+	}
+	if f.Overdue {
+		w.Add("status != ?", domain.HazardStatus.ToDB(domain.HazardStatusDone)).Add("due_date < ?", BusinessToday())
 	}
 }
 
@@ -537,34 +542,35 @@ func DeleteHazard(s *db.Session, id int64, expectedVersion *int64) error {
 	return err
 }
 
-// HazardStats 工作台隐患概览。
+// HazardStats 工作台隐患概览：一次扫描同时得到三状态计数与逾期数（原来 GROUP BY + 逾期 COUNT 两次扫描）。
 func HazardStats(s *db.Session) (schema.HazardStatsRead, error) {
 	w, err := scoped(s, "")
 	if err != nil {
 		return schema.HazardStatsRead{}, err
 	}
-	var rows []struct {
-		Status string `db:"status"`
-		N      int64  `db:"n"`
+	var row struct {
+		Pending int64 `db:"pending"`
+		Blocked int64 `db:"blocked"`
+		Done    int64 `db:"done"`
+		Overdue int64 `db:"overdue"`
 	}
-	if err := s.Select(&rows, "SELECT status, COUNT(id) AS n FROM hazard"+w.SQL()+" GROUP BY status", w.Args...); err != nil {
+	query := "SELECT " +
+		"COUNT(CASE WHEN status = ? THEN 1 END) AS pending, " +
+		"COUNT(CASE WHEN status = ? THEN 1 END) AS blocked, " +
+		"COUNT(CASE WHEN status = ? THEN 1 END) AS done, " +
+		"COUNT(CASE WHEN status != ? AND due_date < ? THEN 1 END) AS overdue " +
+		"FROM hazard" + w.SQL()
+	done := domain.HazardStatus.ToDB(domain.HazardStatusDone)
+	args := append([]any{
+		domain.HazardStatus.ToDB(domain.HazardStatusPending),
+		domain.HazardStatus.ToDB(domain.HazardStatusBlocked),
+		done,
+		done, BusinessToday(),
+	}, w.Args...)
+	if err := s.Get(&row, query, args...); err != nil {
 		return schema.HazardStatsRead{}, err
 	}
-	counts := map[string]int64{}
-	for _, r := range rows {
-		counts[r.Status] = r.N
-	}
-	w.Add("due_date < ?", BusinessToday()).Add("status != ?", domain.HazardStatus.ToDB(domain.HazardStatusDone))
-	var overdue int64
-	if err := s.Get(&overdue, "SELECT COUNT(id) FROM hazard"+w.SQL(), w.Args...); err != nil {
-		return schema.HazardStatsRead{}, err
-	}
-	return schema.HazardStatsRead{
-		Pending: counts["PENDING"],
-		Blocked: counts["BLOCKED"],
-		Done:    counts["DONE"],
-		Overdue: overdue,
-	}, nil
+	return schema.HazardStatsRead(row), nil
 }
 
 func countHazardsBy(s *db.Session, col string, id int64) (int64, error) {

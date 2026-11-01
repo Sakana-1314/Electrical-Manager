@@ -34717,6 +34717,8 @@ export interface operations {
                 rectify_person?: string | null;
                 date_from?: string | null;
                 date_to?: string | null;
+                /** @description 只看逾期未整改（未「已整改」且整改期限早于今天，今天到期不算逾期） */
+                overdue?: boolean;
             };
             header?: {
                 "X-Project-Id"?: number | null;

@@ -47,6 +47,7 @@ func listHazards(c *web.Ctx) error {
 		RectifyPerson: p.QueryStr("rectify_person", "max=64"),
 		DateFrom:      p.QueryDate("date_from"),
 		DateTo:        p.QueryDate("date_to"),
+		Overdue:       p.QueryBool("overdue", false),
 	}
 	if err := p.Err(); err != nil {
 		return err

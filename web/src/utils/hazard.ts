@@ -29,6 +29,8 @@ export interface HazardFilters {
   area: string
   keyword: string
   dateRange: [number, number] | null
+  /** 只看逾期未整改（工作台「逾期未整改」直达用）；null 即不限 */
+  overdue: true | null
 }
 
 /** 筛选条件的初始值（重置即回到这里）。 */
@@ -42,6 +44,7 @@ export function initialHazardFilters(): HazardFilters {
     area: '',
     keyword: '',
     dateRange: null,
+    overdue: null,
   }
 }
 
@@ -66,6 +69,7 @@ export function hazardQuery(filters: HazardFilters): Record<string, string | num
     keyword: filters.keyword.trim() || undefined,
     date_from: from === undefined || from === null ? undefined : toShanghaiDate(from),
     date_to: to === undefined || to === null ? undefined : toShanghaiDate(to),
+    overdue: filters.overdue ? 'true' : undefined,
   }
 }
 

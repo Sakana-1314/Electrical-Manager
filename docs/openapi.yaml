@@ -17924,6 +17924,14 @@ paths:
             format: date
           - type: 'null'
           title: Date To
+      - name: overdue
+        in: query
+        required: false
+        description: 只看逾期未整改（未「已整改」且整改期限早于今天，今天到期不算逾期）
+        schema:
+          type: boolean
+          default: false
+          title: Overdue
       - name: X-Project-Id
         in: header
         required: false
