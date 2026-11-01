@@ -31,6 +31,17 @@ Page(withTheme({
     scanning: false,
     // 功能配置接口返回前保持 false：避免精简模式下扫码出库卡片先渲染再隐藏造成闪烁。
     featureReady: false,
+    // 首页入口是否展示：功能被管理员设为「禁用」的入口直接不渲染（原来全部常驻、点了才提示未开放）。
+    // 功能配置返回前默认全显，避免先隐藏后冒出；返回后按配置收起。
+    entryVisible: {
+      inventory: true,
+      huaxing: true,
+      purchasePlans: true,
+      purchaseRecords: true,
+      ledger: true,
+      hazards: true,
+      materialCodes: true,
+    },
     liteMode: false,
     userProfileVisible: false,
     // 界面外观：与「当前项目」同一套交互，走 t-picker 滚轮选择器（确认后才写入本机偏好）。
@@ -79,6 +90,15 @@ Page(withTheme({
           registered_at: formatDateTime(session.user.created_at),
         },
         featureReady: true,
+        entryVisible: {
+          inventory: !isFeatureDisabled('inventory_mode'),
+          huaxing: !isFeatureDisabled('huaxing_inventory_mode'),
+          purchasePlans: !isFeatureDisabled('purchase_plans_mode'),
+          purchaseRecords: !isFeatureDisabled('purchase_records_mode'),
+          ledger: !isFeatureDisabled('ledger_mode'),
+          hazards: !isFeatureDisabled('hazards_mode'),
+          materialCodes: !isFeatureDisabled('material_codes_mode'),
+        },
         liteMode: featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE,
       });
     } catch (error) {

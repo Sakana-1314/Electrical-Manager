@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="HXNI 电气无忧 · 电气车间业务管理系统" />
     <meta property="og:image" content="/logo.png" />
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>HXNI 电气无忧</title>
     <script>
@@ -63,9 +63,71 @@
         )
       })()
     </script>
+    <style>
+      /* 启动占位：入口脚本下载 + 启动配置拉取期间显示，Vue mount 时整块被替换。
+         只用内联样式与 data-theme（预置脚本已写入），不依赖 styles.css。 */
+      .boot-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #f4f6fa;
+        color: #7d8798;
+        font: 13px/1.4 Inter, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+      [data-theme='dark'] .boot-splash {
+        background: #13171d;
+        color: #8791a3;
+      }
+      .boot-splash__mark {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+      }
+      .boot-splash__bar {
+        position: relative;
+        width: 120px;
+        height: 3px;
+        overflow: hidden;
+        border-radius: 3px;
+        background: rgb(63 99 216 / 14%);
+      }
+      .boot-splash__bar::after {
+        content: '';
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 40%;
+        border-radius: 3px;
+        background: #3f63d8;
+        animation: boot-splash-slide 1.1s ease-in-out infinite;
+      }
+      @keyframes boot-splash-slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash__bar::after {
+          animation: none;
+          width: 100%;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <div class="boot-splash" role="status" aria-live="polite">
+        <img class="boot-splash__mark" src="/logo-96.png" alt="" />
+        <div class="boot-splash__bar"></div>
+        <span>HXNI 电气无忧 · 正在加载</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

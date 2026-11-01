@@ -18,7 +18,14 @@ function routeWith(query: Record<string, string | undefined>): RouteLocationNorm
 const mocks = vi.hoisted(() => ({
   routeQuery: {} as Record<string, string | undefined>,
   replace: vi.fn().mockResolvedValue(undefined),
+  activated: [] as Array<() => void>,
 }))
+
+// 捕获 onActivated 回调，模拟 keepAlive 页重新激活
+vi.mock('vue', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('vue')>()
+  return { ...actual, onActivated: (fn: () => void) => mocks.activated.push(fn) }
+})
 
 vi.mock('vue-router', () => ({
   useRoute: () => routeWith(mocks.routeQuery),
@@ -28,6 +35,7 @@ vi.mock('vue-router', () => ({
 beforeEach(() => {
   mocks.routeQuery = {}
   mocks.replace.mockClear()
+  mocks.activated = []
 })
 
 describe('usePagedTable', () => {
@@ -164,6 +172,45 @@ describe('usePagedTable', () => {
     expect(loading.value).toBe(false)
   })
 
+  it('只采纳最后一次请求：先发后到的旧响应不覆盖新页数据，也不提前结束 loading', async () => {
+    let resolveFirst: (value: Page<Item>) => void = () => {}
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise<Page<Item>>((resolve) => (resolveFirst = resolve)))
+      .mockResolvedValueOnce(pageOf([{ id: 3 }], 3, 20, 60))
+    const { items, page, loading, changePage } = usePagedTable<Item, Filters>({
+      fetch: (f, p) => fetchMock(f, p),
+      initialFilters: () => ({ keyword: '' }),
+      immediate: false,
+    })
+    const slow = changePage(2)
+    expect(loading.value).toBe(true)
+    await changePage(3)
+    expect(items.value).toEqual([{ id: 3 }])
+    expect(loading.value).toBe(false)
+    resolveFirst(pageOf([{ id: 2 }], 2, 20, 60))
+    await slow
+    expect(page.value).toBe(3)
+    expect(items.value).toEqual([{ id: 3 }])
+    expect(loading.value).toBe(false)
+  })
+
+  it('error 记录最近一次失败，成功后清空', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce(pageOf([{ id: 1 }], 1, 20, 1))
+    const { error, load } = usePagedTable<Item, Filters>({
+      fetch: (f, p) => fetchMock(f, p),
+      initialFilters: () => ({ keyword: '' }),
+      immediate: false,
+    })
+    await load()
+    expect(error.value).toBeInstanceOf(Error)
+    await load()
+    expect(error.value).toBeNull()
+  })
+
   it('calls onError when provided', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error('boom'))
     const onError = vi.fn()
@@ -298,5 +345,66 @@ describe('usePagedTable', () => {
     await load()
     expect(seen[0].f.keyword).toBe('abc')
     expect(seen[0].p.page).toBe(1)
+  })
+
+  describe('keepAlive 重新激活', () => {
+    // useRoute 在 setup 期取到的是同一个 route 对象：激活时原地改它的 query，模拟路由跳转
+    function navigate(query: Record<string, string>) {
+      for (const key of Object.keys(mocks.routeQuery)) delete mocks.routeQuery[key]
+      Object.assign(mocks.routeQuery, query)
+    }
+    const urlSync = {
+      routeName: 'list',
+      toQuery: (f: Filters) => ({ keyword: f.keyword || undefined }),
+      fromQuery: (route: RouteLocationNormalizedLoaded) => ({
+        keyword: String(route.query.keyword || ''),
+      }),
+      preservedQueryKeys: ['detail'],
+    }
+
+    it('带着不同筛选条件直达时按 URL 恢复并重新查询（不再把条件改写回旧状态）', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(pageOf([], 1, 20, 0))
+      mocks.routeQuery = { keyword: '旧' }
+      const { filters, page } = usePagedTable<Item, Filters>({
+        fetch: (f, p) => fetchMock({ ...f }, p),
+        initialFilters: () => ({ keyword: '' }),
+        immediate: false,
+        urlSync,
+      })
+      mocks.activated[0]!() // 挂载后的首次激活
+      fetchMock.mockClear()
+      mocks.replace.mockClear()
+
+      navigate({ keyword: '电缆', page: '2', detail: '9' })
+      mocks.activated[0]!()
+      expect(filters.keyword).toBe('电缆')
+      expect(page.value).toBe(2)
+      expect(fetchMock).toHaveBeenCalledWith(
+        { keyword: '电缆' },
+        expect.objectContaining({ page: 2 }),
+      )
+      expect(mocks.replace).not.toHaveBeenCalled()
+    })
+
+    it('侧栏点回（URL 无筛选参数）时保持离开前的状态并写回 URL', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(pageOf([], 1, 20, 0))
+      mocks.routeQuery = { keyword: '旧' }
+      const { filters } = usePagedTable<Item, Filters>({
+        fetch: (f, p) => fetchMock(f, p),
+        initialFilters: () => ({ keyword: '' }),
+        immediate: false,
+        urlSync,
+      })
+      mocks.activated[0]!()
+      fetchMock.mockClear()
+      mocks.replace.mockClear()
+
+      navigate({})
+      mocks.activated[0]!()
+      await Promise.resolve()
+      expect(filters.keyword).toBe('旧')
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(mocks.replace).toHaveBeenCalledWith({ name: 'list', query: { keyword: '旧' } })
+    })
   })
 })

@@ -41,6 +41,11 @@ describe('隐患筛选条件 → 查询参数', () => {
     expect(query.hazard_unit_id).toBe(2)
   })
 
+  it('只看逾期：选中时传 overdue=true，未选时不传', () => {
+    expect(hazardQuery(filters()).overdue).toBeUndefined()
+    expect(hazardQuery(filters({ overdue: true })).overdue).toBe('true')
+  })
+
   it('整改员工按精确值筛选，未选时不传', () => {
     expect(hazardQuery(filters()).rectify_person).toBeUndefined()
     expect(hazardQuery(filters({ rectify_person: '孙浩宇' })).rectify_person).toBe('孙浩宇')

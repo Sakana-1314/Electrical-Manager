@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request, uploadImage } = require('../../utils/request');
+const { request, uploadImage, requestCached, clearRequestCache } = require('../../utils/request');
 const { createClientRequestId } = require('../../utils/material');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
@@ -72,7 +72,7 @@ Page(withTheme({
         app.globalData.featureSettingsPromise,
         app.globalData.imageSettingsPromise,
       ]);
-      const options = await request({ url: '/mini-program/hazards/form-options' });
+      const options = await requestCached({ url: '/mini-program/hazards/form-options' });
       const units = options.units || [];
       const types = options.types || [];
       this.setData({
@@ -162,14 +162,16 @@ Page(withTheme({
 
   async addBeforeImages() {
     const remaining = MAX_IMAGES - this.data.form.beforeImages.length;
-    if (remaining <= 0) {
+    if (remaining <= 0 || this.uploading) {
       return;
     }
+    this.uploading = true;
     try {
       const chosen = await new Promise((resolve, reject) => {
         wx.chooseMedia({
           count: remaining,
           mediaType: ['image'],
+          sizeType: ['compressed'],
           sourceType: ['album', 'camera'],
           success: (result) => resolve(result.tempFiles || []),
           fail: (error) => reject(new Error(error.errMsg || t('hazardUploadFailed'))),
@@ -182,6 +184,8 @@ Page(withTheme({
       }
     } catch (error) {
       this.showError(error);
+    } finally {
+      this.uploading = false;
     }
   },
 
@@ -216,7 +220,18 @@ Page(withTheme({
     if (this.data.submitting) {
       return;
     }
+    if (this.uploading) {
+      Toast({
+        context: this,
+        selector: '#hazard-create-toast',
+        message: t('hazardImageUploading'),
+        theme: 'warning',
+        direction: 'column',
+      });
+      return;
+    }
     this.setData({ submitting: true });
+    let created = false;
     try {
       await request({
         url: '/mini-program/hazards',
@@ -239,6 +254,10 @@ Page(withTheme({
         },
       });
       // 登记成功：作废旧幂等键，返回列表（列表 onShow 会刷新）。
+      // submitting 保持为 true 直到页面离开：返回前的 600ms 里再点一次会拿空幂等键重复登记。
+      created = true;
+      // 新登记可能带来新的整改员工等筛选项：让列表页的筛选项缓存失效
+      clearRequestCache('/mini-program/hazards');
       this.clientRequestId = '';
       Toast({
         context: this,
@@ -251,7 +270,7 @@ Page(withTheme({
     } catch (error) {
       this.showError(error);
     } finally {
-      this.setData({ submitting: false });
+      if (!created) this.setData({ submitting: false });
     }
   },
 

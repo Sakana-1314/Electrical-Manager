@@ -4727,6 +4727,10 @@ paths:
                 low_stock_count: 9
                 uncoded_purchase_material_count: 2
                 purchase_record_count: 5
+                pending_purchase_plan_count: 4
+                purchase_in_progress_count: 3
+                today_inbound_count: 1
+                today_outbound_count: 2
         '400':
           description: 业务校验失败
           content:
@@ -17573,6 +17577,8 @@ paths:
       tags:
       - 图片
       summary: 读取图片
+      description: 图片内容不可变（file_id 为 UUIDv7，内容按摘要去重），响应带长期强缓存头与 ETag；请求头 If-None-Match
+        命中时返回 304 且无响应体。缩略图（传 size）的 ETag 为 `"<file_id>-<size>"`。
       operationId: read_image_api_v1_files_images__file_id__get
       parameters:
       - name: file_id
@@ -17598,6 +17604,8 @@ paths:
           content:
             application/json:
               schema: {}
+        '304':
+          description: 未修改（If-None-Match 命中），无响应体
         '400':
           description: 业务校验失败
           content:
@@ -17916,6 +17924,14 @@ paths:
             format: date
           - type: 'null'
           title: Date To
+      - name: overdue
+        in: query
+        required: false
+        description: 只看逾期未整改（未「已整改」且整改期限早于今天，今天到期不算逾期）
+        schema:
+          type: boolean
+          default: false
+          title: Overdue
       - name: X-Project-Id
         in: header
         required: false
@@ -23787,18 +23803,43 @@ components:
         purchase_record_count:
           type: integer
           title: Purchase Record Count
+        pending_purchase_plan_count:
+          type: integer
+          title: Pending Purchase Plan Count
+          description: 状态为「正常」且尚未转入申购记录的申购计划数（等待请购）。
+        purchase_in_progress_count:
+          type: integer
+          title: Purchase In Progress Count
+          description: 尚未「已入库」的申购记录行数（已申购 / 已采购 / 部分入库）。
+        today_inbound_count:
+          type: integer
+          title: Today Inbound Count
+          description: 今天（上海时区自然日）发生的入库单据数，不含反向冲销单据。
+        today_outbound_count:
+          type: integer
+          title: Today Outbound Count
+          description: 今天（上海时区自然日）发生的出库单据数，不含反向冲销单据。
       type: object
       required:
       - stock_material_count
       - low_stock_count
       - uncoded_purchase_material_count
       - purchase_record_count
+      - pending_purchase_plan_count
+      - purchase_in_progress_count
+      - today_inbound_count
+      - today_outbound_count
       title: DashboardSummaryRead
+      description: 工作台概览计数；精简模式下物资数取精简库存行数、低库存计 0。
       examples:
       - stock_material_count: 23
         low_stock_count: 9
         uncoded_purchase_material_count: 2
         purchase_record_count: 5
+        pending_purchase_plan_count: 4
+        purchase_in_progress_count: 3
+        today_inbound_count: 1
+        today_outbound_count: 2
     ExcelExportJobRead:
       properties:
         id:

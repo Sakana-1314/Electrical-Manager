@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request } = require('../../utils/request');
+const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const {
   buildSharePath,
@@ -35,12 +35,14 @@ Page(withTheme({
     loading: true,
     loadingMore: false,
     resultCount: '',
-    backTopVisible: false,
     canWrite: false,
     i18n: getMessages(),
   },
 
   async onLoad(options = {}) {
+    // 必须在第一个 await 之前置位：onShow 紧随 onLoad 同步触发，放到 onLoad 末尾时它早已跑过，
+    // 会在登录、筛选项都没就绪时多发一次列表请求，而「第一次从详情返回」反而被误当成首次 onShow 吞掉。
+    this.skipNextShow = true;
     setNavigationBarTitle('hazardsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（下拉项要靠 options 才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
@@ -67,8 +69,6 @@ Page(withTheme({
       this.setData({ loading: false });
       this.showError(error);
     }
-    // 首次 onShow 紧随 onLoad，跳过；之后从详情/登记页返回时刷新列表。
-    this.skipNextShow = true;
   },
 
   onShow() {
@@ -94,19 +94,6 @@ Page(withTheme({
     }
   },
 
-  onPageScroll(event) {
-    const scrollTop = event.scrollTop || 0;
-    if (scrollTop > 400 && !this.data.backTopVisible) {
-      this.setData({ backTopVisible: true });
-    } else if (scrollTop <= 400 && this.data.backTopVisible) {
-      this.setData({ backTopVisible: false });
-    }
-  },
-
-  scrollToTop() {
-    wx.pageScrollTo({ scrollTop: 0, duration: 300 });
-  },
-
   onSearchChange(event) {
     this.setData({ keyword: event.detail.value });
     clearTimeout(this.searchTimer);
@@ -127,7 +114,7 @@ Page(withTheme({
     // 整改员工是自由文本，选项来自库中已有值；加载失败不阻塞列表。
     let rectifyPersons = [];
     try {
-      const result = await request({ url: '/mini-program/hazards/filter-options' });
+      const result = await requestCached({ url: '/mini-program/hazards/filter-options' });
       rectifyPersons = (result.rectify_persons || []).filter(Boolean);
     } catch (_error) {
       Toast({

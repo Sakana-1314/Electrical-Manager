@@ -542,7 +542,7 @@ erDiagram
 | `stock_operation` | `reversal_of_id` | BIGINT UNSIGNED | 是 | NULL | 被冲销单据（自引用） |
 | `stock_operation` | `client_request_id` | VARCHAR(64) | 否 | 无 | 客户端请求 id，唯一，幂等键 |
 | `stock_operation` | `mini_program_user_name_snapshot` | VARCHAR(128) | 是 | NULL | 小程序提交人姓名快照 |
-| `stock_operation` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation(id)`；唯一 `uq_stock_operation_project_operation_no(project_id, operation_no)`、`uq_stock_operation_project_client_request_id(project_id, client_request_id)`；`ix_stock_operation_occurred_at(occurred_at)`、`ix_stock_operation_source_occurred(source_type, occurred_at)`、`ix_stock_operation_type_occurred(operation_type, occurred_at)`、`ix_stock_operation_reversal_of_id(reversal_of_id)`；外键 `reversal_of_id → stock_operation.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `stock_operation` | *索引 / 外键* | — | — | — | 索引 `pk_stock_operation(id)`；唯一 `uq_stock_operation_project_operation_no(project_id, operation_no)`、`uq_stock_operation_project_client_request_id(project_id, client_request_id)`；`ix_stock_operation_occurred_at(occurred_at)`、`ix_stock_operation_project_occurred(project_id, occurred_at DESC, id DESC)`、`ix_stock_operation_source_occurred(source_type, occurred_at)`、`ix_stock_operation_type_occurred(operation_type, occurred_at)`、`ix_stock_operation_reversal_of_id(reversal_of_id)`；外键 `reversal_of_id → stock_operation.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `purchase_material` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `purchase_material` | `plan_no` | VARCHAR(32) | 否 | 无 | 计划编号，项目内唯一 |
 | `purchase_material` | `plan_date` | DATE | 否 | 无 | 计划日期 |
@@ -561,7 +561,7 @@ erDiagram
 | `purchase_material` | `remark` | VARCHAR(1000) | 是 | NULL | 备注 |
 | `purchase_material` | `stock_material_id` | BIGINT UNSIGNED | 是 | NULL | 关联二级库物资 |
 | `purchase_material` | `status` | ENUM('NORMAL','DEFERRED','ARCHIVED') | 否 | `'NORMAL'` | 计划状态，接口序列化为 正常 / 暂不申购 / 已归档 |
-| `purchase_material` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material(id)`；唯一 `uq_purchase_material_project_plan_no(project_id, plan_no)`；`ix_purchase_material_status(status)`、`ix_purchase_material_stock_material_id(stock_material_id)`；外键 `stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `purchase_material` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material(id)`；唯一 `uq_purchase_material_project_plan_no(project_id, plan_no)`；`ix_purchase_material_project_status(project_id, status)`、`ix_purchase_material_stock_material_id(stock_material_id)`；外键 `stock_material_id → stock_material.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
 </TabsContent>
 
@@ -577,7 +577,7 @@ erDiagram
 | `stock_material_image` | `material_id` | BIGINT UNSIGNED | 否 | 无 | 主键之一，关联物资 |
 | `stock_material_image` | `file_id` | VARCHAR(36) | 否 | 无 | 主键之一，关联文件 |
 | `stock_material_image` | `sort_order` | TINYINT UNSIGNED | 否 | 0 | 展示排序 |
-| `stock_material_image` | *索引 / 外键* | — | — | — | 索引 `pk_stock_material_image(material_id, file_id)`；外键 `material_id → stock_material.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `stock_material_image` | *索引 / 外键* | — | — | — | 索引 `pk_stock_material_image(material_id, file_id)`；`ix_stock_material_image_file_id(file_id)`（附件引用反查）；外键 `material_id → stock_material.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `stock_replenishment_policy` | `stock_material_id` | BIGINT UNSIGNED | 否 | 无 | 主键，1:1 关联物资 |
 | `stock_replenishment_policy` | `minimum_qty` | DECIMAL(18, 1) | 否 | 无 | 最低库存阈值，`CHECK (minimum_qty >= 0)` |
 | `stock_replenishment_policy` | `enabled` | TINYINT(1) | 否 | 1 | 是否启用补库策略 |
@@ -585,7 +585,7 @@ erDiagram
 | `purchase_material_image` | `material_id` | BIGINT UNSIGNED | 否 | 无 | 主键之一，关联申购计划 |
 | `purchase_material_image` | `file_id` | VARCHAR(36) | 否 | 无 | 主键之一，关联文件 |
 | `purchase_material_image` | `sort_order` | TINYINT UNSIGNED | 否 | 0 | 展示排序 |
-| `purchase_material_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material_image(material_id, file_id)`；外键 `material_id → purchase_material.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `purchase_material_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_material_image(material_id, file_id)`；`ix_purchase_material_image_file_id(file_id)`（附件引用反查）；外键 `material_id → purchase_material.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `purchase_plan_template` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `purchase_plan_template` | `material_code` | VARCHAR(64) | 是 | NULL | 物资编码；NULL 即未编码 |
 | `purchase_plan_template` | `category` | VARCHAR(64) | 是 | NULL | 分类 |
@@ -605,7 +605,7 @@ erDiagram
 | `purchase_plan_template_image` | `plan_id` | BIGINT UNSIGNED | 否 | 无 | 主键之一，关联计划模板 |
 | `purchase_plan_template_image` | `file_id` | VARCHAR(36) | 否 | 无 | 主键之一，关联文件 |
 | `purchase_plan_template_image` | `sort_order` | TINYINT UNSIGNED | 否 | 0 | 展示排序 |
-| `purchase_plan_template_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_plan_template_image(plan_id, file_id)`；外键 `plan_id → purchase_plan_template.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `purchase_plan_template_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_plan_template_image(plan_id, file_id)`；`ix_purchase_plan_template_image_file_id(file_id)`（附件引用反查）；外键 `plan_id → purchase_plan_template.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
 </TabsContent>
 
@@ -639,11 +639,11 @@ erDiagram
 | `purchase_request_line` | `salesperson` | VARCHAR(128) | 是 | NULL | 业务员 |
 | `purchase_request_line` | `contract_sign_date` | DATE | 是 | NULL | 合同签订日期（物资级） |
 | `purchase_request_line` | `unit_price` | DECIMAL(18, 2) | 是 | NULL | 单价（人民币，物资级；平台同步只补空值，也可人工填写） |
-| `purchase_request_line` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_request_line(id)`；唯一 `uq_purchase_request_line_purchase_request_id(purchase_request_id, purchase_material_id, subitem_no, usage_hash)`；`ix_purchase_request_line_trace_no(trace_no)`；检查约束 `ck_purchase_request_line_purchase_positive`；外键 `purchase_request_id → purchase_request.id`（`ON DELETE CASCADE`）、`purchase_material_id → purchase_material.id`（`ON DELETE SET NULL`） |
+| `purchase_request_line` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_request_line(id)`；唯一 `uq_purchase_request_line_purchase_request_id(purchase_request_id, purchase_material_id, subitem_no, usage_hash)`；`ix_purchase_request_line_trace_no(trace_no)`、`ix_purchase_request_line_purchase_material_id(purchase_material_id)`、`ix_purchase_request_line_project_status(project_id, status)`；检查约束 `ck_purchase_request_line_purchase_positive`；外键 `purchase_request_id → purchase_request.id`（`ON DELETE CASCADE`）、`purchase_material_id → purchase_material.id`（`ON DELETE SET NULL`） |
 | `purchase_request_line_image` | `line_id` | BIGINT UNSIGNED | 否 | 无 | 主键之一，关联申购记录行 |
 | `purchase_request_line_image` | `file_id` | VARCHAR(36) | 否 | 无 | 主键之一，关联文件 |
 | `purchase_request_line_image` | `sort_order` | TINYINT UNSIGNED | 否 | 0 | 展示排序 |
-| `purchase_request_line_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_request_line_image(line_id, file_id)`；外键 `line_id → purchase_request_line.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `purchase_request_line_image` | *索引 / 外键* | — | — | — | 索引 `pk_purchase_request_line_image(line_id, file_id)`；`ix_purchase_request_line_image_file_id(file_id)`（附件引用反查）；外键 `line_id → purchase_request_line.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `stock_operation_line` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `stock_operation_line` | `operation_id` | BIGINT UNSIGNED | 否 | 无 | 所属单据头 |
 | `stock_operation_line` | `stock_material_id` | BIGINT UNSIGNED | 否 | 无 | 物资（与 `operation_id` 组合唯一） |
@@ -692,15 +692,15 @@ erDiagram
 | `hazard` | `client_request_id` | VARCHAR(64) | 是 | 无 | 小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）；网页端登记为空，非空即表示小程序登记 |
 | `hazard` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `hazard` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；唯一 `uq_hazard_project_client_request_id(project_id, client_request_id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_status`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
+| `hazard` | *索引 / 外键* | — | — | — | 主键 `pk_hazard(id)`；唯一 `uq_hazard_project_client_request_id(project_id, client_request_id)`；`ix_hazard_unit_id`、`ix_hazard_type_id`、`ix_hazard_project_status(project_id, status)`、`ix_hazard_project_created(project_id, created_at DESC, id DESC)`、`ix_hazard_due_date`；外键 `hazard_unit_id → hazard_unit.id`、`hazard_type_id → hazard_type.id` |
 | `hazard_before_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
 | `hazard_before_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `hazard_before_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序） |
-| `hazard_before_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_before_image(hazard_id, file_id)`；外键 `hazard_id → hazard.id`（`ON DELETE CASCADE`）、`file_id → file_object.id` |
+| `hazard_before_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_before_image(hazard_id, file_id)`；`ix_hazard_before_image_file_id(file_id)`（附件引用反查）；外键 `hazard_id → hazard.id`（`ON DELETE CASCADE`）、`file_id → file_object.id` |
 | `hazard_after_image` | `hazard_id` | BIGINT UNSIGNED | 否 | 无 | 隐患（与 `file_id` 组合主键） |
 | `hazard_after_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `hazard_after_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序 |
-| `hazard_after_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_after_image(hazard_id, file_id)`；外键同整改前表 |
+| `hazard_after_image` | *索引 / 外键* | — | — | — | 主键 `pk_hazard_after_image(hazard_id, file_id)`；`ix_hazard_after_image_file_id(file_id)`（附件引用反查）；外键同整改前表 |
 
 ### 字段明细：台账管理表
 
@@ -716,7 +716,7 @@ erDiagram
 | `ledger_tag_image` | `tag_id` | BIGINT UNSIGNED | 否 | 无 | 标签（与 `file_id` 组合主键） |
 | `ledger_tag_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `ledger_tag_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每个标签最多 9 张） |
-| `ledger_tag_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_tag_image(tag_id, file_id)`；外键 `tag_id → ledger_tag.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `ledger_tag_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_tag_image(tag_id, file_id)`；`ix_ledger_tag_image_file_id(file_id)`（附件引用反查）；外键 `tag_id → ledger_tag.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `ledger` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `ledger` | `name` | VARCHAR(128) | 否 | 无 | 名称 |
 | `ledger` | `model_spec` | VARCHAR(255) | 否 | 无 | 型号 |
@@ -728,11 +728,11 @@ erDiagram
 | `ledger` | `tag_ids` | VARCHAR(500) | 否 | `''` | 标签 id，英文逗号分隔（如 `'3,12,15'`），空串 = 未挂标签；写入时由服务端校验 id 存在并去重、升序规范化，单条记录最多 20 个标签 |
 | `ledger` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `ledger` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `ledger` | *索引 / 外键* | — | — | — | 主键 `pk_ledger(id)`；标签只在 `tag_ids` 里以字符串表达，没有关联表与外键，读接口按 id 回填标签名称与完整路径 |
+| `ledger` | *索引 / 外键* | — | — | — | 主键 `pk_ledger(id)`；索引 `ix_ledger_project_created(project_id, created_at DESC, id DESC)`；标签只在 `tag_ids` 里以字符串表达，没有关联表与外键，读接口按 id 回填标签名称与完整路径 |
 | `ledger_image` | `ledger_id` | BIGINT UNSIGNED | 否 | 无 | 台账记录（与 `file_id` 组合主键） |
 | `ledger_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `ledger_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每条记录最多 9 张） |
-| `ledger_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_image(ledger_id, file_id)`；外键 `ledger_id → ledger.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `ledger_image` | *索引 / 外键* | — | — | — | 主键 `pk_ledger_image(ledger_id, file_id)`；`ix_ledger_image_file_id(file_id)`（附件引用反查）；外键 `ledger_id → ledger.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 
 ### 字段明细：工作管理表
 
@@ -746,11 +746,11 @@ erDiagram
 | `work_task` | `remark` | VARCHAR(500) | 是 | NULL | 备注（备件、工作票、停机窗口等） |
 | `work_task` | `created_at` / `updated_at` | DATETIME(6) | 否 | `CURRENT_TIMESTAMP(6)` | 审计列 |
 | `work_task` | `version` | INT UNSIGNED | 否 | `1` | 乐观锁版本 |
-| `work_task` | *索引 / 外键* | — | — | — | 主键 `pk_work_task(id)`；唯一键 `uq_work_task_project_name`；索引 `ix_work_task_status(status)` |
+| `work_task` | *索引 / 外键* | — | — | — | 主键 `pk_work_task(id)`；唯一键 `uq_work_task_project_name`；索引 `ix_work_task_project_status(project_id, status)` |
 | `work_task_image` | `task_id` | BIGINT UNSIGNED | 否 | 无 | 任务（与 `file_id` 组合主键） |
 | `work_task_image` | `file_id` | VARCHAR(36) | 否 | 无 | 图片对象 |
 | `work_task_image` | `sort_order` | TINYINT UNSIGNED | 否 | `0` | 展示顺序（按上传顺序，每个任务最多 9 张） |
-| `work_task_image` | *索引 / 外键* | — | — | — | 主键 `pk_work_task_image(task_id, file_id)`；外键 `task_id → work_task.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `work_task_image` | *索引 / 外键* | — | — | — | 主键 `pk_work_task_image(task_id, file_id)`；`ix_work_task_image_file_id(file_id)`（附件引用反查）；外键 `task_id → work_task.id`（`ON DELETE CASCADE`）、`file_id → file_object.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `work_record` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `work_record` | `task_id` | BIGINT UNSIGNED | 否 | 无 | 所属任务（外键 RESTRICT：删任务前必须先删记录） |
 | `work_record` | `start_date` / `end_date` | DATE | 否 | 无 | 工作起止日期（含端点；结束不得早于开始） |

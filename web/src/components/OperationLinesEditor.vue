@@ -67,8 +67,9 @@ function remove(index: number) {
     >
       <MaterialSelector
         :value="line.stock_material_id"
+        :selected="line.material"
         :disabled="disabled"
-        :exclude-ids="selectedIds.filter((id) => id !== line.stock_material_id)"
+        :exclude-ids="selectedIds"
         @select="selectMaterial(index, $event)"
       />
       <span>{{ line.material?.current_qty ?? '—' }} {{ line.material?.unit_name }}</span>

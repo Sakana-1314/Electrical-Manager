@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useDialog, useMessage } from 'naive-ui'
 import OperationLinesEditor, {
   type OperationLineModel,
@@ -8,6 +8,7 @@ import OperationLinesEditor, {
 import { inventoryApi } from '@/api/inventory'
 import { isDecimalString } from '@/utils/decimal'
 import { toIsoWithTimezone } from '@/utils/time'
+import { invalidateStockMaterialCache } from '@/utils/stockMaterialCache'
 
 const props = defineProps<{ operationType: 'INBOUND' | 'OUTBOUND' }>()
 const route = useRoute()
@@ -26,6 +27,28 @@ const model = reactive({
   lines: [{ stock_material_id: null, quantity: '' }] as OperationLineModel[],
 })
 const title = computed(() => (props.operationType === 'INBOUND' ? '办理入库' : '办理出库'))
+/** 已提交成功：离开页面不再拦截 */
+const submitted = ref(false)
+/** 填过任何内容（物资、数量、用途、领用信息）即视为有草稿，离开前需要确认 */
+const dirty = computed(
+  () =>
+    !submitted.value &&
+    (model.lines.some((x) => x.stock_material_id || x.quantity) ||
+      !!model.business_reason.trim() ||
+      !!model.receiver_unit.trim() ||
+      !!model.receiver_name.trim() ||
+      !!model.subitem_no.trim()),
+)
+// 幂等键跟着「这一份表单内容」走：内容不变时重复提交（含超时后重试）沿用同一个键，
+// 服务端按键返回原单据、不会重复记账；内容一改就是新的一次提交，换新键。
+// 不能在出错时清空：超时的请求可能已经落库，换新键重试会生成两张流水。
+watch(
+  [model, occurredAt],
+  () => {
+    requestId.value = null
+  },
+  { deep: true },
+)
 function validate(): string | null {
   if (props.operationType === 'OUTBOUND' && !model.business_reason.trim()) return '请填写用途'
   if (props.operationType === 'OUTBOUND' && !model.receiver_name.trim()) return '请填写领用人'
@@ -56,11 +79,12 @@ async function submit() {
       props.operationType === 'INBOUND'
         ? await inventoryApi.inbound(payload)
         : await inventoryApi.outbound(payload)
+    submitted.value = true
+    invalidateStockMaterialCache()
     message.success(`${title.value}成功：${result.operation_no}`)
     // 流水详情已改为弹窗：跳到操作记录列表并由 ?detail= 打开这条流水
     await router.replace({ name: 'operations', query: { detail: String(result.id) } })
   } catch (e) {
-    requestId.value = null
     message.error(e instanceof Error ? e.message : '提交失败')
   } finally {
     submitting.value = false
@@ -88,6 +112,29 @@ function confirmSubmit() {
     },
   })
 }
+// 侧栏切页 / 返回时有未提交的草稿：先确认，避免误触丢掉一整单明细
+onBeforeRouteLeave(() => {
+  if (!dirty.value) return true
+  return new Promise<boolean>((resolve) => {
+    dialog.warning({
+      title: '放弃未提交的单据？',
+      content: `当前${props.operationType === 'INBOUND' ? '入库' : '出库'}单还没有提交，离开后填写的内容不会保留。`,
+      positiveText: '放弃并离开',
+      negativeText: '继续填写',
+      onPositiveClick: () => resolve(true),
+      onNegativeClick: () => resolve(false),
+      onClose: () => resolve(false),
+      onMaskClick: () => resolve(false),
+    })
+  })
+})
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!dirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+window.addEventListener('beforeunload', onBeforeUnload)
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 onMounted(async () => {
   const id = Number(route.query.material_id)
   if (id) {

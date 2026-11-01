@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** 隐患台账：筛选 + 分页 + 列显隐，整行点击进入编辑弹窗，删除在弹窗内。 */
-import { computed, h, onMounted, ref } from 'vue'
+import { computed, h, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
@@ -41,6 +42,8 @@ import {
 
 const auth = useAuthStore()
 const canWrite = computed(() => auth.can('hazard:write'))
+const route = useRoute()
+const router = useRouter()
 
 const units = ref<HazardUnit[]>([])
 const rectifyPersons = ref<string[]>([])
@@ -89,6 +92,7 @@ const {
         area: String(route.query.area || ''),
         keyword: String(route.query.keyword || ''),
         dateRange: null,
+        overdue: route.query.overdue === 'true' ? true : null,
       }
     },
     toQuery: (f) => hazardQuery(f),
@@ -97,6 +101,14 @@ const {
 
 const statusOptions: SelectOption[] = hazardStatuses.map((value) => ({ label: value, value }))
 const levelOptions: SelectOption[] = hazardLevels.map((value) => ({ label: value, value }))
+const overdueOptions: SelectOption[] = [{ label: '只看逾期未整改', value: 'overdue' }]
+/** 下拉值只能是字符串 / 数字：筛选状态里用布尔，这里做一层映射 */
+const overdueSelect = computed<string | null>({
+  get: () => (filters.overdue ? 'overdue' : null),
+  set: (value) => {
+    filters.overdue = value ? true : null
+  },
+})
 const unitOptions = computed<SelectOption[]>(() =>
   units.value.map((unit) => ({ label: unit.name, value: unit.id })),
 )
@@ -130,6 +142,7 @@ const activeFilterCount = computed(
       filters.area.trim() || null,
       filters.keyword.trim() || null,
       filters.dateRange,
+      filters.overdue,
     ].filter((value) => value !== null && value !== '').length,
 )
 
@@ -268,6 +281,18 @@ function openEdit(row: Hazard): void {
   showModal.value = true
 }
 
+// 工作台「登记隐患」快捷入口：?create=1 打开登记弹窗，随即把该参数从 URL 去掉
+// （刷新 / 后退不会再次弹出）。本页是 keepAlive 页，停用期间不响应别的路由。
+watch(
+  () => route.query.create,
+  async (raw) => {
+    if (route.name !== 'hazard-records' || raw !== '1') return
+    await router.replace({ query: { ...route.query, create: undefined } })
+    if (canWrite.value) openCreate()
+  },
+  { immediate: true },
+)
+
 /** 整行可点击进入编辑（忽略行内按钮/图片预览/拖拽选字）。 */
 function rowProps(row: Hazard) {
   return {
@@ -322,6 +347,15 @@ onMounted(async () => {
           <n-select
             v-model:value="filters.status"
             :options="statusOptions"
+            placeholder="不限"
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>逾期</span>
+          <n-select
+            v-model:value="overdueSelect"
+            :options="overdueOptions"
             placeholder="不限"
             clearable
           />

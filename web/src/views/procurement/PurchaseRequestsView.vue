@@ -699,8 +699,13 @@ function rowProps(row: PurchaseRecord) {
   }
 }
 
+/** 筛选下拉选项只是辅助数据：失败时保留上一次的选项，不影响保存 / 删除等主流程的结果提示 */
 async function loadFilterOptions() {
-  filterOptions.value = await procurementApi.recordFilterOptions()
+  try {
+    filterOptions.value = await procurementApi.recordFilterOptions()
+  } catch {
+    // 静默：选项沿用上一次结果
+  }
 }
 
 async function loadAiStatus() {

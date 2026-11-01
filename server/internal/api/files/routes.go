@@ -24,8 +24,10 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
-// CacheControl 图片与预览图的缓存头。
-const CacheControl = "public, max-age=86400, s-maxage=2592000"
+// CacheControl 图片与预览图的缓存头：file_id 是 UUIDv7 且内容按摘要去重、写入后不再变化，
+// 同一地址永远是同一张图，可以长期强缓存（与小程序码一致）。原来 1 天过期后整图重新下载，
+// 列表页每次翻页都要把缩略图再拉一遍。
+const CacheControl = "public, max-age=31536000, s-maxage=31536000, immutable"
 
 // fileWriter 各业务模块的写角色都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
 var fileWriter = auth.Roles(
@@ -229,11 +231,25 @@ func readImage(c *web.Ctx) error {
 	if err := p.Err(); err != nil {
 		return err
 	}
+	headers := map[string]string{"Cache-Control": CacheControl}
+	// 缩略图的 ETag 只由 file_id + 尺寸决定（内容不可变），浏览器带着它回来时直接 304，
+	// 连数据库都不用查：强缓存被清掉或 CDN 回源时省下一次查库 + 渲染。
+	if size != nil {
+		etag := previewETag(fileID, int(*size))
+		headers["ETag"] = etag
+		if etagMatches(c.Request.Header.Get("If-None-Match"), etag) {
+			return c.Bytes(304, file.PreviewMimeType, nil, headers)
+		}
+	}
 	item, path, err := file.GetImage(c.DB, fileID)
 	if err != nil {
 		return err
 	}
-	headers := map[string]string{"Cache-Control": CacheControl}
+	// 后面只剩读盘 / 缩放渲染（可能在渲染并发闸门上排队），不再访问数据库：先提交释放连接，
+	// 否则一页几十张冷缓存缩略图会让同样多的连接停在「事务中空闲」，挤占其它接口的连接池。
+	if err := c.DB.Commit(); err != nil {
+		return err
+	}
 	if size != nil {
 		data, err := file.RenderPreviewCached(fileID, path, int(*size))
 		if err != nil {
@@ -244,9 +260,33 @@ func readImage(c *web.Ctx) error {
 	// FileResponse(path, media_type, filename=f"{id}.png", content_disposition_type="inline")
 	headers["Content-Disposition"] = web.ContentDisposition("inline", item.ID+".png")
 	if st, err := os.Stat(path); err == nil {
-		headers["ETag"] = starletteETag(st)
+		etag := starletteETag(st)
+		headers["ETag"] = etag
+		if etagMatches(c.Request.Header.Get("If-None-Match"), etag) {
+			return c.Bytes(304, item.MimeType, nil, headers)
+		}
 	}
 	return c.File(path, "", item.MimeType, headers)
+}
+
+// previewETag 缩略图的强校验值：同一 file_id 同一尺寸的渲染结果恒定。
+func previewETag(fileID string, size int) string {
+	return `"` + fileID + "-" + strconv.Itoa(size) + `"`
+}
+
+// etagMatches 按 RFC 9110 的弱比较判断 If-None-Match 是否命中（支持逗号分隔多值与 *）。
+func etagMatches(header, etag string) bool {
+	if header == "" {
+		return false
+	}
+	want := strings.TrimPrefix(etag, "W/")
+	for _, part := range strings.Split(header, ",") {
+		part = strings.TrimSpace(part)
+		if part == "*" || strings.TrimPrefix(part, "W/") == want {
+			return true
+		}
+	}
+	return false
 }
 
 // starletteETag 复刻 Starlette FileResponse 的 etag：md5(str(st_mtime) + "-" + str(st_size))。

@@ -144,7 +144,12 @@ watch(
     if (visible) open()
   },
 )
-watch(page, () => void load())
+// 翻页只由分页器触发加载：原来的 watch(page) 会与 open / search / changePageSize 里
+// 「page = 1 + load()」叠加，从第 2 页以后重新搜索时同一条件连发两次请求。
+function changePage(value: number) {
+  page.value = value
+  void load()
+}
 </script>
 
 <template>
@@ -197,11 +202,12 @@ watch(page, () => void load())
     />
     <div class="pagination-bar">
       <n-pagination
-        v-model:page="page"
+        :page="page"
         :page-size="pageSize"
         :item-count="total"
         show-size-picker
         :page-sizes="[10, 20, 50]"
+        @update:page="changePage"
         @update:page-size="changePageSize"
       />
     </div>

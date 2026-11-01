@@ -16,7 +16,7 @@ import {
   isProjectMenuKey,
   projectIdFromMenuKey,
 } from '@/layouts/projectMenu'
-import { LOGO_URL } from '@/constants/branding'
+import { LOGO_MARK_URL } from '@/constants/branding'
 
 const route = useRoute()
 const router = useRouter()
@@ -106,7 +106,7 @@ function onUserMenuSelect(key: string) {
       @expand="collapsed = false"
     >
       <div class="brand" :class="{ compact: collapsed }">
-        <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
+        <img class="brand-mark" :src="LOGO_MARK_URL" alt="系统 Logo" />
         <span v-if="!collapsed">HXNI 电气无忧</span>
       </div>
       <n-menu
@@ -156,15 +156,23 @@ function onUserMenuSelect(key: string) {
         </div>
       </n-layout-header>
       <n-layout-content class="app-content" :native-scrollbar="false">
+        <!-- keepAlive 列表页最多缓存 6 个（两个申购列表页各约 2000 行、表格数据量大），超出按最久未用淘汰；
+             筛选与页码都在 URL 里，被淘汰的页重新进入时可完整恢复。
+             非缓存页同样按路由名加 key：入库 / 出库共用 OperationEditorView，不加 key 时侧栏从入库切到出库
+             会复用同一实例，入库草稿（明细、用途、时间）原样带进出库表单。 -->
         <router-view v-slot="{ Component, route: currentRoute }">
-          <keep-alive>
+          <keep-alive :max="6">
             <component
               :is="Component"
               v-if="currentRoute.meta.keepAlive"
               :key="String(currentRoute.name)"
             />
           </keep-alive>
-          <component :is="Component" v-if="!currentRoute.meta.keepAlive" />
+          <component
+            :is="Component"
+            v-if="!currentRoute.meta.keepAlive"
+            :key="String(currentRoute.name)"
+          />
         </router-view>
       </n-layout-content>
     </n-layout>
@@ -173,7 +181,7 @@ function onUserMenuSelect(key: string) {
   <!-- 移动端抽屉导航 -->
   <n-drawer v-model:show="drawerOpen" placement="left" :width="250" aria-label="导航菜单">
     <div class="drawer-brand">
-      <img class="brand-mark" :src="LOGO_URL" alt="系统 Logo" />
+      <img class="brand-mark" :src="LOGO_MARK_URL" alt="系统 Logo" />
       <span>HXNI 电气无忧</span>
     </div>
     <n-menu

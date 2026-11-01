@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request } = require('../../utils/request');
+const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams, withSharedOption } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
@@ -111,7 +111,7 @@ Page(withTheme({
     let persons = [];
     let subitemNos = [];
     try {
-      const result = await request({ url: '/mini-program/purchase-plans/filter-options' });
+      const result = await requestCached({ url: '/mini-program/purchase-plans/filter-options' });
       persons = (result.actual_demand_persons || []).filter(Boolean);
       subitemNos = (result.subitem_nos || []).filter(Boolean);
     } catch (error) {

@@ -95,7 +95,7 @@ web/src/
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：账号密码表单，调 `auth.login`，支持 `?redirect=` 回跳 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 顶栏用户菜单 |
-| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：汇总卡片（`inventoryApi.summary` + `hazardApi.stats`）与低库存提醒表格 |
+| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，跟随「后台可见功能」与二级库精简模式）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
 | `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表；行点击/编辑/新建都打开 `StockMaterialFormModal`（详情、档案与补库策略、出库小程序码、删除） |
 | `/warehouse/materials/:id` | — | 无组件，`redirect` 到 `stock-materials` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该物资的详情弹窗 |
@@ -237,7 +237,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 26 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 27 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -249,7 +249,8 @@ web/src/
 | `ImageUploader.vue` | 图片上传（校验类型/大小、多选后本地排队、最多 2 个并发、逐项进度与失败重试、删除二次确认、预览），并处理 ESC 只关一层预览的捕获逻辑 | props：`files: FileObject[]`、`disabled?`、`max?`（默认 9）；emit：`update:files` |
 | `LoadingMask.vue` | 元素内局部加载遮罩（模糊宿主 + 居中 loading） | props：`show: boolean`、`text?: string` |
 | `MaterialCodeSelector.vue` | 物料编码库弹窗选择器，支持按编码/名称/型号检索分页 | props：`modelValue: string`、`defaultName?`、`defaultModelSpec?`、`disabled?`；emits：`update:modelValue`、`select: [MaterialCodeLibrary]` |
-| `MaterialSelector.vue` | 二级库物资下拉选择（支持关键词加载与排除已选） | props：`value: number \| null`、`disabled?`、`excludeIds?: number[]`；emits：`update:value`、`select: [StockMaterial?]` |
+| `MaterialSelector.vue` | 二级库物资下拉选择（默认候选走 `stockMaterialCache` 的 15s 共享缓存，关键词搜索 300ms 防抖并丢弃过期响应，始终合并已选物资以免显示裸 id；支持排除已选） | props：`value: number \| null`、`selected?: StockMaterial \| null`、`disabled?`、`excludeIds?: number[]`；emits：`update:value`、`select: [StockMaterial?]` |
+| `RouteProgress.vue` | 路由切换顶部进度条（无渲染输出，须放在 `n-loading-bar-provider` 内）：导航开始启动、结束收起、代码块加载失败标红；同路由只改 query 不触发 | 无 props / emits |
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
@@ -272,7 +273,7 @@ web/src/
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
-| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL（`preservedQueryKeys` 声明要原样保留的非筛选参数，如详情弹窗的 `detail`，从当前 `route.query` 实时读） | `items`、`total`、`page`、`pageSize`、`loading`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 19 个列表页（仓库 5、申购 5、设置 5、隐患 3、台账 1） |
+| `usePagedTable.ts` | 统一列表分页/加载/筛选/URL 同步：`load/query/changePage/changePageSize/resetFilters`，可选 `rollbackEmptyPage` 防空页回退、`paginated: false` 全量拉取、`urlSync` 把 page/page_size/筛选写回 URL（`preservedQueryKeys` 声明要原样保留的非筛选参数，如详情弹窗的 `detail`，从当前 `route.query` 实时读）；只采纳最后一次发起的请求（旧响应丢弃）；不传 `onError` 时在组件内默认弹出错误消息，并暴露 `error` 供页面区分「加载失败」与「确实为空」；keepAlive 重新激活时若 URL 带了与本地不同的筛选条件（工作台指标卡等直达）则按 URL 恢复并重查，`create` 视为一次性动作参数不算筛选 | `items`、`total`、`page`、`pageSize`、`loading`、`error`、`filters`、`pageSizeOptions`、`load`、`query`、`changePage`、`changePageSize`、`resetFilters`、`syncRoute` | 19 个列表页（仓库 5、申购 5、设置 5、隐患 3、台账 1） |
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
@@ -292,6 +293,8 @@ web/src/
 | `sha256.ts` | 纯 JS SHA-256（局域网 HTTP 下没有 `crypto.subtle`）：`createSha256()` 增量哈希、`sha256Hex(bytes)`、`readBlobBytes(blob)`（优先 `Blob.arrayBuffer`，回退 `FileReader`）、`hashBlob(blob, { chunkSize, onProgress, shouldAbort })` 分块哈希并在块间让出主线程 |
 | `memoDrafts.ts` | 备忘录未保存草稿的 IndexedDB 暂存：按 `${userId}:${memoId}` 隔离，不可用时静默降级为无操作，另有 `hasPendingDraft` |
 | `memoFontSize.ts` | 备忘录编辑区字号偏好（`localStorage` key `memos.font-size`，档位 `14/16/18/20/24`，默认 16px）：`MEMO_FONT_SIZE_OPTIONS`、`normalizeMemoFontSize`、`readMemoFontSize`、`writeMemoFontSize`；非法 / 越界值回落默认且不写回脏值，存储不可用时静默降级 |
+| `naiveDarkTheme.ts` | Naive UI 深色主题按需加载：`loadNaiveDarkTheme()`（缓存同一个 Promise，首次需要深色时才动态导入 `naive-ui/es/themes/dark`）、`naiveDarkTheme`（已加载的主题，未加载为 null）；`App.vue` 在解析为深色时触发，`main.ts` 在深色档下 mount 前等它就绪避免首屏先浅后深 |
+| `stockMaterialCache.ts` | 物资选择器的请求合并：`fetchDefaultStockMaterials()`（前 200 条，15s 短时缓存，失败不缓存）、`fetchStockMaterial(id)`（只合并同时发出的重复请求）、`invalidateStockMaterialCache()`（出入库成功后调用） |
 | `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
@@ -306,7 +309,7 @@ web/src/
 #### `web/src/constants/`、`types/`、`config/`
 | 文件 | 职责 |
 | --- | --- |
-| `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = publicUrl('logo.png')`（按构建 base 拼前缀，子路径部署也正确）；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
+| `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = publicUrl('logo.png')`（512px，登录页大图；按构建 base 拼前缀，子路径部署也正确）、`LOGO_MARK_URL = publicUrl('logo-96.png')`（侧栏 / 抽屉品牌行用的小图）；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
 | `constants/shareColumns.ts` | 分享页可展示列定义（键名与后端 Literal 严格一致）：`SHARE_PLAN_COLUMNS`、`SHARE_RECORD_COLUMNS`、`shareColumnOptions()`、`SHARE_DEFAULT_HIDDEN_KEYS = ['status']`、`defaultShareColumnKeys()`，供 `ShareView` 渲染与 `ShareLinksView` 勾选共用 |
 | `constants/table.ts` | `tableColumnWidths`（unit/quantity/date/datetime/status/person/code/identifier/name/material/model/text/action）、`preventTableColumnCompression`、`getTableScrollX` |
 | `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
