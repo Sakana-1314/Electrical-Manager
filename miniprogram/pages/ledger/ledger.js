@@ -37,6 +37,8 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
+    // 必须在第一个 await 之前置位：onShow 紧随 onLoad 同步触发（见 hazards.js 同名注释）。
+    this.skipNextShow = true;
     setNavigationBarTitle('ledgerTitle');
     // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
     const shared = readShareParams(options, SHARE_PARAMS);
@@ -56,8 +58,6 @@ Page(withTheme({
       this.setData({ loading: false });
       this.showError(error);
     }
-    // 首次 onShow 紧随 onLoad，跳过；之后从详情页返回时刷新列表。
-    this.skipNextShow = true;
   },
 
   onShow() {

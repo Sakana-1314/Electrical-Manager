@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request, uploadImage } = require('../../utils/request');
+const { request, uploadImage, clearRequestCache } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
@@ -88,14 +88,18 @@ Page(withTheme({
 
   async addAfterImages() {
     const remaining = MAX_IMAGES - this.data.form.afterImages.length;
-    if (remaining <= 0) {
+    // 上传进行中不再受理新的选图：否则连点「添加」会并发多轮上传，总数越过 9 张上限
+    if (remaining <= 0 || this.uploading) {
       return;
     }
+    this.uploading = true;
     try {
       const chosen = await new Promise((resolve, reject) => {
         wx.chooseMedia({
           count: remaining,
           mediaType: ['image'],
+          // 优先压缩图：现场拍的原图常有数 MB，在车间弱网下上传要几十秒
+          sizeType: ['compressed'],
           sourceType: ['album', 'camera'],
           success: (result) => resolve(result.tempFiles || []),
           fail: (error) => reject(new Error(error.errMsg || t('hazardUploadFailed'))),
@@ -108,6 +112,8 @@ Page(withTheme({
       }
     } catch (error) {
       this.showError(error);
+    } finally {
+      this.uploading = false;
     }
   },
 
@@ -120,7 +126,10 @@ Page(withTheme({
   previewImage(event) {
     const group = event.currentTarget.dataset.group;
     const index = Number(event.currentTarget.dataset.index);
-    const images = group === 'before' ? this.data.hazard.before_images : this.data.hazard.after_images;
+    // 可编辑时整改后图片渲染的是 form.afterImages（含刚上传、尚未保存的），预览必须用同一份，
+    // 否则下标对不上（预览到别的图，或 current 为 undefined）。
+    const afterImages = this.data.canWrite ? this.data.form.afterImages : this.data.hazard.after_images;
+    const images = group === 'before' ? this.data.hazard.before_images : afterImages;
     const urls = (images || []).map((image) => image.original_url);
     if (!urls.length) {
       return;
@@ -130,7 +139,7 @@ Page(withTheme({
 
   async saveFollowUp() {
     const hazard = this.data.hazard;
-    if (!hazard || this.data.saving) {
+    if (!hazard || this.data.saving || this.uploading) {
       return;
     }
     this.setData({ saving: true });
@@ -146,6 +155,7 @@ Page(withTheme({
           version: hazard.version,
         },
       });
+      clearRequestCache('/mini-program/hazards');
       const decorated = decorateHazard(updated);
       this.setData({
         hazard: decorated,

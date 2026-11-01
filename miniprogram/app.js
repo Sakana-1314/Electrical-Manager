@@ -44,7 +44,45 @@ App({
         this.globalData.featureModes = DEFAULT_MODES;
         return DEFAULT_MODES;
       });
-    this.globalData.authPromise = loginSilently()
+    this.installAuthPromise();
+    this.globalData.authPromise = this.startLogin();
+  },
+
+  /**
+   * authPromise 做成访问器：登录失败（弱网、微信接口抖动）后，下一个读取它的页面会自动重新登录。
+   * 原来失败的 Promise 会一直留在 globalData 上，登录请求是 POST 不自动重试，
+   * 于是一次失败就让所有页面都卡在报错里，直到用户杀掉小程序重进。
+   * 页面照旧 `await getApp().globalData.authPromise`，无需改动；storeSession 里的赋值走 setter。
+   */
+  installAuthPromise() {
+    const data = this.globalData;
+    let current = null;
+    let failed = false;
+    const markFailed = (promise) => {
+      promise.catch(() => {
+        if (current === promise) failed = true;
+      });
+      return promise;
+    };
+    Object.defineProperty(data, 'authPromise', {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        if (failed) {
+          failed = false;
+          current = markFailed(this.startLogin());
+        }
+        return current;
+      },
+      set: (value) => {
+        failed = false;
+        current = value ? markFailed(value) : value;
+      },
+    });
+  },
+
+  startLogin() {
+    return loginSilently()
       .then((session) => {
         this.globalData.user = session.user;
         return session;

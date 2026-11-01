@@ -85,7 +85,7 @@
   <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
 
   <t-fab
-    wx:if="{{canWrite && items.length}}"
+    wx:if="{{canWrite}}"
     icon="add"
     text="{{i18n.hazardCreateAction}}"
     bind:click="goCreate"

@@ -129,7 +129,7 @@ function recoverCurrentProject() {
   return projectRecoveryPromise;
 }
 
-function request(options) {
+function requestOnce(options) {
   // 可恢复的鉴权失败仅发生在：需要鉴权且未显式传入 token。
   // auth:false（登录/设置接口）与显式 options.token（绑定页注册 token）不参与重登重试。
   const canRetry = options.auth !== false && !options.token;
@@ -335,7 +335,61 @@ function uploadImage(filePath, options = {}) {
   });
 }
 
+// 同一时刻完全相同的 GET 只发一次：页面 onLoad / onShow / 下拉刷新叠在一起时共用同一条在途请求。
+// 只合并「在途」的，响应一回来就移除，所以不会拿到过期数据；写请求不参与。
+const inflightGets = new Map();
+
+function requestKey(options) {
+  const { getCurrentProjectId } = require('./project');
+  return JSON.stringify([
+    options.url,
+    options.data || null,
+    options.token || wx.getStorageSync('miniProgramAccessToken') || '',
+    getCurrentProjectId(),
+    getLocale(),
+  ]);
+}
+
+function request(options) {
+  const method = (options.method || 'GET').toUpperCase();
+  if (method !== 'GET' || options.dedupe === false) return requestOnce(options);
+  const key = requestKey(options);
+  const existing = inflightGets.get(key);
+  if (existing) return existing;
+  const promise = requestOnce(options).finally(() => inflightGets.delete(key));
+  inflightGets.set(key, promise);
+  return promise;
+}
+
+// 筛选项 / 表单选项这类变化很慢的只读数据：会话内短时缓存，进出列表页不再每次都请求。
+// 失败不缓存；换项目、换语言、换账号（token）后自然 miss。
+const CACHE_TTL_MS = 120000;
+const responseCache = new Map();
+
+function requestCached(options, ttlMs = CACHE_TTL_MS) {
+  const key = requestKey(options);
+  const hit = responseCache.get(key);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.promise;
+  const promise = request(options);
+  responseCache.set(key, { at: Date.now(), promise });
+  promise.catch(() => {
+    if (responseCache.get(key) && responseCache.get(key).promise === promise) {
+      responseCache.delete(key);
+    }
+  });
+  return promise;
+}
+
+/** 写操作成功后让相关缓存失效（不传前缀则清空）。 */
+function clearRequestCache(urlPrefix) {
+  responseCache.forEach((_value, key) => {
+    if (!urlPrefix || key.indexOf(`["${urlPrefix}`) === 0) responseCache.delete(key);
+  });
+}
+
 module.exports = {
   request,
+  requestCached,
+  clearRequestCache,
   uploadImage,
 };
