@@ -1,0 +1,1 @@
+import{A as y}from"./index-CUYPwxSu.js";function r(t){const{textColorBase:o,opacity1:p,opacity2:c,opacity3:i,opacity4:a,opacity5:e}=t;return{color:o,opacity1Depth:p,opacity2Depth:c,opacity3Depth:i,opacity4Depth:a,opacity5Depth:e}}const n={common:y,self:r};export{n as i,r as s};
