@@ -165,13 +165,24 @@ async def test_uploaded_image_is_reencoded_as_png(client: AsyncClient) -> None:
     downloaded = await client.get(image_url)
     assert downloaded.status_code == 200
     assert downloaded.content.startswith(b"\x89PNG\r\n\x1a\n")
-    expected_cache = "public, max-age=86400, s-maxage=2592000"
+    expected_cache = "public, max-age=31536000, s-maxage=31536000, immutable"
     assert downloaded.headers["cache-control"] == expected_cache
+    revalidated = await client.get(
+        image_url, headers={"If-None-Match": downloaded.headers["etag"]}
+    )
+    assert revalidated.status_code == 304
+    assert revalidated.content == b""
 
     preview = await client.get(image_url, params={"size": 16})
     assert preview.status_code == 200
     assert preview.headers["content-type"].startswith("image/webp")
     assert preview.headers["cache-control"] == expected_cache
+    assert preview.headers["etag"] == f'"{body["id"]}-16"'
+    preview_revalidated = await client.get(
+        image_url, params={"size": 16}, headers={"If-None-Match": preview.headers["etag"]}
+    )
+    assert preview_revalidated.status_code == 304
+    assert preview_revalidated.content == b""
     with Image.open(io.BytesIO(preview.content)) as image:
         assert image.size == (16, 12)
     assert not (settings.upload_dir() / ".previews").exists()

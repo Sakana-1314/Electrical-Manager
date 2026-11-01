@@ -32,6 +32,11 @@ func materialMiniProgramCode(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
+	// 生成小程序码要调微信接口（最长约 15s），期间不再访问数据库：先提交释放连接，
+	// 批量打印物资码时排队的请求不会各自占着一个「事务中空闲」的连接。
+	if err := c.DB.Commit(); err != nil {
+		return err
+	}
 	code, err := generateUnlimitedMaterialCode(c.DB, materialUUID, env, appID)
 	if err != nil {
 		return err

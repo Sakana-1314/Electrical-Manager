@@ -2086,7 +2086,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 读取图片 */
+        /**
+         * 读取图片
+         * @description 图片内容不可变（file_id 为 UUIDv7，内容按摘要去重），响应带长期强缓存头与 ETag；请求头 If-None-Match 命中时返回 304 且无响应体。缩略图（传 size）的 ETag 为 `"<file_id>-<size>"`。
+         */
         get: operations["read_image_api_v1_files_images__file_id__get"];
         put?: never;
         post?: never;
@@ -34349,6 +34352,13 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description 未修改（If-None-Match 命中），无响应体 */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description 业务校验失败 */
             400: {
