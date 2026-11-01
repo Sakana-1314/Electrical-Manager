@@ -663,8 +663,13 @@ async function toggleTableFullscreen() {
     message.error('切换全屏失败')
   }
 }
+/** 筛选下拉选项只是辅助数据：失败时保留上一次的选项，不能让「保存成功」后再弹一条「保存失败」 */
 async function loadFilterOptions() {
-  filterOptions.value = await procurementApi.materialFilterOptions({ moved: false })
+  try {
+    filterOptions.value = await procurementApi.materialFilterOptions({ moved: false })
+  } catch {
+    // 静默：选项沿用上一次结果
+  }
 }
 async function loadAiStatus() {
   try {
@@ -858,6 +863,18 @@ async function openDetailById(id: number) {
   }
 }
 
+// 工作台「新建申购计划」快捷入口：?create=1 打开新建弹窗，随即把该参数从 URL 去掉
+// （刷新 / 后退不会再次弹出）。同样只认本页路由，keepAlive 停用期间不响应。
+watch(
+  () => routeQueryString(route.query.create),
+  async (raw) => {
+    if (route.name !== 'purchase-materials' || raw !== '1') return
+    await router.replace({ query: { ...route.query, create: undefined } })
+    if (canWrite.value) openCreate()
+  },
+  { immediate: true },
+)
+
 // URL → 弹窗的唯一入口：用 watch 而不是 onMounted，keepAlive / 同页导航都能生效
 watch(
   () => routeQueryString(route.query.detail),
@@ -902,8 +919,10 @@ async function save() {
       rememberPurchaseResponsible(form.purchase_responsible || '')
       message.success('申购计划已创建')
     }
+    // 新建回第一页看到新记录；编辑已有记录留在当前页，不打断翻到后面页的核对流程
+    const created = !editing.value
     closeDetail()
-    page.value = 1
+    if (created) page.value = 1
     await Promise.all([load(), loadFilterOptions()])
   } catch (e) {
     message.error(e instanceof Error ? e.message : '保存失败')
