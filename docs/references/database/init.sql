@@ -471,6 +471,9 @@ CREATE INDEX IF NOT EXISTS ix_stock_operation_type_occurred
 CREATE INDEX IF NOT EXISTS ix_stock_operation_reversal_of_id
   ON stock_operation (reversal_of_id);
 CREATE INDEX IF NOT EXISTS ix_stock_operation_project_id ON stock_operation (project_id);
+-- 操作记录默认排序（发生时间倒序）分页与工作台「今日出入库」计数。
+CREATE INDEX IF NOT EXISTS ix_stock_operation_project_occurred
+  ON stock_operation (project_id, occurred_at DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS purchase_material (
   id BIGSERIAL NOT NULL,
@@ -503,7 +506,8 @@ CREATE TABLE IF NOT EXISTS purchase_material (
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_purchase_material_status ON purchase_material (status);
+-- 列表与工作台都先按项目再按状态过滤，单列 status 索引在多项目下选择性差。
+CREATE INDEX IF NOT EXISTS ix_purchase_material_project_status ON purchase_material (project_id, status);
 CREATE INDEX IF NOT EXISTS ix_purchase_material_stock_material_id
   ON purchase_material (stock_material_id);
 CREATE INDEX IF NOT EXISTS ix_purchase_material_project_id ON purchase_material (project_id);
@@ -539,6 +543,8 @@ CREATE TABLE IF NOT EXISTS stock_material_image (
 
 CREATE INDEX IF NOT EXISTS ix_stock_material_image_project_id
   ON stock_material_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_stock_material_image_file_id ON stock_material_image (file_id);
 
 CREATE TABLE IF NOT EXISTS stock_replenishment_policy (
   stock_material_id BIGINT NOT NULL,
@@ -575,6 +581,8 @@ CREATE TABLE IF NOT EXISTS purchase_material_image (
 
 CREATE INDEX IF NOT EXISTS ix_purchase_material_image_project_id
   ON purchase_material_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_purchase_material_image_file_id ON purchase_material_image (file_id);
 
 CREATE TABLE IF NOT EXISTS purchase_plan_template (
   id BIGSERIAL NOT NULL,
@@ -624,6 +632,8 @@ CREATE TABLE IF NOT EXISTS purchase_plan_template_image (
 
 CREATE INDEX IF NOT EXISTS ix_purchase_plan_template_image_project_id
   ON purchase_plan_template_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_purchase_plan_template_image_file_id ON purchase_plan_template_image (file_id);
 
 CREATE TABLE IF NOT EXISTS purchase_request_line (
   id BIGSERIAL NOT NULL,
@@ -669,6 +679,13 @@ CREATE TABLE IF NOT EXISTS purchase_request_line (
 CREATE INDEX IF NOT EXISTS ix_purchase_request_line_trace_no ON purchase_request_line (trace_no);
 CREATE INDEX IF NOT EXISTS ix_purchase_request_line_project_id
   ON purchase_request_line (project_id);
+-- 申购计划「是否已转入申购记录」的 EXISTS / NOT EXISTS 判定（计划列表、筛选项、小程序计划列表）按它反查；
+-- 唯一键以 purchase_request_id 开头，用不上。
+CREATE INDEX IF NOT EXISTS ix_purchase_request_line_purchase_material_id
+  ON purchase_request_line (purchase_material_id);
+-- 工作台「在途申购」计数与按状态筛选。
+CREATE INDEX IF NOT EXISTS ix_purchase_request_line_project_status
+  ON purchase_request_line (project_id, status);
 
 CREATE TABLE IF NOT EXISTS purchase_request_line_image (
   line_id BIGINT NOT NULL,
@@ -686,6 +703,8 @@ CREATE TABLE IF NOT EXISTS purchase_request_line_image (
 
 CREATE INDEX IF NOT EXISTS ix_purchase_request_line_image_project_id
   ON purchase_request_line_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_purchase_request_line_image_file_id ON purchase_request_line_image (file_id);
 
 CREATE TABLE IF NOT EXISTS stock_operation_line (
   id BIGSERIAL NOT NULL,
@@ -803,7 +822,9 @@ CREATE TABLE IF NOT EXISTS hazard (
 
 CREATE INDEX IF NOT EXISTS ix_hazard_unit_id ON hazard (hazard_unit_id);
 CREATE INDEX IF NOT EXISTS ix_hazard_type_id ON hazard (hazard_type_id);
-CREATE INDEX IF NOT EXISTS ix_hazard_status ON hazard (status);
+CREATE INDEX IF NOT EXISTS ix_hazard_project_status ON hazard (project_id, status);
+-- 隐患台账默认排序（登记时间倒序）分页。
+CREATE INDEX IF NOT EXISTS ix_hazard_project_created ON hazard (project_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS ix_hazard_due_date ON hazard (due_date);
 CREATE INDEX IF NOT EXISTS ix_hazard_project_id ON hazard (project_id);
 
@@ -823,6 +844,8 @@ CREATE TABLE IF NOT EXISTS hazard_before_image (
 
 CREATE INDEX IF NOT EXISTS ix_hazard_before_image_project_id
   ON hazard_before_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_hazard_before_image_file_id ON hazard_before_image (file_id);
 
 CREATE TABLE IF NOT EXISTS hazard_after_image (
   hazard_id BIGINT NOT NULL,
@@ -840,6 +863,8 @@ CREATE TABLE IF NOT EXISTS hazard_after_image (
 
 CREATE INDEX IF NOT EXISTS ix_hazard_after_image_project_id
   ON hazard_after_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_hazard_after_image_file_id ON hazard_after_image (file_id);
 
 -- 台账管理：标签节点（自引用邻接表，至多 3 层）+ 标签图片关联 + 台账记录 + 台账图片关联。
 -- 台账记录的标签以英文逗号分隔的标签 id 存在 ledger.tag_ids（如 '3,12,15'，空串代表未挂标签），
@@ -881,6 +906,8 @@ CREATE TABLE IF NOT EXISTS ledger_tag_image (
 );
 
 CREATE INDEX IF NOT EXISTS ix_ledger_tag_image_project_id ON ledger_tag_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_ledger_tag_image_file_id ON ledger_tag_image (file_id);
 
 CREATE TABLE IF NOT EXISTS ledger (
   id BIGSERIAL NOT NULL,
@@ -902,6 +929,8 @@ CREATE TABLE IF NOT EXISTS ledger (
 );
 
 CREATE INDEX IF NOT EXISTS ix_ledger_project_id ON ledger (project_id);
+-- 台账总览默认排序（创建时间倒序）分页。
+CREATE INDEX IF NOT EXISTS ix_ledger_project_created ON ledger (project_id, created_at DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS ledger_image (
   ledger_id BIGINT NOT NULL,
@@ -918,6 +947,8 @@ CREATE TABLE IF NOT EXISTS ledger_image (
 );
 
 CREATE INDEX IF NOT EXISTS ix_ledger_image_project_id ON ledger_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_ledger_image_file_id ON ledger_image (file_id);
 
 -- 工作管理：任务（活）+ 任务图片 + 工作记录（谁在什么时候干哪个活）。
 -- 任务名在项目内唯一：同一件活反复干都登记在同一个任务下，用工作记录的起止时间表达周期，
@@ -940,7 +971,7 @@ CREATE TABLE IF NOT EXISTS work_task (
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_work_task_status ON work_task (status);
+CREATE INDEX IF NOT EXISTS ix_work_task_project_status ON work_task (project_id, status);
 CREATE INDEX IF NOT EXISTS ix_work_task_project_id ON work_task (project_id);
 
 CREATE TABLE IF NOT EXISTS work_task_image (
@@ -958,6 +989,8 @@ CREATE TABLE IF NOT EXISTS work_task_image (
 );
 
 CREATE INDEX IF NOT EXISTS ix_work_task_image_project_id ON work_task_image (project_id);
+-- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
+CREATE INDEX IF NOT EXISTS ix_work_task_image_file_id ON work_task_image (file_id);
 
 -- 工作记录：起止都精确到上午（AM）/ 下午（PM）；参与人员是「、」连接的姓名串
 -- （最多 20 人 × 24 字（含分隔符）= 500 字符，正好等于列宽），人员视图按姓名拆分后分组。
