@@ -1,29 +1,18 @@
 <script setup lang="ts">
-import { computed, h, ref, type Component as VueComponent } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { NIcon, type MenuOption } from 'naive-ui'
-import { LogOutOutline, MenuOutline } from '@vicons/ionicons5'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { type MenuOption } from 'naive-ui'
+import { MenuOutline } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
-import { useProjectStore } from '@/stores/project'
 import { useSettingsStore } from '@/stores/settings'
-import { useThemeStore } from '@/stores/theme'
-import { roleLabels } from '@/types/navigation'
-import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
 import { buildMainMenu } from '@/layouts/mainMenu'
-import {
-  buildProjectMenuSubmenu,
-  isProjectMenuKey,
-  projectIdFromMenuKey,
-} from '@/layouts/projectMenu'
+import UserMenu from '@/layouts/UserMenu.vue'
 import { LOGO_MARK_URL } from '@/constants/branding'
 
 const route = useRoute()
-const router = useRouter()
 const auth = useAuthStore()
-const project = useProjectStore()
 const settings = useSettingsStore()
-const theme = useThemeStore()
 const collapsed = ref(false)
 // 移动端断点：≤768px 时侧边栏切换为抽屉导航
 const isMobile = useMediaQuery('(max-width: 768px)')
@@ -31,8 +20,6 @@ const drawerOpen = ref(false)
 const closeDrawer = () => {
   drawerOpen.value = false
 }
-/** 统一用组件库图标（Naive UI 的 NIcon + @vicons/ionicons5），尺寸与居中由 n-menu 控制。 */
-const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
 /**
  * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
@@ -47,48 +34,12 @@ const menuOptions = computed<MenuOption[]>(() =>
   }),
 )
 
-function logout() {
-  auth.logout()
-  // 退出登录同时清掉项目选择：同一标签页换账号登录后要重新解析当前项目
-  project.clear()
-  void router.push({ name: 'login' })
-}
-
-/* ============ 顶栏用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色） ============
- * 「项目」二级菜单列出所有启用项目（父项显示当前项目名称，子项也只显示名称），切换后布局
- * 会整页刷新（页面大量使用 keep-alive，不刷新会继续显示上一个项目的数据）；
- * 菜单结构在 projectMenu.ts（有单测）。
- * 「外观」一级同样是二级菜单：鼠标悬浮向左展开三个档位（顶栏在最右上角，
- * Naive UI 子菜单空间不足时自动向左翻转）。父项图标反映当前实际明暗，
- * 当前档位显示对勾；顶栏不再放独立的明暗切换图标，外观只从菜单里切换。
- * 菜单结构在 appearanceMenu.ts（有单测）。 */
-
-const userMenuOptions = computed<MenuOption[]>(() => [
-  ...buildThemeMenuSubmenu(theme.mode, theme.isDark, renderIcon),
-  ...buildProjectMenuSubmenu(
-    project.enabledProjects,
-    project.currentProject?.id ?? null,
-    renderIcon,
-  ),
-  { type: 'divider', key: 'logout-divider' },
-  { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
-])
-
-/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）+ 项目切换（key 为 project:<id>）。 */
-function onUserMenuSelect(key: string) {
-  if (key === 'logout') {
-    logout()
-    return
-  }
-  if (isThemeModeKey(key)) {
-    theme.setMode(key)
-    return
-  }
-  if (isProjectMenuKey(key)) {
-    const id = projectIdFromMenuKey(key)
-    if (id !== null) project.select(id)
-  }
-}
+/**
+ * 侧栏与移动抽屉都改成纵向弹性容器：品牌行、菜单、左下角用户菜单三段。
+ * 覆盖 Naive UI 滚动容器自带的 `overflow: auto`，让滚动只发生在菜单区，
+ * 用户菜单固定在左下角、不随菜单滚走。
+ */
+const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: 'hidden' }
 </script>
 
 <template>
@@ -101,6 +52,7 @@ function onUserMenuSelect(key: string) {
       :collapsed-width="64"
       :width="180"
       :collapsed="collapsed"
+      :content-style="panelColumnStyle"
       show-trigger
       @collapse="collapsed = true"
       @expand="collapsed = false"
@@ -110,50 +62,32 @@ function onUserMenuSelect(key: string) {
         <span v-if="!collapsed">HXNI 电气无忧</span>
       </div>
       <n-menu
+        class="sider-menu"
         :collapsed="collapsed"
         :collapsed-width="64"
         :collapsed-icon-size="22"
         :options="menuOptions"
         :value="String(route.name || '')"
       />
+      <!-- 用户菜单固定在侧栏左下角：外观（自动 / 浅色 / 深色）+ 项目切换 + 退出登录 -->
+      <div class="sider-user">
+        <UserMenu :collapsed="collapsed" />
+      </div>
     </n-layout-sider>
     <n-layout>
-      <n-layout-header bordered class="topbar">
-        <div class="topbar-left">
-          <button
-            v-if="isMobile"
-            type="button"
-            class="menu-toggle"
-            aria-label="打开导航菜单"
-            @click="drawerOpen = true"
-          >
-            <n-icon :size="20"><MenuOutline /></n-icon>
-          </button>
-          <!-- 顶栏标题：桌面端「上级 / 当前」，顶级页面只有当前标题；移动端只保留当前标题（宽度不够） -->
-          <div class="topbar-title">
-            <n-breadcrumb>
-              <n-breadcrumb-item v-if="!isMobile && route.meta.parent">
-                {{ route.meta.parent }}
-              </n-breadcrumb-item>
-              <n-breadcrumb-item>{{ route.meta.title }}</n-breadcrumb-item>
-            </n-breadcrumb>
-          </div>
-        </div>
-        <div class="topbar-actions">
-          <!-- 顶栏不放当前项目标记：项目只在用户菜单里显示与切换，避免顶栏噪音 -->
-          <!-- 外观只从用户菜单的「外观」二级菜单切换，顶栏不再放独立的明暗切换图标 -->
-          <n-dropdown :options="userMenuOptions" @select="onUserMenuSelect">
-            <button type="button" class="user-menu-trigger" aria-label="打开用户菜单">
-              <span class="user-summary">
-                <span class="user-name">{{ auth.user?.display_name || auth.user?.username }}</span>
-                <span v-if="!isMobile" class="user-role">{{
-                  auth.user ? roleLabels[auth.user.role] : ''
-                }}</span>
-              </span>
-              <span class="user-menu-caret" aria-hidden="true" />
-            </button>
-          </n-dropdown>
-        </div>
+      <!-- 桌面端无顶栏：内容区直接从页面标题开始，页面标题由各视图的 .page-header 承担。
+           移动端没有侧栏，抽屉需要一个入口，因此只保留一条窄导航条（菜单按钮 + 当前页标题），
+           不再放用户信息——账号入口统一在抽屉左下角。 -->
+      <n-layout-header v-if="isMobile" bordered class="mobile-topbar">
+        <button
+          type="button"
+          class="menu-toggle"
+          aria-label="打开导航菜单"
+          @click="drawerOpen = true"
+        >
+          <n-icon :size="20"><MenuOutline /></n-icon>
+        </button>
+        <div class="mobile-title">{{ route.meta.title }}</div>
       </n-layout-header>
       <n-layout-content class="app-content" :native-scrollbar="false">
         <!-- keepAlive 列表页最多缓存 6 个（两个申购列表页各约 2000 行、表格数据量大），超出按最久未用淘汰；
@@ -178,8 +112,15 @@ function onUserMenuSelect(key: string) {
     </n-layout>
   </n-layout>
 
-  <!-- 移动端抽屉导航 -->
-  <n-drawer v-model:show="drawerOpen" placement="left" :width="250" aria-label="导航菜单">
+  <!-- 移动端抽屉导航：底部同样固定用户菜单（与桌面侧栏同一组件） -->
+  <n-drawer
+    v-model:show="drawerOpen"
+    placement="left"
+    :width="250"
+    :z-index="2000"
+    :content-style="panelColumnStyle"
+    aria-label="导航菜单"
+  >
     <div class="drawer-brand">
       <img class="brand-mark" :src="LOGO_MARK_URL" alt="系统 Logo" />
       <span>HXNI 电气无忧</span>
@@ -190,6 +131,10 @@ function onUserMenuSelect(key: string) {
       :value="String(route.name || '')"
       @update:value="closeDrawer"
     />
+    <div class="drawer-user">
+      <!-- 抽屉内的下拉浮层挂在 body 上，必须显式高于抽屉（2000），否则会被抽屉与遮罩压住 -->
+      <UserMenu :z-index="2001" />
+    </div>
   </n-drawer>
 </template>
 
@@ -199,6 +144,7 @@ function onUserMenuSelect(key: string) {
   background: var(--color-bg);
 }
 .brand {
+  flex: none;
   height: 68px;
   display: flex;
   align-items: center;
@@ -228,36 +174,59 @@ function onUserMenuSelect(key: string) {
   object-fit: contain;
   flex: none;
 }
-.topbar {
-  height: 68px;
-  padding: 0 28px;
+/* 菜单区独占剩余高度并自行滚动：用户菜单始终贴在左下角 */
+.sider-menu {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+.sider-user {
+  flex: none;
+  padding: 8px 10px 12px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.app-content {
+  padding: 24px 28px 32px;
+  background: var(--page-glow), var(--color-bg);
+}
+/* 抽屉内导航 */
+.drawer-brand {
   display: flex;
+  flex: none;
+  height: 68px;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-strong);
+  font-size: 17px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.drawer-menu {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.drawer-user {
+  flex: none;
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border-subtle);
+}
+/* 移动端窄导航条：唯一作用是给抽屉一个入口，并显示当前页标题（内容区不再重复标题） */
+.mobile-topbar {
+  display: flex;
+  height: 56px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
   background: var(--color-surface-translucent);
   backdrop-filter: blur(12px);
 }
-.topbar-left {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 10px;
-}
-/* 标题区可压缩：窄屏时省略，不把右侧操作挤出屏幕 */
-.topbar-title {
-  min-width: 0;
-  overflow: hidden;
-}
-.topbar-title .n-breadcrumb {
-  white-space: nowrap;
-}
-.topbar-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 8px;
-}
-/* 顶栏弱图标按钮（移动端导航开关） */
 .menu-toggle {
   display: grid;
   flex: none;
@@ -279,81 +248,18 @@ function onUserMenuSelect(key: string) {
   background: var(--color-primary-soft);
   outline: none;
 }
-.user-menu-trigger {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 13px 6px 15px;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  color: inherit;
-  background: transparent;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-}
-.user-menu-trigger:hover,
-.user-menu-trigger:focus-visible {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-soft);
-  outline: none;
-}
-.user-summary {
-  display: grid;
-  gap: 2px;
-  min-width: 96px;
-  text-align: left;
-}
-.user-name {
+.mobile-title {
+  min-width: 0;
+  overflow: hidden;
   color: var(--color-text-strong);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.25;
-}
-.user-role {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.25;
-}
-.user-menu-caret {
-  width: 7px;
-  height: 7px;
-  margin-top: -3px;
-  border-right: 1.5px solid var(--color-text-muted);
-  border-bottom: 1.5px solid var(--color-text-muted);
-  transform: rotate(45deg);
-}
-.app-content {
-  padding: 24px 28px 32px;
-  background: var(--page-glow), var(--color-bg);
-}
-/* 抽屉内导航 */
-.drawer-brand {
-  display: flex;
-  height: 68px;
-  align-items: center;
-  gap: 10px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  color: var(--color-text-strong);
-  font-size: 17px;
-  font-weight: 650;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-.drawer-menu {
-  padding-top: 8px;
-}
-/* 移动端（≤768px）顶栏与内容区适配 */
+/* 移动端（≤768px）内容区适配 */
 @media (max-width: 768px) {
-  .topbar {
-    height: 56px;
-    padding: 0 12px;
-  }
-  .user-summary {
-    min-width: 0;
-  }
   .app-content {
     padding: 16px 14px 24px;
   }

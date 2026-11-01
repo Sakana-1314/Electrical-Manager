@@ -23,8 +23,6 @@ declare module 'vue' {
     MaterialCodeSelector: typeof import('./src/components/MaterialCodeSelector.vue')['default']
     MaterialSelector: typeof import('./src/components/MaterialSelector.vue')['default']
     NAlert: typeof import('naive-ui')['NAlert']
-    NBreadcrumb: typeof import('naive-ui')['NBreadcrumb']
-    NBreadcrumbItem: typeof import('naive-ui')['NBreadcrumbItem']
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']
     NCheckbox: typeof import('naive-ui')['NCheckbox']
