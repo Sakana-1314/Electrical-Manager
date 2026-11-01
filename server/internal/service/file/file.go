@@ -598,14 +598,11 @@ func ListAttachments(s *db.Session, keyword *string, referenced *bool, status st
 	if err := s.Select(&rows, "SELECT "+fileCols+", "+refExpr+" AS reference_count FROM file_object f"+w.SQL()+" ORDER BY f.created_at DESC, f.id DESC LIMIT ? OFFSET ?", args...); err != nil {
 		return nil, 0, err
 	}
-	disk, err := managedDiskFiles()
-	if err != nil {
-		return nil, 0, err
-	}
+	// 只检查当前页这几行的文件是否在盘：原来每翻一页都把整个上传目录读一遍并逐个 stat，
+	// 耗时随附件总数增长而不是随页大小增长。
 	items := make([]schema.AttachmentRead, 0, len(rows))
 	for i := range rows {
-		_, exists := disk[rows[i].ID+".png"]
-		items = append(items, AttachmentRead(&rows[i].FileObject, rows[i].ReferenceCount, exists))
+		items = append(items, AttachmentRead(&rows[i].FileObject, rows[i].ReferenceCount, FileExists(rows[i].ID)))
 	}
 	return items, total, nil
 }

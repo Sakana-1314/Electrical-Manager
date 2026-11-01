@@ -671,21 +671,22 @@ func SearchOperations(s *db.Session, q OperationSearch) ([]*Operation, int64, er
 		return nil, 0, err
 	}
 	from := " FROM stock_operation o"
-	var joinArgs []any
 	if q.OperationNo != nil && *q.OperationNo != "" {
 		w.Add("o.operation_no LIKE ?", "%"+*q.OperationNo+"%")
 	}
 	if q.OperationType != nil && *q.OperationType != "" {
 		w.Add("o.operation_type = ?", *q.OperationType)
 	}
+	// 按物资名称筛选用 EXISTS 半连接而不是 JOIN + DISTINCT：单据头不会因多行明细重复，
+	// 列表查询不必再对全部命中单据去重排序，可以直接按 (project_id, occurred_at, id) 索引顺序取一页。
 	if q.MaterialName != nil && *q.MaterialName != "" {
-		scope, sargs, err := scopeAnd(s, "l.")
-		if err != nil {
+		lw := common.Where{}
+		lw.Add("l.operation_id = o.id")
+		if err := lw.Scope(s, "l."); err != nil {
 			return nil, 0, err
 		}
-		from += " JOIN stock_operation_line l ON o.id = l.operation_id" + scope
-		joinArgs = sargs
-		w.ContainsAny([]string{"l.material_name_snapshot", "l.model_spec_snapshot"}, q.MaterialName)
+		lw.ContainsAny([]string{"l.material_name_snapshot", "l.model_spec_snapshot"}, q.MaterialName)
+		w.Add("EXISTS (SELECT 1 FROM stock_operation_line l"+lw.SQL()+")", lw.Args...)
 	}
 	if q.SourceType != nil && *q.SourceType != "" {
 		switch *q.SourceType {
@@ -703,14 +704,14 @@ func SearchOperations(s *db.Session, q OperationSearch) ([]*Operation, int64, er
 	if q.EndAt != nil {
 		w.Add("o.occurred_at <= ?", *q.EndAt)
 	}
-	args := append(append([]any{}, joinArgs...), w.Args...)
+	args := w.Args
 	var total int64
-	if err := s.Get(&total, "SELECT COUNT(*) FROM (SELECT DISTINCT o.id"+from+w.SQL()+") t", args...); err != nil {
+	if err := s.Get(&total, "SELECT COUNT(o.id)"+from+w.SQL(), args...); err != nil {
 		return nil, 0, err
 	}
 	var rows []model.StockOperation
 	pageArgs := append(append([]any{}, args...), q.PageSize, common.Offset(q.Page, q.PageSize))
-	if err := s.Select(&rows, "SELECT DISTINCT "+prefixCols(model.ColsStockOperation, "o.")+from+w.SQL()+" ORDER BY o.occurred_at DESC, o.id DESC LIMIT ? OFFSET ?", pageArgs...); err != nil {
+	if err := s.Select(&rows, "SELECT "+prefixCols(model.ColsStockOperation, "o.")+from+w.SQL()+" ORDER BY o.occurred_at DESC, o.id DESC LIMIT ? OFFSET ?", pageArgs...); err != nil {
 		return nil, 0, err
 	}
 	ops := make([]*Operation, len(rows))
