@@ -13,17 +13,17 @@
 
   <view wx:if="{{result}}" class="material-card">
     <view class="summary-heading">
-      <view class="material-name">{{result.material_name}}</view>
+      <view class="material-name"><text user-select="{{true}}">{{result.material_name}}</text></view>
     </view>
-    <view class="material-spec">{{result.model_spec}}</view>
+    <view class="material-spec"><text user-select="{{true}}">{{result.model_spec}}</text></view>
     <view class="stock-block">
       <view>
         <view class="stock-label">{{i18n.outboundQuantity}}</view>
-        <view class="quantity-value">{{result.quantity}}<text class="quantity-unit">{{result.unit_name}}</text></view>
+        <view class="quantity-value"><text user-select="{{true}}">{{result.quantity}}<text class="quantity-unit">{{result.unit_name}}</text></text></view>
       </view>
       <view class="after-block">
         <view class="stock-label">{{i18n.remainingStock}}</view>
-        <view class="after-value">{{result.after_qty}} {{result.unit_name}}</view>
+        <view class="after-value"><text user-select="{{true}}">{{result.after_qty}} {{result.unit_name}}</text></view>
       </view>
     </view>
   </view>
@@ -36,35 +36,35 @@
     <view class="detail-list">
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundNo}}</view>
-        <view class="detail-value">{{result.operation_no}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.operation_no}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundQuantity}}</view>
-        <view class="detail-value">{{result.quantity}} {{result.unit_name}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.quantity}} {{result.unit_name}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.stockChange}}</view>
-        <view class="detail-value">{{result.before_qty}} → {{result.after_qty}} {{result.unit_name}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.before_qty}} → {{result.after_qty}} {{result.unit_name}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.subitemNo}}</view>
-        <view class="detail-value">{{result.subitem_no_label}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.subitem_no_label}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundPurpose}}</view>
-        <view class="detail-value">{{result.business_reason}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.business_reason}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.receiverName}}</view>
-        <view class="detail-value">{{result.receiver_name_label}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.receiver_name_label}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.executedBy}}</view>
-        <view class="detail-value">{{result.executed_by}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.executed_by}}</text></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundTime}}</view>
-        <view class="detail-value">{{result.occurred_at_label}}</view>
+        <view class="detail-value"><text user-select="{{true}}">{{result.occurred_at_label}}</text></view>
       </view>
     </view>
   </view>
