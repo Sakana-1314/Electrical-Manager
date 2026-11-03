@@ -75,9 +75,15 @@ jobs:
 
       - name: 生成上传信息
         run: |
-          UPLOAD_INFO="$(date -u --date='+8 hours' '+v%Y.%m.%d|CI 自动上传于 %Y/%m/%d %H:%M:%S')"
-          echo "MINIPROGRAM_VERSION=${UPLOAD_INFO%%|*}" >> "$GITHUB_ENV"
-          echo "MINIPROGRAM_DESC=${UPLOAD_INFO#*|}" >> "$GITHUB_ENV"
+          # 版本号取北京时间日期；版本描述取触发本次构建的 main 提交标题，
+          # 提交说明里通常就是本次改了什么（squash 合并后即 PR 标题）。
+          VERSION="$(date -u --date='+8 hours' '+v%Y.%m.%d')"
+          DESC="$(git log -1 --pretty=%s)"
+          if [ -z "$DESC" ]; then
+            DESC="CI 自动上传于 $(date -u --date='+8 hours' '+%Y/%m/%d %H:%M:%S')"
+          fi
+          printf 'MINIPROGRAM_VERSION=%s\n' "$VERSION" >> "$GITHUB_ENV"
+          printf 'MINIPROGRAM_DESC=%s\n' "$DESC" >> "$GITHUB_ENV"
 
       - name: 写入小程序构建时间
         run: |
