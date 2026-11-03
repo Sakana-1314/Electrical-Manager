@@ -8,16 +8,16 @@
   </view>
   <block wx:elif="{{record}}">
     <view class="summary-card">
-      <view class="summary-name">{{record.name}}</view>
-      <view class="summary-spec">{{record.model_spec}}</view>
+      <view class="summary-name"><text user-select="{{true}}">{{record.name}}</text></view>
+      <view class="summary-spec"><text user-select="{{true}}">{{record.model_spec}}</text></view>
       <view class="summary-footer">
         <view>
           <view class="summary-label">{{i18n.subitemNo}}</view>
-          <view class="summary-value">{{record.subitem_no_label}}</view>
+          <view class="summary-value"><text user-select="{{true}}">{{record.subitem_no_label}}</text></view>
         </view>
         <view class="quantity-block">
           <view class="summary-label">{{i18n.quantityLabel}}</view>
-          <view class="quantity-value">{{record.quantity_label}}</view>
+          <view class="quantity-value"><text user-select="{{true}}">{{record.quantity_label}}</text></view>
         </view>
       </view>
     </view>
@@ -26,11 +26,11 @@
       <view class="section-heading"><view class="section-title">{{i18n.ledgerInfo}}</view></view>
       <view class="section-divider"></view>
       <view class="detail-list">
-        <view class="detail-row"><view class="detail-label">{{i18n.modelSpecLabel}}</view><view class="detail-value">{{record.model_spec}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value">{{record.subitem_no_label}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.quantityLabel}}</view><view class="detail-value">{{record.quantity_label}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value">{{record.usage}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value">{{record.remark_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.modelSpecLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.model_spec}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.subitem_no_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.quantityLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.quantity_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value"><text user-select="{{true}}">{{record.usage}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{record.remark_label}}</text></view></view>
       </view>
     </view>
 
@@ -48,7 +48,7 @@
           theme="primary"
           variant="light"
           size="medium"
-        >{{item.path}}</t-tag>
+        ><text user-select="{{true}}">{{item.path}}</text></t-tag>
       </view>
       <view wx:else class="empty-hint">{{i18n.noTags}}</view>
     </view>

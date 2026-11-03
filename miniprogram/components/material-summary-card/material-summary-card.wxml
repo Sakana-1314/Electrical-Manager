@@ -1,19 +1,17 @@
 <view wx:if="{{displayMaterial}}" class="material-summary-card">
   <view class="summary-heading">
-    <view class="material-name">{{displayMaterial.name}}</view>
+    <view class="material-name"><text user-select="{{true}}">{{displayMaterial.name}}</text></view>
     <t-tag theme="{{displayMaterial.stock_status_theme}}" variant="light">
       {{displayMaterial.stock_status_label}}
     </t-tag>
   </view>
-  <view class="material-spec">{{displayMaterial.model_spec}}</view>
+  <view class="material-spec"><text user-select="{{true}}">{{displayMaterial.model_spec}}</text></view>
   <view class="stock-block">
     <view>
       <view class="stock-label">{{i18n.currentStock}}</view>
-      <view class="stock-number">{{displayMaterial.current_qty}}</view>
+      <view class="stock-number"><text user-select="{{true}}">{{displayMaterial.current_qty}}</text></view>
     </view>
-    <view class="stock-unit">{{displayMaterial.unit_name}}</view>
+    <view class="stock-unit"><text user-select="{{true}}">{{displayMaterial.unit_name}}</text></view>
   </view>
-  <view wx:if="{{displayMaterial.minimum_stock_label}}" class="minimum-tip">
-    {{displayMaterial.minimum_stock_label}}
-  </view>
+  <view wx:if="{{displayMaterial.minimum_stock_label}}" class="minimum-tip"><text user-select="{{true}}">{{displayMaterial.minimum_stock_label}}</text></view>
 </view>

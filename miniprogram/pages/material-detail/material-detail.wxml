@@ -16,7 +16,7 @@
       <view class="section-divider"></view>
       <view class="remark-row">
         <view class="remark-label">{{i18n.remark}}</view>
-        <view class="remark-value">{{material.remark || i18n.noRemark}}</view>
+        <view class="remark-value"><text user-select="{{true}}">{{material.remark || i18n.noRemark}}</text></view>
       </view>
     </view>
 

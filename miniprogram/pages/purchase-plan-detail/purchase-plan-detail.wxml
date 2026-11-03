@@ -9,18 +9,18 @@
   <block wx:elif="{{plan}}">
     <view class="plan-summary-card">
       <view class="summary-heading">
-        <view class="plan-name">{{plan.name}}</view>
+        <view class="plan-name"><text user-select="{{true}}">{{plan.name}}</text></view>
         <t-tag theme="{{plan.urgency_theme}}" variant="light" size="small">{{plan.urgency}}</t-tag>
       </view>
-      <view class="plan-spec">{{plan.model_spec}}</view>
+      <view class="plan-spec"><text user-select="{{true}}">{{plan.model_spec}}</text></view>
       <view class="summary-footer">
         <view>
           <view class="summary-label">{{i18n.planDate}}</view>
-          <view class="summary-date">{{plan.plan_date_label}}</view>
+          <view class="summary-date"><text user-select="{{true}}">{{plan.plan_date_label}}</text></view>
         </view>
         <view class="quantity-block">
           <view class="summary-label">{{i18n.plannedQuantity}}</view>
-          <view class="quantity-value">{{plan.quantity_label}}</view>
+          <view class="quantity-value"><text user-select="{{true}}">{{plan.quantity_label}}</text></view>
         </view>
       </view>
     </view>
@@ -29,14 +29,14 @@
       <view class="section-heading"><view class="section-title">{{i18n.purchasePlanInfo}}</view></view>
       <view class="section-divider"></view>
       <view class="detail-list">
-        <view class="detail-row"><view class="detail-label">{{i18n.materialCode}}</view><view class="detail-value">{{plan.material_code_label}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.category}}</view><view class="detail-value">{{plan.category_label}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.urgency}}</view><view class="detail-value">{{plan.urgency}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value">{{plan.demand_department}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.actualDemandPerson}}</view><view class="detail-value">{{plan.actual_demand_person}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value">{{plan.subitem_no_label}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value">{{plan.usage}}</view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value">{{plan.remark_label}}</view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.materialCode}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.material_code_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.category}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.category_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.urgency}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.urgency}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.demand_department}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.actualDemandPerson}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.actual_demand_person}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.subitem_no_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.usage}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{plan.remark_label}}</text></view></view>
       </view>
     </view>
 
