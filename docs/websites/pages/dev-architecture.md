@@ -1076,7 +1076,7 @@ flowchart LR
 
 - 依赖：`npm install` + 微信开发者工具「构建 npm」（TDesign 组件库）。
 - 检查：`node scripts/check.js`；上传：`node scripts/upload.js`（`miniprogram-ci`）。
-- CI 在 `miniprogram/` 变更时检查并上传开发版本，版本号取北京时间日期（如 `v2026.07.26`），同一版本依次上传到两个小程序；`AppID` 与上传私钥只存在于仓库 Secret，运行时由小程序上报自身 AppID，服务端据此选择对应 AppSecret。
+- CI 在 `miniprogram/` 变更时检查并上传开发版本，版本号取北京时间日期（如 `v2026.07.26`），版本描述取触发构建的 main 提交标题（squash 合并后即 PR 标题），同一版本依次上传到两个小程序；`AppID` 与上传私钥只存在于仓库 Secret，运行时由小程序上报自身 AppID，服务端据此选择对应 AppSecret。
 - 请求合法域名需在小程序后台配置为 `apiBaseUrl` 的域名。
 
 接口清单以[接口文档](/api)为准，库存与申购的数据模型见[数据模型](/dev-data-model)。
