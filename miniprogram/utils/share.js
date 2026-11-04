@@ -57,11 +57,11 @@ function readShareParams(options = {}, keys = []) {
 }
 
 /**
- * 把分享带来的筛选值补进下拉选项。
+ * 把分享带来的筛选值补进选项列表。
  *
- * 分享链接里的值可能已经不在当前选项里（例如那个人名下已没有在途计划，筛选项里就没了他），
- * 此时 t-dropdown-item 找不到匹配项，会回落到默认的「全部××」文案——但列表其实仍在按该值过滤，
- * 界面与数据就对不上了。这里把缺失的值补成一项，保证「看到什么就是筛了什么」。
+ * 分享链接里的值可能已经不在当前选项里（例如那个人名下已没有在途记录，选项里就没了他），
+ * 面板找不到匹配项只能显示原值——但列表其实仍在按该值过滤，界面与数据就对不上了。
+ * 各页的 `buildSection` 用同一规则把缺失值补成一项，保证「看到什么就是筛了什么」。
  *
  * @param {Array<{label: string, value: string}>} options 现有选项
  * @param {string} value 分享带来的筛选值（空串表示不限，直接返回原选项）
@@ -73,7 +73,7 @@ function withSharedOption(options, value) {
   return [{ label: value, value }, ...options];
 }
 
-/** 分享值是否落在允许集合内：页签 / 固定枚举这类不能凭空造选项，非法值直接忽略。 */
+/** 分享值是否落在允许集合内：固定枚举这类不能凭空造选项，非法值直接忽略。 */
 function isAllowedShareValue(value, allowed) {
   return allowed.indexOf(value) !== -1;
 }

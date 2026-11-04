@@ -2,27 +2,14 @@
   <view class="list-header"><view class="page-title">{{i18n.hazardsTitle}}</view></view>
 
   <view class="list-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.hazardSearchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      sections="{{filterSections}}"
+      active="{{filters}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
-    <t-dropdown-menu class="filter-menu">
-      <t-dropdown-item
-        label="{{i18n.allHazardStatuses}}"
-        value="{{status}}"
-        options="{{statusOptions}}"
-        bind:change="onStatusChange"
-      />
-      <t-dropdown-item
-        label="{{i18n.allRectifyPersons}}"
-        value="{{rectifyPerson}}"
-        options="{{rectifyPersonOptions}}"
-        bind:change="onRectifyPersonChange"
-      />
-    </t-dropdown-menu>
   </view>
 
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
@@ -34,7 +21,7 @@
   <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
     <t-empty
       icon="file"
-      description="{{keyword || status || rectifyPerson ? i18n.hazardsEmptyFiltered : i18n.hazardsEmpty}}"
+      description="{{keyword || filtered ? i18n.hazardsEmptyFiltered : i18n.hazardsEmpty}}"
     />
   </view>
 

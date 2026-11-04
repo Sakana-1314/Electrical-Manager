@@ -2,12 +2,13 @@
   <view class="list-header"><view class="page-title">{{i18n.huaxingInventoryTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.huaxingInventorySearchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      sections="{{filterSections}}"
+      active="{{filters}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
   </view>
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
@@ -15,7 +16,7 @@
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHuaxingInventory}}" />
   </view>
   <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
-    <t-empty icon="search" description="{{keyword ? i18n.huaxingInventoryEmptyFiltered : i18n.huaxingInventoryEmpty}}" />
+    <t-empty icon="search" description="{{keyword || filtered ? i18n.huaxingInventoryEmptyFiltered : i18n.huaxingInventoryEmpty}}" />
   </view>
   <view wx:else class="record-list">
     <view

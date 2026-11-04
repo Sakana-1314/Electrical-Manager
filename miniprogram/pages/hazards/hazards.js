@@ -1,33 +1,39 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const {
-  buildSharePath,
-  isAllowedShareValue,
-  readShareParams,
-  withSharedOption,
-} = require('../../utils/share');
+const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
 const Toast = toastModule.default || toastModule;
 
 const PAGE_SIZE = 15;
-// 整改状态是后端枚举的固定三档，选项直接内置（与网页端筛选项一致）。
+// 整改状态与隐患等级是后端枚举的固定档位，选项直接内置（与网页端筛选项一致）。
 const HAZARD_STATUSES = ['待整改', '整改受阻', '已整改'];
+const HAZARD_LEVELS = ['一般隐患', '重大隐患'];
+// 固定枚举的筛选分区：非法分享值不能凭空造选项，校验后直接忽略。
+const ENUM_SECTIONS = { status: HAZARD_STATUSES, level: HAZARD_LEVELS };
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'status', 'rectifyPerson'];
+const SHARE_PARAMS = ['keyword', 'status', 'level', 'rectifyPerson', 'overdue'];
+const FILTER_SECTIONS = ['status', 'level', 'rectifyPerson', 'overdue'];
 const PAGE_ROUTE = '/pages/hazards/hazards';
 
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    status: '',
-    statusOptions: [],
-    rectifyPerson: '',
-    rectifyPersonOptions: [],
+    // 当前生效的筛选值：key 与分享参数同名；「仅逾期」用 overdue / '' 两态。
+    filters: {
+      status: '',
+      level: '',
+      rectifyPerson: '',
+      overdue: '',
+    },
+    filterSections: [],
+    /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
+    filtered: false,
     page: 1,
     pageSize: PAGE_SIZE,
     total: 0,
@@ -44,8 +50,15 @@ Page(withTheme({
     // 会在登录、筛选项都没就绪时多发一次列表请求，而「第一次从详情返回」反而被误当成首次 onShow 吞掉。
     this.skipNextShow = true;
     setNavigationBarTitle('hazardsTitle');
-    // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（下拉项要靠 options 才能解析出文案）。
+    // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    // 固定枚举与「仅逾期」开关：非法值直接忽略，避免按不存在的状态过滤。
+    Object.keys(ENUM_SECTIONS).forEach((key) => {
+      if (shared[key] !== undefined && !isAllowedShareValue(shared[key], ENUM_SECTIONS[key])) {
+        delete shared[key];
+      }
+    });
+    if (shared.overdue !== undefined && shared.overdue !== 'overdue') delete shared.overdue;
     try {
       const app = getApp();
       const session = await app.globalData.authPromise;
@@ -61,14 +74,31 @@ Page(withTheme({
       await app.globalData.featureSettingsPromise;
       this.setData({ canWrite: canWriteHazards() });
       await this.loadFilterOptions(shared);
-      // 整改状态是固定三档：非法值不能凭空补进枚举，直接忽略，避免列表按不存在的状态过滤。
-      if (!isAllowedShareValue(shared.status, HAZARD_STATUSES)) delete shared.status;
-      if (Object.keys(shared).length) this.setData(shared);
+      this.applyShared(shared);
       await this.loadHazards(true);
     } catch (error) {
       this.setData({ loading: false });
       this.showError(error);
     }
+  },
+
+  /** 把分享 / 回跳带来的参数并进当前筛选状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  applyShared(shared) {
+    const filters = { ...this.data.filters };
+    let changed = false;
+    FILTER_SECTIONS.forEach((key) => {
+      if (shared[key] !== undefined) {
+        filters[key] = shared[key];
+        changed = true;
+      }
+    });
+    const patch = {};
+    if (changed) {
+      patch.filters = filters;
+      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
+    }
+    if (shared.keyword !== undefined) patch.keyword = shared.keyword;
+    if (Object.keys(patch).length) this.setData(patch);
   },
 
   onShow() {
@@ -100,13 +130,15 @@ Page(withTheme({
     this.searchTimer = setTimeout(() => void this.loadHazards(true), 350);
   },
 
-  onStatusChange(event) {
-    this.setData({ status: event.detail.value });
-    void this.loadHazards(true);
-  },
-
-  onRectifyPersonChange(event) {
-    this.setData({ rectifyPerson: event.detail.value });
+  /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
+  onFilterChange(event) {
+    const values = (event.detail && event.detail.values) || {};
+    const filters = normalizeFilters(values, FILTER_SECTIONS);
+    // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
+    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+      return;
+    }
+    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
     void this.loadHazards(true);
   },
 
@@ -122,22 +154,40 @@ Page(withTheme({
         selector: '#hazards-toast',
         message: t('hazardFilterOptionsLoadFailed'),
         theme: 'warning',
+        direction: 'column',
       });
     }
     this.setData({
-      statusOptions: [
-        { label: t('allHazardStatuses'), value: '' },
-        ...HAZARD_STATUSES.map((value) => ({ label: value, value })),
+      filterSections: [
+        this.buildSection('status', t('hazardStatusLabel'), HAZARD_STATUSES, shared.status),
+        this.buildSection('level', t('hazardLevelLabel'), HAZARD_LEVELS, shared.level),
+        this.buildSection(
+          'rectifyPerson',
+          t('filterRectifyPerson'),
+          rectifyPersons,
+          shared.rectifyPerson,
+        ),
+        {
+          key: 'overdue',
+          title: t('filterOverdue'),
+          options: [
+            { label: t('all'), value: '' },
+            { label: t('filterOnlyOverdue'), value: 'overdue' },
+          ],
+        },
       ],
-      // 整改人是自由文本：分享值可能已不在候选里，补进选项以免下拉与列表不一致。
-      rectifyPersonOptions: withSharedOption(
-        [
-          { label: t('allRectifyPersons'), value: '' },
-          ...rectifyPersons.map((value) => ({ label: value, value })),
-        ],
-        shared.rectifyPerson,
-      ),
     });
+  },
+
+  /** 组装一个固定枚举 / 候选值分区：首项「全部」，分享值缺失时补一项，避免面板显示成原值。 */
+  buildSection(key, title, values, sharedValue) {
+    const list = [{ label: t('all'), value: '' }].concat(
+      values.map((value) => ({ label: value, value })),
+    );
+    if (sharedValue && !list.some((option) => option.value === sharedValue)) {
+      list.splice(1, 0, { label: sharedValue, value: sharedValue });
+    }
+    return { key, title, options: list };
   },
 
   async loadHazards(reset) {
@@ -152,8 +202,11 @@ Page(withTheme({
       const data = { page, page_size: this.data.pageSize };
       const keyword = this.data.keyword.trim();
       if (keyword) data.keyword = keyword;
-      if (this.data.status) data.status = this.data.status;
-      if (this.data.rectifyPerson) data.rectify_person = this.data.rectifyPerson;
+      const filters = this.data.filters;
+      if (filters.status) data.status = filters.status;
+      if (filters.level) data.level = filters.level;
+      if (filters.rectifyPerson) data.rectify_person = filters.rectifyPerson;
+      if (filters.overdue) data.overdue = true;
       const result = await request({ url: '/mini-program/hazards', data });
       if (requestId !== this.requestId) {
         return;
@@ -200,12 +253,15 @@ Page(withTheme({
     });
   },
 
-  /** 分享路径：把当前搜索词与两个筛选值一起带出去。 */
+  /** 分享路径：把当前搜索词与全部筛选值一起带出去。 */
   sharePath() {
+    const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      status: this.data.status,
-      rectifyPerson: this.data.rectifyPerson,
+      status: filters.status,
+      level: filters.level,
+      rectifyPerson: filters.rectifyPerson,
+      overdue: filters.overdue,
     });
   },
 

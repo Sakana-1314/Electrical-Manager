@@ -11,14 +11,38 @@ const Toast = toastModule.default || toastModule;
 // 分享链接携带的搜索词与库存状态（与页面 data 字段同名，便于直接回填）。
 const SHARE_PARAMS = ['keyword', 'stockStatus'];
 const PAGE_ROUTE = '/pages/inventory/inventory';
-// 库存状态页签是固定三档（与页面上的 t-tabs 一致）：非法值直接忽略，不凭空造页签。
-const STOCK_STATUSES = ['all', 'out_of_stock', 'low_stock'];
+// 库存状态是固定两档（空串表示不限，与筛选面板的「全部」一致）：非法值直接忽略，不凭空造选项。
+const STOCK_STATUSES = ['out_of_stock', 'low_stock'];
+// 筛选面板的分区（key 按面板约定）；精简模式下整个面板退化为纯搜索。
+const FILTER_SECTIONS = ['stockStatus'];
+
+function stockStatusOptions() {
+  return [
+    { label: t('all'), value: '' },
+    { label: t('outOfStock'), value: 'out_of_stock' },
+    { label: t('lowStock'), value: 'low_stock' },
+  ];
+}
+
+/** 组装一个筛选分区：首项「全部」，固定枚举的取值直接列在后面。 */
+function buildSection() {
+  return {
+    key: 'stockStatus',
+    title: t('filterStockStatus'),
+    options: stockStatusOptions(),
+  };
+}
 
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    stockStatus: 'all',
+    // 库存状态：空串 = 全部；精简模式下没有这项筛选，面板不渲染该分区。
+    stockStatus: '',
+    // 传给筛选面板的已生效值（面板只认 `{ [key]: value }`，空值表示不限）。
+    filterActive: {},
+    filterSections: [],
+    filtered: false,
     liteMode: false,
     page: 1,
     pageSize: 15,
@@ -32,7 +56,7 @@ Page(withTheme({
 
   async onLoad(options = {}) {
     setNavigationBarTitle('inventoryTitle');
-    // 分享链接带来的搜索词 / 库存状态；精简模式下没有库存状态页签，忽略该参数。
+    // 分享链接带来的搜索词 / 库存状态；精简模式下没有库存状态筛选，忽略该参数。
     const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const [session, featureModes] = await Promise.all([
@@ -55,11 +79,15 @@ Page(withTheme({
       }
       // 精简模式：二级库独立表 + 只读，调用精简接口且无库存状态/详情。
       const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
-      const restored = { ...shared };
-      if (liteMode || !isAllowedShareValue(restored.stockStatus, STOCK_STATUSES)) {
-        delete restored.stockStatus;
+      const patch = { liteMode };
+      if (shared.keyword !== undefined) patch.keyword = shared.keyword;
+      if (!liteMode && isAllowedShareValue(shared.stockStatus, STOCK_STATUSES)) {
+        patch.stockStatus = shared.stockStatus;
       }
-      this.setData({ liteMode, ...restored });
+      patch.filterSections = liteMode ? [] : [buildSection()];
+      patch.filtered = !liteMode && !!patch.stockStatus;
+      patch.filterActive = patch.filtered ? { stockStatus: patch.stockStatus } : {};
+      this.setData(patch);
       await this.loadInventory(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -91,15 +119,17 @@ Page(withTheme({
     }, 350);
   },
 
-  onStatusChange(event) {
+  /** 筛选面板确认：库存状态是唯一分区，空值回落到「全部」。 */
+  onFilterChange(event) {
     if (this.data.liteMode) {
       return;
     }
-    const stockStatus = event.detail.value;
+    const values = (event.detail && event.detail.values) || {};
+    const stockStatus = values.stockStatus || '';
     if (stockStatus === this.data.stockStatus) {
       return;
     }
-    this.setData({ stockStatus });
+    this.setData({ stockStatus, filtered: !!stockStatus, filterActive: stockStatus ? { stockStatus } : {} });
     void this.loadInventory(true);
   },
 
@@ -120,7 +150,7 @@ Page(withTheme({
       if (keyword) {
         query.keyword = keyword;
       }
-      if (!this.data.liteMode && this.data.stockStatus !== 'all') {
+      if (!this.data.liteMode && this.data.stockStatus) {
         query.stock_status = this.data.stockStatus;
       }
       const url = this.data.liteMode
@@ -168,14 +198,13 @@ Page(withTheme({
     });
   },
 
-  /** 分享路径：把当前搜索词与库存状态页签一起带出去（精简模式没有页签，不带该参数）。 */
+  /** 分享路径：把当前搜索词与库存状态一起带出去（精简模式没有该筛选，不带该参数）。 */
   sharePath() {
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
       stockStatus: this.data.liteMode ? '' : this.data.stockStatus,
     });
   },
-
   onShareAppMessage() {
     return {
       title: t('shareInventory'),

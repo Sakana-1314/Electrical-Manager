@@ -1,0 +1,93 @@
+<!-- 收起态：一行「搜索 + 筛选按钮」，占位与原来的 t-search 一致，不额外增加首屏高度。 -->
+<view class="filter-bar">
+  <view class="filter-search">
+    <t-search
+      value="{{keyword}}"
+      placeholder="{{placeholder}}"
+      shape="round"
+      confirm-type="search"
+      bind:change="onSearchInput"
+      bind:submit="onSearchSubmit"
+    />
+  </view>
+  <!-- 没有筛选维度时（如精简模式）只留搜索框，按钮不占位置。 -->
+  <view
+    wx:if="{{sectionsView.length}}"
+    class="filter-trigger {{activeCount ? 'filter-trigger-active' : ''}}"
+    hover-class="filter-trigger-hover"
+    aria-role="button"
+    aria-label="{{i18n.filterTitle}}"
+    aria-expanded="{{visible}}"
+    bind:tap="openSheet"
+  >
+    <t-icon name="filter" size="32rpx" />
+    <text wx:if="{{activeCount}}" class="filter-trigger-count">{{activeCount}}</text>
+  </view>
+</view>
+
+<!-- 已选条件：只在有筛选时出现一行，可单项删除或全部清除。
+     用 scroll-view 横向滚动（view 上的 overflow-x 在部分基础库不生效）。 -->
+<scroll-view wx:if="{{activeCount}}" class="filter-chips" scroll-x enhanced show-scrollbar="{{false}}">
+  <view class="filter-chips-track">
+    <view
+      wx:for="{{chips}}"
+      wx:key="key"
+      class="filter-chip"
+      hover-class="filter-chip-hover"
+      data-key="{{item.key}}"
+      bind:tap="removeChip"
+    >
+      <text class="filter-chip-text">{{item.label}}</text>
+      <t-icon class="filter-chip-close" name="close" size="24rpx" />
+    </view>
+    <view class="filter-chip-clear" hover-class="filter-chip-hover" bind:tap="resetAll">
+      {{i18n.filterClearAll}}
+    </view>
+  </view>
+</scroll-view>
+
+<!-- 底部筛选面板：分区平铺，点选即改草稿；点「确定」一次性回传。 -->
+<t-popup
+  visible="{{visible}}"
+  placement="bottom"
+  close-on-overlay-click
+  bind:visible-change="onVisibleChange"
+>
+  <view class="filter-sheet">
+    <view class="filter-sheet-header">
+      <view class="filter-sheet-title">{{i18n.filterTitle}}</view>
+      <view class="filter-sheet-close" hover-class="filter-chip-hover" bind:tap="closeSheet">
+        <t-icon name="close" size="36rpx" />
+      </view>
+    </view>
+    <scroll-view class="filter-sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{sectionsView}}" wx:key="key" class="filter-section">
+        <view class="filter-section-title">{{item.title}}</view>
+        <view class="filter-options">
+          <view
+            class="filter-option {{option.selected ? 'filter-option-selected' : ''}}"
+            hover-class="filter-option-hover"
+            wx:for="{{item.options}}"
+            wx:for-item="option"
+            wx:key="value"
+            data-section="{{item.key}}"
+            data-value="{{option.value}}"
+            bind:tap="selectOption"
+          >{{option.label}}</view>
+        </view>
+      </view>
+    </scroll-view>
+    <view class="filter-sheet-actions">
+      <t-button
+        class="filter-action"
+        theme="default"
+        variant="outline"
+        size="large"
+        bind:tap="resetDraft"
+      >{{i18n.filterReset}}</t-button>
+      <t-button class="filter-action" theme="primary" size="large" bind:tap="confirmSheet">
+        {{i18n.confirm}}
+      </t-button>
+    </view>
+  </view>
+</t-popup>
