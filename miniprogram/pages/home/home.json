@@ -2,7 +2,9 @@
   "navigationBarTitleText": "电气无忧",
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
+    "t-empty": "tdesign-miniprogram/empty/empty",
     "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-loading": "tdesign-miniprogram/loading/loading",
     "t-picker": "tdesign-miniprogram/picker/picker",
     "t-picker-item": "tdesign-miniprogram/picker-item/picker-item",
     "t-popup": "tdesign-miniprogram/popup/popup",

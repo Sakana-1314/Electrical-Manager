@@ -214,10 +214,12 @@ type MiniProgramPurchasePlanDetailRead struct {
 	NextID           *int64           `json:"next_id"`
 }
 
-// MiniProgramPurchasePlanFilterOptions 是申购计划筛选下拉选项。
+// MiniProgramPurchasePlanFilterOptions 是申购计划筛选下拉选项（只统计在途计划）。
 type MiniProgramPurchasePlanFilterOptions struct {
 	ActualDemandPersons []string `json:"actual_demand_persons"`
 	SubitemNos          []string `json:"subitem_nos"`
+	Urgencies           []string `json:"urgencies"`
+	Categories          []string `json:"categories"`
 }
 
 // MiniProgramPurchaseRecordItemRead 是小程序申购记录行（列表与详情共用）。
@@ -254,8 +256,11 @@ type MiniProgramPurchaseRecordItemRead struct {
 
 // MiniProgramPurchaseRecordFilterOptions 是申购记录筛选下拉选项。
 type MiniProgramPurchaseRecordFilterOptions struct {
-	Statuses   []string `json:"statuses"`
-	SubitemNos []string `json:"subitem_nos"`
+	Statuses            []string `json:"statuses"`
+	SubitemNos          []string `json:"subitem_nos"`
+	Categories          []string `json:"categories"`
+	Salespersons        []string `json:"salespersons"`
+	ActualDemandPersons []string `json:"actual_demand_persons"`
 }
 
 // ---------------- 编码库 / 华星库存 / 精简库存 / 台账 ----------------

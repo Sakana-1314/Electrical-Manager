@@ -15,17 +15,6 @@
   margin-bottom: 8rpx;
 }
 
-.filter-menu {
-  margin-top: 16rpx;
-  border-radius: 20rpx;
-  overflow: hidden;
-  --td-dropdown-menu-height: 88rpx;
-  --td-dropdown-menu-bg-color: var(--app-surface);
-  --td-dropdown-menu-border-width: 0;
-  --td-dropdown-menu-color: var(--app-text);
-  --td-dropdown-menu-active-color: var(--app-brand);
-}
-
 .result-count {
   margin: 12rpx 0 4rpx;
   color: var(--app-text-muted);

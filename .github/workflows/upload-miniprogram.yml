@@ -73,6 +73,9 @@ jobs:
       - name: 检查小程序代码
         run: npm run check
 
+      - name: 页面逻辑冒烟测试
+        run: npm test
+
       - name: 生成上传信息
         run: |
           # 版本号取北京时间日期；版本描述取触发本次构建的 main 提交标题，

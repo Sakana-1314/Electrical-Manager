@@ -11,17 +11,6 @@
   padding: 4rpx 0;
 }
 
-.filter-menu {
-  margin-top: 16rpx;
-  border-radius: 20rpx;
-  overflow: hidden;
-  --td-dropdown-menu-height: 88rpx;
-  --td-dropdown-menu-bg-color: var(--app-surface);
-  --td-dropdown-menu-border-width: 0;
-  --td-dropdown-menu-color: var(--app-text);
-  --td-dropdown-menu-active-color: var(--app-brand);
-}
-
 .result-count { margin: 0 8rpx 14rpx; color: var(--app-text-muted); font-size: 23rpx; }
 .plan-list { display: flex; flex-direction: column; gap: 16rpx; }
 

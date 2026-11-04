@@ -1,34 +1,21 @@
 <view class="page-shell purchase-records-page {{themeClass}}">
   <view class="list-header"><view class="page-title">{{i18n.purchaseRecordsTitle}}</view></view>
   <view class="list-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.purchaseRecordSearchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      sections="{{filterSections}}"
+      active="{{filters}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
-    <t-dropdown-menu class="filter-menu">
-      <t-dropdown-item
-        label="{{i18n.allPurchaseStatuses}}"
-        value="{{status}}"
-        options="{{statusOptions}}"
-        bind:change="onStatusChange"
-      />
-      <t-dropdown-item
-        label="{{i18n.allSubitemNos}}"
-        value="{{subitemNo}}"
-        options="{{subitemNoOptions}}"
-        bind:change="onSubitemNoChange"
-      />
-    </t-dropdown-menu>
   </view>
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
   <view wx:if="{{loading && !items.length}}" class="state-panel">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingPurchaseRecords}}" />
   </view>
   <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
-    <t-empty icon="file" description="{{keyword || status ? i18n.purchaseRecordsEmptyFiltered : i18n.purchaseRecordsEmpty}}" />
+    <t-empty icon="file" description="{{keyword || filtered ? i18n.purchaseRecordsEmptyFiltered : i18n.purchaseRecordsEmpty}}" />
   </view>
   <view wx:else class="record-list">
     <view

@@ -3,12 +3,10 @@
   "enablePullDownRefresh": true,
   "backgroundTextStyle": "dark",
   "usingComponents": {
+    "filter-panel": "/components/filter-panel/filter-panel",
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-loading": "tdesign-miniprogram/loading/loading",
-    "t-search": "tdesign-miniprogram/search/search",
-    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
-    "t-tabs": "tdesign-miniprogram/tabs/tabs",
     "t-tag": "tdesign-miniprogram/tag/tag",
     "t-toast": "tdesign-miniprogram/toast/toast"
   }

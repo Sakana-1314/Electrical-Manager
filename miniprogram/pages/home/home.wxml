@@ -10,78 +10,97 @@
     </view>
   </view>
 
-  <view class="action-grid">
-    <view wx:if="{{entryVisible.inventory}}" class="action-card" hover-class="action-card-active" bind:tap="openInventory">
-      <view class="action-icon"><t-icon name="view-list" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.allInventory}}</view>
-        <view class="action-description">{{i18n.inventoryDescription}}</view>
+  <!-- 登录态与功能配置返回前只显示加载态：入口要按「禁用」项与精简模式过滤，先渲染再收起会闪。 -->
+  <block wx:if="{{featureReady}}">
+    <!-- 扫码出库：首页唯一的主动作，整张卡片可点（不再嵌套「开始扫码」按钮），
+         与下方功能入口共用同一套卡片语言，只靠主色底区分主次。 -->
+    <view
+      wx:if="{{canScan}}"
+      class="scan-card"
+      hover-class="scan-card-active"
+      aria-role="button"
+      aria-label="{{i18n.scanMaterialCode}}"
+      bind:tap="scanMaterial"
+    >
+      <view class="scan-icon">
+        <t-icon class="{{scanning ? 'scan-spinner' : ''}}" name="{{scanning ? 'loading' : 'scan'}}" size="52rpx" />
       </view>
+      <view class="scan-content">
+        <view class="scan-title">{{i18n.scanMaterialCode}}</view>
+        <view class="scan-description">{{i18n.scanDescription}}</view>
+      </view>
+      <t-icon class="scan-chevron" name="chevron-right" size="36rpx" />
     </view>
 
-    <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
-      <view class="action-icon"><t-icon name="layers" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.huaxingInventoryTitle}}</view>
-        <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
-      </view>
-    </view>
+    <view class="section-label">{{i18n.featureEntries}}</view>
 
-    <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
-      <view class="action-icon"><t-icon name="file-attachment" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.purchasePlans}}</view>
-        <view class="action-description">{{i18n.purchasePlansDescription}}</view>
+    <view class="action-grid">
+      <view wx:if="{{entryVisible.inventory}}" class="action-card" hover-class="action-card-active" bind:tap="openInventory">
+        <view class="action-icon"><t-icon name="view-list" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.allInventory}}</view>
+          <view class="action-description">{{i18n.inventoryDescription}}</view>
+        </view>
       </view>
-    </view>
 
-    <view wx:if="{{entryVisible.purchaseRecords}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchaseRecords">
-      <view class="action-icon"><t-icon name="file-copy" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.purchaseRecordsTitle}}</view>
-        <view class="action-description">{{i18n.purchaseRecordsDescription}}</view>
+      <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
+        <view class="action-icon"><t-icon name="layers" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.huaxingInventoryTitle}}</view>
+          <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
+        </view>
       </view>
-    </view>
 
-    <view wx:if="{{entryVisible.ledger}}" class="action-card" hover-class="action-card-active" bind:tap="openLedger">
-      <view class="action-icon"><t-icon name="folder" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.ledgerTitle}}</view>
-        <view class="action-description">{{i18n.ledgerDescription}}</view>
+      <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
+        <view class="action-icon"><t-icon name="file-attachment" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.purchasePlans}}</view>
+          <view class="action-description">{{i18n.purchasePlansDescription}}</view>
+        </view>
       </view>
-    </view>
 
-    <view wx:if="{{entryVisible.hazards}}" class="action-card" hover-class="action-card-active" bind:tap="openHazards">
-      <view class="action-icon"><t-icon name="error-circle" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.hazardsTitle}}</view>
-        <view class="action-description">{{i18n.hazardsDescription}}</view>
+      <view wx:if="{{entryVisible.purchaseRecords}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchaseRecords">
+        <view class="action-icon"><t-icon name="file-copy" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.purchaseRecordsTitle}}</view>
+          <view class="action-description">{{i18n.purchaseRecordsDescription}}</view>
+        </view>
       </view>
-    </view>
 
-    <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
-      <view class="action-icon"><t-icon name="tag" size="48rpx" /></view>
-      <view class="action-content">
-        <view class="action-title">{{i18n.materialCodesTitle}}</view>
-        <view class="action-description">{{i18n.materialCodesDescription}}</view>
+      <view wx:if="{{entryVisible.ledger}}" class="action-card" hover-class="action-card-active" bind:tap="openLedger">
+        <view class="action-icon"><t-icon name="folder" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.ledgerTitle}}</view>
+          <view class="action-description">{{i18n.ledgerDescription}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{entryVisible.hazards}}" class="action-card" hover-class="action-card-active" bind:tap="openHazards">
+        <view class="action-icon"><t-icon name="error-circle" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.hazardsTitle}}</view>
+          <view class="action-description">{{i18n.hazardsDescription}}</view>
+        </view>
+      </view>
+
+      <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
+        <view class="action-icon"><t-icon name="tag" size="44rpx" /></view>
+        <view class="action-content">
+          <view class="action-title">{{i18n.materialCodesTitle}}</view>
+          <view class="action-description">{{i18n.materialCodesDescription}}</view>
+        </view>
       </view>
     </view>
+  </block>
+
+  <!-- 登录态 / 功能配置还没回来：只显示加载态，不提前渲染入口（入口需按配置过滤）。 -->
+  <view wx:if="{{!featureReady && !loadFailed}}" class="state-panel">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
   </view>
 
-  <view wx:if="{{featureReady && !liteMode}}" class="section-card scan-card">
-    <view class="scan-icon"><t-icon name="scan" size="64rpx" /></view>
-    <view class="scan-title">{{i18n.scanMaterialCode}}</view>
-    <view class="scan-description">{{i18n.scanDescription}}</view>
-    <t-button
-      class="scan-action"
-      theme="primary"
-      size="large"
-      block
-      loading="{{scanning}}"
-      disabled="{{scanning}}"
-      icon="scan"
-      bind:tap="scanMaterial"
-    >{{i18n.startScan}}</t-button>
+  <view wx:if="{{loadFailed}}" class="state-panel failed-panel">
+    <t-empty icon="error-circle" description="{{i18n.requestFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="retryLoad">{{i18n.reload}}</t-button>
   </view>
 
   <t-toast id="home-toast" />

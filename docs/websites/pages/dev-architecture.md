@@ -907,7 +907,20 @@ flowchart LR
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 | 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
 
-公共组件只有 `material-summary-card`；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+
+### 列表页筛选面板（`components/filter-panel`）
+
+筛选维度一多，常驻的 `t-dropdown-menu` 会把首屏挤满，所以列表页统一改用共享组件：收起态只有一行「搜索 + 筛选按钮（带已选数量）」，点开是底部弹层，分区平铺选项。
+
+| 项 | 实现 |
+| --- | --- |
+| 组件契约 | props：`keyword` / `placeholder` / `sections`（`[{ key, title, options: [{ label, value }] }]`）/ `active`（`{ [key]: value }`）；events：`search`（输入 / 回车）、`change`（`{ values }`） |
+| 草稿与生效 | 面板里点选项只改草稿，点「确定」才发 `change`；已选条件胶囊上的 × 与「清除筛选」立即发 `change`。`visible` 为真时外部 `active` 变化不覆盖草稿，避免改到一半被页面回写打断 |
+| 已选条件 | 由 `sections` + `active` 派生胶囊（`标题：选项文案`），未知值回显原值；数量角标 = 生效的筛选个数 |
+| 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options` 接口。分享值不在候选里时由页面 `buildSection()` 补一项，保证面板能看到「筛了什么」 |
+| 页面侧 | 各页维护 `filters`（key 与分享参数同名，空串 = 不限）与 `filtered`（空态文案据此区分「本来为空」/「筛空了」），`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一后重新取第一页；`sameFilters` 为真（点「确定」但条件没变）时直接返回，不重复请求 |
+| 精简模式 | 二级库精简模式下 `filterSections` 为空，组件退化为纯搜索栏（不显示筛选按钮与已选条件） |
 
 ### 分享带搜索 / 筛选（`utils/share.js`）
 
@@ -917,11 +930,11 @@ flowchart LR
 | --- | --- |
 | 写 | 各页重写 `sharePath()`，用 `buildSharePath(route, params)` 拼 query：空值 / `null` / `undefined` 一律省略，其余逐个 `encodeURIComponent`（中文与 `&` `=` `#` 都不会破坏结构） |
 | 读 | 小程序 `onLoad(options)` 的 query **不会自动解码**，统一走 `readShareParams(options, SHARE_PARAMS)`：按白名单 key 取值并解码，对已解码 / 含裸 `%` 的值做兜底，不抛错 |
-| 携带范围 | 申购计划 `keyword`/`actualDemandPerson`/`subitemNo`；申购记录 `keyword`/`status`/`subitemNo`；隐患管理 `keyword`/`status`/`rectifyPerson`；二级库库存 `keyword`/`stockStatus`；物料编码、华星总库存、台账查看 `keyword` |
-| 回填时机 | 带下拉筛选的页面先 `loadFilterOptions()` 再回填——`t-dropdown-item` 要靠 `options` 才能把当前值解析成文案，早于选项写入会显示成默认的「全部××」 |
-| 值已不在候选项 | 自由文本类（申购人、子项号、整改人）用 `withSharedOption()` 把缺失值补成一项，避免下拉显示「全部」而列表其实仍在过滤 |
-| 固定枚举 | 隐患状态与库存状态页签是固定几档，用 `isAllowedShareValue()` 校验，非法值直接忽略（不能凭空造出页签） |
-| 精简模式 | 二级库精简模式下没有库存状态页签，既不分享该参数，也忽略外部传入值 |
+| 携带范围 | 申购计划 `keyword`/`actualDemandPerson`/`subitemNo`/`urgency`/`category`；申购记录 `keyword`/`status`/`subitemNo`/`category`/`salesperson`/`actualDemandPerson`；隐患管理 `keyword`/`status`/`level`/`rectifyPerson`/`overdue`；二级库库存 `keyword`/`stockStatus`；华星总库存 `keyword`/`purchaseDepartment`/`purchaser`；物料编码、台账查看 `keyword` |
+| 回填时机 | 带筛选的页面先 `loadFilterOptions()` 再回填——面板要靠选项才能把当前值解析成文案，早于选项写入会显示成原值 |
+| 值已不在候选项 | 页面 `buildSection()` 把缺失值补成一项，避免面板看不到「筛了什么」而列表其实仍在过滤 |
+| 固定枚举 | 隐患状态 / 等级、库存状态是固定档位，用 `isAllowedShareValue()` 校验，非法值直接忽略（不能凭空造出选项）；「仅逾期」只接受 `overdue` |
+| 精简模式 | 二级库精简模式下没有库存状态筛选，既不分享该参数，也忽略外部传入值 |
 
 ### 界面外观（明 / 暗）
 
@@ -1004,7 +1017,7 @@ flowchart TD
     A["首页「隐患管理」入口"] --> B{"hazards_mode"}
     B -- "disabled" --> B1["不展示入口"]
     B -- "query_only / read_write" --> C["隐患列表<br/>搜索检查区域或隐患描述"]
-    C --> D["按整改状态、整改员工筛选"]
+    C --> D["筛选面板：整改状态、隐患等级、整改员工、仅逾期"]
     C --> E["点开详情：登记信息 + 整改前/后图片"]
     B -- "read_write" --> F["登记隐患：区域、日期、描述、责任单位、类型、整改前图片"]
     F --> G["生成一次幂等键 client_request_id<br/>（弱网重试复用，重复提交不新增）"]
@@ -1013,7 +1026,7 @@ flowchart TD
     I --> J["带 version 提交，冲突时提示刷新"]
 ```
 
-- 列表搜索只匹配「检查区域 + 隐患描述」两个字段，按整改状态与整改员工筛选；筛选项里整改员工来自库中已有值去重（`/mini-program/hazards/filter-options`）。
+- 列表搜索只匹配「检查区域 + 隐患描述」两个字段，筛选面板提供整改状态、隐患等级、整改员工与「仅逾期」；整改员工选项来自库中已有值去重（`/mini-program/hazards/filter-options`）。
 - 登记时检查人员缺省为当前小程序用户姓名，责任人仍由所选责任单位带出快照；`client_request_id` 是幂等键，重复提交返回同一条隐患而不是新增。
 - 跟进走与网页端同一个更新接口：状态是普通可编辑字段，`version` 为乐观锁，提交旧版本会被拒（`VERSION_CONFLICT`）。
 - 图片上传（`/mini-program/hazards/images`）与网页端共用同一套存储与去重规则，附件管理按两张关联表统计引用次数。

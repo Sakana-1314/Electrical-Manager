@@ -405,28 +405,146 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
-// 列表页筛选下拉：展开面板收成与筛选栏同宽，不再铺满整屏（三个列表页共用 app.wxss 里的这条规则）。
+// 首页入口要等登录态与功能配置同时返回：加载期间只渲染加载态，不提前铺功能入口。
 {
-  const block = styleBlock(appStyles, '.filter-menu .t-dropdown-item__popup-host');
-  if (!block) {
-    throw new Error('app.wxss must narrow the dropdown panel under .filter-menu.');
-  }
-  for (const declaration of ['left: 24rpx', 'right: 24rpx', 'width: auto']) {
-    if (!block.includes(declaration)) {
-      throw new Error(`The narrowed dropdown panel must declare "${declaration}".`);
+  const homeScript = read('pages/home/home.js');
+  const homeMarkup = read('pages/home/home.wxml');
+  for (const snippet of ['loadSession', 'loadFailed', 'retryLoad', 'featureReady: false']) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`pages/home/home.js must gate the home entries behind loading: ${snippet}`);
     }
   }
-  // 面板内缩值与圆角跟列表页的页面内边距、.filter-menu 圆角耦合：改页面内边距必须同步这条规则。
+  // 扫码卡与入口网格都在同一段 featureReady 守卫里（block），否则加载中仍会先渲染一遍入口。
+  if (!homeMarkup.includes('<block wx:if="{{featureReady}}">')) {
+    throw new Error('The home entries must only render after the session and features load.');
+  }
+  for (const snippet of ['class="scan-card"', 'class="action-grid"']) {
+    if (!homeMarkup.includes(snippet)) {
+      throw new Error(`The home entries must stay inside the featureReady block: ${snippet}`);
+    }
+  }
+  // 扫码是首页唯一的主动作：整卡可点，不能再嵌套「开始扫码」按钮（版式与功能入口一致）。
+  if (!homeMarkup.includes('aria-label="{{i18n.scanMaterialCode}}"') ||
+      !homeMarkup.includes('bind:tap="scanMaterial"')) {
+    throw new Error('The home scan card must be tappable as a whole.');
+  }
+  if (homeMarkup.includes('class="scan-action"')) {
+    throw new Error('The home scan card must not nest a separate start-scan button.');
+  }
+  if (!homeScript.includes('canScan: canOutbound()')) {
+    throw new Error('The home scan card must only render when outbound is allowed.');
+  }
+  for (const snippet of ['!featureReady && !loadFailed', 'bind:tap="retryLoad"']) {
+    if (!homeMarkup.includes(snippet)) {
+      throw new Error(`pages/home/home.wxml must render the loading / retry panels: ${snippet}`);
+    }
+  }
+  const homeConfig = JSON.parse(read('pages/home/home.json'));
+  const components = Object.values(homeConfig.usingComponents || {});
+  for (const component of [
+    'tdesign-miniprogram/loading/loading',
+    'tdesign-miniprogram/empty/empty',
+    'tdesign-miniprogram/button/button',
+  ]) {
+    if (!components.includes(component)) {
+      throw new Error(`pages/home/home.json must register ${component} for the loading panel.`);
+    }
+  }
+}
+
+// 列表页筛选：搜索 + 「筛选」按钮 + 底部面板（共享组件），可选的维度再多也不占首屏。
+// 五个列表页（库存 / 华星 / 申购计划 / 申购记录 / 隐患）必须用同一套组件，不能回到常驻下拉。
+{
+  const componentFiles = ['js', 'json', 'wxml', 'wxss'].map((ext) => `components/filter-panel/filter-panel.${ext}`);
+  for (const file of componentFiles) {
+    if (!fs.existsSync(path.join(root, file))) {
+      throw new Error(`Missing shared filter panel file: ${file}`);
+    }
+  }
+  const panelScript = read('components/filter-panel/filter-panel.js');
+  for (const snippet of ['sections', 'active', 'triggerEvent(\'change\'', 'triggerEvent(\'search\'']) {
+    if (!panelScript.includes(snippet)) {
+      throw new Error(`components/filter-panel must expose the filter contract: ${snippet}`);
+    }
+  }
+  const panelMarkup = read('components/filter-panel/filter-panel.wxml');
+  for (const snippet of ['class="filter-bar"', 'class="filter-chips"', 'placement="bottom"']) {
+    if (!panelMarkup.includes(snippet)) {
+      throw new Error(`components/filter-panel/filter-panel.wxml must render: ${snippet}`);
+    }
+  }
+  // 面板里点选项只改草稿，必须先点「确定」才回传：草稿与已生效值分两个字段。
+  if (!panelScript.includes('draft') || !panelScript.includes('confirmSheet')) {
+    throw new Error('The filter panel must keep a draft and apply it on confirm.');
+  }
+
   for (const page of [
-    'hazards/hazards',
+    'inventory/inventory',
+    'huaxing-inventory/huaxing-inventory',
     'purchase-plans/purchase-plans',
     'purchase-records/purchase-records',
+    'hazards/hazards',
   ]) {
-    if (!read(`pages/${page}.wxml`).includes('class="filter-menu"')) {
-      throw new Error(`pages/${page}.wxml must anchor the shared .filter-menu panel rule.`);
+    const markup = read(`pages/${page}.wxml`);
+    if (!markup.includes('<filter-panel')) {
+      throw new Error(`pages/${page}.wxml must use the shared filter panel.`);
     }
-    if (!read(`pages/${page}.wxss`).includes('.filter-menu')) {
-      throw new Error(`pages/${page}.wxss must style .filter-menu.`);
+    for (const snippet of ['bind:search="onSearchChange"', 'bind:change="onFilterChange"']) {
+      if (!markup.includes(snippet)) {
+        throw new Error(`pages/${page}.wxml must wire the filter panel: ${snippet}`);
+      }
+    }
+    if (markup.includes('<t-dropdown-menu')) {
+      throw new Error(`pages/${page}.wxml must not keep the always-visible dropdown menu.`);
+    }
+    const config = JSON.parse(read(`pages/${page}.json`));
+    if (!Object.values(config.usingComponents || {}).includes('/components/filter-panel/filter-panel')) {
+      throw new Error(`pages/${page}.json must register the shared filter panel.`);
+    }
+    const script = read(`pages/${page}.js`);
+    for (const snippet of ['FILTER_SECTIONS', 'onFilterChange', 'filterSections']) {
+      if (!script.includes(snippet)) {
+        throw new Error(`pages/${page}.js must feed the filter panel: ${snippet}`);
+      }
+    }
+  }
+
+  // 筛选状态的归一 / 判定集中在一处：五页用同一套，避免某页漏掉「条件没变不重查」。
+  const filtersUtil = read('utils/filters.js');
+  for (const name of ['normalizeFilters', 'hasActiveFilter', 'sameFilters']) {
+    if (!filtersUtil.includes(`function ${name}(`)) {
+      throw new Error(`utils/filters.js must export ${name}.`);
+    }
+  }
+  for (const page of [
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+    'hazards/hazards',
+    'huaxing-inventory/huaxing-inventory',
+  ]) {
+    const script = read(`pages/${page}.js`);
+    for (const snippet of ["require('../../utils/filters')", 'sameFilters(this.data.filters']) {
+      if (!script.includes(snippet)) {
+        throw new Error(`pages/${page}.js must reuse utils/filters: ${snippet}`);
+      }
+    }
+  }
+}
+
+// 列表页筛选面板（.filter-panel）是页面里唯一的筛选入口：旧的常驻下拉必须彻底退场。
+{
+  for (const page of [
+    'inventory/inventory',
+    'huaxing-inventory/huaxing-inventory',
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+    'hazards/hazards',
+  ]) {
+    const styles = read(`pages/${page}.wxss`);
+    for (const legacy of ['.filter-menu', 't-dropdown']) {
+      if (styles.includes(legacy)) {
+        throw new Error(`pages/${page}.wxss must not keep the legacy dropdown styles: ${legacy}`);
+      }
     }
   }
 }
@@ -707,17 +825,21 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
   }
 
   // 每个带搜索 / 筛选的列表页都必须：导入 share 工具、用 sharePath() 转发、回跳带参。
+  // params 是该页分享参数白名单：筛选面板的每个分区 key 都必须在其中（否则转发后会丢筛选）。
   const shareablePages = [
     { page: 'inventory/inventory', params: ['keyword', 'stockStatus'] },
-    { page: 'huaxing-inventory/huaxing-inventory', params: ['keyword'] },
+    { page: 'huaxing-inventory/huaxing-inventory', params: ['keyword', 'purchaseDepartment', 'purchaser'] },
     { page: 'material-codes/material-codes', params: ['keyword'] },
     { page: 'ledger/ledger', params: ['keyword'] },
     {
       page: 'purchase-plans/purchase-plans',
-      params: ['keyword', 'actualDemandPerson', 'subitemNo'],
+      params: ['keyword', 'actualDemandPerson', 'subitemNo', 'urgency', 'category'],
     },
-    { page: 'purchase-records/purchase-records', params: ['keyword', 'status', 'subitemNo'] },
-    { page: 'hazards/hazards', params: ['keyword', 'status', 'rectifyPerson'] },
+    {
+      page: 'purchase-records/purchase-records',
+      params: ['keyword', 'status', 'subitemNo', 'category', 'salesperson', 'actualDemandPerson'],
+    },
+    { page: 'hazards/hazards', params: ['keyword', 'status', 'level', 'rectifyPerson', 'overdue'] },
   ];
   for (const { page, params } of shareablePages) {
     const script = read(`pages/${page}.js`);
@@ -744,16 +866,23 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     }
   }
 
-  // 分享值可能已不在候选项里：下拉页必须补选项，固定枚举（页签 / 状态）必须白名单校验。
-  for (const page of ['purchase-plans/purchase-plans', 'purchase-records/purchase-records']) {
-    if (!read(`pages/${page}.js`).includes('withSharedOption(')) {
+  // 分享值可能已不在候选项里：每个筛选分区都必须把缺失的分享值补成选项（面板才能回显），
+  // 固定枚举（库存状态、隐患状态 / 等级、仅逾期）必须白名单校验后再采用。
+  for (const page of [
+    'inventory/inventory',
+    'huaxing-inventory/huaxing-inventory',
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+    'hazards/hazards',
+  ]) {
+    if (!read(`pages/${page}.js`).includes('buildSection(')) {
       throw new Error(`pages/${page}.js must append missing shared filter options.`);
     }
   }
-  if (!read('pages/hazards/hazards.js').includes('isAllowedShareValue(shared.status')) {
-    throw new Error('pages/hazards/hazards.js must validate the shared status enum.');
+  if (!read('pages/hazards/hazards.js').includes('isAllowedShareValue(shared[key]')) {
+    throw new Error('pages/hazards/hazards.js must validate the shared status / level enums.');
   }
-  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(restored.stockStatus')) {
+  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
     throw new Error('pages/inventory/inventory.js must validate the shared stock status enum.');
   }
 }

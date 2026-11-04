@@ -4,25 +4,14 @@
   </view>
 
   <view class="inventory-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.searchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      sections="{{filterSections}}"
+      active="{{filterActive}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
-    <t-tabs
-      wx:if="{{!liteMode}}"
-      value="{{stockStatus}}"
-      theme="tag"
-      split="{{false}}"
-      show-bottom-line="{{false}}"
-      bind:change="onStatusChange"
-    >
-      <t-tab-panel value="all" label="{{i18n.all}}" />
-      <t-tab-panel value="out_of_stock" label="{{i18n.outOfStock}}" />
-      <t-tab-panel value="low_stock" label="{{i18n.lowStock}}" />
-    </t-tabs>
   </view>
 
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
@@ -32,7 +21,7 @@
   </view>
 
   <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
-    <t-empty icon="search" description="{{keyword || stockStatus !== 'all' ? i18n.inventoryEmptyFiltered : i18n.inventoryEmpty}}" />
+    <t-empty icon="search" description="{{keyword || filtered ? i18n.inventoryEmptyFiltered : i18n.inventoryEmpty}}" />
   </view>
 
   <view wx:else class="inventory-list">

@@ -1,13 +1,15 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request } = require('../../utils/request');
+const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
-// 分享链接携带的搜索词（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword'];
+// 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'purchaseDepartment', 'purchaser'];
+const FILTER_SECTIONS = ['purchaseDepartment', 'purchaser'];
 const PAGE_ROUTE = '/pages/huaxing-inventory/huaxing-inventory';
 
 function formatDateTime(value) {
@@ -32,6 +34,12 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    filters: {
+      purchaseDepartment: '',
+      purchaser: '',
+    },
+    filterSections: [],
+    filtered: false,
     page: 1,
     pageSize: 15,
     total: 0,
@@ -48,7 +56,7 @@ Page(withTheme({
 
   async onLoad(options = {}) {
     setNavigationBarTitle('huaxingInventoryTitle');
-    // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
+    // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const session = await getApp().globalData.authPromise;
@@ -60,13 +68,74 @@ Page(withTheme({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      if (Object.keys(shared).length) this.setData(shared);
+      await this.loadFilterOptions(shared);
+      this.applyShared(shared);
       this.loadLastImport();
       await this.loadInventory(true);
     } catch (error) {
       this.setData({ loading: false });
       this.showError(error);
     }
+  },
+
+  /** 把分享 / 回跳带来的参数并进当前状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  applyShared(shared) {
+    const filters = { ...this.data.filters };
+    let changed = false;
+    FILTER_SECTIONS.forEach((key) => {
+      if (shared[key] !== undefined) {
+        filters[key] = shared[key];
+        changed = true;
+      }
+    });
+    const patch = {};
+    if (changed) {
+      patch.filters = filters;
+      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
+    }
+    if (shared.keyword !== undefined) patch.keyword = shared.keyword;
+    if (Object.keys(patch).length) this.setData(patch);
+  },
+
+  /** 申购部门 / 申购人选项来自库中已有值；加载失败不阻塞列表。 */
+  async loadFilterOptions(shared = {}) {
+    let departments = [];
+    let purchasers = [];
+    try {
+      const result = await requestCached({ url: '/mini-program/huaxing-inventory/filter-options' });
+      departments = (result.purchase_departments || []).filter(Boolean);
+      purchasers = (result.purchasers || []).filter(Boolean);
+    } catch (_error) {
+      Toast({
+        context: this,
+        selector: '#huaxing-inventory-toast',
+        message: t('huaxingInventoryFilterOptionsLoadFailed'),
+        theme: 'warning',
+        direction: 'column',
+      });
+    }
+    this.setData({
+      filterSections: [
+        this.buildSection(
+          'purchaseDepartment',
+          t('filterPurchaseDepartment'),
+          departments,
+          shared.purchaseDepartment,
+        ),
+        this.buildSection('purchaser', t('filterPurchaser'), purchasers, shared.purchaser),
+      ],
+    });
+  },
+
+  /** 组装一个筛选分区：首项「全部」；分享值缺失时补一项，避免面板显示成原值。 */
+  buildSection(key, title, values, sharedValue) {
+    const list = [{ label: t('all'), value: '' }].concat(
+      values.map((value) => ({ label: value, value })),
+    );
+    if (sharedValue && !list.some((option) => option.value === sharedValue)) {
+      list.splice(1, 0, { label: sharedValue, value: sharedValue });
+    }
+    return { key, title, options: list };
   },
 
   onUnload() {
@@ -101,6 +170,18 @@ Page(withTheme({
     this.searchTimer = setTimeout(() => void this.loadInventory(true), 350);
   },
 
+  /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
+  onFilterChange(event) {
+    const values = (event.detail && event.detail.values) || {};
+    const filters = normalizeFilters(values, FILTER_SECTIONS);
+    // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
+    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+      return;
+    }
+    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
+    void this.loadInventory(true);
+  },
+
   async loadInventory(reset) {
     if (!reset && (this.data.loading || this.data.loadingMore || !this.data.hasMore)) return;
     const requestId = (this.requestId || 0) + 1;
@@ -111,6 +192,9 @@ Page(withTheme({
       const data = { page, page_size: this.data.pageSize };
       const keyword = this.data.keyword.trim();
       if (keyword) data.keyword = keyword;
+      const filters = this.data.filters;
+      if (filters.purchaseDepartment) data.purchase_department = filters.purchaseDepartment;
+      if (filters.purchaser) data.purchaser = filters.purchaser;
       const result = await request({ url: '/mini-program/huaxing-inventory', data });
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decorateItem);
@@ -138,9 +222,14 @@ Page(withTheme({
     }
   },
 
-  /** 分享路径：把当前搜索词一起带出去。 */
+  /** 分享路径：把当前搜索词与筛选值一起带出去。 */
   sharePath() {
-    return buildSharePath(PAGE_ROUTE, { keyword: this.data.keyword.trim() });
+    const filters = this.data.filters;
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      purchaseDepartment: filters.purchaseDepartment,
+      purchaser: filters.purchaser,
+    });
   },
 
   onShareAppMessage() {

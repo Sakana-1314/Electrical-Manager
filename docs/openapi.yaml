@@ -8278,6 +8278,26 @@ paths:
             maxLength: 64
           - type: 'null'
           title: Subitem No
+      - name: urgency
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 紧急程度（精确匹配，取值见 filter-options 的 urgencies）
+          title: Urgency
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 类别（精确匹配，取值见 filter-options 的 categories）
+          title: Category
       responses:
         '200':
           description: Successful Response
@@ -8433,6 +8453,14 @@ paths:
                 - '301'
                 - '305'
                 - '401'
+                urgencies:
+                - 正常
+                - 紧急
+                - 非常紧急
+                categories:
+                - 备品备件
+                - 消耗物资
+                - 工具
         '400':
           description: 业务校验失败
           content:
@@ -8543,6 +8571,36 @@ paths:
             maxLength: 64
           - type: 'null'
           title: Subitem No
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 类别（精确匹配，取值见 filter-options 的 categories）
+          title: Category
+      - name: salesperson
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 业务员（精确匹配，取值见 filter-options 的 salespersons）
+          title: Salesperson
+      - name: actual_demand_person
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
+          title: Actual Demand Person
       responses:
         '200':
           description: Successful Response
@@ -8773,6 +8831,21 @@ paths:
                 - '201'
                 - '202'
                 - '305'
+                categories:
+                - 备品备件
+                - 消耗物资
+                salespersons:
+                - 何丽娟
+                - 徐怀志
+                - 马晓东
+                actual_demand_persons:
+                - 李建军
+                - 王海涛
+                - 陈志远
+                - 刘振华
+                - 杨明辉
+                - 周立新
+                - 孙浩宇
         '400':
           description: 业务校验失败
           content:
@@ -9121,6 +9194,26 @@ paths:
             maxLength: 255
           - type: 'null'
           title: Keyword
+      - name: purchase_department
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 申购部门（精确匹配，可用 | 或 ｜ 分隔多个值）
+          title: Purchase Department
+      - name: purchaser
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 申购人（精确匹配，可用 | 或 ｜ 分隔多个值）
+          title: Purchaser
       responses:
         '200':
           description: Successful Response
@@ -9269,6 +9362,85 @@ paths:
                 $ref: '#/components/schemas/LastImportRead'
               example:
                 last_import_at: '2026-09-12T18:20:00+08:00'
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+  /api/v1/mini-program/huaxing-inventory/filter-options:
+    get:
+      tags:
+      - 小程序
+      summary: 华星库存筛选
+      operationId: mini_program_huaxing_inventory_filter_options_api_v1_mini_program_huaxing_inventory_filter_options_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HuaXingFilterOptions'
+              example:
+                purchase_departments:
+                - HXNI冶炼厂
+                - 生产调度中心
+                - 设备管理部
+                purchasers:
+                - 吴冰
+                - 夏军
+                - 李振国
         '400':
           description: 业务校验失败
           content:
@@ -10128,7 +10300,7 @@ paths:
       tags:
       - 小程序
       summary: 隐患列表
-      description: 隐患列表：关键字只匹配「检查区域 + 隐患描述」，可按整改状态与整改员工筛选。
+      description: 隐患列表：关键字只匹配「检查区域 + 隐患描述」，可按整改状态、隐患等级、整改员工与「仅逾期」筛选。
       operationId: mini_program_hazards_api_v1_mini_program_hazards_get
       security:
       - HTTPBearer: []
@@ -10176,6 +10348,22 @@ paths:
             maxLength: 64
           - type: 'null'
           title: Rectify Person
+      - name: level
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/HazardLevel'
+          - type: 'null'
+          title: Level
+      - name: overdue
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          description: 只看逾期未整改（未「已整改」且整改期限早于今天）
+          title: Overdue
       responses:
         '200':
           description: Successful Response
@@ -26776,10 +26964,22 @@ components:
             type: string
           type: array
           title: Subitem Nos
+        urgencies:
+          items:
+            type: string
+          type: array
+          title: Urgencies
+        categories:
+          items:
+            type: string
+          type: array
+          title: Categories
       type: object
       required:
       - actual_demand_persons
       - subitem_nos
+      - urgencies
+      - categories
       title: MiniProgramPurchasePlanFilterOptions
       examples:
       - actual_demand_persons:
@@ -26796,6 +26996,14 @@ components:
         - '301'
         - '305'
         - '401'
+        urgencies:
+        - 正常
+        - 紧急
+        - 非常紧急
+        categories:
+        - 备品备件
+        - 消耗物资
+        - 工具
     MiniProgramPurchasePlanItemRead:
       properties:
         id:
@@ -26865,10 +27073,28 @@ components:
             type: string
           type: array
           title: Subitem Nos
+        categories:
+          items:
+            type: string
+          type: array
+          title: Categories
+        salespersons:
+          items:
+            type: string
+          type: array
+          title: Salespersons
+        actual_demand_persons:
+          items:
+            type: string
+          type: array
+          title: Actual Demand Persons
       type: object
       required:
       - statuses
       - subitem_nos
+      - categories
+      - salespersons
+      - actual_demand_persons
       title: MiniProgramPurchaseRecordFilterOptions
       examples:
       - statuses:
@@ -26880,6 +27106,21 @@ components:
         - '201'
         - '202'
         - '305'
+        categories:
+        - 备品备件
+        - 消耗物资
+        salespersons:
+        - 何丽娟
+        - 徐怀志
+        - 马晓东
+        actual_demand_persons:
+        - 李建军
+        - 王海涛
+        - 陈志远
+        - 刘振华
+        - 杨明辉
+        - 周立新
+        - 孙浩宇
     MiniProgramPurchaseRecordItemRead:
       properties:
         line_id:

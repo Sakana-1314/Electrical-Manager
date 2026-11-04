@@ -29,10 +29,13 @@ Page(withTheme({
   data: {
     user: null,
     scanning: false,
-    // 功能配置接口返回前保持 false：避免精简模式下扫码出库卡片先渲染再隐藏造成闪烁。
+    // 登录态与功能配置都返回后才置 true：加载期间只显示加载态，不渲染功能入口，
+    // 避免入口先全量冒出、拿到配置后再逐个收起（精简模式与「禁用」项都会这样闪一下）。
     featureReady: false,
+    // 首次加载失败：停在错误态给「重新加载」，而不是一直转圈。
+    loadFailed: false,
     // 首页入口是否展示：功能被管理员设为「禁用」的入口直接不渲染（原来全部常驻、点了才提示未开放）。
-    // 功能配置返回前默认全显，避免先隐藏后冒出；返回后按配置收起。
+    // 这些值只在 featureReady 置位时一并写入，渲染入口前已是最终结果。
     entryVisible: {
       inventory: true,
       huaxing: true,
@@ -43,6 +46,8 @@ Page(withTheme({
       materialCodes: true,
     },
     liteMode: false,
+    // 扫码出库入口：精简模式或库存只读/禁用时不渲染（原来常驻、点了才提示未开放）。
+    canScan: false,
     userProfileVisible: false,
     // 界面外观：与「当前项目」同一套交互，走 t-picker 滚轮选择器（确认后才写入本机偏好）。
     appearancePickerVisible: false,
@@ -67,6 +72,18 @@ Page(withTheme({
 
   async onLoad() {
     setNavigationBarTitle('appTitle');
+    await this.loadSession();
+  },
+
+  /**
+   * 加载登录态与功能配置。
+   *
+   * 两者都到齐后才一次性写入 user / entryVisible / liteMode 并置 featureReady，
+   * 让页面从「加载中」直接切到完整入口，不出现入口先渲染再隐藏的闪烁。
+   * 失败时停在错误态（loadFailed），由用户点「重新加载」重试。
+   */
+  async loadSession() {
+    this.setData({ featureReady: false, loadFailed: false });
     try {
       const [session, featureModes] = await Promise.all([
         getApp().globalData.authPromise,
@@ -84,6 +101,7 @@ Page(withTheme({
         wx.reLaunch({ url: '/pages/bind/bind' });
         return;
       }
+      const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
       this.setData({
         user: {
           ...session.user,
@@ -99,11 +117,18 @@ Page(withTheme({
           hazards: !isFeatureDisabled('hazards_mode'),
           materialCodes: !isFeatureDisabled('material_codes_mode'),
         },
-        liteMode: featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE,
+        liteMode,
+        canScan: canOutbound(),
       });
     } catch (error) {
+      this.setData({ loadFailed: true });
       this.showError(error);
     }
+  },
+
+  /** 错误态里的「重新加载」：重新走一遍登录与功能配置。 */
+  retryLoad() {
+    void this.loadSession();
   },
 
   onShow() {
