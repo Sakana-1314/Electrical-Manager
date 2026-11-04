@@ -11,6 +11,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/file"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/hazard"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/huaxing"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/importjob"
 	svc "github.com/Sakana-1314/Electrical-Manager/server/internal/service/miniprogram"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/project"
@@ -42,6 +43,7 @@ func Register(r *web.Router) {
 	g.GET("/purchase-records/{line_id}", purchaseRecordDetail, user)
 	g.GET("/material-codes", materialCodes, user)
 	g.GET("/huaxing-inventory", huaxingInventory, user)
+	g.GET("/huaxing-inventory/filter-options", huaxingFilterOptions, user)
 	g.GET("/material-codes/last-import", lastImport("MATERIAL_CODE_LIBRARY"), user)
 	g.GET("/huaxing-inventory/last-import", lastImport("HUAXING_INVENTORY"), user)
 	g.GET("/ledger-items", ledgerItems, user)
@@ -310,13 +312,17 @@ func outboundByNo(c *web.Ctx) error {
 func purchasePlans(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	actualDemandPerson := p.QueryStr("actual_demand_person", "max=128")
-	subitemNo := p.QueryStr("subitem_no", "max=64")
+	f := svc.MiniProgramPlanFilter{
+		Keyword:            p.QueryStr("keyword", "max=255"),
+		ActualDemandPerson: p.QueryStr("actual_demand_person", "max=128"),
+		SubitemNo:          p.QueryStr("subitem_no", "max=64"),
+		Urgency:            p.QueryStr("urgency", "max=64"),
+		Category:           p.QueryStr("category", "max=64"),
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListPurchasePlans(c.DB, keyword, page, size, actualDemandPerson, subitemNo)
+	items, total, err := svc.ListPurchasePlans(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
@@ -328,11 +334,13 @@ func purchasePlans(c *web.Ctx) error {
 }
 
 func purchasePlanFilterOptions(c *web.Ctx) error {
-	persons, subitemNos, err := svc.ListPurchasePlanFilterOptions(c.DB)
+	persons, subitemNos, urgencies, categories, err := svc.ListPurchasePlanFilterOptions(c.DB)
 	if err != nil {
 		return err
 	}
-	return c.OK(schema.MiniProgramPurchasePlanFilterOptions{ActualDemandPersons: persons, SubitemNos: subitemNos})
+	return c.OK(schema.MiniProgramPurchasePlanFilterOptions{
+		ActualDemandPersons: persons, SubitemNos: subitemNos, Urgencies: urgencies, Categories: categories,
+	})
 }
 
 func purchasePlanDetail(c *web.Ctx) error {
@@ -351,13 +359,18 @@ func purchasePlanDetail(c *web.Ctx) error {
 func purchaseRecords(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	status := p.QueryStr("status", "max=128")
-	subitemNo := p.QueryStr("subitem_no", "max=64")
+	f := svc.MiniProgramRecordFilter{
+		Keyword:            p.QueryStr("keyword", "max=255"),
+		Status:             p.QueryStr("status", "max=128"),
+		SubitemNo:          p.QueryStr("subitem_no", "max=64"),
+		Category:           p.QueryStr("category", "max=64"),
+		Salesperson:        p.QueryStr("salesperson", "max=64"),
+		ActualDemandPerson: p.QueryStr("actual_demand_person", "max=128"),
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListPurchaseRecords(c.DB, keyword, status, subitemNo, page, size)
+	items, total, err := svc.ListPurchaseRecords(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
@@ -365,11 +378,14 @@ func purchaseRecords(c *web.Ctx) error {
 }
 
 func purchaseRecordFilterOptions(c *web.Ctx) error {
-	statuses, subitemNos, err := svc.ListPurchaseRecordFilterOptions(c.DB)
+	statuses, subitemNos, categories, salespersons, persons, err := svc.ListPurchaseRecordFilterOptions(c.DB)
 	if err != nil {
 		return err
 	}
-	return c.OK(schema.MiniProgramPurchaseRecordFilterOptions{Statuses: statuses, SubitemNos: subitemNos})
+	return c.OK(schema.MiniProgramPurchaseRecordFilterOptions{
+		Statuses: statuses, SubitemNos: subitemNos, Categories: categories, Salespersons: salespersons,
+		ActualDemandPersons: persons,
+	})
 }
 
 func purchaseRecordDetail(c *web.Ctx) error {
@@ -404,15 +420,28 @@ func materialCodes(c *web.Ctx) error {
 func huaxingInventory(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
+	f := svc.MiniProgramHuaXingFilter{
+		Keyword:            p.QueryStr("keyword", "max=255"),
+		PurchaseDepartment: p.QueryStr("purchase_department", "max=128"),
+		Purchaser:          p.QueryStr("purchaser", "max=128"),
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListHuaXingInventory(c.DB, keyword, page, size)
+	items, total, err := svc.ListHuaXingInventory(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.NewPage(items, page, size, total))
+}
+
+// huaxingFilterOptions 小程序华星库存筛选：与网页端共用同一份申购部门 / 申购人选项。
+func huaxingFilterOptions(c *web.Ctx) error {
+	departments, purchasers, err := huaxing.ListFilterOptions(c.DB)
+	if err != nil {
+		return err
+	}
+	return c.OK(schema.HuaXingFilterOptions{PurchaseDepartments: departments, Purchasers: purchasers})
 }
 
 func ledgerItems(c *web.Ctx) error {
@@ -447,16 +476,19 @@ func ledgerItemDetail(c *web.Ctx) error {
 func hazards(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	status := p.QueryStr("status", schema.HazardStatusQuery)
-	rectifyPerson := p.QueryStr("rectify_person", "max=64")
+	f := hazard.HazardFilter{
+		Keyword:                    p.QueryStr("keyword", "max=255"),
+		Status:                     p.QueryStr("status", schema.HazardStatusQuery),
+		Level:                      p.QueryStr("level", schema.HazardLevelQuery),
+		RectifyPerson:              p.QueryStr("rectify_person", "max=64"),
+		Overdue:                    p.QueryBool("overdue", false),
+		KeywordAreaDescriptionOnly: true,
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	// 关键字只匹配「检查区域 + 隐患描述」，可按整改状态与整改员工筛选。
-	items, total, err := hazard.ListHazards(c.DB, hazard.HazardFilter{
-		Status: status, Keyword: keyword, RectifyPerson: rectifyPerson, KeywordAreaDescriptionOnly: true,
-	}, page, size)
+	// 关键字只匹配「检查区域 + 隐患描述」，可按整改状态、隐患等级、整改员工与「仅逾期」筛选。
+	items, total, err := hazard.ListHazards(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}

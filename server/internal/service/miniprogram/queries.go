@@ -72,18 +72,34 @@ func activePlanWhere(s *db.Session) (*common.Where, error) {
 	return w, nil
 }
 
+// MiniProgramPlanFilter 是小程序申购计划的筛选条件（nil / 空串表示不限）。
+type MiniProgramPlanFilter struct {
+	Keyword            *string
+	ActualDemandPerson *string
+	SubitemNo          *string
+	Urgency            *string
+	Category           *string
+}
+
 // ListPurchasePlans 对应 list_purchase_plans：只列出正常且未转申购记录的计划，id 倒序分页。
-func ListPurchasePlans(s *db.Session, keyword *string, page, pageSize int64, actualDemandPerson, subitemNo *string) ([]model.PurchaseMaterial, int64, error) {
+// keyword 匹配名称 / 型号 / 物料编码，便于按编码或型号快速定位。
+func ListPurchasePlans(s *db.Session, f MiniProgramPlanFilter, page, pageSize int64) ([]model.PurchaseMaterial, int64, error) {
 	w, err := activePlanWhere(s)
 	if err != nil {
 		return nil, 0, err
 	}
-	w.ContainsAny([]string{"pm.name", "pm.model_spec"}, keyword)
-	if actualDemandPerson != nil && *actualDemandPerson != "" {
-		w.ContainsAny([]string{"pm.actual_demand_person"}, actualDemandPerson)
+	w.ContainsAny([]string{"pm.name", "pm.model_spec", "pm.material_code"}, f.Keyword)
+	if f.ActualDemandPerson != nil && *f.ActualDemandPerson != "" {
+		w.ContainsAny([]string{"pm.actual_demand_person"}, f.ActualDemandPerson)
 	}
-	if subitemNo != nil && *subitemNo != "" {
-		w.Add("TRIM(pm.subitem_no) = ?", pyStrip(*subitemNo))
+	if f.SubitemNo != nil && *f.SubitemNo != "" {
+		w.Add("TRIM(pm.subitem_no) = ?", pyStrip(*f.SubitemNo))
+	}
+	if f.Urgency != nil && *f.Urgency != "" {
+		w.Add("TRIM(pm.urgency) = ?", pyStrip(*f.Urgency))
+	}
+	if f.Category != nil && *f.Category != "" {
+		w.Add("TRIM(pm.category) = ?", pyStrip(*f.Category))
 	}
 	var total int64
 	if err := s.Get(&total, "SELECT COUNT(*) FROM purchase_material pm"+w.SQL(), w.Args...); err != nil {
@@ -100,36 +116,41 @@ func ListPurchasePlans(s *db.Session, keyword *string, page, pageSize int64, act
 	return items, total, nil
 }
 
-// ListPurchasePlanFilterOptions 对应 list_purchase_plan_filter_options：(实际需求人, 子项号) 去重升序。
-func ListPurchasePlanFilterOptions(s *db.Session) ([]string, []string, error) {
+// planDistinct 取在途计划里某列的去重非空值（升序）。
+func planDistinct(s *db.Session, col string) ([]string, error) {
 	w, err := activePlanWhere(s)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	w.Add("TRIM(pm.actual_demand_person) != ''")
-	persons := []string{}
-	if err := s.Select(&persons, "SELECT DISTINCT pm.actual_demand_person FROM purchase_material pm"+w.SQL()+
-		" ORDER BY pm.actual_demand_person", w.Args...); err != nil {
-		return nil, nil, err
+	w.Add(col + " IS NOT NULL").Add("TRIM(" + col + ") != ''")
+	var rows []*string
+	if err := s.Select(&rows, "SELECT DISTINCT TRIM("+col+") FROM purchase_material pm"+w.SQL()+
+		" ORDER BY TRIM("+col+")", w.Args...); err != nil {
+		return nil, err
 	}
-	w2, err := activePlanWhere(s)
-	if err != nil {
-		return nil, nil, err
-	}
-	w2.Add("pm.subitem_no IS NOT NULL")
-	w2.Add("TRIM(pm.subitem_no) != ''")
-	var subitems []*string
-	if err := s.Select(&subitems, "SELECT DISTINCT pm.subitem_no FROM purchase_material pm"+w2.SQL()+
-		" ORDER BY pm.subitem_no", w2.Args...); err != nil {
-		return nil, nil, err
-	}
-	subitemNos := []string{}
-	for _, v := range subitems {
-		if v != nil {
-			subitemNos = append(subitemNos, *v)
+	out := []string{}
+	for _, v := range rows {
+		if v != nil && *v != "" {
+			out = append(out, *v)
 		}
 	}
-	return persons, subitemNos, nil
+	return out, nil
+}
+
+// ListPurchasePlanFilterOptions 对应 list_purchase_plan_filter_options：
+// (提报员工, 子项号, 紧急程度, 类别) 去重升序，只统计在途计划，避免选项里出现已转记录的值。
+func ListPurchasePlanFilterOptions(s *db.Session) (persons, subitemNos, urgencies, categories []string, err error) {
+	if persons, err = planDistinct(s, "pm.actual_demand_person"); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if subitemNos, err = planDistinct(s, "pm.subitem_no"); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if urgencies, err = planDistinct(s, "pm.urgency"); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	categories, err = planDistinct(s, "pm.category")
+	return persons, subitemNos, urgencies, categories, err
 }
 
 // PurchasePlanItemRead 对应 purchase_plan_item_read。
@@ -189,26 +210,35 @@ func PurchasePlanDetail(s *db.Session, materialID int64) (schema.MiniProgramPurc
 
 // ---------------- 申购记录 ----------------
 
-// ListPurchaseRecords 对应 list_purchase_records：keyword 仅 OR 匹配 名称 / 型号 / 追溯号 / 申购单号，id 倒序分页。
-func ListPurchaseRecords(s *db.Session, keyword, status, subitemNo *string, page, pageSize int64) ([]schema.MiniProgramPurchaseRecordItemRead, int64, error) {
-	lines, total, err := purchaserequest.SearchMiniProgramPurchaseRecords(s, keyword, status, subitemNo, page, pageSize)
+// MiniProgramRecordFilter 是小程序申购记录的筛选条件（nil / 空串表示不限）。
+type MiniProgramRecordFilter = purchaserequest.MiniProgramRecordFilter
+
+// ListPurchaseRecords 对应 list_purchase_records：keyword 匹配 名称 / 型号 / 物料编码 / 追溯号 / 申购单号，id 倒序分页。
+func ListPurchaseRecords(s *db.Session, f MiniProgramRecordFilter, page, pageSize int64) ([]schema.MiniProgramPurchaseRecordItemRead, int64, error) {
+	lines, total, err := purchaserequest.SearchMiniProgramPurchaseRecords(s, f, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
 	return purchaseRecordItemReads(lines), total, nil
 }
 
-// ListPurchaseRecordFilterOptions 对应 list_purchase_record_filter_options：(状态, 子项号) 去重升序。
-func ListPurchaseRecordFilterOptions(s *db.Session) ([]string, []string, error) {
-	statuses, err := purchaserequest.PurchaseStatusOptions(s)
-	if err != nil {
-		return nil, nil, err
+// ListPurchaseRecordFilterOptions 对应 list_purchase_record_filter_options：
+// (状态, 子项号, 类别, 业务员, 提报员工) 去重升序。
+func ListPurchaseRecordFilterOptions(s *db.Session) (statuses, subitemNos, categories, salespersons, persons []string, err error) {
+	if statuses, err = purchaserequest.PurchaseStatusOptions(s); err != nil {
+		return nil, nil, nil, nil, nil, err
 	}
-	subitemNos, err := purchaserequest.PurchaseSubitemOptions(s)
-	if err != nil {
-		return nil, nil, err
+	if subitemNos, err = purchaserequest.PurchaseSubitemOptions(s); err != nil {
+		return nil, nil, nil, nil, nil, err
 	}
-	return statuses, subitemNos, nil
+	if categories, err = purchaserequest.PurchaseRecordCategoryOptions(s); err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	if salespersons, err = purchaserequest.PurchaseSalespersonOptions(s); err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	persons, err = purchaserequest.PurchaseActualDemandPersonOptions(s)
+	return statuses, subitemNos, categories, salespersons, persons, err
 }
 
 // purchaseRecordItemReads 对应 purchase_record_item_read（行上已加载申购单头与图片）。
@@ -287,9 +317,19 @@ func LedgerItemDetail(s *db.Session, itemID int64) (schema.MiniProgramLedgerItem
 	}, nil
 }
 
+// MiniProgramHuaXingFilter 是小程序华星库存的筛选条件（nil / 空串表示不限）。
+type MiniProgramHuaXingFilter struct {
+	Keyword            *string
+	PurchaseDepartment *string
+	Purchaser          *string
+}
+
 // ListHuaXingInventory 对应 list_huaxing_inventory。
-func ListHuaXingInventory(s *db.Session, keyword *string, page, pageSize int64) ([]schema.MiniProgramHuaXingInventoryRead, int64, error) {
-	items, total, err := huaxing.Search(s, huaxing.SearchParams{Keyword: keyword, Page: page, PageSize: pageSize})
+func ListHuaXingInventory(s *db.Session, f MiniProgramHuaXingFilter, page, pageSize int64) ([]schema.MiniProgramHuaXingInventoryRead, int64, error) {
+	items, total, err := huaxing.Search(s, huaxing.SearchParams{
+		Keyword: f.Keyword, PurchaseDepartment: f.PurchaseDepartment, Purchaser: f.Purchaser,
+		Page: page, PageSize: pageSize,
+	})
 	if err != nil {
 		return nil, 0, err
 	}

@@ -914,19 +914,41 @@ func derefStr(p *string) string {
 	return *p
 }
 
+// MiniProgramRecordFilter 是小程序申购记录的筛选条件（nil / 空串表示不限）。
+type MiniProgramRecordFilter struct {
+	Keyword            *string
+	Status             *string
+	SubitemNo          *string
+	Category           *string
+	Salesperson        *string
+	ActualDemandPerson *string
+}
+
 // SearchMiniProgramPurchaseRecords 对应 search_mini_program_purchase_records：keyword 仅 OR 匹配
-// 名称 / 型号 / 追溯号 / 申购单号；按行 id 倒序。
-func SearchMiniProgramPurchaseRecords(s *db.Session, keyword, status, subitemNo *string, page, pageSize int64) ([]*Line, int64, error) {
+// 名称 / 型号 / 物料编码 / 追溯号 / 申购单号；按行 id 倒序。
+func SearchMiniProgramPurchaseRecords(s *db.Session, f MiniProgramRecordFilter, page, pageSize int64) ([]*Line, int64, error) {
 	w, err := recordScope(s)
 	if err != nil {
 		return nil, 0, err
 	}
-	w.ContainsAny([]string{"l.material_name_snapshot", "l.model_spec_snapshot", "l.trace_no", "r.purchase_order_no"}, keyword)
-	if nonEmpty(status) {
-		w.Add("TRIM(l.status) = ?", pyStrip(*status))
+	w.ContainsAny([]string{
+		"l.material_name_snapshot", "l.model_spec_snapshot", "l.material_code_snapshot",
+		"l.trace_no", "r.purchase_order_no",
+	}, f.Keyword)
+	if nonEmpty(f.Status) {
+		w.Add("TRIM(l.status) = ?", pyStrip(*f.Status))
 	}
-	if nonEmpty(subitemNo) {
-		w.Add("TRIM(l.subitem_no) = ?", pyStrip(*subitemNo))
+	if nonEmpty(f.SubitemNo) {
+		w.Add("TRIM(l.subitem_no) = ?", pyStrip(*f.SubitemNo))
+	}
+	if nonEmpty(f.Category) {
+		w.Add("TRIM(l.category_snapshot) = ?", pyStrip(*f.Category))
+	}
+	if nonEmpty(f.Salesperson) {
+		w.Add("TRIM(l.salesperson) = ?", pyStrip(*f.Salesperson))
+	}
+	if nonEmpty(f.ActualDemandPerson) {
+		w.ContainsAny([]string{"l.actual_demand_person_snapshot"}, f.ActualDemandPerson)
 	}
 	var total int64
 	if err := s.Get(&total, "SELECT COUNT(*)"+recordFrom+w.SQL(), w.Args...); err != nil {
@@ -977,6 +999,17 @@ func PurchaseStatusOptions(s *db.Session) ([]string, error) {
 // PurchaseSubitemOptions 对应 purchase_subitem_options。
 func PurchaseSubitemOptions(s *db.Session) ([]string, error) {
 	return distinctLineValues(s, "subitem_no", "subitem_no IS NOT NULL AND TRIM(subitem_no) != ?", "")
+}
+
+// PurchaseRecordCategoryOptions 申购记录行的类别去重（取快照列，空值不列）。
+func PurchaseRecordCategoryOptions(s *db.Session) ([]string, error) {
+	return distinctLineValues(s, "category_snapshot", "category_snapshot IS NOT NULL AND TRIM(category_snapshot) != ?", "")
+}
+
+// PurchaseActualDemandPersonOptions 申购记录行的提报员工去重（去掉「空提报员工」的占位值）。
+func PurchaseActualDemandPersonOptions(s *db.Session) ([]string, error) {
+	return distinctLineValues(s, "actual_demand_person_snapshot",
+		"TRIM(actual_demand_person_snapshot) NOT IN (?, ?, ?, ?, ?)", emptyPersonValues...)
 }
 
 var emptyPersonValues = []any{"", "\\", "/", "—", "-"}

@@ -1106,6 +1106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mini-program/huaxing-inventory/filter-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 华星库存筛选 */
+        get: operations["mini_program_huaxing_inventory_filter_options_api_v1_mini_program_huaxing_inventory_filter_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mini-program/huaxing-inventory/last-import": {
         parameters: {
             query?: never;
@@ -1257,7 +1274,7 @@ export interface paths {
         };
         /**
          * 隐患列表
-         * @description 隐患列表：关键字只匹配「检查区域 + 隐患描述」，可按整改状态与整改员工筛选。
+         * @description 隐患列表：关键字只匹配「检查区域 + 隐患描述」，可按整改状态、隐患等级、整改员工与「仅逾期」筛选。
          */
         get: operations["mini_program_hazards_api_v1_mini_program_hazards_get"];
         put?: never;
@@ -5153,6 +5170,16 @@ export interface components {
          *         "301",
          *         "305",
          *         "401"
+         *       ],
+         *       "urgencies": [
+         *         "正常",
+         *         "紧急",
+         *         "非常紧急"
+         *       ],
+         *       "categories": [
+         *         "备品备件",
+         *         "消耗物资",
+         *         "工具"
          *       ]
          *     }
          */
@@ -5161,6 +5188,10 @@ export interface components {
             actual_demand_persons: string[];
             /** Subitem Nos */
             subitem_nos: string[];
+            /** Urgencies */
+            urgencies: string[];
+            /** Categories */
+            categories: string[];
         };
         /**
          * MiniProgramPurchasePlanItemRead
@@ -5215,6 +5246,24 @@ export interface components {
          *         "201",
          *         "202",
          *         "305"
+         *       ],
+         *       "categories": [
+         *         "备品备件",
+         *         "消耗物资"
+         *       ],
+         *       "salespersons": [
+         *         "何丽娟",
+         *         "徐怀志",
+         *         "马晓东"
+         *       ],
+         *       "actual_demand_persons": [
+         *         "李建军",
+         *         "王海涛",
+         *         "陈志远",
+         *         "刘振华",
+         *         "杨明辉",
+         *         "周立新",
+         *         "孙浩宇"
          *       ]
          *     }
          */
@@ -5223,6 +5272,12 @@ export interface components {
             statuses: string[];
             /** Subitem Nos */
             subitem_nos: string[];
+            /** Categories */
+            categories: string[];
+            /** Salespersons */
+            salespersons: string[];
+            /** Actual Demand Persons */
+            actual_demand_persons: string[];
         };
         /**
          * MiniProgramPurchaseRecordItemRead
@@ -23288,6 +23343,8 @@ export interface operations {
                 /** @description 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词 */
                 actual_demand_person?: string | null;
                 subitem_no?: string | null;
+                urgency?: string | null;
+                category?: string | null;
             };
             header?: never;
             path?: never;
@@ -23504,6 +23561,16 @@ export interface operations {
                      *         "301",
                      *         "305",
                      *         "401"
+                     *       ],
+                     *       "urgencies": [
+                     *         "正常",
+                     *         "紧急",
+                     *         "非常紧急"
+                     *       ],
+                     *       "categories": [
+                     *         "备品备件",
+                     *         "消耗物资",
+                     *         "工具"
                      *       ]
                      *     }
                      */
@@ -23605,6 +23672,9 @@ export interface operations {
                 keyword?: string | null;
                 status?: string | null;
                 subitem_no?: string | null;
+                category?: string | null;
+                salesperson?: string | null;
+                actual_demand_person?: string | null;
             };
             header?: never;
             path?: never;
@@ -23894,6 +23964,24 @@ export interface operations {
                      *         "201",
                      *         "202",
                      *         "305"
+                     *       ],
+                     *       "categories": [
+                     *         "备品备件",
+                     *         "消耗物资"
+                     *       ],
+                     *       "salespersons": [
+                     *         "何丽娟",
+                     *         "徐怀志",
+                     *         "马晓东"
+                     *       ],
+                     *       "actual_demand_persons": [
+                     *         "李建军",
+                     *         "王海涛",
+                     *         "陈志远",
+                     *         "刘振华",
+                     *         "杨明辉",
+                     *         "周立新",
+                     *         "孙浩宇"
                      *       ]
                      *     }
                      */
@@ -24314,6 +24402,8 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 keyword?: string | null;
+                purchase_department?: string | null;
+                purchaser?: string | null;
             };
             header?: never;
             path?: never;
@@ -24525,6 +24615,125 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["LastImportRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_huaxing_inventory_filter_options_api_v1_mini_program_huaxing_inventory_filter_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "purchase_departments": [
+                     *         "HXNI冶炼厂",
+                     *         "生产调度中心",
+                     *         "设备管理部"
+                     *       ],
+                     *       "purchasers": [
+                     *         "吴冰",
+                     *         "夏军",
+                     *         "李振国"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["HuaXingFilterOptions"];
                 };
             };
             /** @description 业务校验失败 */
@@ -25703,6 +25912,8 @@ export interface operations {
                 keyword?: string | null;
                 status?: components["schemas"]["HazardStatus"] | null;
                 rectify_person?: string | null;
+                level?: components["schemas"]["HazardLevel"] | null;
+                overdue?: boolean;
             };
             header?: never;
             path?: never;
