@@ -531,6 +531,24 @@ if (themedPage.data.i18n === undefined) {
   }
 }
 
+// 上传脚本必须把开发文件排除在小程序包外：主包上限 2MB，而 package-lock.json 一项就有 530KB+。
+// 这些文件一旦被重新打进包，体积会悄悄顶到上限（线上报 80051 时才知道）。
+{
+  const uploadScript = read('scripts/upload.js');
+  const match = uploadScript.match(/const IGNORES = \[([\s\S]*?)\];/);
+  if (!match) {
+    throw new Error('scripts/upload.js must declare the packaged-file ignore list.');
+  }
+  for (const entry of ['node_modules/**/*', 'package-lock.json', 'scripts/**/*', 'README.md']) {
+    if (!match[1].includes(`'${entry}'`)) {
+      throw new Error(`scripts/upload.js must keep "${entry}" out of the mini program package.`);
+    }
+  }
+  if (!uploadScript.includes('PACKAGE_LIMIT_KB')) {
+    throw new Error('scripts/upload.js must check the package size before uploading.');
+  }
+}
+
 // 列表页筛选面板（.filter-panel）是页面里唯一的筛选入口：旧的常驻下拉必须彻底退场。
 {
   for (const page of [
