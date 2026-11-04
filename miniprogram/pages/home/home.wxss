@@ -59,6 +59,95 @@
   margin-bottom: 18rpx;
 }
 
+/* 首屏加载态：占住入口区域的高度，加载完成时入口一次性就位，不会把页面顶上去。 */
+.state-panel {
+  display: flex;
+  min-height: 420rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.failed-panel {
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 扫码出库：整张卡可点的主入口，用主色实底与下方功能卡区分主次，
+ * 版式与 .action-card 相同（左侧图标 + 右侧两行文案 + 箭头），不再是一块单独的大卡加嵌套按钮。 */
+.scan-card {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+  padding: 26rpx 24rpx;
+  border-radius: 24rpx;
+  background: var(--app-brand-strong-gradient);
+  box-shadow: 0 14rpx 32rpx var(--app-brand-strong-shadow-color);
+  transition: transform 120ms ease;
+}
+
+.scan-card-active {
+  transform: scale(0.98);
+}
+
+.scan-icon {
+  display: flex;
+  flex: none;
+  width: 76rpx;
+  height: 76rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22rpx;
+  background: var(--app-on-brand-glow);
+  color: var(--app-on-brand);
+}
+
+/* 扫码中：图标原地旋转。t-loading 的默认色是主色，在实底卡片上看不清，
+ * 这里直接用图标 + 自带配色，保证与卡片文字同色。 */
+.scan-spinner {
+  animation: scan-spin 900ms linear infinite;
+}
+
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scan-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.scan-title {
+  color: var(--app-on-brand);
+  font-size: 30rpx;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.scan-description {
+  margin-top: 6rpx;
+  color: var(--app-on-brand-soft);
+  font-size: 22rpx;
+  line-height: 1.4;
+}
+
+.scan-chevron {
+  flex: none;
+  color: var(--app-on-brand-soft);
+}
+
+/* 入口分组的标题：把「扫码」与下方功能列表在视觉上分成两段，
+ * 只做一行小字标签，不加卡片、不加描述，避免又占掉首屏。 */
+.section-label {
+  margin: 8rpx 4rpx 16rpx;
+  color: var(--app-text-subtle);
+  font-size: 23rpx;
+  font-weight: 600;
+}
+
 .action-card {
   box-sizing: border-box;
   display: flex;
@@ -76,13 +165,13 @@
 .action-icon {
   display: flex;
   flex: none;
-  width: 72rpx;
-  height: 72rpx;
+  width: 68rpx;
+  height: 68rpx;
   align-items: center;
   justify-content: center;
-  border-radius: 22rpx;
-  background: var(--app-brand);
-  color: var(--app-on-brand);
+  border-radius: 20rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
 }
 
 .action-content {
@@ -110,43 +199,6 @@
   font-size: 20rpx;
   line-height: 1.4;
   text-align: left;
-}
-
-.scan-description {
-  margin-top: 6rpx;
-  color: var(--app-text-secondary);
-  font-size: 23rpx;
-}
-
-.scan-card {
-  box-sizing: border-box;
-  padding: 42rpx 32rpx 34rpx;
-  border-color: var(--app-brand-border);
-  text-align: center;
-  background: var(--app-surface-gradient-soft);
-}
-
-.scan-icon {
-  display: flex;
-  width: 112rpx;
-  height: 112rpx;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  border-radius: 34rpx;
-  background: var(--app-brand-soft);
-  color: var(--app-brand);
-}
-
-.scan-title {
-  margin-top: 24rpx;
-  color: var(--app-text-strong);
-  font-size: 34rpx;
-  font-weight: 650;
-}
-
-.scan-action {
-  margin-top: 32rpx;
 }
 
 .user-profile-popup {
