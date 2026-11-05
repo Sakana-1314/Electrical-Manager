@@ -1,12 +1,16 @@
 <view class="page-shell ledger-page {{themeClass}}">
   <view class="list-header"><view class="page-title">{{i18n.ledgerTitle}}</view></view>
   <view class="list-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.ledgerSearchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      sections="{{filterSections}}"
+      active="{{filters}}"
+      search-fields="{{searchFields}}"
+      search-field="{{searchField}}"
+      field-conditions="{{fieldConditions}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
   </view>
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
@@ -14,7 +18,7 @@
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingLedger}}" />
   </view>
   <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
-    <t-empty icon="file" description="{{keyword ? i18n.ledgerEmptyFiltered : i18n.ledgerEmpty}}" />
+    <t-empty icon="file" description="{{keyword || filtered ? i18n.ledgerEmptyFiltered : i18n.ledgerEmpty}}" />
   </view>
   <view wx:else class="ledger-list">
     <view

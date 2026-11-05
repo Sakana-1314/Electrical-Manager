@@ -8,7 +8,10 @@
       keyword="{{keyword}}"
       placeholder="{{i18n.searchPlaceholder}}"
       sections="{{filterSections}}"
-      active="{{filterActive}}"
+      active="{{filters}}"
+      search-fields="{{searchFields}}"
+      search-field="{{searchField}}"
+      field-conditions="{{fieldConditions}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />

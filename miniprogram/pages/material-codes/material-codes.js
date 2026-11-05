@@ -4,10 +4,18 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { buildFieldQuery, buildSearchQuery } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
-// 分享链接携带的搜索词（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword'];
+// 分享链接携带的搜索词 / 分字段搜索（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'searchField', 'name', 'modelSpec', 'materialCode'];
+// 分字段搜索：网页端「物资名称 / 型号规格 / 物料编码」三个输入框。
+const SEARCH_FIELDS = [
+  { labelKey: 'filterSearchAll', value: '', param: '' },
+  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
+  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
+  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+];
 const PAGE_ROUTE = '/pages/material-codes/material-codes';
 
 function formatDateTime(value) {
@@ -22,6 +30,9 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    searchField: '',
+    fieldConditions: [],
+    searchFields: [],
     page: 1,
     pageSize: 15,
     total: 0,
@@ -40,6 +51,9 @@ Page(withTheme({
     setNavigationBarTitle('materialCodesTitle');
     // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
     const shared = readShareParams(options, SHARE_PARAMS);
+    this.setData({
+      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
+    });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -50,7 +64,15 @@ Page(withTheme({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      if (Object.keys(shared).length) this.setData(shared);
+      // 搜索字段 + 分字段条件（分享里的单字段参数还原成条件）。
+      const conditions = [];
+      SEARCH_FIELDS.forEach((field) => {
+        if (!field.value) return;
+        if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
+      });
+      const patch = { fieldConditions: conditions, searchField: shared.searchField || '' };
+      if (shared.keyword !== undefined) patch.keyword = shared.keyword;
+      this.setData(patch);
       this.loadLastImport();
       await this.loadCodes(true);
     } catch (error) {
@@ -85,10 +107,28 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
+  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
   onSearchChange(event) {
-    this.setData({ keyword: event.detail.value });
+    const detail = event.detail || {};
+    const patch = { keyword: detail.value || '' };
+    if (detail.field !== undefined) patch.searchField = detail.field || '';
+    this.setData(patch);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadCodes(true), 350);
+  },
+
+  /**
+   * 物料编码页没有筛选分区（与网页端一致：只有三个搜索框）。
+   * 分字段条件在面板里添加后走这里，条件与关键词一起重新取数。
+   */
+  onFilterChange(event) {
+    const detail = event.detail || {};
+    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
+    if (JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)) {
+      return;
+    }
+    this.setData({ fieldConditions: conditions });
+    void this.loadCodes(true);
   },
 
   async loadCodes(reset) {
@@ -98,9 +138,12 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      const data = { page, page_size: this.data.pageSize };
-      const keyword = this.data.keyword.trim();
-      if (keyword) data.keyword = keyword;
+      const data = {
+        page,
+        page_size: this.data.pageSize,
+        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+      };
       const result = await request({ url: '/mini-program/material-codes', data });
       if (requestId !== this.requestId) return;
       const incoming = result.items || [];
@@ -128,9 +171,16 @@ Page(withTheme({
     }
   },
 
-  /** 分享路径：把当前搜索词一起带出去。 */
+  /** 分享路径：把当前搜索词、搜索字段与分字段条件一起带出去。 */
   sharePath() {
-    return buildSharePath(PAGE_ROUTE, { keyword: this.data.keyword.trim() });
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      searchField: this.data.searchField,
+      ...(this.data.fieldConditions || []).reduce((params, condition) => {
+        if (condition.field && condition.value) params[condition.field] = condition.value;
+        return params;
+      }, {}),
+    });
   },
 
   onShareAppMessage() {

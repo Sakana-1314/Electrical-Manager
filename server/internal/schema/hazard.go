@@ -171,6 +171,14 @@ type HazardFormOptionsRead struct {
 	Types []HazardTypeRead `json:"types"`
 }
 
+// MiniProgramHazardFilterOptions 小程序隐患列表的筛选项：
+// 整改员工（库中已有值去重）+ 责任单位 + 隐患类型（与登记表单同一份字典）。
+type MiniProgramHazardFilterOptions struct {
+	RectifyPersons []string         `json:"rectify_persons"`
+	Units          []HazardUnitRead `json:"units"`
+	Types          []HazardTypeRead `json:"types"`
+}
+
 // MiniProgramHazardCreate 小程序登记隐患：在网页端请求体上增加幂等键（字段平铺，解码器不支持嵌入）。
 // 解码前请用 NewMiniProgramHazardCreate 预填默认值。
 type MiniProgramHazardCreate struct {

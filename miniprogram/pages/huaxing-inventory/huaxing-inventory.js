@@ -4,12 +4,42 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
-const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
+const {
+  buildFieldQuery,
+  buildFilterQuery,
+  buildSearchQuery,
+  hasActiveFilter,
+  normalizeFilters,
+  sameFilters,
+} = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'purchaseDepartment', 'purchaser'];
-const FILTER_SECTIONS = ['purchaseDepartment', 'purchaser'];
+const SHARE_PARAMS = [
+  'keyword',
+  'searchField',
+  'purchaseDepartment',
+  'purchaser',
+  'name',
+  'modelSpec',
+  'materialCode',
+  'inboundFrom',
+  'inboundTo',
+];
+// 筛选分区：申购部门 / 申购人是多选（网页端可多选），首次入库日期是区间。
+const FILTER_SECTIONS = ['purchaseDepartment', 'purchaser', 'firstInboundDate'];
+const FILTER_SPEC = {
+  purchaseDepartment: { kind: 'multi', param: 'purchase_department' },
+  purchaser: { kind: 'multi', param: 'purchaser' },
+  firstInboundDate: { kind: 'dateRange', fromParam: 'date_from', toParam: 'date_to' },
+};
+// 分字段搜索：网页端「货品名称 / 型号 / 货品编码」三个输入框。
+const SEARCH_FIELDS = [
+  { labelKey: 'filterSearchAll', value: '', param: '' },
+  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
+  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
+  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+];
 const PAGE_ROUTE = '/pages/huaxing-inventory/huaxing-inventory';
 
 function formatDateTime(value) {
@@ -18,6 +48,15 @@ function formatDateTime(value) {
   if (Number.isNaN(date.getTime())) return '';
   const pad = (part) => String(part).padStart(2, '0');
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** 分享里的多选值用 | 分隔（与后端「任一」匹配一致），还原成数组。 */
+function splitSharedList(value) {
+  if (!value) return [];
+  return String(value)
+    .split(/[|｜]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function decorateItem(item) {
@@ -34,9 +73,14 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    searchField: '',
+    fieldConditions: [],
+    searchFields: [],
+    // 部门 / 申购人是多选数组，日期是区间对象。
     filters: {
-      purchaseDepartment: '',
-      purchaser: '',
+      purchaseDepartment: [],
+      purchaser: [],
+      firstInboundDate: { from: '', to: '' },
     },
     filterSections: [],
     filtered: false,
@@ -58,6 +102,9 @@ Page(withTheme({
     setNavigationBarTitle('huaxingInventoryTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    this.setData({
+      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
+    });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -78,23 +125,33 @@ Page(withTheme({
     }
   },
 
-  /** 把分享 / 回跳带来的参数并进当前状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  /**
+   * 把分享 / 回跳带来的参数并进当前状态。
+   *
+   * 多选分区在分享里用 | 分隔（与后端「任一」匹配一致），这里还原成数组；
+   * 单字段参数（name / modelSpec / materialCode）还原成分字段条件。
+   */
   applyShared(shared) {
     const filters = { ...this.data.filters };
-    let changed = false;
-    FILTER_SECTIONS.forEach((key) => {
-      if (shared[key] !== undefined) {
-        filters[key] = shared[key];
-        changed = true;
-      }
+    ['purchaseDepartment', 'purchaser'].forEach((key) => {
+      if (shared[key] !== undefined) filters[key] = splitSharedList(shared[key]);
     });
-    const patch = {};
-    if (changed) {
-      patch.filters = filters;
-      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
+    if (shared.inboundFrom || shared.inboundTo) {
+      filters.firstInboundDate = { from: shared.inboundFrom || '', to: shared.inboundTo || '' };
     }
+    const conditions = [];
+    SEARCH_FIELDS.forEach((field) => {
+      if (!field.value) return;
+      if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
+    });
+    const patch = {
+      filters,
+      fieldConditions: conditions,
+      searchField: shared.searchField || '',
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    };
     if (shared.keyword !== undefined) patch.keyword = shared.keyword;
-    if (Object.keys(patch).length) this.setData(patch);
+    this.setData(patch);
   },
 
   /** 申购部门 / 申购人选项来自库中已有值；加载失败不阻塞列表。 */
@@ -120,15 +177,23 @@ Page(withTheme({
           'purchaseDepartment',
           t('filterPurchaseDepartment'),
           departments,
-          shared.purchaseDepartment,
+          splitSharedList(shared.purchaseDepartment),
+          'multi',
         ),
-        this.buildSection('purchaser', t('filterPurchaser'), purchasers, shared.purchaser),
+        this.buildSection('purchaser', t('filterPurchaser'), purchasers, splitSharedList(shared.purchaser), 'multi'),
+        {
+          key: 'firstInboundDate',
+          title: t('filterFirstInboundDate'),
+          kind: 'dateRange',
+          fromLabel: t('filterDateFrom'),
+          toLabel: t('filterDateTo'),
+        },
       ],
     });
   },
 
   /** 组装一个筛选分区：首项「全部」；分享值缺失时补一项，避免面板显示成原值。 */
-  buildSection(key, title, values, sharedValue) {
+  buildSection(key, title, values, sharedValue, kind = 'single') {
     const list = [{ label: t('all'), value: '' }].concat(
       values.map((value) => ({ label: value, value })),
     );
@@ -164,21 +229,33 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
+  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
   onSearchChange(event) {
-    this.setData({ keyword: event.detail.value });
+    const detail = event.detail || {};
+    const patch = { keyword: detail.value || '' };
+    if (detail.field !== undefined) patch.searchField = detail.field || '';
+    this.setData(patch);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadInventory(true), 350);
   },
 
   /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
   onFilterChange(event) {
-    const values = (event.detail && event.detail.values) || {};
-    const filters = normalizeFilters(values, FILTER_SECTIONS);
+    const detail = event.detail || {};
+    const filters = normalizeFilters(detail.values || {}, FILTER_SECTIONS, ['purchaseDepartment', 'purchaser'], ['firstInboundDate']);
+    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
     // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
-    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+    if (
+      sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
+      JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)
+    ) {
       return;
     }
-    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
+    this.setData({
+      filters,
+      fieldConditions: conditions,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    });
     void this.loadInventory(true);
   },
 
@@ -189,12 +266,13 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      const data = { page, page_size: this.data.pageSize };
-      const keyword = this.data.keyword.trim();
-      if (keyword) data.keyword = keyword;
-      const filters = this.data.filters;
-      if (filters.purchaseDepartment) data.purchase_department = filters.purchaseDepartment;
-      if (filters.purchaser) data.purchaser = filters.purchaser;
+      const data = {
+        page,
+        page_size: this.data.pageSize,
+        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+        ...buildFilterQuery(this.data.filters, FILTER_SPEC),
+      };
       const result = await request({ url: '/mini-program/huaxing-inventory', data });
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decorateItem);
@@ -222,13 +300,20 @@ Page(withTheme({
     }
   },
 
-  /** 分享路径：把当前搜索词与筛选值一起带出去。 */
+  /** 分享路径：把当前搜索词、搜索字段、多选筛选项与日期区间一起带出去。 */
   sharePath() {
     const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      purchaseDepartment: filters.purchaseDepartment,
-      purchaser: filters.purchaser,
+      searchField: this.data.searchField,
+      purchaseDepartment: filters.purchaseDepartment.join('|'),
+      purchaser: filters.purchaser.join('|'),
+      inboundFrom: filters.firstInboundDate.from,
+      inboundTo: filters.firstInboundDate.to,
+      ...(this.data.fieldConditions || []).reduce((params, condition) => {
+        if (condition.field && condition.value) params[condition.field] = condition.value;
+        return params;
+      }, {}),
     });
   },
 

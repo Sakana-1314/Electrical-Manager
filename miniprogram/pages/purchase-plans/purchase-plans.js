@@ -4,13 +4,52 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
-const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
+const {
+  buildFieldQuery,
+  buildFilterQuery,
+  buildSearchQuery,
+  hasActiveFilter,
+  normalizeFilters,
+  readFilterShare,
+  sameFilters,
+} = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'actualDemandPerson', 'subitemNo', 'urgency', 'category'];
-// 筛选面板的分区（key 即分享参数名），选项在拿到 filter-options 后填充。
-const FILTER_SECTIONS = ['urgency', 'category', 'actualDemandPerson', 'subitemNo'];
+const SHARE_PARAMS = [
+  'keyword',
+  'searchField',
+  'urgency',
+  'category',
+  'actualDemandPerson',
+  'purchaseResponsible',
+  'demandDepartment',
+  'subitemNo',
+  'name',
+  'modelSpec',
+  'materialCode',
+  'planDateFrom',
+  'planDateTo',
+];
+// 筛选面板的分区（key 即分享参数名），选项在拿到 filter-options 后填充；与网页端字段一一对应。
+const FILTER_SECTIONS = ['urgency', 'category', 'actualDemandPerson', 'purchaseResponsible', 'demandDepartment', 'subitemNo', 'planDate'];
+// 某个分区的 key → 请求参数（区间分区拆成两个参数）。
+const FILTER_SPEC = {
+  urgency: { kind: 'single', param: 'urgency' },
+  category: { kind: 'single', param: 'category' },
+  actualDemandPerson: { kind: 'single', param: 'actual_demand_person' },
+  purchaseResponsible: { kind: 'single', param: 'purchase_responsible' },
+  demandDepartment: { kind: 'single', param: 'demand_department' },
+  subitemNo: { kind: 'single', param: 'subitem_no' },
+  planDate: { kind: 'dateRange', fromParam: 'plan_date_from', toParam: 'plan_date_to' },
+};
+// 分字段搜索 / 综合搜索的字段候选（首项是「综合」，与网页端每个字段一个输入框等价）。
+const SEARCH_FIELDS = [
+  { labelKey: 'filterSearchAll', value: '', param: '' },
+  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
+  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
+  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+];
 const PAGE_ROUTE = '/pages/purchase-plans/purchase-plans';
 
 function decoratePlan(item) {
@@ -28,12 +67,20 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    // 当前生效的筛选值：key 与分享参数同名，空串表示不限。
+    // 搜索字段：空串 = 综合（跨名称 / 型号 / 编码）；选了字段则只搜该字段。
+    searchField: '',
+    // 分字段搜索的已生效条件：[{ field, value }]（可与综合搜索同时存在）。
+    fieldConditions: [],
+    searchFields: [],
+    // 当前生效的筛选值：key 与分享参数同名；单值为空串、区间为 { from, to }。
     filters: {
       actualDemandPerson: '',
+      purchaseResponsible: '',
+      demandDepartment: '',
       subitemNo: '',
       urgency: '',
       category: '',
+      planDate: { from: '', to: '' },
     },
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
@@ -54,6 +101,7 @@ Page(withTheme({
     // 分享链接带来的搜索 / 筛选：先解析出来，等筛选项加载完再回填——
     // 面板里的选项要靠 options 才能把当前值解析成文案，早于选项写入会显示成原值。
     const shared = readShareParams(options, SHARE_PARAMS);
+    this.setData({ searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })) });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -74,23 +122,39 @@ Page(withTheme({
     }
   },
 
-  /** 把分享 / 回跳带来的参数并进当前筛选状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  /**
+   * 把分享 / 回跳带来的参数并进当前状态。
+   *
+   * 分字段搜索字段（name / modelSpec / materialCode）与综合 keyword 是两条独立通道：
+   * 前者落到 fieldConditions，后者落到 keyword；searchField 决定搜索框作用于哪个字段。
+   */
   applyShared(shared) {
     const filters = { ...this.data.filters };
-    let changed = false;
     FILTER_SECTIONS.forEach((key) => {
-      if (shared[key] !== undefined) {
-        filters[key] = shared[key];
-        changed = true;
+      if (key === 'planDate') {
+        if (shared.planDateFrom || shared.planDateTo) {
+          filters.planDate = { from: shared.planDateFrom || '', to: shared.planDateTo || '' };
+        }
+        return;
       }
+      if (shared[key] !== undefined) filters[key] = shared[key];
     });
-    const patch = {};
-    if (changed) {
-      patch.filters = filters;
-      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
-    }
+
+    // 分享里的单字段参数还原成分字段条件。
+    const conditions = [];
+    SEARCH_FIELDS.forEach((field) => {
+      if (!field.value) return;
+      if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
+    });
+
+    const patch = {
+      filters,
+      fieldConditions: conditions,
+      searchField: shared.searchField || '',
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    };
     if (shared.keyword !== undefined) patch.keyword = shared.keyword;
-    if (Object.keys(patch).length) this.setData(patch);
+    this.setData(patch);
   },
 
   onUnload() {
@@ -119,38 +183,55 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
+  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
   onSearchChange(event) {
-    this.setData({ keyword: event.detail.value });
+    const detail = event.detail || {};
+    const patch = { keyword: detail.value || '' };
+    if (detail.field !== undefined) patch.searchField = detail.field || '';
+    this.setData(patch);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadPlans(true), 350);
   },
 
-  /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
+  /** 筛选面板确认：整体替换筛选值与分字段条件后重新取第一页。 */
   onFilterChange(event) {
-    const values = (event.detail && event.detail.values) || {};
-    const filters = normalizeFilters(values, FILTER_SECTIONS);
+    const detail = event.detail || {};
+    const values = detail.values || {};
+    const filters = normalizeFilters(values, FILTER_SECTIONS, [], ['planDate']);
+    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
     // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
-    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+    if (
+      sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
+      JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)
+    ) {
       return;
     }
-    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
+    this.setData({
+      filters,
+      fieldConditions: conditions,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    });
     void this.loadPlans(true);
   },
 
   /**
    * 加载筛选选项。
    *
-   * 提报员工选项把「当前用户」固定置顶（value 用哨兵值，避免与真实姓名冲突），
+   * 提报员工选项把「当前用户」固定置顶（标出「当前用户」），
    * 分享带来的值若已不在候选里也补进选项，保证面板能看到「筛了什么」。
    */
   async loadFilterOptions(shared = {}, displayName = '') {
     let persons = [];
+    let responsibles = [];
+    let departments = [];
     let subitemNos = [];
     let urgencies = [];
     let categories = [];
     try {
       const result = await requestCached({ url: '/mini-program/purchase-plans/filter-options' });
       persons = (result.actual_demand_persons || []).filter(Boolean);
+      responsibles = (result.purchase_responsibles || []).filter(Boolean);
+      departments = (result.demand_departments || []).filter(Boolean);
       subitemNos = (result.subitem_nos || []).filter(Boolean);
       urgencies = (result.urgencies || []).filter(Boolean);
       categories = (result.categories || []).filter(Boolean);
@@ -181,15 +262,31 @@ Page(withTheme({
           // 当前用户固定置顶，且标出「当前用户」方便快速切到自己。
           (value) => (value === displayName ? `${value}${currentUserSuffix}` : value),
         ),
+        this.buildSection(
+          'purchaseResponsible',
+          t('filterPurchaseResponsible'),
+          responsibles,
+          shared.purchaseResponsible,
+        ),
+        this.buildSection(
+          'demandDepartment',
+          t('filterDemandDepartment'),
+          departments,
+          shared.demandDepartment,
+        ),
         this.buildSection('subitemNo', t('filterSubitemNo'), subitemNos, shared.subitemNo),
+        {
+          key: 'planDate',
+          title: t('filterPlanDate'),
+          kind: 'dateRange',
+          fromLabel: t('filterDateFrom'),
+          toLabel: t('filterDateTo'),
+        },
       ],
     });
   },
 
-  /**
-   * 组装一个筛选分区：首项「全部」+ 传入的候选值（字符串）。
-   * sharedValue 不在候选里时补一项，保证面板能看到「筛了什么」；labelOf 用于个别项的展示改写。
-   */
+  /** 组装一个单选筛选分区：首项「全部」+ 传入的候选值（字符串）。 */
   buildSection(key, title, values, sharedValue, labelOf = (value) => value) {
     const list = [{ label: t('all'), value: '' }].concat(
       values.map((value) => ({ label: labelOf(value), value })),
@@ -197,7 +294,7 @@ Page(withTheme({
     if (sharedValue && !list.some((option) => option.value === sharedValue)) {
       list.splice(1, 0, { label: sharedValue, value: sharedValue });
     }
-    return { key, title, options: list };
+    return { key, title, kind: 'single', options: list };
   },
 
   async loadPlans(reset) {
@@ -207,14 +304,14 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      const data = { page, page_size: this.data.pageSize };
-      const keyword = this.data.keyword.trim();
-      if (keyword) data.keyword = keyword;
-      const filters = this.data.filters;
-      if (filters.actualDemandPerson) data.actual_demand_person = filters.actualDemandPerson;
-      if (filters.subitemNo) data.subitem_no = filters.subitemNo;
-      if (filters.urgency) data.urgency = filters.urgency;
-      if (filters.category) data.category = filters.category;
+      // 搜索：综合 / 单字段由 searchField 决定；分字段条件再叠加（AND）。
+      const data = {
+        page,
+        page_size: this.data.pageSize,
+        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+        ...buildFilterQuery(this.data.filters, FILTER_SPEC),
+      };
       const result = await request({ url: '/mini-program/purchase-plans', data });
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decoratePlan);
@@ -239,15 +336,25 @@ Page(withTheme({
     });
   },
 
-  /** 分享路径：把当前搜索词与全部筛选值一起带出去。 */
+  /** 分享路径：关键词、搜索字段、筛选项与分字段条件一起带出去。 */
   sharePath() {
     const filters = this.data.filters;
+    const planDate = filters.planDate || {};
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      actualDemandPerson: filters.actualDemandPerson,
-      subitemNo: filters.subitemNo,
+      searchField: this.data.searchField,
       urgency: filters.urgency,
       category: filters.category,
+      actualDemandPerson: filters.actualDemandPerson,
+      purchaseResponsible: filters.purchaseResponsible,
+      demandDepartment: filters.demandDepartment,
+      subitemNo: filters.subitemNo,
+      planDateFrom: planDate.from,
+      planDateTo: planDate.to,
+      ...(this.data.fieldConditions || []).reduce((params, condition) => {
+        if (condition.field && condition.value) params[condition.field] = condition.value;
+        return params;
+      }, {}),
     });
   },
 

@@ -906,6 +906,24 @@ func HazardFilterOptions(s *db.Session) (schema.HazardFilterOptionsRead, error) 
 	return schema.HazardFilterOptionsRead{RectifyPersons: out}, nil
 }
 
+// MiniProgramHazardFilterOptions 小程序隐患列表的筛选项：整改员工 + 责任单位 + 隐患类型。
+// 责任单位与类型直接复用字典（与网页端下拉同一份数据，只保留启用中的单位）。
+func MiniProgramHazardFilterOptions(s *db.Session) (schema.MiniProgramHazardFilterOptions, error) {
+	base, err := HazardFilterOptions(s)
+	if err != nil {
+		return schema.MiniProgramHazardFilterOptions{}, err
+	}
+	form, err := HazardFormOptions(s)
+	if err != nil {
+		return schema.MiniProgramHazardFilterOptions{}, err
+	}
+	return schema.MiniProgramHazardFilterOptions{
+		RectifyPersons: base.RectifyPersons,
+		Units:          form.Units,
+		Types:          form.Types,
+	}, nil
+}
+
 // HazardFormOptions 小程序登记隐患用的下拉数据：只列启用中的责任单位 + 全部隐患类型。
 func HazardFormOptions(s *db.Session) (schema.HazardFormOptionsRead, error) {
 	units, err := listUnits(s, nil)

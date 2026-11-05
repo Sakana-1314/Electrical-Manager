@@ -2,7 +2,10 @@
   "component": true,
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
+    "t-date-time-picker": "tdesign-miniprogram/date-time-picker/date-time-picker",
     "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-picker": "tdesign-miniprogram/picker/picker",
+    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item",
     "t-popup": "tdesign-miniprogram/popup/popup",
     "t-search": "tdesign-miniprogram/search/search"
   }

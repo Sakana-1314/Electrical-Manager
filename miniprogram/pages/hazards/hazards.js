@@ -4,9 +4,15 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
-const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
+const {
+  buildFilterQuery,
+  buildSearchQuery,
+  hasActiveFilter,
+  normalizeFilters,
+  sameFilters,
+} = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 const PAGE_SIZE = 15;
@@ -16,20 +22,51 @@ const HAZARD_LEVELS = ['一般隐患', '重大隐患'];
 // 固定枚举的筛选分区：非法分享值不能凭空造选项，校验后直接忽略。
 const ENUM_SECTIONS = { status: HAZARD_STATUSES, level: HAZARD_LEVELS };
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'status', 'level', 'rectifyPerson', 'overdue'];
-const FILTER_SECTIONS = ['status', 'level', 'rectifyPerson', 'overdue'];
+const SHARE_PARAMS = [
+  'keyword',
+  'status',
+  'level',
+  'rectifyPerson',
+  'overdue',
+  'area',
+  'hazardTypeId',
+  'hazardUnitId',
+  'inspectionDateFrom',
+  'inspectionDateTo',
+];
+// 筛选分区；与网页端字段一一对应（类型 / 单位 / 等级 / 状态 / 整改员工 / 区域 / 日期）。
+const FILTER_SECTIONS = ['status', 'overdue', 'level', 'hazardTypeId', 'hazardUnitId', 'rectifyPerson', 'inspectionDate'];
+const FILTER_SPEC = {
+  status: { kind: 'single', param: 'status' },
+  overdue: { kind: 'single', param: 'overdue' },
+  level: { kind: 'single', param: 'level' },
+  hazardTypeId: { kind: 'single', param: 'hazard_type_id' },
+  hazardUnitId: { kind: 'single', param: 'hazard_unit_id' },
+  rectifyPerson: { kind: 'single', param: 'rectify_person' },
+  inspectionDate: { kind: 'dateRange', fromParam: 'date_from', toParam: 'date_to' },
+};
+// 分字段搜索：网页端的「检查区域」是独立输入框，这里作为可切换的搜索字段。
+const SEARCH_FIELDS = [
+  { labelKey: 'filterSearchAll', value: '', param: '' },
+  { labelKey: 'filterSearchArea', value: 'area', param: 'area' },
+];
 const PAGE_ROUTE = '/pages/hazards/hazards';
 
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    searchField: '',
+    searchFields: [],
     // 当前生效的筛选值：key 与分享参数同名；「仅逾期」用 overdue / '' 两态。
     filters: {
       status: '',
       level: '',
       rectifyPerson: '',
       overdue: '',
+      hazardTypeId: '',
+      hazardUnitId: '',
+      inspectionDate: { from: '', to: '' },
     },
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
@@ -59,6 +96,9 @@ Page(withTheme({
       }
     });
     if (shared.overdue !== undefined && shared.overdue !== 'overdue') delete shared.overdue;
+    this.setData({
+      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
+    });
     try {
       const app = getApp();
       const session = await app.globalData.authPromise;
@@ -82,23 +122,27 @@ Page(withTheme({
     }
   },
 
-  /** 把分享 / 回跳带来的参数并进当前筛选状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  /** 把分享 / 回跳带来的参数并进当前筛选状态。 */
   applyShared(shared) {
     const filters = { ...this.data.filters };
-    let changed = false;
     FILTER_SECTIONS.forEach((key) => {
-      if (shared[key] !== undefined) {
-        filters[key] = shared[key];
-        changed = true;
+      if (key === 'inspectionDate') {
+        if (shared.inspectionDateFrom || shared.inspectionDateTo) {
+          filters.inspectionDate = {
+            from: shared.inspectionDateFrom || '',
+            to: shared.inspectionDateTo || '',
+          };
+        }
+        return;
       }
+      if (shared[key] !== undefined) filters[key] = shared[key];
     });
-    const patch = {};
-    if (changed) {
-      patch.filters = filters;
-      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
-    }
-    if (shared.keyword !== undefined) patch.keyword = shared.keyword;
-    if (Object.keys(patch).length) this.setData(patch);
+    this.setData({
+      filters,
+      searchField: shared.searchField || '',
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS),
+    });
+    if (shared.keyword !== undefined) this.setData({ keyword: shared.keyword });
   },
 
   onShow() {
@@ -124,17 +168,20 @@ Page(withTheme({
     }
   },
 
+  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
   onSearchChange(event) {
-    this.setData({ keyword: event.detail.value });
+    const detail = event.detail || {};
+    const patch = { keyword: detail.value || '' };
+    if (detail.field !== undefined) patch.searchField = detail.field || '';
+    this.setData(patch);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadHazards(true), 350);
   },
 
   /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
   onFilterChange(event) {
-    const values = (event.detail && event.detail.values) || {};
-    const filters = normalizeFilters(values, FILTER_SECTIONS);
-    // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
+    const detail = event.detail || {};
+    const filters = normalizeFilters(detail.values || {}, FILTER_SECTIONS, [], ['inspectionDate']);
     if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
       return;
     }
@@ -143,11 +190,15 @@ Page(withTheme({
   },
 
   async loadFilterOptions(shared = {}) {
-    // 整改员工是自由文本，选项来自库中已有值；加载失败不阻塞列表。
+    // 整改员工来自库中已有值；责任单位与隐患类型来自字典。加载失败不阻塞列表。
     let rectifyPersons = [];
+    let units = [];
+    let types = [];
     try {
       const result = await requestCached({ url: '/mini-program/hazards/filter-options' });
       rectifyPersons = (result.rectify_persons || []).filter(Boolean);
+      units = result.units || [];
+      types = result.types || [];
     } catch (_error) {
       Toast({
         context: this,
@@ -160,34 +211,53 @@ Page(withTheme({
     this.setData({
       filterSections: [
         this.buildSection('status', t('hazardStatusLabel'), HAZARD_STATUSES, shared.status),
-        this.buildSection('level', t('hazardLevelLabel'), HAZARD_LEVELS, shared.level),
-        this.buildSection(
-          'rectifyPerson',
-          t('filterRectifyPerson'),
-          rectifyPersons,
-          shared.rectifyPerson,
-        ),
         {
           key: 'overdue',
           title: t('filterOverdue'),
+          kind: 'single',
           options: [
             { label: t('all'), value: '' },
             { label: t('filterOnlyOverdue'), value: 'overdue' },
           ],
         },
+        this.buildSection('level', t('hazardLevelLabel'), HAZARD_LEVELS, shared.level),
+        this.buildSection(
+          'hazardTypeId',
+          t('filterHazardType'),
+          types.map((type) => ({ label: `${type.major} / ${type.minor}`, value: String(type.id) })),
+          shared.hazardTypeId,
+        ),
+        this.buildSection(
+          'hazardUnitId',
+          t('filterHazardUnit'),
+          units.map((unit) => ({ label: unit.name, value: String(unit.id) })),
+          shared.hazardUnitId,
+        ),
+        this.buildSection('rectifyPerson', t('filterRectifyPerson'), rectifyPersons, shared.rectifyPerson),
+        {
+          key: 'inspectionDate',
+          title: t('filterInspectionDate'),
+          kind: 'dateRange',
+          fromLabel: t('filterDateFrom'),
+          toLabel: t('filterDateTo'),
+        },
       ],
     });
   },
 
-  /** 组装一个固定枚举 / 候选值分区：首项「全部」，分享值缺失时补一项，避免面板显示成原值。 */
+  /**
+   * 组装一个筛选分区：首项「全部」+ 候选值。
+   * 候选值可以是字符串数组，也可以是已带 label / value 的对象数组（类型、单位需要文案映射）。
+   */
   buildSection(key, title, values, sharedValue) {
-    const list = [{ label: t('all'), value: '' }].concat(
-      values.map((value) => ({ label: value, value })),
+    const options = values.map((value) =>
+      value && typeof value === 'object' ? value : { label: value, value },
     );
+    const list = [{ label: t('all'), value: '' }].concat(options);
     if (sharedValue && !list.some((option) => option.value === sharedValue)) {
       list.splice(1, 0, { label: sharedValue, value: sharedValue });
     }
-    return { key, title, options: list };
+    return { key, title, kind: 'single', options: list };
   },
 
   async loadHazards(reset) {
@@ -199,14 +269,15 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      const data = { page, page_size: this.data.pageSize };
-      const keyword = this.data.keyword.trim();
-      if (keyword) data.keyword = keyword;
-      const filters = this.data.filters;
-      if (filters.status) data.status = filters.status;
-      if (filters.level) data.level = filters.level;
-      if (filters.rectifyPerson) data.rectify_person = filters.rectifyPerson;
-      if (filters.overdue) data.overdue = true;
+      const data = {
+        page,
+        page_size: this.data.pageSize,
+        // 搜索：综合走 keyword（检查区域 + 隐患描述），切到「检查区域」则只匹配区域。
+        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        ...buildFilterQuery(this.data.filters, FILTER_SPEC),
+      };
+      // 「仅逾期」是布尔参数，其余筛选是字符串。
+      if (data.overdue) data.overdue = true;
       const result = await request({ url: '/mini-program/hazards', data });
       if (requestId !== this.requestId) {
         return;
@@ -253,15 +324,20 @@ Page(withTheme({
     });
   },
 
-  /** 分享路径：把当前搜索词与全部筛选值一起带出去。 */
+  /** 分享路径：关键词、搜索字段与全部筛选值一起带出去。 */
   sharePath() {
     const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
+      searchField: this.data.searchField,
       status: filters.status,
       level: filters.level,
       rectifyPerson: filters.rectifyPerson,
       overdue: filters.overdue,
+      hazardTypeId: filters.hazardTypeId,
+      hazardUnitId: filters.hazardUnitId,
+      inspectionDateFrom: filters.inspectionDate.from,
+      inspectionDateTo: filters.inspectionDate.to,
     });
   },
 

@@ -4,13 +4,54 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
-const { hasActiveFilter, normalizeFilters, sameFilters } = require('../../utils/filters');
+const {
+  buildFieldQuery,
+  buildFilterQuery,
+  buildSearchQuery,
+  hasActiveFilter,
+  normalizeFilters,
+  sameFilters,
+} = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'status', 'subitemNo', 'category', 'salesperson', 'actualDemandPerson'];
-// 筛选面板的分区（key 即分享参数名），选项在拿到 filter-options 后填充。
-const FILTER_SECTIONS = ['status', 'category', 'subitemNo', 'salesperson', 'actualDemandPerson'];
+const SHARE_PARAMS = [
+  'keyword',
+  'searchField',
+  'status',
+  'category',
+  'subitemNo',
+  'salesperson',
+  'actualDemandPerson',
+  'purchaseResponsible',
+  'name',
+  'modelSpec',
+  'materialCode',
+  'traceNo',
+  'purchaseOrderNo',
+  'usage',
+];
+// 筛选面板的分区；与网页端字段一一对应。
+const FILTER_SECTIONS = ['status', 'category', 'subitemNo', 'salesperson', 'actualDemandPerson', 'purchaseResponsible'];
+// 分区 key → 请求参数。
+const FILTER_SPEC = {
+  status: { kind: 'single', param: 'status' },
+  category: { kind: 'single', param: 'category' },
+  subitemNo: { kind: 'single', param: 'subitem_no' },
+  salesperson: { kind: 'single', param: 'salesperson' },
+  actualDemandPerson: { kind: 'single', param: 'actual_demand_person' },
+  purchaseResponsible: { kind: 'single', param: 'purchase_responsible' },
+};
+// 分字段搜索的字段候选：与网页端「名称 / 型号 / 追溯号 / 申购单号 / 用途 …」一一对应。
+const SEARCH_FIELDS = [
+  { labelKey: 'filterSearchAll', value: '', param: '' },
+  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
+  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
+  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+  { labelKey: 'filterSearchTraceNo', value: 'traceNo', param: 'trace_no' },
+  { labelKey: 'filterSearchPurchaseOrderNo', value: 'purchaseOrderNo', param: 'purchase_order_no' },
+  { labelKey: 'filterSearchUsage', value: 'usage', param: 'usage' },
+];
 const PAGE_ROUTE = '/pages/purchase-records/purchase-records';
 
 function decorateRecord(item) {
@@ -34,6 +75,10 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    // 搜索字段：空串 = 综合（跨名称 / 型号 / 编码 / 追溯号 / 单号）。
+    searchField: '',
+    fieldConditions: [],
+    searchFields: [],
     // 当前生效的筛选值：key 与分享参数同名，空串表示不限。
     filters: {
       status: '',
@@ -41,6 +86,7 @@ Page(withTheme({
       category: '',
       salesperson: '',
       actualDemandPerson: '',
+      purchaseResponsible: '',
     },
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
@@ -60,6 +106,7 @@ Page(withTheme({
     setNavigationBarTitle('purchaseRecordsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    this.setData({ searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })) });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -79,23 +126,25 @@ Page(withTheme({
     }
   },
 
-  /** 把分享 / 回跳带来的参数并进当前筛选状态（只认 FILTER_SECTIONS 与 keyword）。 */
+  /** 把分享 / 回跳带来的参数并进当前状态（分字段参数还原成条件）。 */
   applyShared(shared) {
     const filters = { ...this.data.filters };
-    let changed = false;
     FILTER_SECTIONS.forEach((key) => {
-      if (shared[key] !== undefined) {
-        filters[key] = shared[key];
-        changed = true;
-      }
+      if (shared[key] !== undefined) filters[key] = shared[key];
     });
-    const patch = {};
-    if (changed) {
-      patch.filters = filters;
-      patch.filtered = hasActiveFilter(filters, FILTER_SECTIONS);
-    }
+    const conditions = [];
+    SEARCH_FIELDS.forEach((field) => {
+      if (!field.value) return;
+      if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
+    });
+    const patch = {
+      filters,
+      fieldConditions: conditions,
+      searchField: shared.searchField || '',
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    };
     if (shared.keyword !== undefined) patch.keyword = shared.keyword;
-    if (Object.keys(patch).length) this.setData(patch);
+    this.setData(patch);
   },
 
   onUnload() {
@@ -124,21 +173,32 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
+  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
   onSearchChange(event) {
-    this.setData({ keyword: event.detail.value });
+    const detail = event.detail || {};
+    const patch = { keyword: detail.value || '' };
+    if (detail.field !== undefined) patch.searchField = detail.field || '';
+    this.setData(patch);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadPlans(true), 350);
   },
 
-  /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
+  /** 筛选面板确认：整体替换筛选值与分字段条件后重新取第一页。 */
   onFilterChange(event) {
-    const values = (event.detail && event.detail.values) || {};
-    const filters = normalizeFilters(values, FILTER_SECTIONS);
-    // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
-    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+    const detail = event.detail || {};
+    const filters = normalizeFilters(detail.values || {}, FILTER_SECTIONS);
+    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
+    if (
+      sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
+      JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)
+    ) {
       return;
     }
-    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
+    this.setData({
+      filters,
+      fieldConditions: conditions,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+    });
     void this.loadPlans(true);
   },
 
@@ -148,6 +208,7 @@ Page(withTheme({
     let categories = [];
     let salespersons = [];
     let persons = [];
+    let responsibles = [];
     try {
       const result = await requestCached({ url: '/mini-program/purchase-records/filter-options' });
       statuses = (result.statuses || []).filter(Boolean);
@@ -155,6 +216,7 @@ Page(withTheme({
       categories = (result.categories || []).filter(Boolean);
       salespersons = (result.salespersons || []).filter(Boolean);
       persons = (result.actual_demand_persons || []).filter(Boolean);
+      responsibles = (result.purchase_responsibles || []).filter(Boolean);
     } catch (_error) {
       // 选项加载失败不阻塞列表，但提示用户，并至少保留「全部」选项
       Toast({
@@ -177,11 +239,17 @@ Page(withTheme({
           persons,
           shared.actualDemandPerson,
         ),
+        this.buildSection(
+          'purchaseResponsible',
+          t('filterPurchaseResponsible'),
+          responsibles,
+          shared.purchaseResponsible,
+        ),
       ],
     });
   },
 
-  /** 组装一个筛选分区：首项固定「全部」；分享值缺失时补一项，避免面板显示成原值。 */
+  /** 组装一个单选筛选分区：首项固定「全部」；分享值缺失时补一项，避免面板显示成原值。 */
   buildSection(key, title, values, sharedValue) {
     const list = [{ label: t('all'), value: '' }].concat(
       values.map((value) => ({ label: value, value })),
@@ -189,7 +257,7 @@ Page(withTheme({
     if (sharedValue && !list.some((option) => option.value === sharedValue)) {
       list.splice(1, 0, { label: sharedValue, value: sharedValue });
     }
-    return { key, title, options: list };
+    return { key, title, kind: 'single', options: list };
   },
 
   async loadPlans(reset) {
@@ -199,15 +267,13 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      const data = { page, page_size: this.data.pageSize };
-      const keyword = this.data.keyword.trim();
-      if (keyword) data.keyword = keyword;
-      const filters = this.data.filters;
-      if (filters.status) data.status = filters.status;
-      if (filters.subitemNo) data.subitem_no = filters.subitemNo;
-      if (filters.category) data.category = filters.category;
-      if (filters.salesperson) data.salesperson = filters.salesperson;
-      if (filters.actualDemandPerson) data.actual_demand_person = filters.actualDemandPerson;
+      const data = {
+        page,
+        page_size: this.data.pageSize,
+        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+        ...buildFilterQuery(this.data.filters, FILTER_SPEC),
+      };
       const result = await request({ url: '/mini-program/purchase-records', data });
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decorateRecord);
@@ -226,16 +292,22 @@ Page(withTheme({
     }
   },
 
-  /** 分享路径：把当前搜索词与全部筛选值一起带出去。 */
+  /** 分享路径：关键词、搜索字段、筛选项与分字段条件一起带出去。 */
   sharePath() {
     const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
+      searchField: this.data.searchField,
       status: filters.status,
       subitemNo: filters.subitemNo,
       category: filters.category,
       salesperson: filters.salesperson,
       actualDemandPerson: filters.actualDemandPerson,
+      purchaseResponsible: filters.purchaseResponsible,
+      ...(this.data.fieldConditions || []).reduce((params, condition) => {
+        if (condition.field && condition.value) params[condition.field] = condition.value;
+        return params;
+      }, {}),
     });
   },
 

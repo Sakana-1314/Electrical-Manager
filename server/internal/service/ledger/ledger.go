@@ -477,6 +477,21 @@ func ListTags(s *db.Session, keyword *string, scope *string) ([]schema.LedgerTag
 	return out, nil
 }
 
+// TagPathOptions 标签的「id + 名称 + 完整层级路径」清单（平铺）。
+// 小程序只做单选下拉，直接给路径（如「一级 / 二级」），不必在手机上画树。
+func TagPathOptions(s *db.Session) ([]schema.LedgerTagRefRead, error) {
+	tags, err := listTags(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	byID := toMap(tags)
+	out := make([]schema.LedgerTagRefRead, len(tags))
+	for i := range tags {
+		out[i] = schema.LedgerTagRefRead{ID: tags[i].ID, Name: tags[i].Name, Path: TagPath(byID, &tags[i])}
+	}
+	return out, nil
+}
+
 // GetTagRead 单个标签读模型，不存在报 NOT_FOUND「标签不存在」。
 func GetTagRead(s *db.Session, tagID int64) (schema.LedgerTagRead, error) {
 	tags, err := listTags(s, nil)

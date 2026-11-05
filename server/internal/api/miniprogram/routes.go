@@ -47,6 +47,7 @@ func Register(r *web.Router) {
 	g.GET("/material-codes/last-import", lastImport("MATERIAL_CODE_LIBRARY"), user)
 	g.GET("/huaxing-inventory/last-import", lastImport("HUAXING_INVENTORY"), user)
 	g.GET("/ledger-items", ledgerItems, user)
+	g.GET("/ledger-items/tag-options", ledgerTagOptions, user)
 	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user)
 	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user)
 	g.POST("/outbound", outbound, user)
@@ -223,13 +224,19 @@ func scanMaterial(c *web.Ctx) error {
 func inventoryList(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	stockStatus := p.QueryStr("stock_status", "oneof="+domain.MiniProgramStockStatus.OneOf())
+	f := svc.MiniProgramInventoryFilter{
+		Keyword:     p.QueryStr("keyword", "max=255"),
+		Name:        p.QueryStr("name", "max=255"),
+		ModelSpec:   p.QueryStr("model_spec", "max=255"),
+		MinQty:      p.QueryDecimal("min_qty", ""),
+		MaxQty:      p.QueryDecimal("max_qty", ""),
+		StockStatus: p.QueryStr("stock_status", "oneof="+domain.MiniProgramStockStatus.OneOf()),
+	}
 	language := acceptLanguage(c)
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListInventory(c.DB, keyword, stockStatus, page, size)
+	items, total, err := svc.ListInventory(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
@@ -313,11 +320,18 @@ func purchasePlans(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
 	f := svc.MiniProgramPlanFilter{
-		Keyword:            p.QueryStr("keyword", "max=255"),
-		ActualDemandPerson: p.QueryStr("actual_demand_person", "max=128"),
-		SubitemNo:          p.QueryStr("subitem_no", "max=64"),
-		Urgency:            p.QueryStr("urgency", "max=64"),
-		Category:           p.QueryStr("category", "max=64"),
+		Keyword:             p.QueryStr("keyword", "max=255"),
+		Name:                p.QueryStr("name", "max=255"),
+		ModelSpec:           p.QueryStr("model_spec", "max=255"),
+		MaterialCode:        p.QueryStr("material_code", "max=64"),
+		ActualDemandPerson:  p.QueryStr("actual_demand_person", "max=128"),
+		PurchaseResponsible: p.QueryStr("purchase_responsible", "max=128"),
+		DemandDepartment:    p.QueryStr("demand_department", "max=128"),
+		SubitemNo:           p.QueryStr("subitem_no", "max=64"),
+		Urgency:             p.QueryStr("urgency", "max=64"),
+		Category:            p.QueryStr("category", "max=64"),
+		PlanDateFrom:        p.QueryDate("plan_date_from"),
+		PlanDateTo:          p.QueryDate("plan_date_to"),
 	}
 	if err := p.Err(); err != nil {
 		return err
@@ -334,12 +348,17 @@ func purchasePlans(c *web.Ctx) error {
 }
 
 func purchasePlanFilterOptions(c *web.Ctx) error {
-	persons, subitemNos, urgencies, categories, err := svc.ListPurchasePlanFilterOptions(c.DB)
+	out, err := svc.ListPurchasePlanFilterOptions(c.DB)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.MiniProgramPurchasePlanFilterOptions{
-		ActualDemandPersons: persons, SubitemNos: subitemNos, Urgencies: urgencies, Categories: categories,
+		ActualDemandPersons:  out.ActualDemandPersons,
+		PurchaseResponsibles: out.PurchaseResponsibles,
+		DemandDepartments:    out.DemandDepartments,
+		SubitemNos:           out.SubitemNos,
+		Urgencies:            out.Urgencies,
+		Categories:           out.Categories,
 	})
 }
 
@@ -360,12 +379,19 @@ func purchaseRecords(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
 	f := svc.MiniProgramRecordFilter{
-		Keyword:            p.QueryStr("keyword", "max=255"),
-		Status:             p.QueryStr("status", "max=128"),
-		SubitemNo:          p.QueryStr("subitem_no", "max=64"),
-		Category:           p.QueryStr("category", "max=64"),
-		Salesperson:        p.QueryStr("salesperson", "max=64"),
-		ActualDemandPerson: p.QueryStr("actual_demand_person", "max=128"),
+		Keyword:             p.QueryStr("keyword", "max=255"),
+		Name:                p.QueryStr("name", "max=255"),
+		ModelSpec:           p.QueryStr("model_spec", "max=255"),
+		MaterialCode:        p.QueryStr("material_code", "max=64"),
+		TraceNo:             p.QueryStr("trace_no", "max=64"),
+		PurchaseOrderNo:     p.QueryStr("purchase_order_no", "max=128"),
+		Usage:               p.QueryStr("usage", "max=500"),
+		Status:              p.QueryStr("status", "max=128"),
+		SubitemNo:           p.QueryStr("subitem_no", "max=64"),
+		Category:            p.QueryStr("category", "max=64"),
+		Salesperson:         p.QueryStr("salesperson", "max=64"),
+		ActualDemandPerson:  p.QueryStr("actual_demand_person", "max=128"),
+		PurchaseResponsible: p.QueryStr("purchase_responsible", "max=128"),
 	}
 	if err := p.Err(); err != nil {
 		return err
@@ -378,13 +404,14 @@ func purchaseRecords(c *web.Ctx) error {
 }
 
 func purchaseRecordFilterOptions(c *web.Ctx) error {
-	statuses, subitemNos, categories, salespersons, persons, err := svc.ListPurchaseRecordFilterOptions(c.DB)
+	out, err := svc.ListPurchaseRecordFilterOptions(c.DB)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.MiniProgramPurchaseRecordFilterOptions{
-		Statuses: statuses, SubitemNos: subitemNos, Categories: categories, Salespersons: salespersons,
-		ActualDemandPersons: persons,
+		Statuses: out.Statuses, SubitemNos: out.SubitemNos, Categories: out.Categories,
+		Salespersons: out.Salespersons, ActualDemandPersons: out.ActualDemandPersons,
+		PurchaseResponsibles: out.PurchaseResponsibles,
 	})
 }
 
@@ -406,11 +433,16 @@ func purchaseRecordDetail(c *web.Ctx) error {
 func materialCodes(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
+	f := svc.MiniProgramCodeFilter{
+		Keyword:      p.QueryStr("keyword", "max=255"),
+		Name:         p.QueryStr("name", "max=255"),
+		ModelSpec:    p.QueryStr("model_spec", "max=255"),
+		MaterialCode: p.QueryStr("material_code", "max=64"),
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListMaterialCodes(c.DB, keyword, page, size)
+	items, total, err := svc.ListMaterialCodes(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
@@ -422,8 +454,13 @@ func huaxingInventory(c *web.Ctx) error {
 	page, size := p.Page()
 	f := svc.MiniProgramHuaXingFilter{
 		Keyword:            p.QueryStr("keyword", "max=255"),
+		Name:               p.QueryStr("name", "max=255"),
+		ModelSpec:          p.QueryStr("model_spec", "max=255"),
+		MaterialCode:       p.QueryStr("material_code", "max=64"),
 		PurchaseDepartment: p.QueryStr("purchase_department", "max=128"),
 		Purchaser:          p.QueryStr("purchaser", "max=128"),
+		FirstInboundFrom:   p.QueryDate("date_from"),
+		FirstInboundTo:     p.QueryDate("date_to"),
 	}
 	if err := p.Err(); err != nil {
 		return err
@@ -447,15 +484,36 @@ func huaxingFilterOptions(c *web.Ctx) error {
 func ledgerItems(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
+	f := svc.MiniProgramLedgerFilter{
+		Keyword: p.QueryStr("keyword", "max=255"),
+		TagIDs:  p.QueryStr("tag_ids", "max=500"),
+	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListLedgerItems(c.DB, keyword, page, size)
+	items, total, err := svc.ListLedgerItems(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.NewPage(items, page, size, total))
+}
+
+// ledgerTagOptions 小程序台账的标签筛选候选值（平铺 + 层级路径）。
+func ledgerTagOptions(c *web.Ctx) error {
+	items, err := svc.LedgerTagOptions(c.DB)
+	if err != nil {
+		return err
+	}
+	return c.OK(items)
+}
+
+// hazardFilterOptions 小程序隐患的筛选项：整改员工 + 责任单位 + 隐患类型（类型 / 单位供筛选下拉用）。
+func hazardFilterOptions(c *web.Ctx) error {
+	out, err := hazard.MiniProgramHazardFilterOptions(c.DB)
+	if err != nil {
+		return err
+	}
+	return c.OK(out)
 }
 
 func ledgerItemDetail(c *web.Ctx) error {
@@ -481,26 +539,23 @@ func hazards(c *web.Ctx) error {
 		Status:                     p.QueryStr("status", schema.HazardStatusQuery),
 		Level:                      p.QueryStr("level", schema.HazardLevelQuery),
 		RectifyPerson:              p.QueryStr("rectify_person", "max=64"),
+		Area:                       p.QueryStr("area", "max=128"),
+		HazardTypeID:               p.QueryIntPtr("hazard_type_id", "ge=1"),
+		HazardUnitID:               p.QueryIntPtr("hazard_unit_id", "ge=1"),
+		DateFrom:                   p.QueryDate("date_from"),
+		DateTo:                     p.QueryDate("date_to"),
 		Overdue:                    p.QueryBool("overdue", false),
 		KeywordAreaDescriptionOnly: true,
 	}
 	if err := p.Err(); err != nil {
 		return err
 	}
-	// 关键字只匹配「检查区域 + 隐患描述」，可按整改状态、隐患等级、整改员工与「仅逾期」筛选。
+	// 关键字只匹配「检查区域 + 隐患描述」，其余字段各自精确 / 模糊匹配（与网页端同名筛选口径）。
 	items, total, err := hazard.ListHazards(c.DB, f, page, size)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.NewPage(items, page, size, total))
-}
-
-func hazardFilterOptions(c *web.Ctx) error {
-	out, err := hazard.HazardFilterOptions(c.DB)
-	if err != nil {
-		return err
-	}
-	return c.OK(out)
 }
 
 func hazardFormOptions(c *web.Ctx) error {

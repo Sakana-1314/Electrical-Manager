@@ -71,9 +71,22 @@ func StockStatus(item *material.Stock) string {
 	return domain.MiniProgramStockNormal
 }
 
+// MiniProgramInventoryFilter 是小程序二级库库存的筛选条件（nil / 空串表示不限）。
+//
+// 字段与网页端列表对齐：Name / ModelSpec 是「分字段搜索」的单字段条件，Keyword 是综合搜索；
+// MinQty / MaxQty 是库存数量闭区间；StockStatus 为 out_of_stock / low_stock 时按预警状态过滤。
+type MiniProgramInventoryFilter struct {
+	Keyword     *string
+	Name        *string
+	ModelSpec   *string
+	MinQty      *jtype.Decimal
+	MaxQty      *jtype.Decimal
+	StockStatus *string
+}
+
 // ListInventory 对应 list_inventory：关键字匹配名称 / 印尼语名称 / 别名 / 型号，可按库存状态筛选，id 倒序分页。
 // stockStatus 为 out_of_stock / low_stock 时筛选，其它值（normal）不过滤。
-func ListInventory(s *db.Session, keyword, stockStatus *string, page, pageSize int64) ([]*material.Stock, int64, error) {
+func ListInventory(s *db.Session, f MiniProgramInventoryFilter, page, pageSize int64) ([]*material.Stock, int64, error) {
 	balanceScope, bargs, err := scopeAnd(s, "b.")
 	if err != nil {
 		return nil, 0, err
@@ -90,10 +103,19 @@ func ListInventory(s *db.Session, keyword, stockStatus *string, page, pageSize i
 	if err := w.Scope(s, "m."); err != nil {
 		return nil, 0, err
 	}
-	w.ContainsAny([]string{"m.name", "m.name_id", "m.alias", "m.model_spec"}, keyword)
+	w.ContainsAny([]string{"m.name", "m.name_id", "m.alias", "m.model_spec"}, f.Keyword)
+	// 分字段搜索：名称同时匹配印尼语名称与别名（与网页端「名称、别名或型号规格」口径一致）。
+	w.ContainsAny([]string{"m.name", "m.name_id", "m.alias"}, f.Name)
+	w.ContainsAny([]string{"m.model_spec"}, f.ModelSpec)
 	const currentQty = "COALESCE(b.quantity, 0)"
-	if stockStatus != nil {
-		switch *stockStatus {
+	if f.MinQty != nil {
+		w.Add(currentQty+" >= ?", *f.MinQty)
+	}
+	if f.MaxQty != nil {
+		w.Add(currentQty+" <= ?", *f.MaxQty)
+	}
+	if f.StockStatus != nil {
+		switch *f.StockStatus {
 		case domain.MiniProgramStockOutOfStock:
 			w.Add(currentQty + " <= 0")
 		case domain.MiniProgramStockLow:

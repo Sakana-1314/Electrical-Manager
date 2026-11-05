@@ -177,13 +177,18 @@ function loadFilterPanel() {
   return component;
 }
 
-// 各页筛选分区的 options 必须带「全部」首项，且 value 唯一。
+// 各页筛选分区：胶囊类分区必须带「全部」首项且 value 唯一；区间类分区没有 options。
 function assertSections(page, label) {
   const sections = page.data.filterSections;
   assert(sections.length > 0, `${label}: filterSections must not be empty`);
   sections.forEach((section) => {
     assert(section.key && section.title, `${label}: section needs key/title`);
-    assert(section.options.length >= 2, `${label}: section ${section.key} needs options`);
+    if (section.kind === 'range' || section.kind === 'dateRange') {
+      assert(section.fromLabel && section.toLabel, `${label}: ${section.key} needs range labels`);
+      return;
+    }
+    // 候选值来自接口，桩里可能为空：只要有「全部」这一项就算结构正确。
+    assert(section.options.length >= 1, `${label}: section ${section.key} needs options`);
     assert(section.options[0].value === '', `${label}: section ${section.key} must start with 全部`);
     const values = section.options.map((option) => option.value);
     assert.strictEqual(new Set(values).size, values.length, `${label}: duplicate option values`);
@@ -249,7 +254,9 @@ async function run() {
   let page = await mountPage('pages/purchase-plans/purchase-plans.js');
   assertSections(page, 'purchase-plans');
   const planSections = page.data.filterSections.map((section) => section.key);
-  assert.deepStrictEqual(planSections, ['urgency', 'category', 'actualDemandPerson', 'subitemNo']);
+  assert.deepStrictEqual(planSections, [
+    'urgency', 'category', 'actualDemandPerson', 'purchaseResponsible', 'demandDepartment', 'subitemNo', 'planDate',
+  ]);
   // 当前用户固定置顶
   const personOptions = page.data.filterSections[2].options;
   assert(personOptions[1].value === '张三' && personOptions[1].label.indexOf('当前用户') >= 0, 'current user pinned');
@@ -275,6 +282,56 @@ async function run() {
   const planShare = page.sharePath();
   assert(planShare.indexOf('urgency=') > 0 && planShare.indexOf('subitemNo=201') > 0, 'share must carry filters');
   assert(planShare.indexOf('category=') === -1, 'empty filters must be omitted');
+
+  // ===== 分字段搜索：搜索框切字段 =====
+  requests.length = 0;
+  page.setData({ keyword: 'CJX2' });
+  page.onSearchChange({ detail: { value: 'CJX2', field: 'modelSpec' } });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  let fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest, 'field search request missing');
+  assert(fieldRequest.data.model_spec === 'CJX2', 'search field must map to its own param');
+  assert(fieldRequest.data.keyword === undefined, 'field search must not send keyword');
+
+  // 综合搜索仍然走 keyword
+  requests.length = 0;
+  page.setData({ searchField: '' });
+  page.onSearchChange({ detail: { value: '接触器', field: '' } });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest.data.keyword === '接触器', 'combined search must use keyword');
+
+  // 分字段条件与搜索、筛选项同时生效（AND）
+  requests.length = 0;
+  page.onFilterChange({
+    detail: {
+      values: { urgency: '紧急' },
+      conditions: [{ field: 'materialCode', value: 'E011' }, { field: 'name', value: '接触器' }],
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest.data.material_code === 'E011', 'field condition must map to its param');
+  assert(fieldRequest.data.name === '接触器', 'each field condition keeps its own param');
+  assert(fieldRequest.data.urgency === '紧急', 'filters and field conditions combine');
+  assert(page.data.fieldConditions.length === 2, 'conditions must be kept on the page');
+  // 分享要带上分字段条件
+  const conditionShare = page.sharePath();
+  assert(conditionShare.indexOf('materialCode=E011') > 0, 'share must carry field conditions');
+
+  // 日期区间：拆成两个参数
+  requests.length = 0;
+  page.onFilterChange({ detail: { values: { planDate: { from: '2026-01-01', to: '2026-06-30' } } } });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest.data.plan_date_from === '2026-01-01', 'date range from must be sent');
+  assert(fieldRequest.data.plan_date_to === '2026-06-30', 'date range to must be sent');
+  // 空的区间不发参数
+  requests.length = 0;
+  page.onFilterChange({ detail: { values: { planDate: { from: '', to: '' } } } });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest.data.plan_date_from === undefined, 'empty date range must be omitted');
 
   // 分享值不在选项里：补进分区
   requests.length = 0;
@@ -333,16 +390,18 @@ async function run() {
   requests.length = 0;
   page = await mountPage('pages/inventory/inventory.js', { stockStatus: 'out_of_stock' });
   assertSections(page, 'inventory');
-  assert(page.data.filters === undefined, 'inventory keeps stockStatus field');
-  assert(page.data.stockStatus === 'out_of_stock', 'shared stock status applied');
+  assert(page.data.filters.stockStatus === 'out_of_stock', 'shared stock status applied');
   requests.length = 0;
-  page.onFilterChange({ detail: { values: { stockStatus: 'low_stock' } } });
+  page.onFilterChange({
+    detail: { values: { stockStatus: 'low_stock', stockQty: { from: '1', to: '10' } } },
+  });
   await new Promise((resolve) => setTimeout(resolve, 10));
   const inventoryRequest = requests.find((item) => item.url === '/mini-program/inventory');
   assert(inventoryRequest.data.stock_status === 'low_stock', 'stock_status must be sent');
+  assert(inventoryRequest.data.min_qty === '1' && inventoryRequest.data.max_qty === '10', 'qty range must be sent');
   // 非法分享值被忽略
   page = await mountPage('pages/inventory/inventory.js', { stockStatus: 'weird' });
-  assert(page.data.stockStatus === '', 'invalid shared stock status must fall back to all');
+  assert(page.data.filters.stockStatus === '', 'invalid shared stock status must fall back to all');
 
   // ===== 华星页 =====
   global.__cachedResponse = { purchase_departments: ['设备管理部'], purchasers: ['吴冰'] };
@@ -350,11 +409,16 @@ async function run() {
   page = await mountPage('pages/huaxing-inventory/huaxing-inventory.js');
   assertSections(page, 'huaxing');
   requests.length = 0;
-  page.onFilterChange({ detail: { values: { purchaseDepartment: '设备管理部', purchaser: '吴冰' } } });
+  // 多选：部门 / 申购人各选一项，用 | 连接发给后端。
+  page.onFilterChange({
+    detail: { values: { purchaseDepartment: ['设备管理部'], purchaser: ['吴冰'], firstInboundDate: { from: '2026-01-01', to: '' } } },
+  });
   await new Promise((resolve) => setTimeout(resolve, 10));
   const huaxingRequest = requests.find((item) => item.url === '/mini-program/huaxing-inventory');
   assert(huaxingRequest.data.purchase_department === '设备管理部', 'department must be sent');
   assert(huaxingRequest.data.purchaser === '吴冰', 'purchaser must be sent');
+  assert(huaxingRequest.data.date_from === '2026-01-01', 'inbound date from must be sent');
+  assert(huaxingRequest.data.date_to === undefined, 'empty date to must be omitted');
 
   // ===== 首页：扫码入口按 canOutbound 显示 =====
   const home = loadPage('pages/home/home.js');

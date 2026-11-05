@@ -915,13 +915,23 @@ func derefStr(p *string) string {
 }
 
 // MiniProgramRecordFilter 是小程序申购记录的筛选条件（nil / 空串表示不限）。
+//
+// 字段与网页端列表对齐：Name / ModelSpec / TraceNo / PurchaseOrderNo / Usage 是「分字段搜索」的单字段条件，
+// Keyword 是「综合」搜索（跨名称 / 型号 / 编码 / 追溯号 / 单号）。
 type MiniProgramRecordFilter struct {
-	Keyword            *string
-	Status             *string
-	SubitemNo          *string
-	Category           *string
-	Salesperson        *string
-	ActualDemandPerson *string
+	Keyword             *string
+	Name                *string
+	ModelSpec           *string
+	MaterialCode        *string
+	TraceNo             *string
+	PurchaseOrderNo     *string
+	Usage               *string
+	Status              *string
+	SubitemNo           *string
+	Category            *string
+	Salesperson         *string
+	ActualDemandPerson  *string
+	PurchaseResponsible *string
 }
 
 // SearchMiniProgramPurchaseRecords 对应 search_mini_program_purchase_records：keyword 仅 OR 匹配
@@ -935,6 +945,13 @@ func SearchMiniProgramPurchaseRecords(s *db.Session, f MiniProgramRecordFilter, 
 		"l.material_name_snapshot", "l.model_spec_snapshot", "l.material_code_snapshot",
 		"l.trace_no", "r.purchase_order_no",
 	}, f.Keyword)
+	// 分字段搜索：每项只匹配自己的列（网页端同名筛选口径）。
+	w.ContainsAny([]string{"l.material_name_snapshot"}, f.Name)
+	w.ContainsAny([]string{"l.model_spec_snapshot"}, f.ModelSpec)
+	w.ContainsAny([]string{"l.material_code_snapshot"}, f.MaterialCode)
+	w.ContainsAny([]string{"l.trace_no"}, f.TraceNo)
+	w.ContainsAny([]string{"r.purchase_order_no"}, f.PurchaseOrderNo)
+	w.ContainsAny([]string{"l.`usage`"}, f.Usage)
 	if nonEmpty(f.Status) {
 		w.Add("TRIM(l.status) = ?", pyStrip(*f.Status))
 	}
@@ -949,6 +966,9 @@ func SearchMiniProgramPurchaseRecords(s *db.Session, f MiniProgramRecordFilter, 
 	}
 	if nonEmpty(f.ActualDemandPerson) {
 		w.ContainsAny([]string{"l.actual_demand_person_snapshot"}, f.ActualDemandPerson)
+	}
+	if nonEmpty(f.PurchaseResponsible) {
+		w.ContainsAny([]string{"l.purchase_responsible_snapshot"}, f.PurchaseResponsible)
 	}
 	var total int64
 	if err := s.Get(&total, "SELECT COUNT(*)"+recordFrom+w.SQL(), w.Args...); err != nil {
@@ -1010,6 +1030,12 @@ func PurchaseRecordCategoryOptions(s *db.Session) ([]string, error) {
 func PurchaseActualDemandPersonOptions(s *db.Session) ([]string, error) {
 	return distinctLineValues(s, "actual_demand_person_snapshot",
 		"TRIM(actual_demand_person_snapshot) NOT IN (?, ?, ?, ?, ?)", emptyPersonValues...)
+}
+
+// PurchaseResponsibleOptions 申购记录行的实际需求人去重（取快照列）。
+func PurchaseResponsibleOptions(s *db.Session) ([]string, error) {
+	return distinctLineValues(s, "purchase_responsible_snapshot",
+		"purchase_responsible_snapshot IS NOT NULL AND TRIM(purchase_responsible_snapshot) != ?", "")
 }
 
 var emptyPersonValues = []any{"", "\\", "/", "—", "-"}

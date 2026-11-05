@@ -6,6 +6,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/codelib"
@@ -73,12 +74,22 @@ func activePlanWhere(s *db.Session) (*common.Where, error) {
 }
 
 // MiniProgramPlanFilter 是小程序申购计划的筛选条件（nil / 空串表示不限）。
+//
+// 字段与网页端列表对齐：Name / ModelSpec / MaterialCode 是「分字段搜索」的单字段条件，
+// Keyword 是「综合」搜索（跨名称 / 型号 / 编码），两者可同时使用、互不覆盖。
 type MiniProgramPlanFilter struct {
-	Keyword            *string
-	ActualDemandPerson *string
-	SubitemNo          *string
-	Urgency            *string
-	Category           *string
+	Keyword             *string
+	Name                *string
+	ModelSpec           *string
+	MaterialCode        *string
+	ActualDemandPerson  *string
+	SubitemNo           *string
+	Urgency             *string
+	Category            *string
+	DemandDepartment    *string
+	PurchaseResponsible *string
+	PlanDateFrom        *jtype.Date
+	PlanDateTo          *jtype.Date
 }
 
 // ListPurchasePlans 对应 list_purchase_plans：只列出正常且未转申购记录的计划，id 倒序分页。
@@ -89,8 +100,18 @@ func ListPurchasePlans(s *db.Session, f MiniProgramPlanFilter, page, pageSize in
 		return nil, 0, err
 	}
 	w.ContainsAny([]string{"pm.name", "pm.model_spec", "pm.material_code"}, f.Keyword)
+	// 分字段搜索：每项只匹配自己的列（网页端同名筛选口径）。
+	w.ContainsAny([]string{"pm.name"}, f.Name)
+	w.ContainsAny([]string{"pm.model_spec"}, f.ModelSpec)
+	w.ContainsAny([]string{"pm.material_code"}, f.MaterialCode)
 	if f.ActualDemandPerson != nil && *f.ActualDemandPerson != "" {
 		w.ContainsAny([]string{"pm.actual_demand_person"}, f.ActualDemandPerson)
+	}
+	if f.PurchaseResponsible != nil && *f.PurchaseResponsible != "" {
+		w.ContainsAny([]string{"pm.purchase_responsible"}, f.PurchaseResponsible)
+	}
+	if f.DemandDepartment != nil && *f.DemandDepartment != "" {
+		w.Add("TRIM(pm.demand_department) = ?", pyStrip(*f.DemandDepartment))
 	}
 	if f.SubitemNo != nil && *f.SubitemNo != "" {
 		w.Add("TRIM(pm.subitem_no) = ?", pyStrip(*f.SubitemNo))
@@ -100,6 +121,12 @@ func ListPurchasePlans(s *db.Session, f MiniProgramPlanFilter, page, pageSize in
 	}
 	if f.Category != nil && *f.Category != "" {
 		w.Add("TRIM(pm.category) = ?", pyStrip(*f.Category))
+	}
+	if f.PlanDateFrom != nil {
+		w.Add("pm.plan_date >= ?", *f.PlanDateFrom)
+	}
+	if f.PlanDateTo != nil {
+		w.Add("pm.plan_date <= ?", *f.PlanDateTo)
 	}
 	var total int64
 	if err := s.Get(&total, "SELECT COUNT(*) FROM purchase_material pm"+w.SQL(), w.Args...); err != nil {
@@ -137,20 +164,39 @@ func planDistinct(s *db.Session, col string) ([]string, error) {
 	return out, nil
 }
 
+// PlanFilterOptions 是申购计划的筛选下拉候选值（与网页端列表对齐）。
+type PlanFilterOptions struct {
+	ActualDemandPersons  []string
+	PurchaseResponsibles []string
+	DemandDepartments    []string
+	SubitemNos           []string
+	Urgencies            []string
+	Categories           []string
+}
+
 // ListPurchasePlanFilterOptions 对应 list_purchase_plan_filter_options：
-// (提报员工, 子项号, 紧急程度, 类别) 去重升序，只统计在途计划，避免选项里出现已转记录的值。
-func ListPurchasePlanFilterOptions(s *db.Session) (persons, subitemNos, urgencies, categories []string, err error) {
-	if persons, err = planDistinct(s, "pm.actual_demand_person"); err != nil {
-		return nil, nil, nil, nil, err
+// 各维度去重升序，只统计在途计划，避免选项里出现已转记录的值。
+func ListPurchasePlanFilterOptions(s *db.Session) (PlanFilterOptions, error) {
+	out := PlanFilterOptions{}
+	columns := []struct {
+		col string
+		dst *[]string
+	}{
+		{"pm.actual_demand_person", &out.ActualDemandPersons},
+		{"pm.purchase_responsible", &out.PurchaseResponsibles},
+		{"pm.demand_department", &out.DemandDepartments},
+		{"pm.subitem_no", &out.SubitemNos},
+		{"pm.urgency", &out.Urgencies},
+		{"pm.category", &out.Categories},
 	}
-	if subitemNos, err = planDistinct(s, "pm.subitem_no"); err != nil {
-		return nil, nil, nil, nil, err
+	for _, c := range columns {
+		values, err := planDistinct(s, c.col)
+		if err != nil {
+			return PlanFilterOptions{}, err
+		}
+		*c.dst = values
 	}
-	if urgencies, err = planDistinct(s, "pm.urgency"); err != nil {
-		return nil, nil, nil, nil, err
-	}
-	categories, err = planDistinct(s, "pm.category")
-	return persons, subitemNos, urgencies, categories, err
+	return out, nil
 }
 
 // PurchasePlanItemRead 对应 purchase_plan_item_read。
@@ -222,23 +268,37 @@ func ListPurchaseRecords(s *db.Session, f MiniProgramRecordFilter, page, pageSiz
 	return purchaseRecordItemReads(lines), total, nil
 }
 
-// ListPurchaseRecordFilterOptions 对应 list_purchase_record_filter_options：
-// (状态, 子项号, 类别, 业务员, 提报员工) 去重升序。
-func ListPurchaseRecordFilterOptions(s *db.Session) (statuses, subitemNos, categories, salespersons, persons []string, err error) {
-	if statuses, err = purchaserequest.PurchaseStatusOptions(s); err != nil {
-		return nil, nil, nil, nil, nil, err
+// RecordFilterOptions 是申购记录的筛选下拉候选值（与网页端列表对齐）。
+type RecordFilterOptions struct {
+	Statuses             []string
+	SubitemNos           []string
+	Categories           []string
+	Salespersons         []string
+	ActualDemandPersons  []string
+	PurchaseResponsibles []string
+}
+
+// ListPurchaseRecordFilterOptions 对应 list_purchase_record_filter_options：各维度去重升序。
+func ListPurchaseRecordFilterOptions(s *db.Session) (RecordFilterOptions, error) {
+	out := RecordFilterOptions{}
+	var err error
+	if out.Statuses, err = purchaserequest.PurchaseStatusOptions(s); err != nil {
+		return RecordFilterOptions{}, err
 	}
-	if subitemNos, err = purchaserequest.PurchaseSubitemOptions(s); err != nil {
-		return nil, nil, nil, nil, nil, err
+	if out.SubitemNos, err = purchaserequest.PurchaseSubitemOptions(s); err != nil {
+		return RecordFilterOptions{}, err
 	}
-	if categories, err = purchaserequest.PurchaseRecordCategoryOptions(s); err != nil {
-		return nil, nil, nil, nil, nil, err
+	if out.Categories, err = purchaserequest.PurchaseRecordCategoryOptions(s); err != nil {
+		return RecordFilterOptions{}, err
 	}
-	if salespersons, err = purchaserequest.PurchaseSalespersonOptions(s); err != nil {
-		return nil, nil, nil, nil, nil, err
+	if out.Salespersons, err = purchaserequest.PurchaseSalespersonOptions(s); err != nil {
+		return RecordFilterOptions{}, err
 	}
-	persons, err = purchaserequest.PurchaseActualDemandPersonOptions(s)
-	return statuses, subitemNos, categories, salespersons, persons, err
+	if out.ActualDemandPersons, err = purchaserequest.PurchaseActualDemandPersonOptions(s); err != nil {
+		return RecordFilterOptions{}, err
+	}
+	out.PurchaseResponsibles, err = purchaserequest.PurchaseResponsibleOptions(s)
+	return out, err
 }
 
 // purchaseRecordItemReads 对应 purchase_record_item_read（行上已加载申购单头与图片）。
@@ -279,9 +339,21 @@ func PurchaseRecordDetail(s *db.Session, lineID int64) (schema.MiniProgramPurcha
 
 // ---------------- 编码库 / 台账 / 华星库存 / 精简库存 ----------------
 
+// MiniProgramCodeFilter 是小程序物料编码的筛选条件（nil / 空串表示不限）。
+type MiniProgramCodeFilter struct {
+	Keyword      *string
+	Name         *string
+	ModelSpec    *string
+	MaterialCode *string
+}
+
 // ListMaterialCodes 对应 list_material_codes：复用编码库搜索，去掉单价字段。
-func ListMaterialCodes(s *db.Session, keyword *string, page, pageSize int64) ([]schema.MiniProgramMaterialCodeRead, int64, error) {
-	items, total, err := codelib.Search(s, codelib.SearchParams{Keyword: keyword, Page: page, PageSize: pageSize})
+// Name / ModelSpec / MaterialCode 是「分字段搜索」的单字段条件，Keyword 是综合搜索。
+func ListMaterialCodes(s *db.Session, f MiniProgramCodeFilter, page, pageSize int64) ([]schema.MiniProgramMaterialCodeRead, int64, error) {
+	items, total, err := codelib.Search(s, codelib.SearchParams{
+		Keyword: f.Keyword, Name: f.Name, ModelSpec: f.ModelSpec, MaterialCode: f.MaterialCode,
+		Page: page, PageSize: pageSize,
+	})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -292,9 +364,16 @@ func ListMaterialCodes(s *db.Session, keyword *string, page, pageSize int64) ([]
 	return out, total, nil
 }
 
-// ListLedgerItems 对应 list_ledger_items：与网页端同一份口径（名称 / 型号 / 备注模糊搜索，创建时间倒序）。
-func ListLedgerItems(s *db.Session, keyword *string, page, pageSize int64) ([]schema.MiniProgramLedgerItemRead, int64, error) {
-	items, total, err := ledger.ListItems(s, keyword, nil, page, pageSize)
+// MiniProgramLedgerFilter 是小程序台账的筛选条件（nil / 空串表示不限）。
+// TagIDs 为英文逗号分隔的标签 id（与网页端一致：选中父标签会一并包含子标签）。
+type MiniProgramLedgerFilter struct {
+	Keyword *string
+	TagIDs  *string
+}
+
+// ListLedgerItems 对应 list_ledger_items：与网页端同一份口径（名称 / 型号 / 备注模糊搜索，可筛标签，创建时间倒序）。
+func ListLedgerItems(s *db.Session, f MiniProgramLedgerFilter, page, pageSize int64) ([]schema.MiniProgramLedgerItemRead, int64, error) {
+	items, total, err := ledger.ListItems(s, f.Keyword, f.TagIDs, page, pageSize)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -303,6 +382,20 @@ func ListLedgerItems(s *db.Session, keyword *string, page, pageSize int64) ([]sc
 		out[i] = schema.MiniProgramLedgerItemRead{ID: it.ID, Name: it.Name, ModelSpec: it.ModelSpec, SubitemNo: it.SubitemNo, Quantity: it.Quantity, UnitName: it.UnitName}
 	}
 	return out, total, nil
+}
+
+// LedgerTagOptions 是台账标签筛选的候选值：平铺返回 id / 名称 / 层级路径，
+// 小程序只做单选下拉，路径直接给出（如「一级 / 二级」）避免在手机上画树。
+func LedgerTagOptions(s *db.Session) ([]schema.MiniProgramLedgerTagOption, error) {
+	refs, err := ledger.TagPathOptions(s)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]schema.MiniProgramLedgerTagOption, len(refs))
+	for i, ref := range refs {
+		out[i] = schema.MiniProgramLedgerTagOption{ID: ref.ID, Name: ref.Name, Path: ref.Path}
+	}
+	return out, nil
 }
 
 // LedgerItemDetail 对应 ledger_item_detail。
@@ -318,16 +411,26 @@ func LedgerItemDetail(s *db.Session, itemID int64) (schema.MiniProgramLedgerItem
 }
 
 // MiniProgramHuaXingFilter 是小程序华星库存的筛选条件（nil / 空串表示不限）。
+//
+// 字段与网页端列表对齐：Name / ModelSpec / MaterialCode 是「分字段搜索」的单字段条件，
+// Keyword 是综合搜索；FirstInboundFrom / FirstInboundTo 是首次入库日期闭区间。
 type MiniProgramHuaXingFilter struct {
 	Keyword            *string
+	Name               *string
+	ModelSpec          *string
+	MaterialCode       *string
 	PurchaseDepartment *string
 	Purchaser          *string
+	FirstInboundFrom   *jtype.Date
+	FirstInboundTo     *jtype.Date
 }
 
 // ListHuaXingInventory 对应 list_huaxing_inventory。
 func ListHuaXingInventory(s *db.Session, f MiniProgramHuaXingFilter, page, pageSize int64) ([]schema.MiniProgramHuaXingInventoryRead, int64, error) {
 	items, total, err := huaxing.Search(s, huaxing.SearchParams{
-		Keyword: f.Keyword, PurchaseDepartment: f.PurchaseDepartment, Purchaser: f.Purchaser,
+		Keyword: f.Keyword, MaterialCode: f.MaterialCode, Name: f.Name, ModelSpec: f.ModelSpec,
+		PurchaseDepartment: f.PurchaseDepartment, Purchaser: f.Purchaser,
+		DateFrom: f.FirstInboundFrom, DateTo: f.FirstInboundTo,
 		Page: page, PageSize: pageSize,
 	})
 	if err != nil {
