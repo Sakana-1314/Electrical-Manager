@@ -224,7 +224,6 @@ async function run() {
   panel.setProperty('active', { status: '待整改' });
   panel.refresh();
   assert(panel.data.activeCount === 1, 'panel should count active filters');
-  assert(panel.data.chips[0].label.indexOf('待整改') >= 0, 'panel chip must show the label');
   assert(
     panel.data.sectionsView[0].options.find((option) => option.value === '待整改').selected,
     'panel must mark the active option',
@@ -245,12 +244,6 @@ async function run() {
   assert(confirmed.name === 'change' && confirmed.detail.values.status === '待整改', 'confirm emits change');
   assert(panel.data.visible === false, 'confirm closes the sheet');
 
-  // 胶囊 × 立即回传（删掉该项）
-  panel.setProperty('active', { status: '待整改' });
-  panel.removeChip({ currentTarget: { dataset: { key: 'status' } } });
-  const removed = panel.events.pop();
-  assert(removed.name === 'change' && removed.detail.values.status === undefined, 'chip × clears the key');
-
   // ===== 面板：分字段组合搜索 =====
   // 每个字段一个输入框，填多个后「确定」一次性回传（多字段同时生效）。
   const fieldPanel = loadFilterPanel();
@@ -264,10 +257,6 @@ async function run() {
   assert(
     fieldPanel.data.fieldRows[0].value === '接触器',
     'field input must show the applied value',
-  );
-  assert(
-    fieldPanel.data.chips.some((chip) => chip.label.indexOf('物资名称：接触器') >= 0),
-    'field search must show as a chip',
   );
   // 打开面板后改两个字段，确定后一起回传
   fieldPanel.openSheet();
@@ -285,11 +274,15 @@ async function run() {
   fieldPanel.confirmSheet();
   const trimmed = fieldPanel.events.pop();
   assert(trimmed.detail.fields.name === undefined, 'blank field must be dropped');
-  // 单个字段的 × 立即生效
+  // 收起态不再铺胶囊，但按钮角标仍要算上分字段条件
   fieldPanel.setProperty('fieldValues', { name: '接触器', modelSpec: 'CJX2' });
-  fieldPanel.removeChip({ currentTarget: { dataset: { fieldKey: 'modelSpec' } } });
-  const removedField = fieldPanel.events.pop();
-  assert(removedField.detail.fields.modelSpec === undefined, 'chip × clears that field only');
+  fieldPanel.refresh();
+  assert(fieldPanel.data.activeCount === 2, 'field values must count toward the badge');
+  assert(fieldPanel.data.chips === undefined, 'collapsed chips must be gone');
+  // 面板内的单个清空按钮仍能去掉该字段
+  fieldPanel.openSheet();
+  fieldPanel.clearField({ currentTarget: { dataset: { field: 'modelSpec' } } });
+  assert(fieldPanel.data.draftFields.modelSpec === undefined, 'clearField drops that field only');
 
   // 面板收到 optionsFailed 后点「重新加载」要发出 retryoptions（页面据此重拉）
   panel.setProperty('optionsFailed', true);
@@ -298,10 +291,15 @@ async function run() {
   assert(retriedEvent && retriedEvent.name === 'retryoptions', 'panel must emit retryoptions');
   panel.setProperty('optionsFailed', false);
 
-  // 分享值不在候选里：回显原值而不是「不限」
-  panel.setProperty('active', { status: '历史状态' });
+  // 分享值不在候选里：收起态虽不再显示胶囊，但打开面板后该项仍要标成已选
+  panel.setProperty('active', { status: '待整改' });
   panel.refresh();
-  assert(panel.data.chips[0].label.indexOf('历史状态') >= 0, 'unknown shared value must still be shown');
+  panel.openSheet();
+  assert(
+    panel.data.sectionsView[0].options.find((option) => option.value === '待整改').selected,
+    'applied value must still be marked inside the panel',
+  );
+  panel.closeSheet();
 
   // ===== 申购计划页 =====
   global.__cachedResponse = {

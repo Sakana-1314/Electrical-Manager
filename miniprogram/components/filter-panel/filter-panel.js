@@ -96,8 +96,6 @@ Component({
     fieldRows: [],
     /** 带选中标记的分区视图（WXML 里直接读，避免模板内做对象下标比较）。 */
     sectionsView: [],
-    /** 收起态的已选条件胶囊（含分字段条件）。 */
-    chips: [],
     activeCount: 0,
     /** 日期区间选择器的弹层状态与临时值。 */
     datePickerVisible: false,
@@ -149,42 +147,26 @@ Component({
         value: draftFields[def.key] || '',
       }));
 
-      const chips = [];
-      // 分字段条件排在最前：它们是「组合搜索」，与筛选是两回事，用户先要看到自己搜了什么。
+      // 只数生效条件的个数给筛选按钮做角标；具体条件在面板里看（收起态不再铺一行胶囊）。
+      let activeCount = 0;
       defs.forEach((def) => {
-        const value = String(fieldValues[def.key] || '').trim();
-        if (!value) return;
-        chips.push({ key: `field:${def.key}`, fieldKey: def.key, label: `${def.label}：${value}` });
+        if (String(fieldValues[def.key] || '').trim()) activeCount += 1;
       });
-
       sections.forEach((section) => {
         const kind = section.kind || KIND_SINGLE;
         const value = active[section.key];
         if (kind === KIND_MULTI) {
-          (value || []).forEach((item) => {
-            const matched = (section.options || []).find((option) => option.value === item);
-            chips.push({ key: section.key, value: item, label: `${section.title}：${matched ? matched.label : item}` });
-          });
+          activeCount += (value || []).length;
           return;
         }
         if (kind === KIND_RANGE || kind === KIND_DATE_RANGE) {
-          if (!value || (!value.from && !value.to)) return;
-          const text =
-            value.from && value.to
-              ? `${value.from} ~ ${value.to}`
-              : value.from
-                ? `≥ ${value.from}`
-                : `≤ ${value.to}`;
-          chips.push({ key: section.key, value: '', label: `${section.title}：${text}` });
+          if (value && (value.from || value.to)) activeCount += 1;
           return;
         }
-        if (!value) return;
-        const matched = (section.options || []).find((option) => option.value === value);
-        // 分享带来的值可能已不在选项里：回显原值，别显示成「不限」。
-        chips.push({ key: section.key, value: '', label: `${section.title}：${matched ? matched.label : value}` });
+        if (value) activeCount += 1;
       });
 
-      this.setData({ sectionsView, fieldRows, chips, activeCount: chips.length });
+      this.setData({ sectionsView, fieldRows, activeCount });
     },
 
     onSearchInput(event) {
@@ -320,35 +302,6 @@ Component({
       const fields = trimFields(this.data.draftFields, this.data.fieldDefs || []);
       this.setData({ visible: false });
       this.triggerEvent('change', { values, fields });
-    },
-
-    /** 已选条件胶囊上的 ×：立即去掉这一项（不必再开面板点确定）。 */
-    removeChip(event) {
-      const { key, value, fieldKey } = event.currentTarget.dataset;
-      // 分字段条件的 × 也是立即生效。
-      if (fieldKey) {
-        const fields = { ...(this.data.fieldValues || {}) };
-        delete fields[fieldKey];
-        this.triggerEvent('change', { values: cloneFilters(this.data.active || {}), fields });
-        return;
-      }
-      if (!key) return;
-      const values = cloneFilters(this.data.active || {});
-      const section = (this.data.sections || []).find((item) => item.key === key);
-      const kind = (section && section.kind) || KIND_SINGLE;
-      if (kind === KIND_MULTI) {
-        values[key] = (values[key] || []).filter((item) => item !== value);
-      } else {
-        delete values[key];
-      }
-      this.triggerEvent('change', {
-        values,
-        fields: { ...(this.data.fieldValues || {}) },
-      });
-    },
-
-    resetAll() {
-      this.triggerEvent('change', { values: {}, fields: {} });
     },
 
     /** 选项加载失败时的「重新加载」：页面收到后重拉 filter-options 并重建分区。 */
