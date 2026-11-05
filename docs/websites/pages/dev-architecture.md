@@ -911,15 +911,18 @@ flowchart LR
 
 ### 列表页筛选面板（`components/filter-panel`）
 
-筛选维度一多，常驻的 `t-dropdown-menu` 会把首屏挤满，所以列表页统一改用共享组件：收起态只有一行「搜索 + 筛选按钮（带已选数量）」，点开是底部弹层，分区平铺选项。
+筛选维度一多，常驻的 `t-dropdown-menu` 会把首屏挤满，所以列表页统一改用共享组件：收起态只有一行「字段选择 + 搜索 + 筛选按钮（带已选数量）」，点开是底部弹层，分区平铺选项。
 
 | 项 | 实现 |
 | --- | --- |
-| 组件契约 | props：`keyword` / `placeholder` / `sections`（`[{ key, title, options: [{ label, value }] }]`）/ `active`（`{ [key]: value }`）；events：`search`（输入 / 回车）、`change`（`{ values }`） |
-| 草稿与生效 | 面板里点选项只改草稿，点「确定」才发 `change`；已选条件胶囊上的 × 与「清除筛选」立即发 `change`。`visible` 为真时外部 `active` 变化不覆盖草稿，避免改到一半被页面回写打断 |
-| 已选条件 | 由 `sections` + `active` 派生胶囊（`标题：选项文案`），未知值回显原值；数量角标 = 生效的筛选个数 |
-| 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options` 接口。分享值不在候选里时由页面 `buildSection()` 补一项，保证面板能看到「筛了什么」 |
-| 页面侧 | 各页维护 `filters`（key 与分享参数同名，空串 = 不限）与 `filtered`（空态文案据此区分「本来为空」/「筛空了」），`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一后重新取第一页；`sameFilters` 为真（点「确定」但条件没变）时直接返回，不重复请求 |
+| 组件契约 | props：`keyword` / `placeholder` / `searchFields` / `searchField` / `sections`（`[{ key, title, kind, options }]`）/ `active` / `fieldConditions`；events：`search`（`{ value, field }`）、`change`（`{ values, conditions }`） |
+| 分区类型 | `kind` 取 `single` / `multi` / `range` / `dateRange`：单选用 `selectOption`（再点一次取消），多选用 `toggleOption`，数值区间与日期区间写进 `{ from, to }` |
+| 分字段搜索 | 搜索框左侧的字段选择器（`t-picker`）决定搜索框作用于哪个字段（空串 = 综合）；面板顶部的条件行 `[字段][值][添加]` 支持同时限定多个字段，条件在 `fieldConditions` 里以 `[{ field, value }]` 保存 |
+| 草稿与生效 | 面板里改的值只进草稿，点「确定」才发 `change`；已选条件胶囊上的 × 与「清除筛选」立即发 `change`。`visible` 为真时外部 `active` / `fieldConditions` 变化不覆盖草稿 |
+| 已选条件 | 由 `sections` + `active` + `fieldConditions` 派生胶囊（`标题：选项文案`），未知值回显原值；数量角标 = 生效的条件个数 |
+| 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options`。分享值不在候选里时由页面 `buildSection()` 补一项 |
+| 页面侧 | 各页维护 `filters` / `fieldConditions` / `filtered`，`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一；`sameFilters` 为真时直接返回，不重复请求 |
+| 请求拼装 | `utils/filters.js` 统一把状态换算成参数：`buildSearchQuery`（综合 → `keyword`，单字段 → 该字段参数）、`buildFieldQuery`（分字段条件各落到自己的参数）、`buildFilterQuery`（多选 `\|` 连接、区间拆 `from` / `to`） |
 | 精简模式 | 二级库精简模式下 `filterSections` 为空，组件退化为纯搜索栏（不显示筛选按钮与已选条件） |
 
 ### 分享带搜索 / 筛选（`utils/share.js`）
@@ -930,7 +933,7 @@ flowchart LR
 | --- | --- |
 | 写 | 各页重写 `sharePath()`，用 `buildSharePath(route, params)` 拼 query：空值 / `null` / `undefined` 一律省略，其余逐个 `encodeURIComponent`（中文与 `&` `=` `#` 都不会破坏结构） |
 | 读 | 小程序 `onLoad(options)` 的 query **不会自动解码**，统一走 `readShareParams(options, SHARE_PARAMS)`：按白名单 key 取值并解码，对已解码 / 含裸 `%` 的值做兜底，不抛错 |
-| 携带范围 | 申购计划 `keyword`/`actualDemandPerson`/`subitemNo`/`urgency`/`category`；申购记录 `keyword`/`status`/`subitemNo`/`category`/`salesperson`/`actualDemandPerson`；隐患管理 `keyword`/`status`/`level`/`rectifyPerson`/`overdue`；二级库库存 `keyword`/`stockStatus`；华星总库存 `keyword`/`purchaseDepartment`/`purchaser`；物料编码、台账查看 `keyword` |
+| 携带范围 | 各页的 `SHARE_PARAMS` 与网页端筛选项一一对应：申购计划 `keyword`/`searchField`/`urgency`/`category`/`actualDemandPerson`/`purchaseResponsible`/`demandDepartment`/`subitemNo`/`name`/`modelSpec`/`materialCode`/`planDateFrom`/`planDateTo`；申购记录再加 `traceNo`/`purchaseOrderNo`/`usage`；隐患 `keyword`/`searchField`/`status`/`level`/`rectifyPerson`/`overdue`/`hazardTypeId`/`hazardUnitId`/`inspectionDateFrom`/`inspectionDateTo`；二级库库存 `keyword`/`searchField`/`stockStatus`/`stockQtyFrom`/`stockQtyTo`/`name`/`modelSpec`；华星总库存 `keyword`/`searchField`/`purchaseDepartment`/`purchaser`/`name`/`modelSpec`/`materialCode`/`inboundFrom`/`inboundTo`；物料编码 `keyword`/`searchField`/`name`/`modelSpec`/`materialCode`；台账 `keyword`/`tagId` |
 | 回填时机 | 带筛选的页面先 `loadFilterOptions()` 再回填——面板要靠选项才能把当前值解析成文案，早于选项写入会显示成原值 |
 | 值已不在候选项 | 页面 `buildSection()` 把缺失值补成一项，避免面板看不到「筛了什么」而列表其实仍在过滤 |
 | 固定枚举 | 隐患状态 / 等级、库存状态是固定档位，用 `isAllowedShareValue()` 校验，非法值直接忽略（不能凭空造出选项）；「仅逾期」只接受 `overdue` |
