@@ -9,9 +9,8 @@
       placeholder="{{i18n.searchPlaceholder}}"
       sections="{{filterSections}}"
       active="{{filters}}"
-      search-fields="{{searchFields}}"
-      search-field="{{searchField}}"
-      field-conditions="{{fieldConditions}}"
+      field-defs="{{fieldDefs}}"
+      field-values="{{fieldValues}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />

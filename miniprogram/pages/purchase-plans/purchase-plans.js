@@ -6,11 +6,13 @@ const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
+  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
+  countFieldValues,
   hasActiveFilter,
   normalizeFilters,
-  readFilterShare,
+  readFieldShare,
   sameFilters,
 } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
@@ -18,7 +20,6 @@ const Toast = toastModule.default || toastModule;
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
 const SHARE_PARAMS = [
   'keyword',
-  'searchField',
   'urgency',
   'category',
   'actualDemandPerson',
@@ -44,11 +45,11 @@ const FILTER_SPEC = {
   planDate: { kind: 'dateRange', fromParam: 'plan_date_from', toParam: 'plan_date_to' },
 };
 // 分字段搜索 / 综合搜索的字段候选（首项是「综合」，与网页端每个字段一个输入框等价）。
-const SEARCH_FIELDS = [
-  { labelKey: 'filterSearchAll', value: '', param: '' },
-  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
-  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
-  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+// 分字段组合搜索：每个字段一个输入框，填多个即同时满足（AND），与网页端一致。
+const FIELD_DEFS = [
+  { key: 'name', labelKey: 'filterSearchName', param: 'name' },
+  { key: 'modelSpec', labelKey: 'filterSearchModelSpec', param: 'model_spec' },
+  { key: 'materialCode', labelKey: 'filterSearchMaterialCode', param: 'material_code' },
 ];
 const PAGE_ROUTE = '/pages/purchase-plans/purchase-plans';
 
@@ -63,15 +64,23 @@ function decoratePlan(item) {
   };
 }
 
+/** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n，随语言切换重建）。 */
+function toFieldDefs() {
+  return FIELD_DEFS.map((field) => ({
+    key: field.key,
+    label: t(field.labelKey),
+    placeholder: t('filterFieldValuePlaceholder'),
+  }));
+}
+
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    // 搜索字段：空串 = 综合（跨名称 / 型号 / 编码）；选了字段则只搜该字段。
-    searchField: '',
-    // 分字段搜索的已生效条件：[{ field, value }]（可与综合搜索同时存在）。
-    fieldConditions: [],
-    searchFields: [],
+    // 分字段组合搜索的已生效值：`{ [fieldKey]: value }`，空串表示该字段不参与过滤。
+    fieldValues: {},
+    // 分字段输入框的字段清单（label 走 i18n，随语言切换重建）。
+    fieldDefs: [],
     // 当前生效的筛选值：key 与分享参数同名；单值为空串、区间为 { from, to }。
     filters: {
       actualDemandPerson: '',
@@ -105,7 +114,7 @@ Page(withTheme({
     const shared = readShareParams(options, SHARE_PARAMS);
     // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
     this.lastShared = shared;
-    this.setData({ searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })) });
+    this.setData({ fieldDefs: toFieldDefs() });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -129,8 +138,8 @@ Page(withTheme({
   /**
    * 把分享 / 回跳带来的参数并进当前状态。
    *
-   * 分字段搜索字段（name / modelSpec / materialCode）与综合 keyword 是两条独立通道：
-   * 前者落到 fieldConditions，后者落到 keyword；searchField 决定搜索框作用于哪个字段。
+   * 分字段搜索（name / modelSpec / materialCode…）落到 fieldValues，可多字段同时生效（AND）；
+   * 收起态的 keyword 是独立的综合搜索（跨字段 OR）。
    */
   applyShared(shared) {
     const filters = { ...this.data.filters };
@@ -144,18 +153,13 @@ Page(withTheme({
       if (shared[key] !== undefined) filters[key] = shared[key];
     });
 
-    // 分享里的单字段参数还原成分字段条件。
-    const conditions = [];
-    SEARCH_FIELDS.forEach((field) => {
-      if (!field.value) return;
-      if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
-    });
+    // 分享里的单字段参数还原成分字段值（多字段组合）。
+    const fieldValues = readFieldShare(shared, FIELD_DEFS);
 
     const patch = {
       filters,
-      fieldConditions: conditions,
-      searchField: shared.searchField || '',
-      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+      fieldValues,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
     };
     if (shared.keyword !== undefined) patch.keyword = shared.keyword;
     this.setData(patch);
@@ -187,33 +191,30 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
-  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
+  /** 收起态搜索框：只做综合搜索（跨字段），多字段组合在筛选面板里。 */
   onSearchChange(event) {
-    const detail = event.detail || {};
-    const patch = { keyword: detail.value || '' };
-    if (detail.field !== undefined) patch.searchField = detail.field || '';
-    this.setData(patch);
+    this.setData({ keyword: (event.detail && event.detail.value) || '' });
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadPlans(true), 350);
   },
 
-  /** 筛选面板确认：整体替换筛选值与分字段条件后重新取第一页。 */
+  /** 筛选面板确认：整体替换筛选值与分字段值后重新取第一页。 */
   onFilterChange(event) {
     const detail = event.detail || {};
     const values = detail.values || {};
     const filters = normalizeFilters(values, FILTER_SECTIONS, [], ['planDate']);
-    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
+    const fieldValues = detail.fields || {};
     // 面板点「确定」但条件没变（含「全部」原地确认）：不重复请求。
     if (
       sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
-      JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)
+      JSON.stringify(this.data.fieldValues) === JSON.stringify(fieldValues)
     ) {
       return;
     }
     this.setData({
       filters,
-      fieldConditions: conditions,
-      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+      fieldValues,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
     });
     void this.loadPlans(true);
   },
@@ -312,12 +313,12 @@ Page(withTheme({
     const page = reset ? 1 : this.data.page + 1;
     this.setData(reset ? { loading: true } : { loadingMore: true });
     try {
-      // 搜索：综合 / 单字段由 searchField 决定；分字段条件再叠加（AND）。
+      // 综合搜索 + 分字段组合搜索（填了几个字段就同时满足几个）+ 筛选项，三者叠加。
       const data = {
         page,
         page_size: this.data.pageSize,
-        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
-        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+        ...buildSearchQuery(this.data.keyword),
+        ...buildFieldQuery(this.data.fieldValues, FIELD_DEFS),
         ...buildFilterQuery(this.data.filters, FILTER_SPEC),
       };
       const result = await request({ url: '/mini-program/purchase-plans', data });
@@ -350,7 +351,6 @@ Page(withTheme({
     const planDate = filters.planDate || {};
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      searchField: this.data.searchField,
       urgency: filters.urgency,
       category: filters.category,
       actualDemandPerson: filters.actualDemandPerson,
@@ -359,10 +359,7 @@ Page(withTheme({
       subitemNo: filters.subitemNo,
       planDateFrom: planDate.from,
       planDateTo: planDate.to,
-      ...(this.data.fieldConditions || []).reduce((params, condition) => {
-        if (condition.field && condition.value) params[condition.field] = condition.value;
-        return params;
-      }, {}),
+      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
     });
   },
 

@@ -9,9 +9,8 @@
       active="{{filters}}"
       options-failed="{{optionsFailed}}"
       bind:retryoptions="onRetryOptions"
-      search-fields="{{searchFields}}"
-      search-field="{{searchField}}"
-      field-conditions="{{fieldConditions}}"
+      field-defs="{{fieldDefs}}"
+      field-values="{{fieldValues}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />

@@ -477,14 +477,18 @@ if (themedPage.data.i18n === undefined) {
   if (!panelScript.includes('draft') || !panelScript.includes('confirmSheet')) {
     throw new Error('The filter panel must keep a draft and apply it on confirm.');
   }
-  // 分字段搜索：搜索框左侧的字段选择器 + 面板里的条件行，两者都在同一个组件里。
-  for (const snippet of ['searchFields', 'fieldConditions', 'addCondition', 'toggleOption', 'openDatePicker']) {
+  // 分字段搜索 = 多字段组合搜索：每个字段一个输入框，填多个即 AND。
+  for (const snippet of ['fieldDefs', 'fieldValues', 'onFieldInput', 'clearField', 'toggleOption', 'openDatePicker']) {
     if (!panelScript.includes(snippet)) {
-      throw new Error(`components/filter-panel must support field search / multi / range: ${snippet}`);
+      throw new Error(`components/filter-panel must support combined field search / multi / range: ${snippet}`);
     }
   }
-  if (!panelMarkup.includes('openSearchFieldPicker') || !panelMarkup.includes('filter-condition-add')) {
-    throw new Error('components/filter-panel/filter-panel.wxml must render the field selector and condition row.');
+  if (!panelMarkup.includes('filter-field-list') || !panelMarkup.includes('onFieldInput')) {
+    throw new Error('components/filter-panel/filter-panel.wxml must render one input per search field.');
+  }
+  // 不允许退回「先选字段再添加」的写法：那是一次只能一个字段，不是组合搜索。
+  if (panelMarkup.includes('addCondition') || panelScript.includes('addCondition')) {
+    throw new Error('The filter panel must not go back to add-one-condition-at-a-time.');
   }
   for (const kind of ["'multi'", "'range'", "'dateRange'"]) {
     if (!panelMarkup.includes(kind)) {
@@ -493,10 +497,9 @@ if (themedPage.data.i18n === undefined) {
   }
   const panelConfig = JSON.parse(read('components/filter-panel/filter-panel.json'));
   const panelComponents = Object.values(panelConfig.usingComponents || {});
+  // 分字段用输入框而不是滚轮选择器，所以只需要日期选择器。
   for (const component of [
     'tdesign-miniprogram/date-time-picker/date-time-picker',
-    'tdesign-miniprogram/picker/picker',
-    'tdesign-miniprogram/picker-item/picker-item',
   ]) {
     if (!panelComponents.includes(component)) {
       throw new Error(`components/filter-panel/filter-panel.json must register ${component}.`);
@@ -558,17 +561,20 @@ if (themedPage.data.i18n === undefined) {
         throw new Error(`pages/${page}.js must feed the filter panel: ${snippet}`);
       }
     }
-    // 分字段搜索要接上：字段候选 / 当前字段 / 条件都要传给组件，否则搜索框只剩综合搜索。
+    // 分字段组合搜索要接上：字段定义 / 已填值 / 两个 prop 都要传，否则面板显不出多个输入框。
     for (const snippet of [
-      'SEARCH_FIELDS',
-      'searchFields',
-      'search-fields="{{searchFields}}"',
-      'field-conditions="{{fieldConditions}}"',
+      'FIELD_DEFS',
+      'fieldValues',
+      'buildFieldQuery',
       'buildSearchQuery',
     ]) {
-      const source = snippet.indexOf('{{') >= 0 ? markup : script;
-      if (!source.includes(snippet)) {
-        throw new Error(`pages/${page} must wire the field search: ${snippet}`);
+      if (!script.includes(snippet)) {
+        throw new Error(`pages/${page} must wire the combined field search: ${snippet}`);
+      }
+    }
+    for (const snippet of ['field-defs="{{fieldDefs}}"', 'field-values="{{fieldValues}}"']) {
+      if (!markup.includes(snippet)) {
+        throw new Error(`pages/${page}.wxml must pass the field search props: ${snippet}`);
       }
     }
   }

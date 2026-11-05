@@ -251,6 +251,46 @@ async function run() {
   const removed = panel.events.pop();
   assert(removed.name === 'change' && removed.detail.values.status === undefined, 'chip × clears the key');
 
+  // ===== 面板：分字段组合搜索 =====
+  // 每个字段一个输入框，填多个后「确定」一次性回传（多字段同时生效）。
+  const fieldPanel = loadFilterPanel();
+  fieldPanel.setProperty('fieldDefs', [
+    { key: 'name', label: '物资名称' },
+    { key: 'modelSpec', label: '型号规格' },
+  ]);
+  fieldPanel.setProperty('fieldValues', { name: '接触器' });
+  fieldPanel.refresh();
+  assert(fieldPanel.data.fieldRows.length === 2, 'panel must render one input per field');
+  assert(
+    fieldPanel.data.fieldRows[0].value === '接触器',
+    'field input must show the applied value',
+  );
+  assert(
+    fieldPanel.data.chips.some((chip) => chip.label.indexOf('物资名称：接触器') >= 0),
+    'field search must show as a chip',
+  );
+  // 打开面板后改两个字段，确定后一起回传
+  fieldPanel.openSheet();
+  fieldPanel.data.draftFields = {};
+  fieldPanel.onFieldInput({ currentTarget: { dataset: { field: 'name' } }, detail: { value: '接触器' } });
+  fieldPanel.onFieldInput({ currentTarget: { dataset: { field: 'modelSpec' } }, detail: { value: 'CJX2' } });
+  assert(fieldPanel.data.draftFields.name === '接触器', 'typing updates draft only');
+  fieldPanel.confirmSheet();
+  const fieldChange = fieldPanel.events.pop();
+  assert(fieldChange.name === 'change', 'confirm emits change');
+  assert(fieldChange.detail.fields.name === '接触器', 'both filled fields must be returned');
+  assert(fieldChange.detail.fields.modelSpec === 'CJX2', 'multiple fields returned together');
+  // 空字段不参与
+  fieldPanel.data.draftFields = { name: '  ', modelSpec: 'CJX2' };
+  fieldPanel.confirmSheet();
+  const trimmed = fieldPanel.events.pop();
+  assert(trimmed.detail.fields.name === undefined, 'blank field must be dropped');
+  // 单个字段的 × 立即生效
+  fieldPanel.setProperty('fieldValues', { name: '接触器', modelSpec: 'CJX2' });
+  fieldPanel.removeChip({ currentTarget: { dataset: { fieldKey: 'modelSpec' } } });
+  const removedField = fieldPanel.events.pop();
+  assert(removedField.detail.fields.modelSpec === undefined, 'chip × clears that field only');
+
   // 面板收到 optionsFailed 后点「重新加载」要发出 retryoptions（页面据此重拉）
   panel.setProperty('optionsFailed', true);
   panel.retryOptions();
@@ -303,55 +343,49 @@ async function run() {
   assert(planShare.indexOf('urgency=') > 0 && planShare.indexOf('subitemNo=201') > 0, 'share must carry filters');
   assert(planShare.indexOf('category=') === -1, 'empty filters must be omitted');
 
-  // ===== 分字段搜索：搜索框切字段 =====
-  requests.length = 0;
-  page.setData({ keyword: 'CJX2' });
-  page.onSearchChange({ detail: { value: 'CJX2', field: 'modelSpec' } });
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  let fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
-  assert(fieldRequest, 'field search request missing');
-  assert(fieldRequest.data.model_spec === 'CJX2', 'search field must map to its own param');
-  assert(fieldRequest.data.keyword === undefined, 'field search must not send keyword');
-
-  // 综合搜索仍然走 keyword
-  requests.length = 0;
-  page.setData({ searchField: '' });
-  page.onSearchChange({ detail: { value: '接触器', field: '' } });
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
-  assert(fieldRequest.data.keyword === '接触器', 'combined search must use keyword');
-
-  // 分字段条件与搜索、筛选项同时生效（AND）
+  // ===== 分字段搜索 = 多字段组合搜索（AND） =====
+  // 多个字段同时填 => 各自发到自己的参数上（AND），不收窄成一个 keyword。
+  // 先清掉上一步留的综合搜索词，避免两套通道互相干扰。
+  page.setData({ keyword: '', filters: {} });
   requests.length = 0;
   page.onFilterChange({
     detail: {
       values: { urgency: '紧急' },
-      conditions: [{ field: 'materialCode', value: 'E011' }, { field: 'name', value: '接触器' }],
+      fields: { name: '接触器', materialCode: 'E011' },
     },
   });
   await new Promise((resolve) => setTimeout(resolve, 10));
-  fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
-  assert(fieldRequest.data.material_code === 'E011', 'field condition must map to its param');
-  assert(fieldRequest.data.name === '接触器', 'each field condition keeps its own param');
-  assert(fieldRequest.data.urgency === '紧急', 'filters and field conditions combine');
-  assert(page.data.fieldConditions.length === 2, 'conditions must be kept on the page');
-  // 分享要带上分字段条件
-  const conditionShare = page.sharePath();
-  assert(conditionShare.indexOf('materialCode=E011') > 0, 'share must carry field conditions');
+  let fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
+  assert(fieldRequest, 'combined field search request missing');
+  assert(fieldRequest.data.name === '接触器', 'each field keeps its own param');
+  assert(fieldRequest.data.material_code === 'E011', 'multiple fields must combine');
+  assert(fieldRequest.data.urgency === '紧急', 'filters and field search combine');
+  assert(fieldRequest.data.keyword === undefined, 'field search must not collapse into keyword');
+  assert(page.data.fieldValues.name === '接触器', 'field values must be kept on the page');
+  assert(page.data.fieldValues.materialCode === 'E011', 'all filled fields must be kept');
 
-  // 日期区间：拆成两个参数
+  // 只填一个字段时也只发那一个
   requests.length = 0;
-  page.onFilterChange({ detail: { values: { planDate: { from: '2026-01-01', to: '2026-06-30' } } } });
+  page.onFilterChange({ detail: { values: {}, fields: { modelSpec: 'CJX2' } } });
   await new Promise((resolve) => setTimeout(resolve, 10));
   fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
-  assert(fieldRequest.data.plan_date_from === '2026-01-01', 'date range from must be sent');
-  assert(fieldRequest.data.plan_date_to === '2026-06-30', 'date range to must be sent');
-  // 空的区间不发参数
+  assert(fieldRequest.data.model_spec === 'CJX2', 'single field search sends its own param');
+  assert(fieldRequest.data.name === undefined, 'unfilled fields must not be sent');
+
+  // 收起态搜索框是综合搜索（keyword），与分字段互不干扰
   requests.length = 0;
-  page.onFilterChange({ detail: { values: { planDate: { from: '', to: '' } } } });
-  await new Promise((resolve) => setTimeout(resolve, 10));
+  page.setData({ fieldValues: {} });
+  page.onSearchChange({ detail: { value: '接触器' } });
+  await new Promise((resolve) => setTimeout(resolve, 400));
   fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
-  assert(fieldRequest.data.plan_date_from === undefined, 'empty date range must be omitted');
+  assert(fieldRequest.data.keyword === '接触器', 'combined search box uses keyword');
+
+  // 分享要带上分字段值
+  page.setData({ fieldValues: { name: '接触器', materialCode: 'E011' } });
+  const conditionShare = page.sharePath();
+  assert(conditionShare.indexOf('materialCode=E011') > 0, 'share must carry field values');
+  assert(conditionShare.indexOf('name=')
+    > 0, 'share must carry every filled field');
 
   // 分享值不在选项里：补进分区
   requests.length = 0;

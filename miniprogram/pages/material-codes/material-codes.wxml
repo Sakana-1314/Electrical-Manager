@@ -5,9 +5,8 @@
     <filter-panel
       keyword="{{keyword}}"
       placeholder="{{i18n.materialCodeSearchPlaceholder}}"
-      search-fields="{{searchFields}}"
-      search-field="{{searchField}}"
-      field-conditions="{{fieldConditions}}"
+      field-defs="{{fieldDefs}}"
+      field-values="{{fieldValues}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />
