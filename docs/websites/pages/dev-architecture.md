@@ -918,8 +918,8 @@ flowchart LR
 | 组件契约 | props：`keyword` / `placeholder` / `fieldDefs`（`[{ key, label, placeholder }]`）/ `fieldValues`（`{ [fieldKey]: value }`）/ `sections` / `active`；events：`search`（`{ value }`）、`change`（`{ values, fields }`） |
 | 分区类型 | `kind` 取 `single` / `multi` / `range` / `dateRange`：单选用 `selectOption`（再点一次取消），多选用 `toggleOption`，数值区间与日期区间写进 `{ from, to }` |
 | 分字段搜索 | **多字段组合（AND）**：`fieldDefs` 里的每个字段渲染成一个输入框，页面把已填的字段放进 `fieldValues`。`buildFieldQuery` 把每个非空字段映射到它自己的请求参数，多个字段同时发；收起态搜索框只发 `keyword`（综合搜索），两条通道独立叠加 |
-| 草稿与生效 | 面板里改的值只进草稿，点「确定」才发 `change`；已选条件胶囊上的 × 与「清除筛选」立即发 `change`。`visible` 为真时外部 `active` / `fieldConditions` 变化不覆盖草稿 |
-| 已选条件 | 由 `sections` + `active` + `fieldConditions` 派生胶囊（`标题：选项文案`），未知值回显原值；数量角标 = 生效的条件个数 |
+| 草稿与生效 | 面板里改的值只进草稿，点「确定」才发 `change`；`visible` 为真时外部 `active` / `fieldValues` 变化不覆盖草稿 |
+| 收起态 | 只有「搜索 + 筛选按钮」，**不渲染已选条件胶囊**（重复信息，且吃掉一行高度）；`activeCount` 只用于按钮角标，具体条件在面板里看与改 |
 | 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options`。分享值不在候选里时由页面 `buildSection()` 补一项 |
 | 选项加载失败 | 页面把 `optionsFailed` 传给组件，面板顶部显示一行可点重试的提示并发 `retryoptions`；页面只需重拉选项（`onRetryOptions` → `loadFilterOptions`），不重新登录、不重查列表。**不弹 toast**：列表可用，弹错误提示会让人以为整页坏了且无重试入口。`check.js` 会拦住对这一行为的回退 |
 | 页面侧 | 各页维护 `filters` / `fieldConditions` / `filtered`，`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一；`sameFilters` 为真时直接返回，不重复请求 |

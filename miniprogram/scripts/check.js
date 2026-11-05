@@ -468,10 +468,14 @@ if (themedPage.data.i18n === undefined) {
     }
   }
   const panelMarkup = read('components/filter-panel/filter-panel.wxml');
-  for (const snippet of ['class="filter-bar"', 'class="filter-chips"', 'placement="bottom"']) {
+  // 收起态只有一行「搜索 + 筛选按钮」，不再铺已选条件胶囊（条件在面板里看）。
+  for (const snippet of ['class="filter-bar"', 'placement="bottom"']) {
     if (!panelMarkup.includes(snippet)) {
       throw new Error(`components/filter-panel/filter-panel.wxml must render: ${snippet}`);
     }
+  }
+  if (panelMarkup.includes('filter-chips') || panelScript.includes('removeChip')) {
+    throw new Error('The collapsed filter bar must not render selected-condition chips.');
   }
   // 面板里点选项只改草稿，必须先点「确定」才回传：草稿与已生效值分两个字段。
   if (!panelScript.includes('draft') || !panelScript.includes('confirmSheet')) {

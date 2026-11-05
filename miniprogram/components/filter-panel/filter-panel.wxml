@@ -26,28 +26,6 @@
   </view>
 </view>
 
-<!-- 已选条件：只在有筛选时出现一行，可单项删除或全部清除。 -->
-<scroll-view wx:if="{{activeCount}}" class="filter-chips" scroll-x enhanced show-scrollbar="{{false}}">
-  <view class="filter-chips-track">
-    <view
-      wx:for="{{chips}}"
-      wx:key="label"
-      class="filter-chip"
-      hover-class="filter-chip-hover"
-      data-key="{{item.key}}"
-      data-value="{{item.value}}"
-      data-field-key="{{item.fieldKey}}"
-      bind:tap="removeChip"
-    >
-      <text class="filter-chip-text">{{item.label}}</text>
-      <t-icon class="filter-chip-close" name="close" size="24rpx" />
-    </view>
-    <view class="filter-chip-clear" hover-class="filter-chip-hover" bind:tap="resetAll">
-      {{i18n.filterClearAll}}
-    </view>
-  </view>
-</scroll-view>
-
 <!-- 底部筛选面板：分字段搜索 + 分区筛选；点「确定」一次性回传。 -->
 <t-popup
   visible="{{visible}}"

@@ -52,54 +52,9 @@
   text-align: center;
 }
 
-/* 已选条件：一行横向滚动，超出时可滑，不换行占掉两行高度。 */
-.filter-chips {
-  width: 100%;
-  margin-top: 16rpx;
-  white-space: nowrap;
-}
-
-.filter-chips-track {
-  display: inline-flex;
-  align-items: center;
-  gap: 12rpx;
-  padding-right: 8rpx;
-}
-
-.filter-chip {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6rpx;
-  max-width: 420rpx;
-  padding: 8rpx 16rpx;
-  border: 2rpx solid var(--app-brand-border);
-  border-radius: 999rpx;
-  background: var(--app-brand-soft);
-  color: var(--app-brand-text);
-  font-size: 22rpx;
-}
-
+/* 面板内可点元素的按下反馈（关闭、重试、清空字段、日期按钮共用）。 */
 .filter-chip-hover {
   opacity: 0.7;
-}
-
-.filter-chip-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.filter-chip-close {
-  flex: none;
-  color: var(--app-brand-icon);
-}
-
-.filter-chip-clear {
-  flex: none;
-  padding: 8rpx 12rpx;
-  color: var(--app-text-muted);
-  font-size: 22rpx;
 }
 
 /* 底部面板：圆角只给上沿，与页面底色拉开层次；内容区可滚动，操作区固定在最下方。 */
