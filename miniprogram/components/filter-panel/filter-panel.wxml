@@ -74,6 +74,13 @@
     </view>
 
     <scroll-view class="filter-sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+      <!-- 选项没拉到时给一行可重试的提示：面板里只剩「全部」，不说明原因会被当成没有可选项。 -->
+      <view wx:if="{{optionsFailed}}" class="filter-options-failed" hover-class="filter-chip-hover" bind:tap="retryOptions">
+        <t-icon name="error-circle" size="28rpx" />
+        <text class="filter-options-failed-text">{{i18n.filterOptionsFailed}}</text>
+        <text class="filter-options-failed-retry">{{i18n.filterOptionsRetry}}</text>
+      </view>
+
       <!-- 分字段搜索：需要同时限定多个字段时才用，条件从 1 行起按需增长。 -->
       <view wx:if="{{searchFieldOptions.length > 1}}" class="filter-section">
         <view class="filter-section-title">{{i18n.filterFieldSearch}}</view>

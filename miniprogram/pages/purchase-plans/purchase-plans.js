@@ -82,6 +82,8 @@ Page(withTheme({
       category: '',
       planDate: { from: '', to: '' },
     },
+    /** 筛选项没拉到时为 true：面板里显示一行「重新加载」，不弹打断式提示。 */
+    optionsFailed: false,
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
     filtered: false,
@@ -101,6 +103,8 @@ Page(withTheme({
     // 分享链接带来的搜索 / 筛选：先解析出来，等筛选项加载完再回填——
     // 面板里的选项要靠 options 才能把当前值解析成文案，早于选项写入会显示成原值。
     const shared = readShareParams(options, SHARE_PARAMS);
+    // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
+    this.lastShared = shared;
     this.setData({ searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })) });
     try {
       const session = await getApp().globalData.authPromise;
@@ -220,10 +224,18 @@ Page(withTheme({
    * 提报员工选项把「当前用户」固定置顶（标出「当前用户」），
    * 分享带来的值若已不在候选里也补进选项，保证面板能看到「筛了什么」。
    */
+  /** 面板上的「重新加载」：重拉筛选项（不重新登录、不重查列表）。 */
+  onRetryOptions() {
+    void this.loadFilterOptions(this.lastShared || {}, this.displayName || '');
+  },
+
   async loadFilterOptions(shared = {}, displayName = '') {
+    // 记住当前用户名：重试时要重新把它置顶到提报员工选项里。
+    this.displayName = displayName;
     let persons = [];
     let responsibles = [];
     let departments = [];
+    let optionsFailed = false;
     let subitemNos = [];
     let urgencies = [];
     let categories = [];
@@ -236,14 +248,9 @@ Page(withTheme({
       urgencies = (result.urgencies || []).filter(Boolean);
       categories = (result.categories || []).filter(Boolean);
     } catch (_error) {
-      // 选项加载失败不阻塞列表，但提示用户，并至少保留「全部」选项
-      Toast({
-        context: this,
-        selector: '#purchase-plans-toast',
-        message: t('purchasePlanFilterOptionsLoadFailed'),
-        theme: 'warning',
-        direction: 'column',
-      });
+      // 选项拉不到时列表照常可用：不弹打断式提示（会让人以为页面坏了），
+      // 把状态传给筛选面板，由面板里的一行「重新加载」兜底。
+      optionsFailed = true;
     }
     const currentUserSuffix = t('currentUserSuffix');
     if (displayName) {
@@ -251,6 +258,7 @@ Page(withTheme({
       persons.unshift(displayName);
     }
     this.setData({
+      optionsFailed,
       filterSections: [
         this.buildSection('urgency', t('filterUrgency'), urgencies, shared.urgency),
         this.buildSection('category', t('filterCategory'), categories, shared.category),

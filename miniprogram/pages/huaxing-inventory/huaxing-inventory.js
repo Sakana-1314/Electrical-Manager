@@ -82,6 +82,8 @@ Page(withTheme({
       purchaser: [],
       firstInboundDate: { from: '', to: '' },
     },
+    /** 筛选项没拉到时为 true：面板里显示一行「重新加载」，不弹打断式提示。 */
+    optionsFailed: false,
     filterSections: [],
     filtered: false,
     page: 1,
@@ -102,6 +104,8 @@ Page(withTheme({
     setNavigationBarTitle('huaxingInventoryTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
+    this.lastShared = shared;
     this.setData({
       searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
     });
@@ -155,23 +159,26 @@ Page(withTheme({
   },
 
   /** 申购部门 / 申购人选项来自库中已有值；加载失败不阻塞列表。 */
+  /** 面板上的「重新加载」：重拉筛选项（不重新登录、不重查列表）。 */
+  onRetryOptions() {
+    void this.loadFilterOptions(this.lastShared || {});
+  },
+
   async loadFilterOptions(shared = {}) {
     let departments = [];
     let purchasers = [];
+    let optionsFailed = false;
     try {
       const result = await requestCached({ url: '/mini-program/huaxing-inventory/filter-options' });
       departments = (result.purchase_departments || []).filter(Boolean);
       purchasers = (result.purchasers || []).filter(Boolean);
     } catch (_error) {
-      Toast({
-        context: this,
-        selector: '#huaxing-inventory-toast',
-        message: t('huaxingInventoryFilterOptionsLoadFailed'),
-        theme: 'warning',
-        direction: 'column',
-      });
+      // 选项拉不到时列表照常可用：不弹打断式提示（会让人以为页面坏了），
+      // 把状态传给筛选面板，由面板里的一行「重新加载」兜底。
+      optionsFailed = true;
     }
     this.setData({
+      optionsFailed,
       filterSections: [
         this.buildSection(
           'purchaseDepartment',

@@ -74,6 +74,14 @@ Component({
         this.refresh();
       },
     },
+    /**
+     * 选项加载失败：由页面在 filter-options 请求失败时置 true。
+     *
+     * 候选值拉不到时面板只剩「全部」，用户分不清是「没有可选项」还是「加载失败」；
+     * 这里在面板里给一行可点重试的提示，而不是弹一个打断式的 toast
+     * （列表本身是好的，弹错误提示会让人以为页面坏了）。
+     */
+    optionsFailed: { type: Boolean, value: false },
   },
 
   data: {
@@ -413,6 +421,11 @@ Component({
 
     resetAll() {
       this.triggerEvent('change', { values: {}, conditions: [] });
+    },
+
+    /** 选项加载失败时的「重新加载」：页面收到后重拉 filter-options 并重建分区。 */
+    retryOptions() {
+      this.triggerEvent('retryoptions');
     },
   },
 });

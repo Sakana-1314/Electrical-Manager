@@ -7,6 +7,8 @@
       placeholder="{{i18n.hazardSearchPlaceholder}}"
       sections="{{filterSections}}"
       active="{{filters}}"
+      options-failed="{{optionsFailed}}"
+      bind:retryoptions="onRetryOptions"
       search-fields="{{searchFields}}"
       search-field="{{searchField}}"
       field-conditions="{{fieldConditions}}"

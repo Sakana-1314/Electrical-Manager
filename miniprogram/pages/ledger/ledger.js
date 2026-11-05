@@ -29,6 +29,8 @@ Page(withTheme({
     items: [],
     keyword: '',
     filters: { tagId: '' },
+    /** 标签候选没拉到时为 true：面板里显示一行「重新加载」。 */
+    optionsFailed: false,
     filterSections: [],
     filtered: false,
     page: 1,
@@ -118,14 +120,22 @@ Page(withTheme({
     void this.loadLedger(true);
   },
 
+  /** 面板上的「重新加载」：重拉标签候选值（不重新登录、不重查列表）。 */
+  onRetryOptions() {
+    void this.loadFilterOptions(this.lastShared || {});
+  },
+
   /** 标签候选值：平铺 + 层级路径（手机上不画树）。 */
   async loadFilterOptions(shared = {}) {
+    this.lastShared = shared;
     let tags = [];
+    let optionsFailed = false;
     try {
       const result = await requestCached({ url: '/mini-program/ledger-items/tag-options' });
       tags = (result || []).filter((tag) => tag && tag.id);
     } catch (_error) {
-      // 选项加载失败不阻塞列表：只剩关键字搜索。
+      // 列表照常可用，只有标签候选拿不到：交给面板里的一行「重新加载」兜底。
+      optionsFailed = true;
     }
     const options = [{ label: t('all'), value: '' }].concat(
       tags.map((tag) => ({ label: tag.path || tag.name, value: String(tag.id) })),
@@ -134,6 +144,7 @@ Page(withTheme({
       options.splice(1, 0, { label: shared.tagId, value: shared.tagId });
     }
     this.setData({
+      optionsFailed,
       filterSections: [{ key: 'tagId', title: t('filterLedgerTag'), kind: 'single', options }],
     });
   },

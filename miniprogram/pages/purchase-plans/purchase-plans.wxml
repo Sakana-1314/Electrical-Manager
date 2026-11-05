@@ -8,6 +8,8 @@
       search-field="{{searchField}}"
       sections="{{filterSections}}"
       active="{{filters}}"
+      options-failed="{{optionsFailed}}"
+      bind:retryoptions="onRetryOptions"
       field-conditions="{{fieldConditions}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
