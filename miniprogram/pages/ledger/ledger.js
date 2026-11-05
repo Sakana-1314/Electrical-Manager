@@ -1,13 +1,16 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request } = require('../../utils/request');
+const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-// 分享链接携带的搜索词（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword'];
+// 分享链接携带的搜索词与标签筛选（与页面 data 字段同名，便于直接回填）。
+const SHARE_PARAMS = ['keyword', 'tagId'];
+// 筛选面板的分区：网页端台账只有「关键字 + 标签」两项，这里保持一致。
+const FILTER_SECTIONS = ['tagId'];
+const FILTER_SPEC = { tagId: { kind: 'single', param: 'tag_ids' } };
 const PAGE_ROUTE = '/pages/ledger/ledger';
 
 const PAGE_SIZE = 15;
@@ -25,6 +28,9 @@ Page(withTheme({
   data: {
     items: [],
     keyword: '',
+    filters: { tagId: '' },
+    filterSections: [],
+    filtered: false,
     page: 1,
     pageSize: PAGE_SIZE,
     total: 0,
@@ -53,6 +59,9 @@ Page(withTheme({
         return;
       }
       if (Object.keys(shared).length) this.setData(shared);
+      await this.loadFilterOptions(shared);
+      // 分享带来的标签回填到筛选状态（面板据此显示已选）。
+      if (shared.tagId) this.setData({ filters: { tagId: shared.tagId }, filtered: true });
       await this.loadLedger(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -100,6 +109,35 @@ Page(withTheme({
     this.searchTimer = setTimeout(() => void this.loadLedger(true), 350);
   },
 
+  /** 筛选面板确认：标签单选，条件没变时不重复请求。 */
+  onFilterChange(event) {
+    const values = (event.detail && event.detail.values) || {};
+    const tagId = values.tagId || '';
+    if (tagId === this.data.filters.tagId) return;
+    this.setData({ filters: { tagId }, filtered: !!tagId });
+    void this.loadLedger(true);
+  },
+
+  /** 标签候选值：平铺 + 层级路径（手机上不画树）。 */
+  async loadFilterOptions(shared = {}) {
+    let tags = [];
+    try {
+      const result = await requestCached({ url: '/mini-program/ledger-items/tag-options' });
+      tags = (result || []).filter((tag) => tag && tag.id);
+    } catch (_error) {
+      // 选项加载失败不阻塞列表：只剩关键字搜索。
+    }
+    const options = [{ label: t('all'), value: '' }].concat(
+      tags.map((tag) => ({ label: tag.path || tag.name, value: String(tag.id) })),
+    );
+    if (shared.tagId && !options.some((option) => option.value === shared.tagId)) {
+      options.splice(1, 0, { label: shared.tagId, value: shared.tagId });
+    }
+    this.setData({
+      filterSections: [{ key: 'tagId', title: t('filterLedgerTag'), kind: 'single', options }],
+    });
+  },
+
   async loadLedger(reset) {
     if (!reset && (this.data.loading || this.data.loadingMore || !this.data.hasMore)) return;
     const requestId = (this.requestId || 0) + 1;
@@ -110,6 +148,7 @@ Page(withTheme({
       const data = { page, page_size: this.data.pageSize };
       const keyword = this.data.keyword.trim();
       if (keyword) data.keyword = keyword;
+      if (this.data.filters.tagId) data.tag_ids = this.data.filters.tagId;
       const result = await request({ url: '/mini-program/ledger-items', data });
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decorateLedger);
@@ -134,9 +173,12 @@ Page(withTheme({
     });
   },
 
-  /** 分享路径：把当前搜索词一起带出去。 */
+  /** 分享路径：把当前搜索词与标签筛选一起带出去。 */
   sharePath() {
-    return buildSharePath(PAGE_ROUTE, { keyword: this.data.keyword.trim() });
+    return buildSharePath(PAGE_ROUTE, {
+      keyword: this.data.keyword.trim(),
+      tagId: this.data.filters.tagId,
+    });
   },
 
   onShareAppMessage() {

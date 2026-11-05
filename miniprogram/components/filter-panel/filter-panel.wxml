@@ -1,9 +1,20 @@
-<!-- 收起态：一行「搜索 + 筛选按钮」，占位与原来的 t-search 一致，不额外增加首屏高度。 -->
+<!-- 收起态：一行「字段选择 + 搜索 + 筛选按钮」。字段选择器不占额外高度，
+     默认「综合」等价于原来的跨字段搜索。 -->
 <view class="filter-bar">
+  <view
+    wx:if="{{searchFieldOptions.length > 1}}"
+    class="filter-field"
+    hover-class="filter-trigger-hover"
+    aria-role="button"
+    bind:tap="openSearchFieldPicker"
+  >
+    <text class="filter-field-text">{{searchFieldLabel}}</text>
+    <t-icon class="filter-field-arrow" name="chevron-down" size="22rpx" />
+  </view>
   <view class="filter-search">
     <t-search
       value="{{keyword}}"
-      placeholder="{{placeholder}}"
+      placeholder="{{searchField === '' ? placeholder : searchFieldLabel}}"
       shape="round"
       confirm-type="search"
       bind:change="onSearchInput"
@@ -12,7 +23,7 @@
   </view>
   <!-- 没有筛选维度时（如精简模式）只留搜索框，按钮不占位置。 -->
   <view
-    wx:if="{{sectionsView.length}}"
+    wx:if="{{sectionsView.length || fieldConditions.length}}"
     class="filter-trigger {{activeCount ? 'filter-trigger-active' : ''}}"
     hover-class="filter-trigger-hover"
     aria-role="button"
@@ -25,16 +36,17 @@
   </view>
 </view>
 
-<!-- 已选条件：只在有筛选时出现一行，可单项删除或全部清除。
-     用 scroll-view 横向滚动（view 上的 overflow-x 在部分基础库不生效）。 -->
+<!-- 已选条件：只在有筛选时出现一行，可单项删除或全部清除。 -->
 <scroll-view wx:if="{{activeCount}}" class="filter-chips" scroll-x enhanced show-scrollbar="{{false}}">
   <view class="filter-chips-track">
     <view
       wx:for="{{chips}}"
-      wx:key="key"
+      wx:key="label"
       class="filter-chip"
       hover-class="filter-chip-hover"
       data-key="{{item.key}}"
+      data-value="{{item.value}}"
+      data-condition-index="{{item.conditionIndex}}"
       bind:tap="removeChip"
     >
       <text class="filter-chip-text">{{item.label}}</text>
@@ -46,7 +58,7 @@
   </view>
 </scroll-view>
 
-<!-- 底部筛选面板：分区平铺，点选即改草稿；点「确定」一次性回传。 -->
+<!-- 底部筛选面板：分区平铺 + 分字段搜索；点「确定」一次性回传。 -->
 <t-popup
   visible="{{visible}}"
   placement="bottom"
@@ -60,23 +72,110 @@
         <t-icon name="close" size="36rpx" />
       </view>
     </view>
+
     <scroll-view class="filter-sheet-body" scroll-y enhanced show-scrollbar="{{false}}">
+      <!-- 分字段搜索：需要同时限定多个字段时才用，条件从 1 行起按需增长。 -->
+      <view wx:if="{{searchFieldOptions.length > 1}}" class="filter-section">
+        <view class="filter-section-title">{{i18n.filterFieldSearch}}</view>
+        <view class="filter-condition-add">
+          <view
+            class="filter-condition-field"
+            hover-class="filter-chip-hover"
+            aria-role="button"
+            bind:tap="openConditionFieldPicker"
+          >
+            <text class="filter-condition-field-text">{{conditionFieldLabel}}</text>
+            <t-icon name="chevron-down" size="22rpx" />
+          </view>
+          <input
+            class="filter-condition-input"
+            value="{{conditionValue}}"
+            placeholder="{{i18n.filterFieldValuePlaceholder}}"
+            confirm-type="done"
+            bind:input="onConditionValueInput"
+            bind:confirm="addCondition"
+          />
+          <view
+            class="filter-condition-add-btn {{conditionValue ? '' : 'filter-condition-add-btn-disabled'}}"
+            hover-class="filter-chip-hover"
+            bind:tap="addCondition"
+          >{{i18n.filterFieldAdd}}</view>
+        </view>
+        <view wx:if="{{draftConditions.length}}" class="filter-conditions">
+          <view
+            wx:for="{{draftConditions}}"
+            wx:key="field"
+            class="filter-chip filter-chip-editable"
+            data-index="{{index}}"
+            bind:tap="removeCondition"
+          >
+            <text class="filter-chip-text">{{item.display}}</text>
+            <t-icon class="filter-chip-close" name="close" size="24rpx" />
+          </view>
+        </view>
+      </view>
+
       <view wx:for="{{sectionsView}}" wx:key="key" class="filter-section">
         <view class="filter-section-title">{{item.title}}</view>
-        <view class="filter-options">
+
+        <!-- 数值区间：上下限两个输入框 -->
+        <view wx:if="{{item.kind === 'range'}}" class="filter-range">
+          <input
+            class="filter-range-input"
+            type="digit"
+            value="{{item.rangeFrom}}"
+            placeholder="{{item.fromLabel}}"
+            data-section="{{item.key}}"
+            data-bound="from"
+            bind:input="onRangeInput"
+          />
+          <text class="filter-range-sep">~</text>
+          <input
+            class="filter-range-input"
+            type="digit"
+            value="{{item.rangeTo}}"
+            placeholder="{{item.toLabel}}"
+            data-section="{{item.key}}"
+            data-bound="to"
+            bind:input="onRangeInput"
+          />
+        </view>
+
+        <!-- 日期区间：交给 t-date-time-picker 的原生选择器，避免手输日期 -->
+        <view wx:elif="{{item.kind === 'dateRange'}}" class="filter-range">
           <view
-            class="filter-option {{option.selected ? 'filter-option-selected' : ''}}"
-            hover-class="filter-option-hover"
+            class="filter-date-btn"
+            hover-class="filter-chip-hover"
+            data-section="{{item.key}}"
+            data-bound="from"
+            bind:tap="openDatePicker"
+          >{{item.rangeFrom || item.fromLabel}}</view>
+          <text class="filter-range-sep">~</text>
+          <view
+            class="filter-date-btn"
+            hover-class="filter-chip-hover"
+            data-section="{{item.key}}"
+            data-bound="to"
+            bind:tap="openDatePicker"
+          >{{item.rangeTo || item.toLabel}}</view>
+        </view>
+
+        <!-- 单选 / 多选胶囊 -->
+        <view wx:else class="filter-options">
+          <view
             wx:for="{{item.options}}"
             wx:for-item="option"
             wx:key="value"
+            class="filter-option {{option.selected ? 'filter-option-selected' : ''}}"
+            hover-class="filter-option-hover"
             data-section="{{item.key}}"
             data-value="{{option.value}}"
-            bind:tap="selectOption"
+            bind:tap="{{item.kind === 'multi' ? 'toggleOption' : 'selectOption'}}"
           >{{option.label}}</view>
         </view>
       </view>
     </scroll-view>
+
     <view class="filter-sheet-actions">
       <t-button
         class="filter-action"
@@ -91,3 +190,47 @@
     </view>
   </view>
 </t-popup>
+
+<!-- 搜索字段选择器（收起态） -->
+<t-picker
+  visible="{{searchFieldPickerVisible}}"
+  title="{{i18n.filterFieldLabel}}"
+  cancel-btn="{{i18n.cancel}}"
+  confirm-btn="{{i18n.confirm}}"
+  value="{{[searchFieldIndex]}}"
+  popup-props="{{pickerPopupProps}}"
+  bind:confirm="onSearchFieldPickerConfirm"
+  bind:cancel="onSearchFieldPickerVisibleChange"
+  bind:visible-change="onSearchFieldPickerVisibleChange"
+>
+  <t-picker-item options="{{searchFieldOptions}}" />
+</t-picker>
+
+<!-- 分字段条件里的字段选择器 -->
+<t-picker
+  visible="{{conditionFieldPickerVisible}}"
+  title="{{i18n.filterFieldLabel}}"
+  cancel-btn="{{i18n.cancel}}"
+  confirm-btn="{{i18n.confirm}}"
+  value="{{[searchFieldIndex]}}"
+  popup-props="{{pickerPopupProps}}"
+  bind:confirm="onConditionFieldPickerConfirm"
+  bind:cancel="onConditionFieldPickerVisibleChange"
+  bind:visible-change="onConditionFieldPickerVisibleChange"
+>
+  <t-picker-item options="{{searchFieldOptions}}" />
+</t-picker>
+
+<!-- 日期区间端点选择器 -->
+<t-date-time-picker
+  visible="{{datePickerVisible}}"
+  mode="date"
+  title="{{i18n.filterDateLabel}}"
+  value="{{datePickerValue}}"
+  format="YYYY-MM-DD"
+  cancel-btn="{{i18n.cancel}}"
+  confirm-btn="{{i18n.confirm}}"
+  popup-props="{{pickerPopupProps}}"
+  bind:confirm="onDatePickerConfirm"
+  bind:visible-change="onDatePickerVisibleChange"
+/>

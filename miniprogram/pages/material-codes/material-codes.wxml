@@ -2,12 +2,14 @@
   <view class="list-header"><view class="page-title">{{i18n.materialCodesTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
-    <t-search
-      value="{{keyword}}"
+    <filter-panel
+      keyword="{{keyword}}"
       placeholder="{{i18n.materialCodeSearchPlaceholder}}"
-      shape="round"
-      confirm-type="search"
-      bind:change="onSearchChange"
+      search-fields="{{searchFields}}"
+      search-field="{{searchField}}"
+      field-conditions="{{fieldConditions}}"
+      bind:search="onSearchChange"
+      bind:change="onFilterChange"
     />
   </view>
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>

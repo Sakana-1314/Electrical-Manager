@@ -477,6 +477,31 @@ if (themedPage.data.i18n === undefined) {
   if (!panelScript.includes('draft') || !panelScript.includes('confirmSheet')) {
     throw new Error('The filter panel must keep a draft and apply it on confirm.');
   }
+  // 分字段搜索：搜索框左侧的字段选择器 + 面板里的条件行，两者都在同一个组件里。
+  for (const snippet of ['searchFields', 'fieldConditions', 'addCondition', 'toggleOption', 'openDatePicker']) {
+    if (!panelScript.includes(snippet)) {
+      throw new Error(`components/filter-panel must support field search / multi / range: ${snippet}`);
+    }
+  }
+  if (!panelMarkup.includes('openSearchFieldPicker') || !panelMarkup.includes('filter-condition-add')) {
+    throw new Error('components/filter-panel/filter-panel.wxml must render the field selector and condition row.');
+  }
+  for (const kind of ["'multi'", "'range'", "'dateRange'"]) {
+    if (!panelMarkup.includes(kind)) {
+      throw new Error(`components/filter-panel/filter-panel.wxml must render the ${kind} section kind.`);
+    }
+  }
+  const panelConfig = JSON.parse(read('components/filter-panel/filter-panel.json'));
+  const panelComponents = Object.values(panelConfig.usingComponents || {});
+  for (const component of [
+    'tdesign-miniprogram/date-time-picker/date-time-picker',
+    'tdesign-miniprogram/picker/picker',
+    'tdesign-miniprogram/picker-item/picker-item',
+  ]) {
+    if (!panelComponents.includes(component)) {
+      throw new Error(`components/filter-panel/filter-panel.json must register ${component}.`);
+    }
+  }
 
   for (const page of [
     'inventory/inventory',
@@ -506,6 +531,37 @@ if (themedPage.data.i18n === undefined) {
       if (!script.includes(snippet)) {
         throw new Error(`pages/${page}.js must feed the filter panel: ${snippet}`);
       }
+    }
+    // 分字段搜索要接上：字段候选 / 当前字段 / 条件都要传给组件，否则搜索框只剩综合搜索。
+    for (const snippet of [
+      'SEARCH_FIELDS',
+      'searchFields',
+      'search-fields="{{searchFields}}"',
+      'field-conditions="{{fieldConditions}}"',
+      'buildSearchQuery',
+    ]) {
+      const source = snippet.indexOf('{{') >= 0 ? markup : script;
+      if (!source.includes(snippet)) {
+        throw new Error(`pages/${page} must wire the field search: ${snippet}`);
+      }
+    }
+  }
+
+  // 物料编码 / 台账同样用共享面板（前者只有分字段搜索，后者只有标签筛选）。
+  for (const page of ['material-codes/material-codes', 'ledger/ledger']) {
+    const markup = read(`pages/${page}.wxml`);
+    if (!markup.includes('<filter-panel')) {
+      throw new Error(`pages/${page}.wxml must use the shared filter panel.`);
+    }
+    if (markup.includes('<t-search')) {
+      throw new Error(`pages/${page}.wxml must not keep a bare t-search outside the panel.`);
+    }
+    const config = JSON.parse(read(`pages/${page}.json`));
+    if (!Object.values(config.usingComponents || {}).includes('/components/filter-panel/filter-panel')) {
+      throw new Error(`pages/${page}.json must register the shared filter panel.`);
+    }
+    if (!read(`pages/${page}.js`).includes('onFilterChange')) {
+      throw new Error(`pages/${page}.js must handle filter panel changes.`);
     }
   }
 
@@ -595,7 +651,7 @@ if (themedPage.data.i18n === undefined) {
     }
   }
   const listMarkup = read('pages/ledger/ledger.wxml');
-  for (const snippet of ['t-search', 'i18n.ledgerSearchPlaceholder', 'resultCount', 't-empty']) {
+  for (const snippet of ['filter-panel', 'i18n.ledgerSearchPlaceholder', 'resultCount', 't-empty']) {
     if (!listMarkup.includes(snippet)) {
       throw new Error(`pages/ledger/ledger.wxml must render search and results: ${snippet}`);
     }
@@ -884,18 +940,23 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     }
   }
 
-  // 分享值可能已不在候选项里：每个筛选分区都必须把缺失的分享值补成选项（面板才能回显），
-  // 固定枚举（库存状态、隐患状态 / 等级、仅逾期）必须白名单校验后再采用。
+  // 分享值可能已不在候选项里：候选来自库中已有值的分区必须把缺失值补进选项（面板才能回显）；
+  // 固定枚举分区（库存状态、隐患状态 / 等级、仅逾期）必须白名单校验后再采用。
   for (const page of [
-    'inventory/inventory',
     'huaxing-inventory/huaxing-inventory',
     'purchase-plans/purchase-plans',
     'purchase-records/purchase-records',
     'hazards/hazards',
+    'ledger/ledger',
   ]) {
-    if (!read(`pages/${page}.js`).includes('buildSection(')) {
+    const script = read(`pages/${page}.js`);
+    // 补选项的写法可以是 buildSection（统一入口）或 section 内 splice（台账只有一维）。
+    if (!script.includes('buildSection(') && !script.includes('options.splice(1, 0')) {
       throw new Error(`pages/${page}.js must append missing shared filter options.`);
     }
+  }
+  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
+    throw new Error('pages/inventory/inventory.js must validate the shared stock status enum.');
   }
   if (!read('pages/hazards/hazards.js').includes('isAllowedShareValue(shared[key]')) {
     throw new Error('pages/hazards/hazards.js must validate the shared status / level enums.');

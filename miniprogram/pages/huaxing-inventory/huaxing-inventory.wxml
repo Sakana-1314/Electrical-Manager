@@ -7,6 +7,9 @@
       placeholder="{{i18n.huaxingInventorySearchPlaceholder}}"
       sections="{{filterSections}}"
       active="{{filters}}"
+      search-fields="{{searchFields}}"
+      search-field="{{searchField}}"
+      field-conditions="{{fieldConditions}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />

@@ -10,6 +10,33 @@
   min-width: 0;
 }
 
+/* 搜索字段选择器：贴在搜索框左侧，固定在 1/3 屏宽内，避免挤掉搜索输入区。 */
+.filter-field {
+  display: flex;
+  flex: none;
+  max-width: 200rpx;
+  height: 80rpx;
+  align-items: center;
+  gap: 4rpx;
+  padding: 0 16rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 20rpx;
+  background: var(--app-surface-soft);
+  color: var(--app-text);
+}
+
+.filter-field-text {
+  overflow: hidden;
+  font-size: 23rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-field-arrow {
+  flex: none;
+  color: var(--app-text-placeholder);
+}
+
 .filter-trigger {
   position: relative;
   display: flex;
@@ -195,4 +222,115 @@
 
 .filter-action {
   flex: 1;
+}
+
+/* ---- 分字段搜索 ---- */
+
+/* 一行 [字段][值][添加]：字段与按钮固定宽度，输入框吃掉剩余空间。 */
+.filter-condition-add {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.filter-condition-field {
+  display: flex;
+  flex: none;
+  max-width: 190rpx;
+  height: 72rpx;
+  align-items: center;
+  gap: 4rpx;
+  padding: 0 14rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 16rpx;
+  background: var(--app-surface-soft);
+  color: var(--app-text);
+}
+
+.filter-condition-field-text {
+  overflow: hidden;
+  font-size: 23rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-condition-input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 72rpx;
+  padding: 0 18rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 16rpx;
+  background: var(--app-form-surface);
+  color: var(--app-text-strong);
+  font-size: 25rpx;
+}
+
+.filter-condition-add-btn {
+  flex: none;
+  padding: 0 22rpx;
+  height: 72rpx;
+  border-radius: 16rpx;
+  background: var(--app-brand);
+  color: var(--app-on-brand);
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 72rpx;
+}
+
+/* 值为空时按钮只是占位，点了不会添加任何条件。 */
+.filter-condition-add-btn-disabled {
+  background: var(--app-brand-disabled);
+}
+
+/* 已添加的分字段条件：可点删除。 */
+.filter-conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.filter-chip-editable {
+  border-color: var(--app-brand-border);
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
+}
+
+/* ---- 数值 / 日期区间 ---- */
+
+.filter-range {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.filter-range-input,
+.filter-date-btn {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 72rpx;
+  padding: 0 18rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 16rpx;
+  background: var(--app-form-surface);
+  color: var(--app-text-strong);
+  font-size: 25rpx;
+}
+
+/* 日期按钮是 view 而不是 input：垂直居中靠行高而非 flex 对齐。 */
+.filter-date-btn {
+  overflow: hidden;
+  line-height: 72rpx;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-range-sep {
+  flex: none;
+  color: var(--app-text-placeholder);
+  font-size: 24rpx;
 }
