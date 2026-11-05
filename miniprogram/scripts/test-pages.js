@@ -284,6 +284,47 @@ async function run() {
   fieldPanel.clearField({ currentTarget: { dataset: { field: 'modelSpec' } } });
   assert(fieldPanel.data.draftFields.modelSpec === undefined, 'clearField drops that field only');
 
+  // ===== 重置：清空并立即生效（不留角标） =====
+  const resetPanel = loadFilterPanel();
+  resetPanel.setProperty('sections', [
+    {
+      key: 'status',
+      title: '状态',
+      kind: 'single',
+      options: [
+        { label: '全部', value: '' },
+        { label: '待整改', value: '待整改' },
+      ],
+    },
+    {
+      key: 'stockQty',
+      title: '数量',
+      kind: 'range',
+      fromLabel: '最小值',
+      toLabel: '最大值',
+    },
+  ]);
+  resetPanel.setProperty('fieldDefs', [{ key: 'name', label: '物资名称' }]);
+  resetPanel.setProperty('active', { status: '待整改', stockQty: { from: '1', to: '9' } });
+  resetPanel.setProperty('fieldValues', { name: '接触器' });
+  resetPanel.refresh();
+  assert(resetPanel.data.activeCount === 3, 'three active conditions must count');
+  // 打开面板后点「重置」
+  resetPanel.openSheet();
+  resetPanel.resetDraft();
+  const resetEvent = resetPanel.events.pop();
+  assert(resetEvent && resetEvent.name === 'change', 'reset must emit change immediately');
+  assert(
+    Object.keys(resetEvent.detail.values).length === 0,
+    'reset must clear every section value',
+  );
+  assert(
+    Object.keys(resetEvent.detail.fields).length === 0,
+    'reset must clear every field value',
+  );
+  assert(resetPanel.data.visible === false, 'reset must close the sheet');
+  assert(resetPanel.data.draft.status === undefined, 'reset must clear the draft too');
+
   // 面板收到 optionsFailed 后点「重新加载」要发出 retryoptions（页面据此重拉）
   panel.setProperty('optionsFailed', true);
   panel.retryOptions();
@@ -471,6 +512,28 @@ async function run() {
   assert(huaxingRequest.data.purchaser === '吴冰', 'purchaser must be sent');
   assert(huaxingRequest.data.date_from === '2026-01-01', 'inbound date from must be sent');
   assert(huaxingRequest.data.date_to === undefined, 'empty date to must be omitted');
+
+  // ===== 重置后角标归零并重查（页面侧） =====
+  requests.length = 0;
+  page = await mountPage('pages/purchase-records/purchase-records.js');
+  page.onFilterChange({
+    detail: { values: { status: '已入库', category: '备品备件' }, fields: { name: '接触器' } },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert(page.data.filtered === true, 'conditions must mark the page as filtered');
+  // 面板「重置」回传空值：页面必须清空并重查
+  requests.length = 0;
+  page.onFilterChange({ detail: { values: {}, fields: {} } });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert(page.data.filtered === false, 'reset must clear the filtered flag');
+  assert(
+    Object.keys(page.data.fieldValues).length === 0,
+    'reset must clear field values on the page',
+  );
+  const afterReset = requests.filter((item) => item.url === '/mini-program/purchase-records').pop();
+  assert(afterReset, 'reset must refetch the list');
+  assert(afterReset.data.status === undefined, 'reset must not send the old status');
+  assert(afterReset.data.name === undefined, 'reset must not send the old field value');
 
   // ===== 筛选项加载失败：不弹打断式提示，面板给「重新加载」 =====
   global.__cachedFail = { '/mini-program/hazards/filter-options': true };
