@@ -141,6 +141,7 @@
       </view>
     </scroll-view>
 
+    <!-- 「重置」清空并立即生效（同时收起面板）；「确定」提交面板里的草稿。 -->
     <view class="filter-sheet-actions">
       <t-button
         class="filter-action"

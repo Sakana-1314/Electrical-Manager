@@ -477,6 +477,19 @@ if (themedPage.data.i18n === undefined) {
   if (panelMarkup.includes('filter-chips') || panelScript.includes('removeChip')) {
     throw new Error('The collapsed filter bar must not render selected-condition chips.');
   }
+  // 「重置」必须清空并立即生效：只清草稿会让角标继续挂着已生效的条件，和按钮文案不符。
+  // 取 resetDraft 的函数体（到下一个行首的四个空格 + ` },` 为止），要求同时清草稿并发 change。
+  const resetStart = panelScript.indexOf('resetDraft() {');
+  const resetEnd = resetStart < 0 ? -1 : panelScript.indexOf('\n    },', resetStart);
+  if (resetStart < 0 || resetEnd < 0) {
+    throw new Error('components/filter-panel must keep a resetDraft handler.');
+  }
+  const resetBody = panelScript.slice(resetStart, resetEnd);
+  for (const snippet of ['draftFields: {}', "triggerEvent('change'"]) {
+    if (!resetBody.includes(snippet)) {
+      throw new Error(`The filter panel reset must apply immediately: missing ${snippet}`);
+    }
+  }
   // 面板里点选项只改草稿，必须先点「确定」才回传：草稿与已生效值分两个字段。
   if (!panelScript.includes('draft') || !panelScript.includes('confirmSheet')) {
     throw new Error('The filter panel must keep a draft and apply it on confirm.');

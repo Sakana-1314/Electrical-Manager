@@ -292,8 +292,16 @@ Component({
 
     // ---------------- 确认 / 重置 / 胶囊 ----------------
 
+    /**
+     * 「重置」：清空全部条件并**立即生效**（不等「确定」）。
+     *
+     * 之前的实现只清面板草稿，已生效的筛选仍在，收起后角标照样显示——和「重置」的字面意思
+     * 冲突（用户以为已经清掉了）。这里改成清空即提交：草稿与已生效值一起归零，
+     * 发一次 `change` 让页面重查，面板同时收起。
+     */
     resetDraft() {
-      this.setData({ draft: {}, draftFields: {} });
+      this.setData({ draft: {}, draftFields: {}, visible: false });
+      this.triggerEvent('change', { values: {}, fields: {} });
       this.refresh();
     },
 
