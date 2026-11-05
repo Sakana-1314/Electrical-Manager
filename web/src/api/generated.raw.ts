@@ -1157,6 +1157,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mini-program/ledger-items/tag-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 台账标签筛选
+         * @description 台账标签的筛选候选值：平铺返回 id / 名称 / 完整层级路径。
+         */
+        get: operations["mini_program_ledger_items_tag_options_api_v1_mini_program_ledger_items_tag_options_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mini-program/ledger-items/{item_id}": {
         parameters: {
             query?: never;
@@ -3337,6 +3357,47 @@ export interface components {
             after_image_ids?: string[];
         };
         /**
+         * MiniProgramHazardFilterOptions
+         * @description 小程序隐患列表的筛选项：整改员工（库中已有值去重）+ 责任单位 + 隐患类型。
+         * @example {
+         *       "rectify_persons": [
+         *         "何丽娟",
+         *         "周立新",
+         *         "孙浩宇"
+         *       ],
+         *       "units": [
+         *         {
+         *           "id": 1,
+         *           "name": "电气检修一班",
+         *           "person": "李建军",
+         *           "remark": null,
+         *           "enabled": true,
+         *           "created_at": "2026-06-05T09:10:00+08:00",
+         *           "updated_at": "2026-06-05T09:10:00+08:00",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "types": [
+         *         {
+         *           "id": 1,
+         *           "major": "电气",
+         *           "minor": "绝缘破损",
+         *           "created_at": "2026-06-05T09:10:00+08:00",
+         *           "updated_at": "2026-06-05T09:10:00+08:00",
+         *           "version": 1
+         *         }
+         *       ]
+         *     }
+         */
+        MiniProgramHazardFilterOptions: {
+            /** Rectify Persons */
+            rectify_persons: string[];
+            /** Units */
+            units: components["schemas"]["HazardUnitRead"][];
+            /** Types */
+            types: components["schemas"]["HazardTypeRead"][];
+        };
+        /**
          * HazardFilterOptionsRead
          * @description 隐患列表筛选项：整改员工是自由文本，选项由库中已有值去重得出。
          * @example {
@@ -4700,6 +4761,22 @@ export interface components {
             images?: components["schemas"]["FileObjectRead"][];
         };
         /**
+         * MiniProgramLedgerTagOption
+         * @example {
+         *       "id": 1,
+         *       "name": "电气",
+         *       "path": "电气"
+         *     }
+         */
+        MiniProgramLedgerTagOption: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Path */
+            path: string;
+        };
+        /**
          * MiniProgramLedgerItemRead
          * @description 小程序台账列表行：只带列表要展示的字段（名称 / 型号 / 子项号 / 数量与单位）。
          * @example {
@@ -5164,6 +5241,14 @@ export interface components {
          *         "王海涛",
          *         "陈志远"
          *       ],
+         *       "purchase_responsibles": [
+         *         "吴德海",
+         *         "郑文斌",
+         *         "黄立群"
+         *       ],
+         *       "demand_departments": [
+         *         "检修维护部电气自动化车间"
+         *       ],
          *       "subitem_nos": [
          *         "201",
          *         "202",
@@ -5186,6 +5271,10 @@ export interface components {
         MiniProgramPurchasePlanFilterOptions: {
             /** Actual Demand Persons */
             actual_demand_persons: string[];
+            /** Purchase Responsibles */
+            purchase_responsibles: string[];
+            /** Demand Departments */
+            demand_departments: string[];
             /** Subitem Nos */
             subitem_nos: string[];
             /** Urgencies */
@@ -5264,6 +5353,11 @@ export interface components {
          *         "杨明辉",
          *         "周立新",
          *         "孙浩宇"
+         *       ],
+         *       "purchase_responsibles": [
+         *         "吴德海",
+         *         "郑文斌",
+         *         "黄立群"
          *       ]
          *     }
          */
@@ -5278,6 +5372,8 @@ export interface components {
             salespersons: string[];
             /** Actual Demand Persons */
             actual_demand_persons: string[];
+            /** Purchase Responsibles */
+            purchase_responsibles: string[];
         };
         /**
          * MiniProgramPurchaseRecordItemRead
@@ -22872,6 +22968,10 @@ export interface operations {
                 page_size?: number;
                 keyword?: string | null;
                 stock_status?: components["schemas"]["MiniProgramStockStatus"] | null;
+                name?: string | null;
+                model_spec?: string | null;
+                min_qty?: string | null;
+                max_qty?: string | null;
             };
             header?: {
                 "Accept-Language"?: string | null;
@@ -23345,6 +23445,13 @@ export interface operations {
                 subitem_no?: string | null;
                 urgency?: string | null;
                 category?: string | null;
+                name?: string | null;
+                model_spec?: string | null;
+                material_code?: string | null;
+                purchase_responsible?: string | null;
+                demand_department?: string | null;
+                plan_date_from?: string | null;
+                plan_date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -23555,6 +23662,14 @@ export interface operations {
                      *         "王海涛",
                      *         "陈志远"
                      *       ],
+                     *       "purchase_responsibles": [
+                     *         "吴德海",
+                     *         "郑文斌",
+                     *         "黄立群"
+                     *       ],
+                     *       "demand_departments": [
+                     *         "检修维护部电气自动化车间"
+                     *       ],
                      *       "subitem_nos": [
                      *         "201",
                      *         "202",
@@ -23675,6 +23790,13 @@ export interface operations {
                 category?: string | null;
                 salesperson?: string | null;
                 actual_demand_person?: string | null;
+                name?: string | null;
+                model_spec?: string | null;
+                material_code?: string | null;
+                trace_no?: string | null;
+                purchase_order_no?: string | null;
+                usage?: string | null;
+                purchase_responsible?: string | null;
             };
             header?: never;
             path?: never;
@@ -23982,6 +24104,11 @@ export interface operations {
                      *         "杨明辉",
                      *         "周立新",
                      *         "孙浩宇"
+                     *       ],
+                     *       "purchase_responsibles": [
+                     *         "吴德海",
+                     *         "郑文斌",
+                     *         "黄立群"
                      *       ]
                      *     }
                      */
@@ -24220,6 +24347,9 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 keyword?: string | null;
+                name?: string | null;
+                model_spec?: string | null;
+                material_code?: string | null;
             };
             header?: never;
             path?: never;
@@ -24404,6 +24534,11 @@ export interface operations {
                 keyword?: string | null;
                 purchase_department?: string | null;
                 purchaser?: string | null;
+                name?: string | null;
+                model_spec?: string | null;
+                material_code?: string | null;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -24939,6 +25074,7 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 keyword?: string | null;
+                tag_ids?: string | null;
             };
             header?: never;
             path?: never;
@@ -25002,6 +25138,125 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["Page_MiniProgramLedgerItemRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_ledger_items_tag_options_api_v1_mini_program_ledger_items_tag_options_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 1,
+                     *         "name": "电气",
+                     *         "path": "电气"
+                     *       },
+                     *       {
+                     *         "id": 2,
+                     *         "name": "电机",
+                     *         "path": "电气 / 电机"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["MiniProgramLedgerTagOption"][];
                 };
             };
             /** @description 业务校验失败 */
@@ -25914,6 +26169,11 @@ export interface operations {
                 rectify_person?: string | null;
                 level?: components["schemas"]["HazardLevel"] | null;
                 overdue?: boolean;
+                area?: string | null;
+                hazard_type_id?: number | null;
+                hazard_unit_id?: number | null;
+                date_from?: string | null;
+                date_to?: string | null;
             };
             header?: never;
             path?: never;
@@ -26406,10 +26666,32 @@ export interface operations {
                      *         "周立新",
                      *         "孙浩宇",
                      *         "杨明辉"
+                     *       ],
+                     *       "units": [
+                     *         {
+                     *           "id": 1,
+                     *           "name": "电气车间",
+                     *           "person": "李建军",
+                     *           "remark": "厂区高低压配电、动力电缆与电气设备的日常检修维护",
+                     *           "enabled": true,
+                     *           "created_at": "2026-06-05T09:10:00+08:00",
+                     *           "updated_at": "2026-06-05T09:10:00+08:00",
+                     *           "version": 1
+                     *         }
+                     *       ],
+                     *       "types": [
+                     *         {
+                     *           "id": 3,
+                     *           "major": "电气设备",
+                     *           "minor": "绝缘破损",
+                     *           "created_at": "2026-08-20T09:20:00+08:00",
+                     *           "updated_at": "2026-08-20T09:20:00+08:00",
+                     *           "version": 1
+                     *         }
                      *       ]
                      *     }
                      */
-                    "application/json": components["schemas"]["HazardFilterOptionsRead"];
+                    "application/json": components["schemas"]["MiniProgramHazardFilterOptions"];
                 };
             };
             /** @description 业务校验失败 */

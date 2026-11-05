@@ -7885,6 +7885,46 @@ paths:
           - $ref: '#/components/schemas/MiniProgramStockStatus'
           - type: 'null'
           title: Stock Status
+      - name: name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配名称 / 印尼语名称 / 别名
+          title: Name
+      - name: model_spec
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配型号规格
+          title: Model Spec
+      - name: min_qty
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+          - type: 'null'
+          description: 库存数量下限（含）
+          title: Min Qty
+      - name: max_qty
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+          - type: 'null'
+          description: 库存数量上限（含）
+          title: Max Qty
       - name: Accept-Language
         in: header
         required: false
@@ -8298,6 +8338,76 @@ paths:
           - type: 'null'
           description: 类别（精确匹配，取值见 filter-options 的 categories）
           title: Category
+      - name: name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配物资名称
+          title: Name
+      - name: model_spec
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配型号规格
+          title: Model Spec
+      - name: material_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 分字段搜索：只匹配物料编码
+          title: Material Code
+      - name: purchase_responsible
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 实际需求人（包含匹配，可用 | 或 ｜ 分隔多个关键词）
+          title: Purchase Responsible
+      - name: demand_department
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 需求部门（精确匹配）
+          title: Demand Department
+      - name: plan_date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 计划日期起（含）
+          title: Plan Date From
+      - name: plan_date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 计划日期止（含）
+          title: Plan Date To
       responses:
         '200':
           description: Successful Response
@@ -8447,6 +8557,12 @@ paths:
                 - 杨明辉
                 - 王海涛
                 - 陈志远
+                purchase_responsibles:
+                - 吴德海
+                - 郑文斌
+                - 黄立群
+                demand_departments:
+                - 检修维护部电气自动化车间
                 subitem_nos:
                 - '201'
                 - '202'
@@ -8601,6 +8717,76 @@ paths:
           - type: 'null'
           description: 可使用 | 或 ｜ 分隔多个关键词，同一参数内匹配任意关键词
           title: Actual Demand Person
+      - name: name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配物资名称
+          title: Name
+      - name: model_spec
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配型号规格
+          title: Model Spec
+      - name: material_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 分字段搜索：只匹配物料编码
+          title: Material Code
+      - name: trace_no
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 分字段搜索：只匹配追溯号
+          title: Trace No
+      - name: purchase_order_no
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 分字段搜索：只匹配申购单号
+          title: Purchase Order No
+      - name: usage
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          description: 分字段搜索：只匹配用途
+          title: Usage
+      - name: purchase_responsible
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 实际需求人（包含匹配，可用 | 或 ｜ 分隔多个关键词）
+          title: Purchase Responsible
       responses:
         '200':
           description: Successful Response
@@ -8846,6 +9032,10 @@ paths:
                 - 杨明辉
                 - 周立新
                 - 孙浩宇
+                purchase_responsibles:
+                - 吴德海
+                - 郑文斌
+                - 黄立群
         '400':
           description: 业务校验失败
           content:
@@ -9044,6 +9234,36 @@ paths:
             maxLength: 255
           - type: 'null'
           title: Keyword
+      - name: name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配物资名称
+          title: Name
+      - name: model_spec
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配型号规格
+          title: Model Spec
+      - name: material_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 分字段搜索：只匹配物料编码
+          title: Material Code
       responses:
         '200':
           description: Successful Response
@@ -9214,6 +9434,56 @@ paths:
           - type: 'null'
           description: 申购人（精确匹配，可用 | 或 ｜ 分隔多个值）
           title: Purchaser
+      - name: name
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配货品名称
+          title: Name
+      - name: model_spec
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          description: 分字段搜索：只匹配型号
+          title: Model Spec
+      - name: material_code
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 64
+          - type: 'null'
+          description: 分字段搜索：只匹配货品编码
+          title: Material Code
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 首次入库日期起（含）
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 首次入库日期止（含）
+          title: Date To
       responses:
         '200':
           description: Successful Response
@@ -9605,6 +9875,16 @@ paths:
             maxLength: 255
           - type: 'null'
           title: Keyword
+      - name: tag_ids
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 500
+          - type: 'null'
+          description: 英文逗号分隔的标签 id（选中父标签会一并包含子标签）
+          title: Tag Ids
       responses:
         '200':
           description: Successful Response
@@ -9647,6 +9927,86 @@ paths:
                 page: 1
                 page_size: 20
                 total: 5
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/ledger-items/tag-options:
+    get:
+      tags:
+      - 小程序
+      summary: 台账标签筛选
+      description: 台账标签的筛选候选值：平铺返回 id / 名称 / 完整层级路径。
+      operationId: mini_program_ledger_items_tag_options_api_v1_mini_program_ledger_items_tag_options_get
+      security:
+      - HTTPBearer: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MiniProgramLedgerTagOption'
+              example:
+              - id: 1
+                name: 电气
+                path: 电气
+              - id: 2
+                name: 电机
+                path: 电气 / 电机
         '400':
           description: 业务校验失败
           content:
@@ -10364,6 +10724,56 @@ paths:
           default: false
           description: 只看逾期未整改（未「已整改」且整改期限早于今天）
           title: Overdue
+      - name: area
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          description: 分字段搜索：只匹配检查区域
+          title: Area
+      - name: hazard_type_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: 隐患类型 id（取值见 filter-options 的 types）
+          title: Hazard Type Id
+      - name: hazard_unit_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          description: 责任单位 id（取值见 filter-options 的 units）
+          title: Hazard Unit Id
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 检查日期起（含）
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date
+          - type: 'null'
+          description: 检查日期止（含）
+          title: Date To
       responses:
         '200':
           description: Successful Response
@@ -10728,13 +11138,29 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HazardFilterOptionsRead'
+                $ref: '#/components/schemas/MiniProgramHazardFilterOptions'
               example:
                 rectify_persons:
                 - 何丽娟
                 - 周立新
                 - 孙浩宇
                 - 杨明辉
+                units:
+                - id: 1
+                  name: 电气车间
+                  person: 李建军
+                  remark: 厂区高低压配电、动力电缆与电气设备的日常检修维护
+                  enabled: true
+                  created_at: '2026-06-05T09:10:00+08:00'
+                  updated_at: '2026-06-05T09:10:00+08:00'
+                  version: 1
+                types:
+                - id: 3
+                  major: 电气设备
+                  minor: 绝缘破损
+                  created_at: '2026-08-20T09:20:00+08:00'
+                  updated_at: '2026-08-20T09:20:00+08:00'
+                  version: 1
         '400':
           description: 业务校验失败
           content:
@@ -24333,6 +24759,51 @@ components:
         before_image_ids:
         - 6280e904-3c11-7dad-83a4-d2f8b4a9979d
         after_image_ids: []
+    MiniProgramHazardFilterOptions:
+      properties:
+        rectify_persons:
+          items:
+            type: string
+          type: array
+          title: Rectify Persons
+        units:
+          items:
+            $ref: '#/components/schemas/HazardUnitRead'
+          type: array
+          title: Units
+        types:
+          items:
+            $ref: '#/components/schemas/HazardTypeRead'
+          type: array
+          title: Types
+      type: object
+      required:
+      - rectify_persons
+      - units
+      - types
+      title: MiniProgramHazardFilterOptions
+      description: 小程序隐患列表的筛选项：整改员工（库中已有值去重）+ 责任单位 + 隐患类型。
+      examples:
+      - rectify_persons:
+        - 何丽娟
+        - 周立新
+        - 孙浩宇
+        units:
+        - id: 1
+          name: 电气检修一班
+          person: 李建军
+          remark: null
+          enabled: true
+          created_at: '2026-06-05T09:10:00+08:00'
+          updated_at: '2026-06-05T09:10:00+08:00'
+          version: 1
+        types:
+        - id: 1
+          major: 电气
+          minor: 绝缘破损
+          created_at: '2026-06-05T09:10:00+08:00'
+          updated_at: '2026-06-05T09:10:00+08:00'
+          version: 1
     HazardFilterOptionsRead:
       properties:
         rectify_persons:
@@ -26328,6 +26799,27 @@ components:
         created_at: '2026-09-02T10:20:00+08:00'
         updated_at: '2026-09-11T14:05:00+08:00'
         version: 1
+    MiniProgramLedgerTagOption:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - id
+      - name
+      - path
+      title: MiniProgramLedgerTagOption
+      examples:
+      - id: 1
+        name: 电气
+        path: 电气
     MiniProgramLedgerItemRead:
       properties:
         id:
@@ -26959,6 +27451,16 @@ components:
             type: string
           type: array
           title: Actual Demand Persons
+        purchase_responsibles:
+          items:
+            type: string
+          type: array
+          title: Purchase Responsibles
+        demand_departments:
+          items:
+            type: string
+          type: array
+          title: Demand Departments
         subitem_nos:
           items:
             type: string
@@ -26977,6 +27479,8 @@ components:
       type: object
       required:
       - actual_demand_persons
+      - purchase_responsibles
+      - demand_departments
       - subitem_nos
       - urgencies
       - categories
@@ -26990,6 +27494,12 @@ components:
         - 杨明辉
         - 王海涛
         - 陈志远
+        purchase_responsibles:
+        - 吴德海
+        - 郑文斌
+        - 黄立群
+        demand_departments:
+        - 检修维护部电气自动化车间
         subitem_nos:
         - '201'
         - '202'
@@ -27088,6 +27598,11 @@ components:
             type: string
           type: array
           title: Actual Demand Persons
+        purchase_responsibles:
+          items:
+            type: string
+          type: array
+          title: Purchase Responsibles
       type: object
       required:
       - statuses
@@ -27095,6 +27610,7 @@ components:
       - categories
       - salespersons
       - actual_demand_persons
+      - purchase_responsibles
       title: MiniProgramPurchaseRecordFilterOptions
       examples:
       - statuses:
@@ -27121,6 +27637,10 @@ components:
         - 杨明辉
         - 周立新
         - 孙浩宇
+        purchase_responsibles:
+        - 吴德海
+        - 郑文斌
+        - 黄立群
     MiniProgramPurchaseRecordItemRead:
       properties:
         line_id:

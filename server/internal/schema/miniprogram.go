@@ -216,10 +216,12 @@ type MiniProgramPurchasePlanDetailRead struct {
 
 // MiniProgramPurchasePlanFilterOptions 是申购计划筛选下拉选项（只统计在途计划）。
 type MiniProgramPurchasePlanFilterOptions struct {
-	ActualDemandPersons []string `json:"actual_demand_persons"`
-	SubitemNos          []string `json:"subitem_nos"`
-	Urgencies           []string `json:"urgencies"`
-	Categories          []string `json:"categories"`
+	ActualDemandPersons  []string `json:"actual_demand_persons"`
+	PurchaseResponsibles []string `json:"purchase_responsibles"`
+	DemandDepartments    []string `json:"demand_departments"`
+	SubitemNos           []string `json:"subitem_nos"`
+	Urgencies            []string `json:"urgencies"`
+	Categories           []string `json:"categories"`
 }
 
 // MiniProgramPurchaseRecordItemRead 是小程序申购记录行（列表与详情共用）。
@@ -256,11 +258,12 @@ type MiniProgramPurchaseRecordItemRead struct {
 
 // MiniProgramPurchaseRecordFilterOptions 是申购记录筛选下拉选项。
 type MiniProgramPurchaseRecordFilterOptions struct {
-	Statuses            []string `json:"statuses"`
-	SubitemNos          []string `json:"subitem_nos"`
-	Categories          []string `json:"categories"`
-	Salespersons        []string `json:"salespersons"`
-	ActualDemandPersons []string `json:"actual_demand_persons"`
+	Statuses             []string `json:"statuses"`
+	SubitemNos           []string `json:"subitem_nos"`
+	Categories           []string `json:"categories"`
+	Salespersons         []string `json:"salespersons"`
+	ActualDemandPersons  []string `json:"actual_demand_persons"`
+	PurchaseResponsibles []string `json:"purchase_responsibles"`
 }
 
 // ---------------- 编码库 / 华星库存 / 精简库存 / 台账 ----------------
@@ -306,6 +309,13 @@ type MiniProgramLedgerItemRead struct {
 	SubitemNo *string `json:"subitem_no"`
 	Quantity  int64   `json:"quantity"`
 	UnitName  string  `json:"unit_name"`
+}
+
+// MiniProgramLedgerTagOption 小程序台账的标签筛选候选值：平铺 + 完整层级路径。
+type MiniProgramLedgerTagOption struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 // MiniProgramLedgerItemDetailRead 是小程序台账详情（列表行 + 用途 / 备注 / 标签路径 / 图片）。
