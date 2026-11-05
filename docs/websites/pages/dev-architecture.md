@@ -920,6 +920,7 @@ flowchart LR
 | 分字段搜索 | **多字段组合（AND）**：`fieldDefs` 里的每个字段渲染成一个输入框，页面把已填的字段放进 `fieldValues`。`buildFieldQuery` 把每个非空字段映射到它自己的请求参数，多个字段同时发；收起态搜索框只发 `keyword`（综合搜索），两条通道独立叠加 |
 | 草稿与生效 | 面板里改的值只进草稿，点「确定」才发 `change`；「重置」则清空草稿**并立即发 `change`**（清空即生效，否则收起后角标还挂着已清掉的条件）。`visible` 为真时外部 `active` / `fieldValues` 变化不覆盖草稿 |
 | 收起态 | 只有「搜索 + 筛选按钮」，**不渲染已选条件胶囊**（重复信息，且吃掉一行高度）；`activeCount` 只用于按钮角标，具体条件在面板里看与改 |
+| 角标计数 | 由 `countValue()` 按「值里真有内容」判断：空串 / 空数组 / 空区间都是 0。**不按分区 `kind` 分支**——`kind` 是页面传入的元数据，漏传会退化成单选，而多选默认值 `[]` 在 JS 里是 truthy，会让没有任何筛选时也显示徽标 |
 | 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options`。分享值不在候选里时由页面 `buildSection()` 补一项 |
 | 选项加载失败 | 页面把 `optionsFailed` 传给组件，面板顶部显示一行可点重试的提示并发 `retryoptions`；页面只需重拉选项（`onRetryOptions` → `loadFilterOptions`），不重新登录、不重查列表。**不弹 toast**：列表可用，弹错误提示会让人以为整页坏了且无重试入口。`check.js` 会拦住对这一行为的回退 |
 | 页面侧 | 各页维护 `filters` / `fieldConditions` / `filtered`，`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一；`sameFilters` 为真时直接返回，不重复请求 |

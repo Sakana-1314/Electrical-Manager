@@ -244,6 +244,44 @@ async function run() {
   assert(confirmed.name === 'change' && confirmed.detail.values.status === '待整改', 'confirm emits change');
   assert(panel.data.visible === false, 'confirm closes the sheet');
 
+  // ===== 角标：空值绝不能算成生效条件 =====
+  // 回归：华星 multi 分区的默认值是 []，而 buildSection 曾漏传 kind 导致退化成 single，
+  // `if (value)` 对空数组为真 → 没有任何筛选也显示徽标 2。
+  const badgePanel = loadFilterPanel();
+  badgePanel.setProperty('sections', [
+    { key: 'multiNoKind', title: '多选但没传 kind', options: [] },              // 空数组 + 缺 kind
+    { key: 'multiWithKind', title: '多选', kind: 'multi', options: [] },
+    { key: 'emptyRange', title: '区间', kind: 'range', fromLabel: 'a', toLabel: 'b' },
+    { key: 'emptyDate', title: '日期', kind: 'dateRange', fromLabel: 'a', toLabel: 'b' },
+    { key: 'emptySingle', title: '单选', kind: 'single', options: [] },
+    { key: 'missingKey', title: '缺失', kind: 'single', options: [] },
+  ]);
+  badgePanel.setProperty('fieldDefs', [{ key: 'name', label: '名称' }]);
+  badgePanel.setProperty('active', {
+    multiNoKind: [],
+    multiWithKind: [],
+    emptyRange: { from: '', to: '' },
+    emptyDate: { from: '', to: '' },
+    emptySingle: '',
+  });
+  badgePanel.setProperty('fieldValues', { name: '   ' });
+  badgePanel.refresh();
+  assert(
+    badgePanel.data.activeCount === 0,
+    `empty arrays / ranges / blank text must not count, got ${badgePanel.data.activeCount}`,
+  );
+  // 真正填了值才计数
+  badgePanel.setProperty('active', {
+    multiNoKind: [],
+    multiWithKind: ['A', 'B'],
+    emptyRange: { from: '1', to: '' },
+    emptyDate: { from: '', to: '' },
+    emptySingle: '待整改',
+  });
+  badgePanel.setProperty('fieldValues', { name: '接触器' });
+  badgePanel.refresh();
+  assert(badgePanel.data.activeCount === 5, `expected 5 counted conditions, got ${badgePanel.data.activeCount}`);
+
   // ===== 面板：分字段组合搜索 =====
   // 每个字段一个输入框，填多个后「确定」一次性回传（多字段同时生效）。
   const fieldPanel = loadFilterPanel();
