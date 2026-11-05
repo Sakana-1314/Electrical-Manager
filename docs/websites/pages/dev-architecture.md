@@ -921,6 +921,7 @@ flowchart LR
 | 草稿与生效 | 面板里改的值只进草稿，点「确定」才发 `change`；已选条件胶囊上的 × 与「清除筛选」立即发 `change`。`visible` 为真时外部 `active` / `fieldConditions` 变化不覆盖草稿 |
 | 已选条件 | 由 `sections` + `active` + `fieldConditions` 派生胶囊（`标题：选项文案`），未知值回显原值；数量角标 = 生效的条件个数 |
 | 选项来源 | 固定枚举在页面内置；自由文本来自各页 `filter-options`。分享值不在候选里时由页面 `buildSection()` 补一项 |
+| 选项加载失败 | 页面把 `optionsFailed` 传给组件，面板顶部显示一行可点重试的提示并发 `retryoptions`；页面只需重拉选项（`onRetryOptions` → `loadFilterOptions`），不重新登录、不重查列表。**不弹 toast**：列表可用，弹错误提示会让人以为整页坏了且无重试入口。`check.js` 会拦住对这一行为的回退 |
 | 页面侧 | 各页维护 `filters` / `fieldConditions` / `filtered`，`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一；`sameFilters` 为真时直接返回，不重复请求 |
 | 请求拼装 | `utils/filters.js` 统一把状态换算成参数：`buildSearchQuery`（综合 → `keyword`，单字段 → 该字段参数）、`buildFieldQuery`（分字段条件各落到自己的参数）、`buildFilterQuery`（多选 `\|` 连接、区间拆 `from` / `to`） |
 | 精简模式 | 二级库精简模式下 `filterSections` 为空，组件退化为纯搜索栏（不显示筛选按钮与已选条件） |
