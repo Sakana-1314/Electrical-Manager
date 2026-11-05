@@ -88,6 +88,8 @@ Page(withTheme({
       actualDemandPerson: '',
       purchaseResponsible: '',
     },
+    /** 筛选项没拉到时为 true：面板里显示一行「重新加载」，不弹打断式提示。 */
+    optionsFailed: false,
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
     filtered: false,
@@ -106,6 +108,8 @@ Page(withTheme({
     setNavigationBarTitle('purchaseRecordsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
+    this.lastShared = shared;
     this.setData({ searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })) });
     try {
       const session = await getApp().globalData.authPromise;
@@ -202,10 +206,16 @@ Page(withTheme({
     void this.loadPlans(true);
   },
 
+  /** 面板上的「重新加载」：重拉筛选项（不重新登录、不重查列表）。 */
+  onRetryOptions() {
+    void this.loadFilterOptions(this.lastShared || {});
+  },
+
   async loadFilterOptions(shared = {}) {
     let statuses = [];
     let subitemNos = [];
     let categories = [];
+    let optionsFailed = false;
     let salespersons = [];
     let persons = [];
     let responsibles = [];
@@ -218,16 +228,12 @@ Page(withTheme({
       persons = (result.actual_demand_persons || []).filter(Boolean);
       responsibles = (result.purchase_responsibles || []).filter(Boolean);
     } catch (_error) {
-      // 选项加载失败不阻塞列表，但提示用户，并至少保留「全部」选项
-      Toast({
-        context: this,
-        selector: '#purchase-records-toast',
-        message: t('purchaseRecordFilterOptionsLoadFailed'),
-        theme: 'warning',
-        direction: 'column',
-      });
+      // 选项拉不到时列表照常可用：不弹打断式提示（会让人以为页面坏了），
+      // 把状态传给筛选面板，由面板里的一行「重新加载」兜底。
+      optionsFailed = true;
     }
     this.setData({
+      optionsFailed,
       filterSections: [
         this.buildSection('status', t('filterStatus'), statuses, shared.status),
         this.buildSection('category', t('filterCategory'), categories, shared.category),

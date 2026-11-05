@@ -225,7 +225,6 @@
 }
 
 /* ---- 分字段搜索 ---- */
-
 /* 一行 [字段][值][添加]：字段与按钮固定宽度，输入框吃掉剩余空间。 */
 .filter-condition-add {
   display: flex;
@@ -333,4 +332,32 @@
   flex: none;
   color: var(--app-text-placeholder);
   font-size: 24rpx;
+}
+
+/* ---- 选项加载失败提示 ---- */
+
+/* 一行提示 + 重试，放在面板最上方：候选值没拉到时面板只剩「全部」，
+ * 不解释原因会被当成「本来就没有可选项」。 */
+.filter-options-failed {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 8rpx;
+  padding: 18rpx 20rpx;
+  border: 2rpx solid var(--app-brand-border);
+  border-radius: 16rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
+  font-size: 23rpx;
+}
+
+.filter-options-failed-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-options-failed-retry {
+  flex: none;
+  font-weight: 600;
+  text-decoration: underline;
 }

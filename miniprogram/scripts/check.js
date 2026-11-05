@@ -503,6 +503,32 @@ if (themedPage.data.i18n === undefined) {
     }
   }
 
+  // 筛选项加载失败要落到面板里的「重新加载」，而不是弹打断式 toast：
+  // 列表本身是好的，弹错误提示会让人以为页面坏了；而且弹完没有重试入口。
+  for (const snippet of ['optionsFailed', 'retryOptions']) {
+    if (!(panelScript + panelMarkup).includes(snippet)) {
+      throw new Error(`filter options failure must be retryable in the panel: ${snippet}`);
+    }
+  }
+  if (!read('utils/i18n.js').includes('filterOptionsRetry')) {
+    throw new Error('utils/i18n.js must translate the filter option retry label.');
+  }
+  for (const page of [
+    'hazards/hazards',
+    'huaxing-inventory/huaxing-inventory',
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+    'ledger/ledger',
+  ]) {
+    const script = read(`pages/${page}.js`);
+    if (!script.includes('optionsFailed')) {
+      throw new Error(`pages/${page}.js must surface filter option failures to the panel.`);
+    }
+    if (/FilterOptionsLoadFailed'\)[\s\S]{0,80}theme: 'warning'/.test(script)) {
+      throw new Error(`pages/${page}.js must not toast an interrupting message on option failure.`);
+    }
+  }
+
   for (const page of [
     'inventory/inventory',
     'huaxing-inventory/huaxing-inventory',

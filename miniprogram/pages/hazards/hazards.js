@@ -68,6 +68,8 @@ Page(withTheme({
       hazardUnitId: '',
       inspectionDate: { from: '', to: '' },
     },
+    /** 筛选项没拉到时为 true：面板里显示一行「重新加载」，不弹打断式提示。 */
+    optionsFailed: false,
     filterSections: [],
     /** 是否有生效的筛选（空态文案据此区分「本来为空」与「筛空了」）。 */
     filtered: false,
@@ -89,6 +91,8 @@ Page(withTheme({
     setNavigationBarTitle('hazardsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
+    // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
+    this.lastShared = shared;
     // 固定枚举与「仅逾期」开关：非法值直接忽略，避免按不存在的状态过滤。
     Object.keys(ENUM_SECTIONS).forEach((key) => {
       if (shared[key] !== undefined && !isAllowedShareValue(shared[key], ENUM_SECTIONS[key])) {
@@ -189,26 +193,34 @@ Page(withTheme({
     void this.loadHazards(true);
   },
 
+  /**
+   * 面板上的「重新加载」：重拉筛选项。
+   *
+   * 只需要选项，不必重新登录或重查列表——列表本身是好的，失败多半是筛选项接口
+   * 抖动或后端版本不匹配。重拉成功后清掉失败标记，面板恢复完整选项。
+   */
+  onRetryOptions() {
+    void this.loadFilterOptions(this.lastShared || {});
+  },
+
   async loadFilterOptions(shared = {}) {
     // 整改员工来自库中已有值；责任单位与隐患类型来自字典。加载失败不阻塞列表。
     let rectifyPersons = [];
     let units = [];
     let types = [];
+    let optionsFailed = false;
     try {
       const result = await requestCached({ url: '/mini-program/hazards/filter-options' });
       rectifyPersons = (result.rectify_persons || []).filter(Boolean);
       units = result.units || [];
       types = result.types || [];
     } catch (_error) {
-      Toast({
-        context: this,
-        selector: '#hazards-toast',
-        message: t('hazardFilterOptionsLoadFailed'),
-        theme: 'warning',
-        direction: 'column',
-      });
+      // 选项拉不到时列表照常可用：不弹打断式提示（会让人以为页面坏了），
+      // 把状态传给筛选面板，由面板里的一行「重新加载」兜底。
+      optionsFailed = true;
     }
     this.setData({
+      optionsFailed,
       filterSections: [
         this.buildSection('status', t('hazardStatusLabel'), HAZARD_STATUSES, shared.status),
         {

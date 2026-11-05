@@ -24,7 +24,11 @@ require.cache[TOAST_STUB] = {
   id: TOAST_STUB,
   filename: TOAST_STUB,
   loaded: true,
-  exports: { default: () => {} },
+  exports: {
+    default: (options) => {
+      if (global.__toasts) global.__toasts.push(options);
+    },
+  },
 };
 
 // ---- wx 桩 ----
@@ -48,6 +52,10 @@ global.wx = {
 const i18n = require(path.join(root, 'utils/i18n.js'));
 i18n.initializeI18n();
 
+// 记录 Toast 调用：验证筛选项失败时不再弹打断式提示。
+const toasts = [];
+global.__toasts = toasts;
+
 // ---- request 桩：记录请求并返回空页 ----
 const requests = [];
 const requestPath = require.resolve(path.join(root, 'utils/request.js'));
@@ -62,6 +70,11 @@ require.cache[requestPath] = {
     },
     requestCached: async (options) => {
       requests.push(options);
+      // 允许按 URL 指定失败，用于验证「筛选项加载失败」的兜底路径。
+      if (global.__cachedFail && global.__cachedFail[options.url]) {
+        throw new Error('simulated option failure');
+      }
+      if (typeof global.__cachedResponse === 'function') return global.__cachedResponse(options);
       return global.__cachedResponse || {};
     },
     uploadImage: async () => ({}),
@@ -237,6 +250,13 @@ async function run() {
   panel.removeChip({ currentTarget: { dataset: { key: 'status' } } });
   const removed = panel.events.pop();
   assert(removed.name === 'change' && removed.detail.values.status === undefined, 'chip × clears the key');
+
+  // 面板收到 optionsFailed 后点「重新加载」要发出 retryoptions（页面据此重拉）
+  panel.setProperty('optionsFailed', true);
+  panel.retryOptions();
+  const retriedEvent = panel.events.pop();
+  assert(retriedEvent && retriedEvent.name === 'retryoptions', 'panel must emit retryoptions');
+  panel.setProperty('optionsFailed', false);
 
   // 分享值不在候选里：回显原值而不是「不限」
   panel.setProperty('active', { status: '历史状态' });
@@ -419,6 +439,56 @@ async function run() {
   assert(huaxingRequest.data.purchaser === '吴冰', 'purchaser must be sent');
   assert(huaxingRequest.data.date_from === '2026-01-01', 'inbound date from must be sent');
   assert(huaxingRequest.data.date_to === undefined, 'empty date to must be omitted');
+
+  // ===== 筛选项加载失败：不弹打断式提示，面板给「重新加载」 =====
+  global.__cachedFail = { '/mini-program/hazards/filter-options': true };
+  global.__cachedResponse = {};
+  requests.length = 0;
+  toasts.length = 0;
+  page = await mountPage('pages/hazards/hazards.js');
+  assert(page.data.optionsFailed === true, 'hazard option failure must set optionsFailed');
+  // 不该再弹「筛选选项加载失败」这类打断式提示
+  assert(
+    !toasts.some((item) => String(item.message || '').indexOf('筛选选项') >= 0),
+    'option failure must not toast an interrupting message',
+  );
+  // 列表仍然正常请求（失败不影响取数）
+  assert(
+    requests.some((item) => item.url === '/mini-program/hazards'),
+    'list must still load when filter options fail',
+  );
+  // 固定枚举分区仍然可用（状态 / 等级 / 仅逾期不依赖接口）
+  assertSections(page, 'hazards(failed options)');
+  const statusSection = page.data.filterSections.find((section) => section.key === 'status');
+  assert(statusSection.options.length > 2, 'built-in enum sections must survive option failure');
+
+  // 重试成功后恢复完整选项并清掉失败标记
+  delete global.__cachedFail;
+  global.__cachedResponse = { rectify_persons: ['孙浩宇'], units: [], types: [] };
+  page.onRetryOptions();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert(page.data.optionsFailed === false, 'retry must clear optionsFailed');
+  const retried = page.data.filterSections.find((section) => section.key === 'rectifyPerson');
+  assert(
+    retried.options.some((option) => option.value === '孙浩宇'),
+    'retry must reload the option values',
+  );
+
+  // 华星：接口失败时部门 / 申购人只剩「全部」，但仍可用
+  global.__cachedFail = { '/mini-program/huaxing-inventory/filter-options': true };
+  global.__cachedResponse = {};
+  requests.length = 0;
+  page = await mountPage('pages/huaxing-inventory/huaxing-inventory.js');
+  assert(page.data.optionsFailed === true, 'huaxing option failure must set optionsFailed');
+  assertSections(page, 'huaxing(failed options)');
+  delete global.__cachedFail;
+
+  // 台账：标签候选失败时列表照常
+  global.__cachedFail = { '/mini-program/ledger-items/tag-options': true };
+  global.__cachedResponse = {};
+  page = await mountPage('pages/ledger/ledger.js');
+  assert(page.data.optionsFailed === true, 'ledger option failure must set optionsFailed');
+  delete global.__cachedFail;
 
   // ===== 首页：扫码入口按 canOutbound 显示 =====
   const home = loadPage('pages/home/home.js');
