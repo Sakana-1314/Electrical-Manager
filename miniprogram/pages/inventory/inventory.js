@@ -8,16 +8,19 @@ const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
+  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
+  countFieldValues,
   hasActiveFilter,
   normalizeFilters,
+  readFieldShare,
   sameFilters,
 } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索词与筛选（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'searchField', 'stockStatus', 'name', 'modelSpec', 'stockQtyFrom', 'stockQtyTo'];
+const SHARE_PARAMS = ['keyword', 'stockStatus', 'name', 'modelSpec', 'stockQtyFrom', 'stockQtyTo'];
 const PAGE_ROUTE = '/pages/inventory/inventory';
 // 库存状态是固定两档（空串表示不限，与筛选面板的「全部」一致）：非法值直接忽略。
 const STOCK_STATUSES = ['out_of_stock', 'low_stock'];
@@ -28,10 +31,10 @@ const FILTER_SPEC = {
   stockQty: { kind: 'range', fromParam: 'min_qty', toParam: 'max_qty' },
 };
 // 分字段搜索：与网页端「名称、别名或型号规格」对齐，拆成名称 / 型号两个字段。
-const SEARCH_FIELDS = [
-  { labelKey: 'filterSearchAll', value: '', param: '' },
-  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
-  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
+// 分字段组合搜索：每个字段一个输入框，填多个即同时满足（AND），与网页端一致。
+const FIELD_DEFS = [
+  { key: 'name', labelKey: 'filterSearchName', param: 'name' },
+  { key: 'modelSpec', labelKey: 'filterSearchModelSpec', param: 'model_spec' },
 ];
 
 function stockStatusSection() {
@@ -47,13 +50,22 @@ function stockStatusSection() {
   };
 }
 
+/** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
+function toFieldDefs() {
+  return FIELD_DEFS.map((field) => ({
+    key: field.key,
+    label: t(field.labelKey),
+    placeholder: t('filterFieldValuePlaceholder'),
+  }));
+}
+
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    searchField: '',
-    fieldConditions: [],
-    searchFields: [],
+    /** 分字段组合搜索的已生效值：`{ [fieldKey]: value }`，空串表示该字段不参与过滤。 */
+    fieldValues: {},
+    fieldDefs: [],
     // 筛选值：库存数量是 { from, to } 区间。
     filters: {
       stockStatus: '',
@@ -76,9 +88,7 @@ Page(withTheme({
     setNavigationBarTitle('inventoryTitle');
     // 分享链接带来的搜索词 / 筛选；精简模式下没有筛选，忽略对应参数。
     const shared = readShareParams(options, SHARE_PARAMS);
-    this.setData({
-      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
-    });
+    this.setData({ fieldDefs: toFieldDefs() });
     try {
       const [session, featureModes] = await Promise.all([
         getApp().globalData.authPromise,
@@ -106,20 +116,13 @@ Page(withTheme({
           !liteMode && isAllowedShareValue(shared.stockStatus, STOCK_STATUSES) ? shared.stockStatus : '',
         stockQty: { from: shared.stockQtyFrom || '', to: shared.stockQtyTo || '' },
       };
-      // 精简模式只按关键字搜，不分字段。
-      const conditions = [];
-      if (!liteMode) {
-        SEARCH_FIELDS.forEach((field) => {
-          if (!field.value) return;
-          if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
-        });
-      }
+      // 精简模式只按关键字搜，没有分字段组合搜索。
+      const fieldValues = liteMode ? {} : readFieldShare(shared, FIELD_DEFS);
 
       this.setData({
         liteMode,
         keyword: shared.keyword || '',
-        searchField: liteMode ? '' : shared.searchField || '',
-        fieldConditions: conditions,
+        fieldValues,
         filters,
         filterSections: liteMode
           ? []
@@ -133,7 +136,7 @@ Page(withTheme({
                 toLabel: t('filterRangeTo'),
               },
             ],
-        filtered: !liteMode && (hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0),
+        filtered: !liteMode && (hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0),
       });
       await this.loadInventory(true);
     } catch (error) {
@@ -157,12 +160,9 @@ Page(withTheme({
     }
   },
 
-  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
+  /** 收起态搜索框：只做综合搜索（跨字段），多字段组合在筛选面板里。 */
   onSearchChange(event) {
-    const detail = event.detail || {};
-    const patch = { keyword: detail.value || '' };
-    if (detail.field !== undefined) patch.searchField = detail.field || '';
-    this.setData(patch);
+    this.setData({ keyword: (event.detail && event.detail.value) || '' });
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
       void this.loadInventory(true);
@@ -174,17 +174,17 @@ Page(withTheme({
     if (this.data.liteMode) return;
     const detail = event.detail || {};
     const filters = normalizeFilters(detail.values || {}, FILTER_SECTIONS, [], ['stockQty']);
-    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
+    const fieldValues = detail.fields || {};
     if (
       sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
-      JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)
+      JSON.stringify(this.data.fieldValues) === JSON.stringify(fieldValues)
     ) {
       return;
     }
     this.setData({
       filters,
-      fieldConditions: conditions,
-      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || conditions.length > 0,
+      fieldValues,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
     });
     void this.loadInventory(true);
   },
@@ -205,8 +205,8 @@ Page(withTheme({
         ...(this.data.liteMode
           ? {}
           : {
-              ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
-              ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+              ...buildSearchQuery(this.data.keyword),
+              ...buildFieldQuery(this.data.fieldValues, FIELD_DEFS),
               ...buildFilterQuery(this.data.filters, FILTER_SPEC),
             }),
       };
@@ -267,14 +267,10 @@ Page(withTheme({
     const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      searchField: this.data.searchField,
       stockStatus: filters.stockStatus,
       stockQtyFrom: filters.stockQty.from,
       stockQtyTo: filters.stockQty.to,
-      ...(this.data.fieldConditions || []).reduce((params, condition) => {
-        if (condition.field && condition.value) params[condition.field] = condition.value;
-        return params;
-      }, {}),
+      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
     });
   },
 

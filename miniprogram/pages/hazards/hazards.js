@@ -7,10 +7,14 @@ const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
 const {
+  buildFieldQuery,
+  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
+  countFieldValues,
   hasActiveFilter,
   normalizeFilters,
+  readFieldShare,
   sameFilters,
 } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
@@ -46,18 +50,28 @@ const FILTER_SPEC = {
   inspectionDate: { kind: 'dateRange', fromParam: 'date_from', toParam: 'date_to' },
 };
 // 分字段搜索：网页端的「检查区域」是独立输入框，这里作为可切换的搜索字段。
-const SEARCH_FIELDS = [
-  { labelKey: 'filterSearchAll', value: '', param: '' },
-  { labelKey: 'filterSearchArea', value: 'area', param: 'area' },
+// 分字段组合搜索：每个字段一个输入框，填多个即同时满足（AND），与网页端一致。
+const FIELD_DEFS = [
+  { key: 'area', labelKey: 'filterSearchArea', param: 'area' },
 ];
 const PAGE_ROUTE = '/pages/hazards/hazards';
+
+/** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
+function toFieldDefs() {
+  return FIELD_DEFS.map((field) => ({
+    key: field.key,
+    label: t(field.labelKey),
+    placeholder: t('filterFieldValuePlaceholder'),
+  }));
+}
 
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    searchField: '',
-    searchFields: [],
+    /** 分字段组合搜索的已生效值（隐患只有「检查区域」一个字段）。 */
+    fieldValues: {},
+    fieldDefs: [],
     // 当前生效的筛选值：key 与分享参数同名；「仅逾期」用 overdue / '' 两态。
     filters: {
       status: '',
@@ -100,9 +114,7 @@ Page(withTheme({
       }
     });
     if (shared.overdue !== undefined && shared.overdue !== 'overdue') delete shared.overdue;
-    this.setData({
-      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
-    });
+    this.setData({ fieldDefs: toFieldDefs() });
     try {
       const app = getApp();
       const session = await app.globalData.authPromise;
@@ -141,10 +153,12 @@ Page(withTheme({
       }
       if (shared[key] !== undefined) filters[key] = shared[key];
     });
+    // 分享里的 area 是「检查区域」分字段的值。
+    const fieldValues = readFieldShare(shared, FIELD_DEFS);
     this.setData({
       filters,
-      searchField: shared.searchField || '',
-      filtered: hasActiveFilter(filters, FILTER_SECTIONS),
+      fieldValues,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
     });
     if (shared.keyword !== undefined) this.setData({ keyword: shared.keyword });
   },
@@ -172,24 +186,29 @@ Page(withTheme({
     }
   },
 
-  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
+  /** 收起态搜索框：只做综合搜索（跨字段），多字段组合在筛选面板里。 */
   onSearchChange(event) {
-    const detail = event.detail || {};
-    const patch = { keyword: detail.value || '' };
-    if (detail.field !== undefined) patch.searchField = detail.field || '';
-    this.setData(patch);
+    this.setData({ keyword: (event.detail && event.detail.value) || '' });
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadHazards(true), 350);
   },
 
-  /** 筛选面板确认：整体替换筛选值后重新取第一页。 */
+  /** 筛选面板确认：整体替换筛选值与分字段值后重新取第一页。 */
   onFilterChange(event) {
     const detail = event.detail || {};
     const filters = normalizeFilters(detail.values || {}, FILTER_SECTIONS, [], ['inspectionDate']);
-    if (sameFilters(this.data.filters, filters, FILTER_SECTIONS)) {
+    const fieldValues = detail.fields || {};
+    if (
+      sameFilters(this.data.filters, filters, FILTER_SECTIONS) &&
+      JSON.stringify(this.data.fieldValues) === JSON.stringify(fieldValues)
+    ) {
       return;
     }
-    this.setData({ filters, filtered: hasActiveFilter(filters, FILTER_SECTIONS) });
+    this.setData({
+      filters,
+      fieldValues,
+      filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
+    });
     void this.loadHazards(true);
   },
 
@@ -284,8 +303,9 @@ Page(withTheme({
       const data = {
         page,
         page_size: this.data.pageSize,
-        // 搜索：综合走 keyword（检查区域 + 隐患描述），切到「检查区域」则只匹配区域。
-        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
+        // 综合搜索走 keyword（检查区域 + 隐患描述）；分字段里的「检查区域」单独精确叠加。
+        ...buildSearchQuery(this.data.keyword),
+        ...buildFieldQuery(this.data.fieldValues, FIELD_DEFS),
         ...buildFilterQuery(this.data.filters, FILTER_SPEC),
       };
       // 「仅逾期」是布尔参数，其余筛选是字符串。
@@ -341,7 +361,7 @@ Page(withTheme({
     const filters = this.data.filters;
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      searchField: this.data.searchField,
+      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
       status: filters.status,
       level: filters.level,
       rectifyPerson: filters.rectifyPerson,

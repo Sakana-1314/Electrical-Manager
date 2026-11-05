@@ -1,29 +1,19 @@
-<!-- 收起态：一行「字段选择 + 搜索 + 筛选按钮」。字段选择器不占额外高度，
-     默认「综合」等价于原来的跨字段搜索。 -->
+<!-- 收起态：一行「搜索 + 筛选按钮」。搜索框只做综合搜索（跨字段 OR）；
+     多字段组合搜索在面板里，每个字段一个输入框，填几个就组合几个。 -->
 <view class="filter-bar">
-  <view
-    wx:if="{{searchFieldOptions.length > 1}}"
-    class="filter-field"
-    hover-class="filter-trigger-hover"
-    aria-role="button"
-    bind:tap="openSearchFieldPicker"
-  >
-    <text class="filter-field-text">{{searchFieldLabel}}</text>
-    <t-icon class="filter-field-arrow" name="chevron-down" size="22rpx" />
-  </view>
   <view class="filter-search">
     <t-search
       value="{{keyword}}"
-      placeholder="{{searchField === '' ? placeholder : searchFieldLabel}}"
+      placeholder="{{placeholder}}"
       shape="round"
       confirm-type="search"
       bind:change="onSearchInput"
       bind:submit="onSearchSubmit"
     />
   </view>
-  <!-- 没有筛选维度时（如精简模式）只留搜索框，按钮不占位置。 -->
+  <!-- 没有筛选维度也没有分字段搜索时（如精简模式）只留搜索框，按钮不占位置。 -->
   <view
-    wx:if="{{sectionsView.length || fieldConditions.length}}"
+    wx:if="{{sectionsView.length || fieldDefsView.length}}"
     class="filter-trigger {{activeCount ? 'filter-trigger-active' : ''}}"
     hover-class="filter-trigger-hover"
     aria-role="button"
@@ -46,7 +36,7 @@
       hover-class="filter-chip-hover"
       data-key="{{item.key}}"
       data-value="{{item.value}}"
-      data-condition-index="{{item.conditionIndex}}"
+      data-field-key="{{item.fieldKey}}"
       bind:tap="removeChip"
     >
       <text class="filter-chip-text">{{item.label}}</text>
@@ -58,7 +48,7 @@
   </view>
 </scroll-view>
 
-<!-- 底部筛选面板：分区平铺 + 分字段搜索；点「确定」一次性回传。 -->
+<!-- 底部筛选面板：分字段搜索 + 分区筛选；点「确定」一次性回传。 -->
 <t-popup
   visible="{{visible}}"
   placement="bottom"
@@ -81,45 +71,35 @@
         <text class="filter-options-failed-retry">{{i18n.filterOptionsRetry}}</text>
       </view>
 
-      <!-- 分字段搜索：需要同时限定多个字段时才用，条件从 1 行起按需增长。 -->
-      <view wx:if="{{searchFieldOptions.length > 1}}" class="filter-section">
+      <!-- 分字段搜索：每个字段一个输入框，填哪几个就同时满足哪几个（AND）。
+           字段全部显式可见，不需要先选字段再添加。 -->
+      <view wx:if="{{fieldRows.length}}" class="filter-section">
         <view class="filter-section-title">{{i18n.filterFieldSearch}}</view>
-        <view class="filter-condition-add">
-          <view
-            class="filter-condition-field"
-            hover-class="filter-chip-hover"
-            aria-role="button"
-            bind:tap="openConditionFieldPicker"
-          >
-            <text class="filter-condition-field-text">{{conditionFieldLabel}}</text>
-            <t-icon name="chevron-down" size="22rpx" />
-          </view>
-          <input
-            class="filter-condition-input"
-            value="{{conditionValue}}"
-            placeholder="{{i18n.filterFieldValuePlaceholder}}"
-            confirm-type="done"
-            bind:input="onConditionValueInput"
-            bind:confirm="addCondition"
-          />
-          <view
-            class="filter-condition-add-btn {{conditionValue ? '' : 'filter-condition-add-btn-disabled'}}"
-            hover-class="filter-chip-hover"
-            bind:tap="addCondition"
-          >{{i18n.filterFieldAdd}}</view>
-        </view>
-        <view wx:if="{{draftConditions.length}}" class="filter-conditions">
-          <view
-            wx:for="{{draftConditions}}"
-            wx:key="field"
-            class="filter-chip filter-chip-editable"
-            data-index="{{index}}"
-            bind:tap="removeCondition"
-          >
-            <text class="filter-chip-text">{{item.display}}</text>
-            <t-icon class="filter-chip-close" name="close" size="24rpx" />
+        <view class="filter-field-list">
+          <view wx:for="{{fieldRows}}" wx:key="key" class="filter-field-row">
+            <view class="filter-field-label">{{item.label}}</view>
+            <view class="filter-field-input-wrap">
+              <input
+                class="filter-field-input"
+                value="{{item.value}}"
+                placeholder="{{item.placeholder}}"
+                confirm-type="done"
+                data-field="{{item.key}}"
+                bind:input="onFieldInput"
+              />
+              <view
+                wx:if="{{item.value}}"
+                class="filter-field-clear"
+                hover-class="filter-chip-hover"
+                data-field="{{item.key}}"
+                bind:tap="clearField"
+              >
+                <t-icon name="close-circle-filled" size="30rpx" />
+              </view>
+            </view>
           </view>
         </view>
+        <view class="filter-field-hint">{{i18n.filterFieldCombineHint}}</view>
       </view>
 
       <view wx:for="{{sectionsView}}" wx:key="key" class="filter-section">
@@ -197,36 +177,6 @@
     </view>
   </view>
 </t-popup>
-
-<!-- 搜索字段选择器（收起态） -->
-<t-picker
-  visible="{{searchFieldPickerVisible}}"
-  title="{{i18n.filterFieldLabel}}"
-  cancel-btn="{{i18n.cancel}}"
-  confirm-btn="{{i18n.confirm}}"
-  value="{{[searchFieldIndex]}}"
-  popup-props="{{pickerPopupProps}}"
-  bind:confirm="onSearchFieldPickerConfirm"
-  bind:cancel="onSearchFieldPickerVisibleChange"
-  bind:visible-change="onSearchFieldPickerVisibleChange"
->
-  <t-picker-item options="{{searchFieldOptions}}" />
-</t-picker>
-
-<!-- 分字段条件里的字段选择器 -->
-<t-picker
-  visible="{{conditionFieldPickerVisible}}"
-  title="{{i18n.filterFieldLabel}}"
-  cancel-btn="{{i18n.cancel}}"
-  confirm-btn="{{i18n.confirm}}"
-  value="{{[searchFieldIndex]}}"
-  popup-props="{{pickerPopupProps}}"
-  bind:confirm="onConditionFieldPickerConfirm"
-  bind:cancel="onConditionFieldPickerVisibleChange"
-  bind:visible-change="onConditionFieldPickerVisibleChange"
->
-  <t-picker-item options="{{searchFieldOptions}}" />
-</t-picker>
 
 <!-- 日期区间端点选择器 -->
 <t-date-time-picker

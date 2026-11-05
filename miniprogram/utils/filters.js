@@ -68,55 +68,70 @@ function buildFilterQuery(filters, spec) {
 }
 
 /**
- * 分字段条件 → 请求参数。
- * 条件形如 `[{ field, value }]`，`fields` 声明每个字段落到哪个请求参数上；
- * 未声明的字段直接忽略（防止界面新增字段后把未知参数发给后端）。
+ * 分字段搜索条件 → 请求参数（多字段组合，AND）。
+ *
+ * 条件形如 `{ name: '接触器', modelSpec: 'CJX2' }`（key 是字段定义的 `key`），
+ * `fields` 声明每个字段落到哪个请求参数上；只发填了值的字段，未声明的字段直接忽略
+ * （防止界面新增字段后把未知参数发给后端）。多个字段同时填 = 同时满足，与网页端一致。
  */
-function buildFieldQuery(conditions, fields) {
+function buildFieldQuery(fieldValues, fields) {
   const query = {};
-  (conditions || []).forEach((condition) => {
-    const field = (fields || []).find((item) => item.value === condition.field);
-    if (!field || !field.param || !condition.value) return;
-    query[field.param] = condition.value;
+  fields.forEach((field) => {
+    if (!field.param) return;
+    const value = fieldValues && fieldValues[field.key];
+    const text = String(value === undefined || value === null ? '' : value).trim();
+    if (!text) return;
+    query[field.param] = text;
   });
   return query;
 }
 
-/** 收起态搜索框：综合搜索走 keyword，选了字段则走该字段的参数。 */
-function buildSearchQuery(keyword, searchField, fields) {
-  const value = String(keyword || '').trim();
-  if (!value) return {};
-  const field = (fields || []).find((item) => item.value === searchField);
-  if (!field || !field.param) return { keyword: value };
-  return { [field.param]: value };
+/** 分字段条件里是否有生效的字段（用于空态文案与数量角标）。 */
+function countFieldValues(fieldValues, fields) {
+  return fields.filter((field) => {
+    if (!field.param) return false;
+    const value = fieldValues && fieldValues[field.key];
+    return String(value === undefined || value === null ? '' : value).trim() !== '';
+  }).length;
 }
 
 /**
- * 筛选状态 → 分享参数。
- * 数组用换行分隔（`|` 是后端的「任一」分隔符，分享值里用它会歧义），区间写 from / to 两个键。
+ * 收起态搜索框：只做「综合搜索」（跨字段 OR）。
+ *
+ * 多字段组合搜索走面板里的分字段输入框——那里的每个字段都显式可见，
+ * 不像搜索框切字段那样「看起来像多字段、实际只有一个生效」。
  */
-function buildFilterShare(filters, conditions, spec) {
+function buildSearchQuery(keyword) {
+  const value = String(keyword || '').trim();
+  return value ? { keyword: value } : {};
+}
+
+/**
+ * 分字段条件 → 分享参数：只写填了值的字段，key 用字段的 value（与页面 SHARE_PARAMS 对应）。
+ */
+function buildFieldShare(fieldValues, fields) {
   const params = {};
-  Object.keys(spec || {}).forEach((key) => {
-    const rule = spec[key];
-    const value = filters && filters[key];
-    if (!hasValue(value)) return;
-    if (rule.kind === 'multi') {
-      params[rule.param] = value.join('|');
-      return;
-    }
-    if (rule.kind === 'range' || rule.kind === 'dateRange') {
-      if (value.from) params[rule.fromParam] = value.from;
-      if (value.to) params[rule.toParam] = value.to;
-      return;
-    }
-    params[rule.param] = value;
-  });
-  (conditions || []).forEach((condition) => {
-    const field = (spec && spec.__fields ? spec.__fields : []).find((item) => item.value === condition.field);
-    if (field && field.param && condition.value) params[field.param] = condition.value;
+  fields.forEach((field) => {
+    if (!field.param) return;
+    const value = fieldValues && fieldValues[field.key];
+    const text = String(value === undefined || value === null ? '' : value).trim();
+    if (text) params[field.key] = text;
   });
   return params;
+}
+
+/**
+ * 分享参数 → 分字段条件（只回填声明过的字段）。
+ * 反向用：字段在分享里以字段名（如 `name`）出现，读回来还原成 `{ name: '接触器' }`。
+ */
+function readFieldShare(shared, fields) {
+  const values = {};
+  fields.forEach((field) => {
+    if (!field.param) return;
+    const value = shared && shared[field.key];
+    if (value !== undefined && value !== null && String(value) !== '') values[field.key] = String(value);
+  });
+  return values;
 }
 
 /** 分享参数 → 筛选状态（只回填声明过的键）。 */
@@ -130,12 +145,14 @@ function readFilterShare(shared, keys) {
 
 module.exports = {
   buildFieldQuery,
+  buildFieldShare,
   buildFilterQuery,
-  buildFilterShare,
   buildSearchQuery,
+  countFieldValues,
   hasActiveFilter,
   hasValue,
   normalizeFilters,
+  readFieldShare,
   readFilterShare,
   sameFilters,
 };

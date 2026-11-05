@@ -10,33 +10,6 @@
   min-width: 0;
 }
 
-/* 搜索字段选择器：贴在搜索框左侧，固定在 1/3 屏宽内，避免挤掉搜索输入区。 */
-.filter-field {
-  display: flex;
-  flex: none;
-  max-width: 200rpx;
-  height: 80rpx;
-  align-items: center;
-  gap: 4rpx;
-  padding: 0 16rpx;
-  border: 2rpx solid var(--app-card-border);
-  border-radius: 20rpx;
-  background: var(--app-surface-soft);
-  color: var(--app-text);
-}
-
-.filter-field-text {
-  overflow: hidden;
-  font-size: 23rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.filter-field-arrow {
-  flex: none;
-  color: var(--app-text-placeholder);
-}
-
 .filter-trigger {
   position: relative;
   display: flex;
@@ -224,41 +197,41 @@
   flex: 1;
 }
 
-/* ---- 分字段搜索 ---- */
-/* 一行 [字段][值][添加]：字段与按钮固定宽度，输入框吃掉剩余空间。 */
-.filter-condition-add {
+/* ---- 分字段组合搜索 ---- */
+
+/* 每个字段一行：左侧固定宽度的字段名，右侧输入框。字段全部显式可见，
+ * 填哪几个就同时满足哪几个（AND），与网页端「每字段一个输入框」一致。 */
+.filter-field-list {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12rpx;
 }
 
-.filter-condition-field {
+.filter-field-row {
   display: flex;
-  flex: none;
-  max-width: 190rpx;
-  height: 72rpx;
   align-items: center;
-  gap: 4rpx;
-  padding: 0 14rpx;
-  border: 2rpx solid var(--app-card-border);
-  border-radius: 16rpx;
-  background: var(--app-surface-soft);
-  color: var(--app-text);
+  gap: 16rpx;
 }
 
-.filter-condition-field-text {
-  overflow: hidden;
+.filter-field-label {
+  flex: none;
+  width: 170rpx;
+  color: var(--app-text-muted);
   font-size: 23rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
-.filter-condition-input {
+.filter-field-input-wrap {
+  position: relative;
   flex: 1;
   min-width: 0;
+}
+
+.filter-field-input {
   box-sizing: border-box;
+  width: 100%;
   height: 72rpx;
-  padding: 0 18rpx;
+  padding: 0 56rpx 0 18rpx;
   border: 2rpx solid var(--app-card-border);
   border-radius: 16rpx;
   background: var(--app-form-surface);
@@ -266,35 +239,26 @@
   font-size: 25rpx;
 }
 
-.filter-condition-add-btn {
-  flex: none;
-  padding: 0 22rpx;
-  height: 72rpx;
-  border-radius: 16rpx;
-  background: var(--app-brand);
-  color: var(--app-on-brand);
-  font-size: 24rpx;
-  font-weight: 600;
-  line-height: 72rpx;
-}
-
-/* 值为空时按钮只是占位，点了不会添加任何条件。 */
-.filter-condition-add-btn-disabled {
-  background: var(--app-brand-disabled);
-}
-
-/* 已添加的分字段条件：可点删除。 */
-.filter-conditions {
+/* 清空按钮压在输入框右侧，不额外占行高。 */
+.filter-field-clear {
+  position: absolute;
+  top: 50%;
+  right: 12rpx;
   display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin-top: 16rpx;
+  width: 44rpx;
+  height: 44rpx;
+  align-items: center;
+  justify-content: center;
+  color: var(--app-text-placeholder);
+  transform: translateY(-50%);
 }
 
-.filter-chip-editable {
-  border-color: var(--app-brand-border);
-  background: var(--app-brand-soft);
-  color: var(--app-brand-text);
+/* 一行小字说明「填多个会同时生效」，避免用户以为是 OR。 */
+.filter-field-hint {
+  margin-top: 12rpx;
+  color: var(--app-text-placeholder);
+  font-size: 21rpx;
+  line-height: 1.45;
 }
 
 /* ---- 数值 / 日期区间 ---- */

@@ -4,17 +4,23 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
-const { buildFieldQuery, buildSearchQuery } = require('../../utils/filters');
+const {
+  buildFieldQuery,
+  buildFieldShare,
+  buildSearchQuery,
+  countFieldValues,
+  readFieldShare,
+} = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索词 / 分字段搜索（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'searchField', 'name', 'modelSpec', 'materialCode'];
+const SHARE_PARAMS = ['keyword', 'name', 'modelSpec', 'materialCode'];
 // 分字段搜索：网页端「物资名称 / 型号规格 / 物料编码」三个输入框。
-const SEARCH_FIELDS = [
-  { labelKey: 'filterSearchAll', value: '', param: '' },
-  { labelKey: 'filterSearchName', value: 'name', param: 'name' },
-  { labelKey: 'filterSearchModelSpec', value: 'modelSpec', param: 'model_spec' },
-  { labelKey: 'filterSearchMaterialCode', value: 'materialCode', param: 'material_code' },
+// 分字段组合搜索：每个字段一个输入框，填多个即同时满足（AND），与网页端一致。
+const FIELD_DEFS = [
+  { key: 'name', labelKey: 'filterSearchName', param: 'name' },
+  { key: 'modelSpec', labelKey: 'filterSearchModelSpec', param: 'model_spec' },
+  { key: 'materialCode', labelKey: 'filterSearchMaterialCode', param: 'material_code' },
 ];
 const PAGE_ROUTE = '/pages/material-codes/material-codes';
 
@@ -26,13 +32,22 @@ function formatDateTime(value) {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+/** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
+function toFieldDefs() {
+  return FIELD_DEFS.map((field) => ({
+    key: field.key,
+    label: t(field.labelKey),
+    placeholder: t('filterFieldValuePlaceholder'),
+  }));
+}
+
 Page(withTheme({
   data: {
     items: [],
     keyword: '',
-    searchField: '',
-    fieldConditions: [],
-    searchFields: [],
+    /** 分字段组合搜索的已生效值：`{ [fieldKey]: value }`，空串表示该字段不参与过滤。 */
+    fieldValues: {},
+    fieldDefs: [],
     page: 1,
     pageSize: 15,
     total: 0,
@@ -51,9 +66,7 @@ Page(withTheme({
     setNavigationBarTitle('materialCodesTitle');
     // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
     const shared = readShareParams(options, SHARE_PARAMS);
-    this.setData({
-      searchFields: SEARCH_FIELDS.map((field) => ({ label: t(field.labelKey), value: field.value })),
-    });
+    this.setData({ fieldDefs: toFieldDefs() });
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) return;
@@ -64,13 +77,8 @@ Page(withTheme({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      // 搜索字段 + 分字段条件（分享里的单字段参数还原成条件）。
-      const conditions = [];
-      SEARCH_FIELDS.forEach((field) => {
-        if (!field.value) return;
-        if (shared[field.value] !== undefined) conditions.push({ field: field.value, value: shared[field.value] });
-      });
-      const patch = { fieldConditions: conditions, searchField: shared.searchField || '' };
+      // 分字段组合搜索（分享里的单字段参数还原成多字段值）。
+      const patch = { fieldValues: readFieldShare(shared, FIELD_DEFS) };
       if (shared.keyword !== undefined) patch.keyword = shared.keyword;
       this.setData(patch);
       this.loadLastImport();
@@ -107,27 +115,24 @@ Page(withTheme({
     wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
-  /** 搜索框：写入关键词与当前字段后防抖取数（切字段也走这里）。 */
+  /** 收起态搜索框：只做综合搜索（跨字段），多字段组合在筛选面板里。 */
   onSearchChange(event) {
-    const detail = event.detail || {};
-    const patch = { keyword: detail.value || '' };
-    if (detail.field !== undefined) patch.searchField = detail.field || '';
-    this.setData(patch);
+    this.setData({ keyword: (event.detail && event.detail.value) || '' });
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.loadCodes(true), 350);
   },
 
   /**
-   * 物料编码页没有筛选分区（与网页端一致：只有三个搜索框）。
-   * 分字段条件在面板里添加后走这里，条件与关键词一起重新取数。
+   * 物料编码页没有筛选分区（与网页端一致：只有三个分字段输入框）。
+   * 面板点「确定」回传分字段值，与关键词一起重新取数。
    */
   onFilterChange(event) {
     const detail = event.detail || {};
-    const conditions = (detail.conditions || []).filter((condition) => condition && condition.field && condition.value);
-    if (JSON.stringify(this.data.fieldConditions) === JSON.stringify(conditions)) {
+    const fieldValues = detail.fields || {};
+    if (JSON.stringify(this.data.fieldValues) === JSON.stringify(fieldValues)) {
       return;
     }
-    this.setData({ fieldConditions: conditions });
+    this.setData({ fieldValues });
     void this.loadCodes(true);
   },
 
@@ -141,8 +146,8 @@ Page(withTheme({
       const data = {
         page,
         page_size: this.data.pageSize,
-        ...buildSearchQuery(this.data.keyword, this.data.searchField, SEARCH_FIELDS),
-        ...buildFieldQuery(this.data.fieldConditions, SEARCH_FIELDS),
+        ...buildSearchQuery(this.data.keyword),
+        ...buildFieldQuery(this.data.fieldValues, FIELD_DEFS),
       };
       const result = await request({ url: '/mini-program/material-codes', data });
       if (requestId !== this.requestId) return;
@@ -175,11 +180,7 @@ Page(withTheme({
   sharePath() {
     return buildSharePath(PAGE_ROUTE, {
       keyword: this.data.keyword.trim(),
-      searchField: this.data.searchField,
-      ...(this.data.fieldConditions || []).reduce((params, condition) => {
-        if (condition.field && condition.value) params[condition.field] = condition.value;
-        return params;
-      }, {}),
+      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
     });
   },
 

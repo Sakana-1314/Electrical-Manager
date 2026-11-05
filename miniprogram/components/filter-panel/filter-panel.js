@@ -4,17 +4,18 @@
  * 小程序列表页的筛选维度一多，常驻一行下拉就会把首屏挤满。这里把筛选收进底部弹层：
  * 收起态只占一行「搜索 + 筛选按钮（带已选数量）」，已选条件用一行可单删的胶囊回显。
  *
- * 分字段搜索（与网页端「每个字段一个输入框」对齐，但不占额外高度）：
- * - 搜索框左侧嵌一个字段选择器：默认「综合」= 跨字段搜；选中某个字段后，搜索框的值只作用于该字段。
- *   这一个选项就覆盖了「按型号 / 编号精确找」的最常用场景，且不增加任何常驻高度。
- * - 需要同时限定多个字段时，用面板顶部的「分字段搜索」区：一行 `[字段][值][添加]`，
- *   添加后变成可删除的条件行。条件从 1 行起按需增长，不用时不占位。
+ * 分字段搜索 = **多个字段组合搜索**（与网页端「每个字段一个输入框」完全一致）：
+ * 面板顶部把该页的每个字段都列成一个输入框，填哪几个就同时满足哪几个（AND），
+ * 留空的字段不参与过滤。字段全部显式可见，不存在「看起来像多字段、实际只有一个生效」。
+ *
+ * 收起态的搜索框只做综合搜索（跨字段 OR），不放字段选择器——组合搜索统一在面板里做，
+ * 避免两个入口语义重叠。
  *
  * 组件只管交互，取数仍由页面负责：
  * - `sections` 由页面按自己的维度组装，见 buildSection；
  * - 面板里改的值都进草稿，点「确定」才发 `change`；
  *   已选条件胶囊上的 × 与「清除筛选」立即发 `change`。
- * - 搜索框的输入 / 回车 / 字段切换统一发 `search`，页面自己做防抖后取数。
+ * - 搜索框的输入 / 回车发 `search`，页面自己做防抖后取数。
  */
 const { getMessages } = require('../../utils/i18n');
 
@@ -26,23 +27,34 @@ const KIND_DATE_RANGE = 'dateRange';
 
 Component({
   properties: {
-    /** 搜索框当前值（页面持有，便于分享参数回填）。 */
+    /** 搜索框当前值（综合搜索，页面持有，便于分享参数回填）。 */
     keyword: { type: String, value: '' },
     placeholder: { type: String, value: '' },
     /**
-     * 搜索字段候选：[{ label, value }]，首项通常是「综合」（value 为空串）。
-     * 为空数组时不渲染字段选择器（该页没有分字段搜索）。
+     * 分字段搜索的字段清单：[{ key, label, placeholder }]。
+     *
+     * 每个字段渲染成一个输入框，多字段同时填写即组合搜索（AND）。
+     * 为空数组时不渲染该区块（该页没有分字段搜索）。
      */
-    searchFields: {
+    fieldDefs: {
       type: Array,
       value: [],
-      observer(fields) {
-        this.setData({ searchFieldOptions: (fields || []).slice() });
+      observer(defs) {
+        this.setData({ fieldDefsView: (defs || []).slice() });
         this.refresh();
       },
     },
-    /** 当前搜索字段（空串 = 综合）。 */
-    searchField: { type: String, value: '' },
+    /** 已生效的分字段值：`{ [fieldKey]: value }`，空串表示该字段不参与过滤。 */
+    fieldValues: {
+      type: Object,
+      value: {},
+      observer(values) {
+        if (!this.data.visible) {
+          this.setData({ draftFields: { ...(values || {}) } });
+        }
+        this.refresh();
+      },
+    },
     /** 筛选分区：[{ key, title, kind, options }]，见 buildSection。 */
     sections: {
       type: Array,
@@ -63,17 +75,6 @@ Component({
         this.refresh();
       },
     },
-    /** 分字段搜索条件：[{ field, value }]，field 为 searchFields 里的 value。 */
-    fieldConditions: {
-      type: Array,
-      value: [],
-      observer(conditions) {
-        if (!this.data.visible) {
-          this.setData({ draftConditions: cloneConditions(conditions || []) });
-        }
-        this.refresh();
-      },
-    },
     /**
      * 选项加载失败：由页面在 filter-options 请求失败时置 true。
      *
@@ -88,24 +89,16 @@ Component({
     visible: false,
     /** 面板内的草稿值，点「确定」才回传给页面。 */
     draft: {},
-    /** 面板内的分字段条件草稿（`[{ field, value }]`）。 */
-    draftConditions: [],
+    /** 面板内的分字段草稿：`{ [fieldKey]: value }`。 */
+    draftFields: {},
+    /** 字段清单 + 当前值（WXML 里直接读）。 */
+    fieldDefsView: [],
+    fieldRows: [],
     /** 带选中标记的分区视图（WXML 里直接读，避免模板内做对象下标比较）。 */
     sectionsView: [],
     /** 收起态的已选条件胶囊（含分字段条件）。 */
     chips: [],
     activeCount: 0,
-    /** 分字段搜索区的「待添加」字段与值。 */
-    conditionField: '',
-    conditionValue: '',
-    /** 字段选择器的候选与当前索引（t-picker 用）。 */
-    searchFieldOptions: [],
-    searchFieldIndex: 0,
-    searchFieldPickerVisible: false,
-    conditionFieldPickerVisible: false,
-    conditionFieldLabel: '',
-    /** 当前搜索字段的文案（收起态显示在字段选择器上）。 */
-    searchFieldLabel: '',
     /** 日期区间选择器的弹层状态与临时值。 */
     datePickerVisible: false,
     datePickerValue: '',
@@ -117,13 +110,14 @@ Component({
   },
 
   methods: {
-    /** 由 sections / active / draft / 条件派生视图与胶囊。 */
+    /** 由 sections / active / draft / 分字段派生视图与胶囊。 */
     refresh() {
       const sections = this.data.sections || [];
       const active = this.data.active || {};
       const draft = this.data.draft || {};
-      const conditions = this.data.fieldConditions || [];
-      const searchFields = this.data.searchFields || [];
+      const fieldValues = this.data.fieldValues || {};
+      const draftFields = this.data.draftFields || {};
+      const defs = this.data.fieldDefs || [];
 
       const sectionsView = sections.map((section) => {
         const kind = section.kind || KIND_SINGLE;
@@ -133,7 +127,6 @@ Component({
           key: section.key,
           title: section.title,
           kind,
-          // 区间类分区没有 options，展示的是两个输入框 / 日期。
           fromLabel: section.fromLabel || '',
           toLabel: section.toLabel || '',
           rangeFrom: current && current.from !== undefined ? current.from : '',
@@ -148,7 +141,22 @@ Component({
         };
       });
 
+      // 分字段输入框：组件是受控的，值取自草稿（打开面板后改的就是草稿）。
+      const fieldRows = defs.map((def) => ({
+        key: def.key,
+        label: def.label,
+        placeholder: def.placeholder || '',
+        value: draftFields[def.key] || '',
+      }));
+
       const chips = [];
+      // 分字段条件排在最前：它们是「组合搜索」，与筛选是两回事，用户先要看到自己搜了什么。
+      defs.forEach((def) => {
+        const value = String(fieldValues[def.key] || '').trim();
+        if (!value) return;
+        chips.push({ key: `field:${def.key}`, fieldKey: def.key, label: `${def.label}：${value}` });
+      });
+
       sections.forEach((section) => {
         const kind = section.kind || KIND_SINGLE;
         const value = active[section.key];
@@ -176,79 +184,46 @@ Component({
         chips.push({ key: section.key, value: '', label: `${section.title}：${matched ? matched.label : value}` });
       });
 
-      // 分字段条件也当作可删除的胶囊，字段名取 searchFields 的文案。
-      conditions.forEach((condition, index) => {
-        const field = searchFields.find((item) => item.value === condition.field);
-        if (!field || !condition.value) return;
-        chips.push({
-          conditionIndex: index,
-          label: `${field.label}：${condition.value}`,
-        });
-      });
-
-      // 条件行的展示文案（WXML 里不拼字符串）。
-      const draftConditions = (this.data.draftConditions || []).map((condition) => {
-        const field = searchFields.find((item) => item.value === condition.field);
-        return { ...condition, display: `${field ? field.label : condition.field}：${condition.value}` };
-      });
-
-      const fieldOf = (value) => searchFields.find((item) => item.value === value);
-      const searchFieldLabel = (fieldOf(this.data.searchField) || {}).label || '';
-      const conditionFieldLabel = (fieldOf(this.data.conditionField) || {}).label || '';
-
-      this.setData({
-        sectionsView,
-        chips,
-        activeCount: chips.length,
-        draftConditions,
-        searchFieldLabel,
-        conditionFieldLabel,
-      });
+      this.setData({ sectionsView, fieldRows, chips, activeCount: chips.length });
     },
 
     onSearchInput(event) {
-      this.triggerEvent('search', { value: event.detail.value || '', field: this.data.searchField });
+      this.triggerEvent('search', { value: event.detail.value || '' });
     },
 
     onSearchSubmit(event) {
-      const value = (event.detail && event.detail.value) || '';
-      this.triggerEvent('search', { value, field: this.data.searchField });
+      this.triggerEvent('search', { value: (event.detail && event.detail.value) || '' });
     },
 
-    // ---------------- 搜索字段切换 ----------------
+    // ---------------- 分字段组合搜索 ----------------
 
-    openSearchFieldPicker() {
-      const fields = this.data.searchFields || [];
-      if (!fields.length) return;
-      const index = Math.max(0, fields.findIndex((field) => field.value === this.data.searchField));
-      this.setData({ searchFieldPickerVisible: true, searchFieldIndex: index });
+    /** 输入某个字段：只改草稿，点「确定」才生效。 */
+    onFieldInput(event) {
+      const { field } = event.currentTarget.dataset;
+      if (!field) return;
+      const draftFields = { ...this.data.draftFields };
+      draftFields[field] = (event.detail && event.detail.value) || '';
+      this.setData({ draftFields });
+      this.refresh();
     },
 
-    onSearchFieldPickerConfirm(event) {
-      const fields = this.data.searchFields || [];
-      const index = Number((event.detail.value || [])[0] || 0);
-      const field = fields[index];
-      this.setData({ searchFieldPickerVisible: false });
-      if (!field || field.value === this.data.searchField) return;
-      // 切字段立即生效：搜索词保留，结果随之从「综合」切到单字段。
-      this.triggerEvent('search', { value: this.data.keyword, field: field.value });
-    },
-
-    onSearchFieldPickerVisibleChange(event) {
-      this.setData({ searchFieldPickerVisible: !!event.detail.visible });
+    /** 清空某个字段（输入框右侧的 ×）。 */
+    clearField(event) {
+      const { field } = event.currentTarget.dataset;
+      if (!field) return;
+      const draftFields = { ...this.data.draftFields };
+      delete draftFields[field];
+      this.setData({ draftFields });
+      this.refresh();
     },
 
     // ---------------- 面板开关 ----------------
 
     openSheet() {
-      const fields = this.data.searchFields || [];
       this.setData({
         visible: true,
         draft: cloneFilters(this.data.active || {}),
-        draftConditions: cloneConditions(this.data.fieldConditions || []),
-        // 分字段搜索默认停在「综合」以外的第一个字段，避免默认等于综合搜索而没有意义。
-        conditionField: fields.length > 1 ? fields[1].value : fields.length ? fields[0].value : '',
-        conditionValue: '',
+        draftFields: { ...(this.data.fieldValues || {}) },
       });
       this.refresh();
     },
@@ -333,78 +308,28 @@ Component({
       this.setData({ datePickerVisible: !!event.detail.visible });
     },
 
-    // ---------------- 分字段条件 ----------------
-
-    openConditionFieldPicker() {
-      const fields = this.data.searchFields || [];
-      if (!fields.length) return;
-      const index = Math.max(0, fields.findIndex((field) => field.value === this.data.conditionField));
-      this.setData({ conditionFieldPickerVisible: true, searchFieldIndex: index });
-    },
-
-    onConditionFieldPickerConfirm(event) {
-      const fields = this.data.searchFields || [];
-      const index = Number((event.detail.value || [])[0] || 0);
-      const field = fields[index];
-      this.setData({ conditionFieldPickerVisible: false });
-      if (!field) return;
-      this.setData({ conditionField: field.value });
-    },
-
-    onConditionFieldPickerVisibleChange(event) {
-      this.setData({ conditionFieldPickerVisible: !!event.detail.visible });
-    },
-
-    onConditionValueInput(event) {
-      this.setData({ conditionValue: (event.detail && event.detail.value) || '' });
-    },
-
-    /** 添加一条分字段条件；同一字段再添加时覆盖原值（与网页端一个字段一个输入框一致）。 */
-    addCondition() {
-      const field = this.data.conditionField;
-      const value = String(this.data.conditionValue || '').trim();
-      if (!field || !value) return;
-      const conditions = this.data.draftConditions
-        .filter((condition) => condition.field !== field)
-        .concat({ field, value });
-      this.setData({ draftConditions: conditions, conditionValue: '' });
-      this.refresh();
-    },
-
-    removeCondition(event) {
-      const index = Number(event.currentTarget.dataset.index);
-      const conditions = this.data.draftConditions.slice();
-      if (Number.isNaN(index) || index < 0 || index >= conditions.length) return;
-      conditions.splice(index, 1);
-      this.setData({ draftConditions: conditions });
-      this.refresh();
-    },
-
     // ---------------- 确认 / 重置 / 胶囊 ----------------
 
     resetDraft() {
-      this.setData({ draft: {}, draftConditions: [] });
+      this.setData({ draft: {}, draftFields: {} });
       this.refresh();
     },
 
     confirmSheet() {
       const values = normalizeDraft(this.data.draft, this.data.sections || []);
-      const conditions = this.data.draftConditions.slice();
+      const fields = trimFields(this.data.draftFields, this.data.fieldDefs || []);
       this.setData({ visible: false });
-      this.triggerEvent('change', { values, conditions });
+      this.triggerEvent('change', { values, fields });
     },
 
     /** 已选条件胶囊上的 ×：立即去掉这一项（不必再开面板点确定）。 */
     removeChip(event) {
-      const { key, value, conditionIndex } = event.currentTarget.dataset;
+      const { key, value, fieldKey } = event.currentTarget.dataset;
       // 分字段条件的 × 也是立即生效。
-      if (conditionIndex !== undefined && conditionIndex !== null && conditionIndex !== '') {
-        const conditions = (this.data.fieldConditions || []).slice();
-        conditions.splice(Number(conditionIndex), 1);
-        this.triggerEvent('change', {
-          values: cloneFilters(this.data.active || {}),
-          conditions,
-        });
+      if (fieldKey) {
+        const fields = { ...(this.data.fieldValues || {}) };
+        delete fields[fieldKey];
+        this.triggerEvent('change', { values: cloneFilters(this.data.active || {}), fields });
         return;
       }
       if (!key) return;
@@ -416,11 +341,14 @@ Component({
       } else {
         delete values[key];
       }
-      this.triggerEvent('change', { values, conditions: (this.data.fieldConditions || []).slice() });
+      this.triggerEvent('change', {
+        values,
+        fields: { ...(this.data.fieldValues || {}) },
+      });
     },
 
     resetAll() {
-      this.triggerEvent('change', { values: {}, conditions: [] });
+      this.triggerEvent('change', { values: {}, fields: {} });
     },
 
     /** 选项加载失败时的「重新加载」：页面收到后重拉 filter-options 并重建分区。 */
@@ -442,16 +370,6 @@ function cloneFilters(filters) {
   return out;
 }
 
-/** 本地日期字符串（YYYY-MM-DD），日期选择器的初始值与提交格式都用它。 */
-function toDateString(date) {
-  const pad = (part) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function cloneConditions(conditions) {
-  return (conditions || []).map((condition) => ({ ...condition }));
-}
-
 /** 提交前把草稿归一：空的区间对象 / 空数组直接去掉，避免把「没选」当成条件发出去。 */
 function normalizeDraft(draft, sections) {
   const out = {};
@@ -471,6 +389,22 @@ function normalizeDraft(draft, sections) {
     if (value) out[section.key] = value;
   });
   return out;
+}
+
+/** 提交前去掉空字段：只保留真正填了值的，避免空串参与过滤。 */
+function trimFields(fieldValues, defs) {
+  const out = {};
+  defs.forEach((def) => {
+    const value = String((fieldValues && fieldValues[def.key]) || '').trim();
+    if (value) out[def.key] = value;
+  });
+  return out;
+}
+
+/** 本地日期字符串（YYYY-MM-DD），日期选择器的初始值与提交格式都用它。 */
+function toDateString(date) {
+  const pad = (part) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 module.exports = { KIND_SINGLE, KIND_MULTI, KIND_RANGE, KIND_DATE_RANGE };

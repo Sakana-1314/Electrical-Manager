@@ -4,13 +4,12 @@
     <filter-panel
       keyword="{{keyword}}"
       placeholder="{{i18n.purchasePlanSearchPlaceholder}}"
-      search-fields="{{searchFields}}"
-      search-field="{{searchField}}"
       sections="{{filterSections}}"
       active="{{filters}}"
       options-failed="{{optionsFailed}}"
       bind:retryoptions="onRetryOptions"
-      field-conditions="{{fieldConditions}}"
+      field-defs="{{fieldDefs}}"
+      field-values="{{fieldValues}}"
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />
