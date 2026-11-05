@@ -148,22 +148,14 @@ Component({
       }));
 
       // 只数生效条件的个数给筛选按钮做角标；具体条件在面板里看（收起态不再铺一行胶囊）。
+      // 计数一律以「值里真有内容」为准，不依赖 kind：多选默认的空数组是 truthy，
+      // 一旦分区 kind 漏传（退回 single）就会被误算成一个生效条件。
       let activeCount = 0;
       defs.forEach((def) => {
         if (String(fieldValues[def.key] || '').trim()) activeCount += 1;
       });
       sections.forEach((section) => {
-        const kind = section.kind || KIND_SINGLE;
-        const value = active[section.key];
-        if (kind === KIND_MULTI) {
-          activeCount += (value || []).length;
-          return;
-        }
-        if (kind === KIND_RANGE || kind === KIND_DATE_RANGE) {
-          if (value && (value.from || value.to)) activeCount += 1;
-          return;
-        }
-        if (value) activeCount += 1;
+        activeCount += countValue(active[section.key]);
       });
 
       this.setData({ sectionsView, fieldRows, activeCount });
@@ -350,6 +342,19 @@ function normalizeDraft(draft, sections) {
     if (value) out[section.key] = value;
   });
   return out;
+}
+
+/**
+ * 一个筛选值里「有几个生效条件」：空串 / 空数组 / 空区间都算 0。
+ *
+ * 不按分区 kind 判断，是因为 kind 是页面传进来的元数据，漏传就会退化成单选，
+ * 而多选的默认值 `[]` 在 JS 里是 truthy——那会让没有任何筛选时也显示角标。
+ */
+function countValue(value) {
+  if (value === undefined || value === null) return 0;
+  if (Array.isArray(value)) return value.filter(Boolean).length;
+  if (typeof value === 'object') return value.from || value.to ? 1 : 0;
+  return String(value).trim() ? 1 : 0;
 }
 
 /** 提交前去掉空字段：只保留真正填了值的，避免空串参与过滤。 */

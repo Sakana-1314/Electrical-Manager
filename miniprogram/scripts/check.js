@@ -477,6 +477,36 @@ if (themedPage.data.i18n === undefined) {
   if (panelMarkup.includes('filter-chips') || panelScript.includes('removeChip')) {
     throw new Error('The collapsed filter bar must not render selected-condition chips.');
   }
+  // 角标只能按「值里真有内容」计数：多选的默认值 [] 是 truthy，
+  // 一旦按 kind 分支 or 直接 `if (value)`，没筛选也会显示徽标（华星曾因此显示 2）。
+  if (!panelScript.includes('function countValue(')) {
+    throw new Error('components/filter-panel must count active filters with countValue().');
+  }
+  if (/if \(value\) activeCount \+= 1/.test(panelScript)) {
+    throw new Error('The filter badge must not count truthy empty arrays as active filters.');
+  }
+  // 页面侧的 buildSection 必须把 kind 带到分区上，否则多选会被当成单选渲染。
+  // 只检查该函数内的 return 对象有没有 kind（`kind: 'single'` 与形参透传都算）。
+  for (const page of [
+    'huaxing-inventory/huaxing-inventory',
+    'purchase-plans/purchase-plans',
+    'purchase-records/purchase-records',
+    'hazards/hazards',
+  ]) {
+    const script = read(`pages/${page}.js`);
+    // 用定义签名定位（`buildSection(key, ...` 会命中调用处，所以要求前面是方法名声明形式）。
+    const def = script.indexOf('  buildSection(key, title');
+    if (def < 0) continue;
+    const ret = script.indexOf('return {', def);
+    if (ret < 0 || ret - def > 1500) {
+      throw new Error(`pages/${page}.js buildSection must return a section object.`);
+    }
+    const objEnd = script.indexOf('}', ret);
+    if (!/\bkind\b/.test(script.slice(ret, objEnd))) {
+      throw new Error(`pages/${page}.js buildSection must pass kind through to the section.`);
+    }
+  }
+
   // 「重置」必须清空并立即生效：只清草稿会让角标继续挂着已生效的条件，和按钮文案不符。
   // 取 resetDraft 的函数体（到下一个行首的四个空格 + ` },` 为止），要求同时清草稿并发 change。
   const resetStart = panelScript.indexOf('resetDraft() {');

@@ -205,13 +205,17 @@ Page(withTheme({
 
   /** 组装一个筛选分区：首项「全部」；分享值缺失时补一项，避免面板显示成原值。 */
   buildSection(key, title, values, sharedValue, kind = 'single') {
-    const list = [{ label: t('all'), value: '' }].concat(
-      values.map((value) => ({ label: value, value })),
-    );
-    if (sharedValue && !list.some((option) => option.value === sharedValue)) {
-      list.splice(1, 0, { label: sharedValue, value: sharedValue });
-    }
-    return { key, title, options: list };
+    const options = values.map((value) => ({ label: value, value }));
+    // 多选分区的值是数组：分享值可能是 | 分隔的多个，逐个补进选项。
+    const sharedValues = kind === 'multi' ? (Array.isArray(sharedValue) ? sharedValue : []) : sharedValue ? [sharedValue] : [];
+    sharedValues.forEach((value) => {
+      if (value && !options.some((option) => option.value === value)) {
+        options.unshift({ label: value, value });
+      }
+    });
+    const list = [{ label: t('all'), value: '' }].concat(options);
+    // kind 必须一路带到分区上：漏掉会被当成单选，空数组（多选默认值）会被算成一个生效条件。
+    return { key, title, kind, options: list };
   },
 
   onUnload() {
