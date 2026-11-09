@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { h, ref, watch } from 'vue'
 import { NTag, type DataTableColumns, useMessage } from 'naive-ui'
+import { useRouter } from 'vue-router'
 import type { PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
+import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import { renderTwoLineText } from '@/utils/tableText'
 import { formatDate } from '@/utils/time'
-import PurchaseRecordDetailPanel from '@/components/PurchaseRecordDetailPanel.vue'
 
 const props = defineProps<{
   show: boolean
@@ -17,6 +18,8 @@ const emit = defineEmits<{
 }>()
 
 const message = useMessage()
+const router = useRouter()
+const rowClickGuard = createTableRowClickGuard()
 const searchMaterialCode = ref('')
 const searchName = ref('')
 const searchModelSpec = ref('')
@@ -30,11 +33,6 @@ const pageSize = ref(10)
 const loading = ref(false)
 
 const columns: DataTableColumns<PurchaseRecord> = [
-  {
-    type: 'expand',
-    width: 36,
-    renderExpand: (row) => h(PurchaseRecordDetailPanel, { record: row }),
-  },
   {
     title: '需求日期',
     key: 'plan_date',
@@ -105,6 +103,22 @@ const columns: DataTableColumns<PurchaseRecord> = [
     render: (row) => renderTwoLineText(row.actual_demand_person),
   },
 ]
+
+/** 整行可点击：跳到申购记录列表并复用已有的详情弹窗（`?detail=`）。 */
+function rowProps(row: PurchaseRecord) {
+  return {
+    style: 'cursor: pointer',
+    onMousedown: rowClickGuard.onMouseDown,
+    onClick: (event: MouseEvent) => {
+      if (rowClickGuard.shouldIgnore(event)) return
+      emit('update:show', false)
+      void router.push({
+        name: 'purchase-records',
+        query: { detail: String(row.line_id) },
+      })
+    },
+  }
+}
 
 async function load() {
   loading.value = true
@@ -188,7 +202,7 @@ function changePage(value: number) {
     title="历史申购记录"
     class="purchase-record-history-modal"
     style="width: min(960px, 92vw)"
-    :mask-closable="false"
+    :mask-closable="true"
     :bordered="false"
     @update:show="emit('update:show', $event)"
   >
@@ -227,7 +241,6 @@ function changePage(value: number) {
         <n-button type="primary" :loading="loading" @click="search">查询</n-button>
       </div>
     </div>
-    <div v-if="items.length" class="history-hint">点击行首箭头可展开该条申购记录的完整信息</div>
     <n-data-table
       remote
       size="small"
@@ -237,6 +250,7 @@ function changePage(value: number) {
       :data="items"
       :loading="loading"
       :row-key="(row: PurchaseRecord) => row.line_id"
+      :row-props="rowProps"
       :scroll-x="1160"
     />
     <div class="pagination-bar">
@@ -289,11 +303,5 @@ function changePage(value: number) {
 
 .history-search-actions :deep(.n-button) {
   min-width: 88px;
-}
-
-.history-hint {
-  margin: -4px 0 10px;
-  color: var(--color-text-muted);
-  font-size: 12px;
 }
 </style>
