@@ -1,4 +1,4 @@
-const { apiBaseUrl } = require('../config/index');
+const { apiBaseUrl } = require('../config/api');
 const { t } = require('./i18n');
 
 // 库存状态 → t-tag 主题色。全局已统一为蓝色分级（见 app.wxss 语义变量）：

@@ -1,2 +1,6 @@
 miniprogram_npm/
 node_modules/
+
+# 接口域名配置：仓库是公开的，真实域名只落本地与 CI Secret，不进版本库。
+# 本地从 config/index.example.js 复制；CI 上传前由工作流生成。
+config/index.js

@@ -9,12 +9,12 @@ const {
   switchProject,
   takeProjectSwitchNotice,
 } = require('../../utils/project');
-const { apiBaseUrl } = require('../../config/index');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
 const { getAppearanceOptions, readThemeMode, setThemeMode, withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-const SHARE_IMAGE_URL = `${apiBaseUrl.replace(/\/api\/v1\/?$/, '')}/logo.png`;
+// 分享卡片图放在代码包里，不依赖接口域名（接口域名只提供 API，不保证有 /logo.png）。
+const SHARE_IMAGE_URL = '/assets/share-logo.png';
 
 function formatDateTime(value) {
   const date = new Date(value);
