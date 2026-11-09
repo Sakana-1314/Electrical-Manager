@@ -138,6 +138,7 @@ Vary: Origin, Referer
 | 项 | 值 |
 | --- | --- |
 | 部署配置 | `web/edgeone.json`（EdgeOne 项目根目录为 `web/`） |
+| 构建命令 | `npm run build` 经 `web/scripts/build.mjs` 在 POSIX 构建机上先尽量提升 `nofile`，再执行 `vue-tsc -b && vite build`（即 `build:ci`）。EdgeOne 构建容器的 nofile 软限制较低，直接构建可能报 `EMFILE: too many open files`；若平台仍失败，把构建命令改成 `sh -c 'ulimit -n 65535; npm run build'`。 |
 | 构建产物 | `dist/`（JS/CSS 在 `dist/yangrucheng-assets/`，文件名带内容 hash） |
 | 缓存规则 | `/yangrucheng-assets/*`、`/*.png`、`/*.jpg` → `max-age=1209600`（14 天） |
 
