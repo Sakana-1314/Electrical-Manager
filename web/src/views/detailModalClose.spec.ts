@@ -34,8 +34,8 @@ const DETAIL_MODAL_FILES = [
   'components/StockMaterialFormModal.vue', // 二级库物资详情
   'components/OperationDetailModal.vue', // 出入库流水详情
   'components/WorkRecordFormModal.vue', // 工作记录详情
+  'components/PurchaseRecordDetailModal.vue', // 申购记录详情
   'views/procurement/PurchaseMaterialsView.vue', // 申购计划详情
-  'views/procurement/PurchaseRequestsView.vue', // 申购记录详情
 ]
 
 /** 已移除的详情路由名与硬编码详情路径。 */

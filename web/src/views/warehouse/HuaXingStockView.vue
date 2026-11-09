@@ -2,8 +2,10 @@
 import { computed, h, onMounted, ref } from 'vue'
 import type { DataTableColumns } from 'naive-ui'
 import { useDialog, useMessage } from 'naive-ui'
-import type { HuaXingInventory } from '@/api/generated'
+import { useRoute, useRouter, type LocationQueryValue } from 'vue-router'
+import type { HuaXingInventory, PurchaseRecord } from '@/api/generated'
 import { huaXingInventoryApi } from '@/api/huaXingInventory'
+import { procurementApi } from '@/api/procurement'
 import { useAuthStore } from '@/stores/auth'
 import {
   getTableScrollX,
@@ -13,21 +15,30 @@ import {
 import { useImportConfirm } from '@/composables/useImportConfirm'
 import { useImportJob } from '@/composables/useImportJob'
 import { usePagedTable } from '@/composables/usePagedTable'
+import { routeQueryString } from '@/utils/routeQuery'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import { formatShanghaiTime, toShanghaiDate } from '@/utils/time'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
 import FilterExpandButton from '@/components/FilterExpandButton.vue'
 import LoadingMask from '@/components/LoadingMask.vue'
+import PurchaseRecordDetailModal from '@/components/PurchaseRecordDetailModal.vue'
 import PurchaseRecordHistoryDialog from '@/components/PurchaseRecordHistoryDialog.vue'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const dialog = useDialog()
 const message = useMessage()
 const fileInput = ref<HTMLInputElement | null>(null)
 const filterExpanded = ref(false)
 const rowClickGuard = createTableRowClickGuard()
-const showPurchaseRecords = ref(false)
-const purchaseRecordMaterialCode = ref('')
+const showPurchaseRecords = ref(routeQueryString(route.query.history) === '1')
+const historyMaterialCode = ref(routeQueryString(route.query.history_code))
+const historyName = ref(routeQueryString(route.query.history_name))
+const historyModelSpec = ref(routeQueryString(route.query.history_model))
+const historyReloadToken = ref(0)
+const showRecordDetail = ref(false)
+const selectedRecord = ref<PurchaseRecord | null>(null)
 type HuaXingFilters = {
   materialCode: string
   name: string
@@ -35,7 +46,33 @@ type HuaXingFilters = {
   purchaseDepartment: string[]
   purchaser: string[]
   /** 首次入库日期区间：[起始时间戳, 结束时间戳]，未选为 null */
-  inboundDateRange: [number, number] | null
+  inboundDateRange: [number | null, number | null] | null
+}
+
+type RouteQueryValue = LocationQueryValue | LocationQueryValue[] | undefined
+
+/** 多选值在 URL 里用 `|` 分隔（与后端的「任一」匹配一致）。 */
+function splitQueryList(value: RouteQueryValue): string[] {
+  return routeQueryString(value)
+    .split(/[|｜]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+/** URL 里的 YYYY-MM-DD 还原成上海时区当天零点的时间戳（日期选择器的值）。 */
+function queryDateTimestamp(value: RouteQueryValue): number | null {
+  const date = routeQueryString(value)
+  if (!date) return null
+  const timestamp = Date.parse(`${date}T00:00:00+08:00`)
+  return Number.isFinite(timestamp) ? timestamp : null
+}
+
+function inboundRangeFromQuery(
+  query: Record<string, RouteQueryValue>,
+): [number | null, number | null] | null {
+  const from = queryDateTimestamp(query.date_from)
+  const to = queryDateTimestamp(query.date_to)
+  return from === null && to === null ? null : [from, to]
 }
 const {
   items,
@@ -73,6 +110,35 @@ const {
     inboundDateRange: null,
   }),
   onError: (error) => message.error(error instanceof Error ? error.message : '加载华星总库存失败'),
+  urlSync: {
+    routeName: 'hua-xing-stock',
+    fromQuery: (r) => ({
+      materialCode: routeQueryString(r.query.material_code),
+      name: routeQueryString(r.query.name),
+      modelSpec: routeQueryString(r.query.model_spec),
+      purchaseDepartment: splitQueryList(r.query.purchase_department),
+      purchaser: splitQueryList(r.query.purchaser),
+      inboundDateRange: inboundRangeFromQuery(r.query),
+    }),
+    toQuery: (f) => ({
+      material_code: f.materialCode.trim() || undefined,
+      name: f.name.trim() || undefined,
+      model_spec: f.modelSpec.trim() || undefined,
+      purchase_department: f.purchaseDepartment.length ? f.purchaseDepartment.join('|') : undefined,
+      purchaser: f.purchaser.length ? f.purchaser.join('|') : undefined,
+      date_from:
+        f.inboundDateRange?.[0] == null ? undefined : toShanghaiDate(f.inboundDateRange[0]),
+      date_to: f.inboundDateRange?.[1] == null ? undefined : toShanghaiDate(f.inboundDateRange[1]),
+    }),
+    // 历史申购记录弹窗 / 详情弹窗的参数不属于列表筛选，翻页与查询时必须原样保留
+    preservedQueryKeys: [
+      'history',
+      'history_code',
+      'history_name',
+      'history_model',
+      'record_detail',
+    ],
+  },
   pageSizeOptions: [20, 50, 100, 200],
 })
 const departmentOptions = ref<{ label: string; value: string }[]>([])
@@ -104,6 +170,9 @@ async function loadLastImport() {
 onMounted(() => {
   void loadLastImport()
   void loadFilterOptions()
+  // 刷新 / 收藏：URL 里带 record_detail 时恢复该条申购记录详情弹窗
+  const detailId = Number(routeQueryString(route.query.record_detail))
+  if (Number.isInteger(detailId) && detailId > 0) void openRecordDetailById(detailId)
 })
 const activeFilterCount = computed(
   () =>
@@ -250,15 +319,113 @@ function rowProps(row: HuaXingInventory) {
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
       if (rowClickGuard.shouldIgnore(event)) return
-      const code = row.material_code?.trim()
-      if (!code) {
-        message.warning('该货品没有物料编码，无法查询申购记录')
-        return
-      }
-      purchaseRecordMaterialCode.value = code
-      showPurchaseRecords.value = true
+      openHistory(row)
     },
   }
+}
+
+function openHistory(row: HuaXingInventory) {
+  const code = row.material_code?.trim()
+  if (!code) {
+    message.warning('该货品没有物料编码，无法查询申购记录')
+    return
+  }
+  historyMaterialCode.value = code
+  historyName.value = ''
+  historyModelSpec.value = ''
+  showPurchaseRecords.value = true
+  selectedRecord.value = null
+  showRecordDetail.value = false
+  void router.replace({
+    query: {
+      ...route.query,
+      history: '1',
+      history_code: code,
+      history_name: undefined,
+      history_model: undefined,
+      record_detail: undefined,
+    },
+  })
+}
+
+function onHistoryShow(value: boolean) {
+  showPurchaseRecords.value = value
+  if (value) return
+  selectedRecord.value = null
+  showRecordDetail.value = false
+  void router.replace({
+    query: {
+      ...route.query,
+      history: undefined,
+      history_code: undefined,
+      history_name: undefined,
+      history_model: undefined,
+      record_detail: undefined,
+    },
+  })
+}
+
+function onHistorySearch(filters: { materialCode: string; name: string; modelSpec: string }) {
+  historyMaterialCode.value = filters.materialCode
+  historyName.value = filters.name
+  historyModelSpec.value = filters.modelSpec
+  void router.replace({
+    query: {
+      ...route.query,
+      history: '1',
+      history_code: filters.materialCode || undefined,
+      history_name: filters.name || undefined,
+      history_model: filters.modelSpec || undefined,
+    },
+  })
+}
+
+function openRecordDetail(record: PurchaseRecord) {
+  selectedRecord.value = record
+  showRecordDetail.value = true
+  void router.replace({ query: { ...route.query, record_detail: String(record.line_id) } })
+}
+
+async function openRecordDetailById(lineId: number) {
+  try {
+    const record = await procurementApi.record(lineId)
+    selectedRecord.value = record
+    showRecordDetail.value = true
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '申购记录加载失败')
+    void router.replace({ query: { ...route.query, record_detail: undefined } })
+  }
+}
+
+function onRecordDetailShow(value: boolean) {
+  if (value) return
+  showRecordDetail.value = false
+  selectedRecord.value = null
+  void router.replace({ query: { ...route.query, record_detail: undefined } })
+}
+
+function onRecordSaved() {
+  historyReloadToken.value += 1
+}
+
+async function onRecordRestored(planId: number) {
+  showRecordDetail.value = false
+  selectedRecord.value = null
+  await router.replace({
+    query: {
+      ...route.query,
+      record_detail: undefined,
+      history: undefined,
+      history_code: undefined,
+      history_name: undefined,
+      history_model: undefined,
+    },
+  })
+  await router.push({ name: 'purchase-materials', query: { detail: String(planId) } })
+}
+
+function onReapplyCreated(planId: number) {
+  void onRecordRestored(planId)
 }
 
 function openFilePicker() {
@@ -442,8 +609,22 @@ function onFileChange(event: Event) {
     </n-card>
 
     <PurchaseRecordHistoryDialog
-      v-model:show="showPurchaseRecords"
-      :initial-material-code="purchaseRecordMaterialCode"
+      :show="showPurchaseRecords"
+      :initial-material-code="historyMaterialCode"
+      :initial-name="historyName"
+      :initial-model-spec="historyModelSpec"
+      :reload-token="historyReloadToken"
+      @update:show="onHistoryShow"
+      @select="openRecordDetail"
+      @search="onHistorySearch"
+    />
+    <PurchaseRecordDetailModal
+      :show="showRecordDetail"
+      :record="selectedRecord"
+      @update:show="onRecordDetailShow"
+      @saved="onRecordSaved"
+      @restored="onRecordRestored"
+      @reapply-created="onReapplyCreated"
     />
   </div>
 </template>

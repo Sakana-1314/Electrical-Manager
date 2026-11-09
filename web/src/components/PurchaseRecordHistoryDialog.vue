@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { h, ref, watch } from 'vue'
 import { NTag, type DataTableColumns, useMessage } from 'naive-ui'
-import { useRouter } from 'vue-router'
 import type { PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
@@ -12,13 +11,17 @@ const props = defineProps<{
   show: boolean
   initialName?: string
   initialMaterialCode?: string
+  initialModelSpec?: string
+  /** 详情弹窗保存后由父组件自增，触发当前列表刷新。 */
+  reloadToken?: number
 }>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
+  select: [record: PurchaseRecord]
+  search: [filters: { materialCode: string; name: string; modelSpec: string }]
 }>()
 
 const message = useMessage()
-const router = useRouter()
 const rowClickGuard = createTableRowClickGuard()
 const searchMaterialCode = ref('')
 const searchName = ref('')
@@ -104,19 +107,23 @@ const columns: DataTableColumns<PurchaseRecord> = [
   },
 ]
 
-/** 整行可点击：跳到申购记录列表并复用已有的详情弹窗（`?detail=`）。 */
+/** 整行可点击：交给父组件打开已有的申购记录详情弹窗。 */
 function rowProps(row: PurchaseRecord) {
   return {
     style: 'cursor: pointer',
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
       if (rowClickGuard.shouldIgnore(event)) return
-      emit('update:show', false)
-      void router.push({
-        name: 'purchase-records',
-        query: { detail: String(row.line_id) },
-      })
+      emit('select', row)
     },
+  }
+}
+
+function currentSearch() {
+  return {
+    materialCode: searchMaterialCode.value.trim(),
+    name: searchName.value.trim(),
+    modelSpec: searchModelSpec.value.trim(),
   }
 }
 
@@ -145,7 +152,7 @@ async function load() {
 function open() {
   defaultMaterialCode.value = props.initialMaterialCode?.trim() || ''
   defaultName.value = props.initialName?.trim() || ''
-  defaultModelSpec.value = ''
+  defaultModelSpec.value = props.initialModelSpec?.trim() || ''
   restoreFilters()
   page.value = 1
   void load()
@@ -159,6 +166,7 @@ function restoreFilters() {
 
 function search() {
   page.value = 1
+  emit('search', currentSearch())
   void load()
 }
 
@@ -184,6 +192,15 @@ watch(
   () => props.show,
   (visible) => {
     if (visible) open()
+  },
+  { immediate: true },
+)
+
+// 详情弹窗保存后父组件自增 reloadToken：当前列表保持页码与搜索条件重查一次。
+watch(
+  () => props.reloadToken,
+  () => {
+    if (props.show) void load()
   },
 )
 // 翻页只由分页器触发加载：原来的 watch(page) 会与 open / search / changePageSize 里

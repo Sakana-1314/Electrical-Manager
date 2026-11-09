@@ -2,7 +2,6 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { NButton, NDataTable, NInput, NMessageProvider, NModal, NPagination, NTag } from 'naive-ui'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
-import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import type { PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import PurchaseRecordHistoryDialog from './PurchaseRecordHistoryDialog.vue'
@@ -48,7 +47,6 @@ const record: PurchaseRecord = {
 
 const show = ref(false)
 let wrapper: VueWrapper | null = null
-let router: Router
 
 const Host = defineComponent({
   setup() {
@@ -68,18 +66,9 @@ const Host = defineComponent({
 
 async function mountDialog(): Promise<void> {
   procurement.records.mockResolvedValue({ items: [record], page: 1, page_size: 10, total: 1 })
-  router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/procurement/records', name: 'purchase-records', component: { template: '' } },
-    ],
-  })
-  await router.push('/procurement/records')
-  await router.isReady()
   wrapper = mount(Host, {
     attachTo: document.body,
     global: {
-      plugins: [router],
       // 单测环境未启用 unplugin-vue-components，需显式注册模板里的 n-* 组件。
       components: {
         NButton,
@@ -126,7 +115,7 @@ describe('PurchaseRecordHistoryDialog', () => {
     expect(modal?.props('maskClosable')).toBe(true)
   })
 
-  it('点击记录行跳到申购记录列表并带 ?detail= 复用详情弹窗', async () => {
+  it('点击记录行抛出 select 事件，由父组件打开详情弹窗', async () => {
     await mountDialog()
 
     const row = document.querySelector('.n-data-table-tbody .n-data-table-tr') as HTMLElement
@@ -135,9 +124,32 @@ describe('PurchaseRecordHistoryDialog', () => {
     row.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await flushPromises()
 
-    expect(show.value).toBe(false)
-    expect(router.currentRoute.value.name).toBe('purchase-records')
-    expect(router.currentRoute.value.query.detail).toBe('1')
+    expect(show.value).toBe(true)
+    const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
+    expect(dialog?.emitted('select')?.[0]?.[0]).toMatchObject({ line_id: 1 })
+  })
+
+  it('查询时抛出 search 事件供父页面写回 URL', async () => {
+    await mountDialog()
+
+    const inputs = wrapper?.findAllComponents(NInput)
+    if (!inputs?.length) throw new Error('找不到查询输入框')
+    await inputs[0].vm.$emit('update:value', 'L099-00001')
+    await flushPromises()
+    const searchButton = [
+      ...document.querySelectorAll<HTMLButtonElement>('.history-search button'),
+    ].find((button) => button.textContent?.trim().includes('查询'))
+    if (!searchButton) throw new Error('找不到查询按钮')
+    searchButton.click()
+    await flushPromises()
+
+    const searches = wrapper?.findComponent(PurchaseRecordHistoryDialog)?.emitted('search')
+    const lastSearch = searches?.[searches.length - 1]?.[0]
+    expect(lastSearch).toMatchObject({
+      materialCode: 'L099-00001',
+      name: '',
+      modelSpec: '',
+    })
   })
 
   it('清空后重置恢复初始物料编码并重新查询', async () => {

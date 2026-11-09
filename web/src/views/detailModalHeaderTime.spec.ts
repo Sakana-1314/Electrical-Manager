@@ -19,8 +19,8 @@ const rule = styles.match(/\.card-header-time \{[^}]*\}/)?.[0] ?? ''
 /** 用「最后更新时间」的详情弹窗（相对 `web/src`）。 */
 const HEADER_TIME_FILES = [
   'components/StockMaterialFormModal.vue',
+  'components/PurchaseRecordDetailModal.vue',
   'views/procurement/PurchaseMaterialsView.vue',
-  'views/procurement/PurchaseRequestsView.vue',
 ]
 
 describe('详情弹窗标题右侧的更新时间', () => {

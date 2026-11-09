@@ -69,6 +69,7 @@ declare module 'vue' {
     NTag: typeof import('naive-ui')['NTag']
     OperationDetailModal: typeof import('./src/components/OperationDetailModal.vue')['default']
     OperationLinesEditor: typeof import('./src/components/OperationLinesEditor.vue')['default']
+    PurchaseRecordDetailModal: typeof import('./src/components/PurchaseRecordDetailModal.vue')['default']
     PurchaseRecordHistoryDialog: typeof import('./src/components/PurchaseRecordHistoryDialog.vue')['default']
     QuantityInput: typeof import('./src/components/QuantityInput.vue')['default']
     ReverseOperationDialog: typeof import('./src/components/ReverseOperationDialog.vue')['default']
