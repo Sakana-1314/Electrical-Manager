@@ -9,7 +9,7 @@
 ## 本地运行
 
 1. 在本目录执行 `npm install`。
-2. 复制 `config/index.example.js` 为 `config/index.js`，把 `apiBaseUrl` 改成实际后端地址（形如 `https://<域名>/api/v1`）。该文件已被 `.gitignore` 忽略，真实域名不要提交到仓库。
+2. 复制 `config/index.example.js` 为 `config/index.js`，把 `apiBaseUrl` 改成实际后端域名（形如 `https://<域名>`，不要带 `/api/v1`）。该文件已被 `.gitignore` 忽略，真实域名不要提交到仓库。
 3. 使用微信开发者工具导入本目录。
 4. 将 `project.config.json` 的 `appid` 替换为正式小程序 AppID。
 5. 在微信开发者工具中执行“工具 → 构建 npm”。
@@ -21,9 +21,9 @@
 
 仓库是公开的，接口域名不写入版本库：运行时的 `config/index.js` 由本地配置或 CI 生成，仓库只保留 `config/index.example.js` 模板。
 
-- 本地开发：复制模板后填写实际域名。
+- 本地开发：复制模板后只填域名（origin），`/api/v1` 前缀由 `config/api.js` 统一追加。
 - CI 上传：工作流从 GitHub Secret `MINIPROGRAM_API_BASE_URL` 生成 `config/index.js`（结尾斜杠会被去掉），缺失时直接失败。
-- `npm run check` 会校验 `apiBaseUrl` 必须是 `https://<域名>/api/v1`，且不能还是模板占位值。
+- `npm run check` 会校验 `apiBaseUrl` 是纯域名（不带路径），且 `config/api.js` 能正确追加 `/api/v1`。
 
 ## 深色模式（界面外观）
 
@@ -103,7 +103,7 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 - `WECHAT_MINIPROGRAM_PRIVATE_KEY`：微信公众平台“小程序代码上传”中生成的上传私钥完整内容。
 - `WECHAT_MINIPROGRAM_APPID_2`：第二个小程序 AppID。
 - `WECHAT_MINIPROGRAM_PRIVATE_KEY_2`：第二个小程序的上传私钥完整内容。
-- `MINIPROGRAM_API_BASE_URL`：后端接口地址，形如 `https://<域名>/api/v1`。工作流用它生成 `config/index.js`，不写进仓库。
+- `MINIPROGRAM_API_BASE_URL`：后端接口域名，形如 `https://<域名>`（不要带 `/api/v1`，代码会追加）。工作流用它生成 `config/index.js`，不写进仓库。
 
 工作流会先完成一次依赖安装、接口域名配置生成和代码检查，再将同一版本依次上传到两个小程序。运行时，小程序
 会通过 `wx.getAccountInfoSync()` 上报自身 AppID，后端据此选择对应 AppSecret；不要把 AppSecret

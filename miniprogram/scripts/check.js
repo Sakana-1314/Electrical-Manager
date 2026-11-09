@@ -8,17 +8,28 @@ function read(relativePath) {
 }
 
 // 接口域名不进版本库：本地从 config/index.example.js 复制，CI 上传前由工作流用 Secret 生成。
+// 配置只填域名（origin），/api/v1 前缀由 config/api.js 统一追加。
 const apiConfigPath = path.join(root, 'config/index.js');
 if (!fs.existsSync(apiConfigPath)) {
   throw new Error(
-    '缺少 config/index.js：请复制 config/index.example.js 为 config/index.js 并填写接口地址（CI 由 MINIPROGRAM_API_BASE_URL 生成）。',
+    '缺少 config/index.js：请复制 config/index.example.js 为 config/index.js 并填写接口域名（CI 由 MINIPROGRAM_API_BASE_URL 生成）。',
   );
 }
-const { apiBaseUrl } = require(apiConfigPath);
-if (!/^https:\/\/[^/]+\/api\/v1$/.test(apiBaseUrl) || /example\.com/i.test(apiBaseUrl)) {
+const { apiBaseUrl: configuredApiBaseUrl } = require(apiConfigPath);
+if (!/^https:\/\/[^/]+$/.test(configuredApiBaseUrl) || /example\.com/i.test(configuredApiBaseUrl)) {
   throw new Error(
-    'config/index.js 的 apiBaseUrl 必须是 https://<域名>/api/v1（结尾不带斜杠，不能是模板占位值）。',
+    'config/index.js 的 apiBaseUrl 只填接口域名（https://<域名>，不带路径与结尾斜杠，不能是模板占位值）。',
   );
+}
+const { apiBaseUrl, resolveApiBaseUrl } = require(path.join(root, 'config/api.js'));
+if (apiBaseUrl !== `${configuredApiBaseUrl}/api/v1`) {
+  throw new Error('/api/v1 前缀必须由 config/api.js 统一追加。');
+}
+if (
+  resolveApiBaseUrl('https://api.example.com') !== 'https://api.example.com/api/v1' ||
+  resolveApiBaseUrl('https://api.example.com/api/v1/') !== 'https://api.example.com/api/v1'
+) {
+  throw new Error('接口地址解析必须给纯域名追加 /api/v1，并去掉结尾斜杠、保留已有路径。');
 }
 
 const appConfig = JSON.parse(read('app.json'));

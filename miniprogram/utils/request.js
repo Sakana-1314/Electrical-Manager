@@ -1,4 +1,4 @@
-const { apiBaseUrl } = require('../config/index');
+const { apiBaseUrl } = require('../config/api');
 const { getLocale, t } = require('./i18n');
 const { buildRedirectQuery, getCurrentPageUrl } = require('./navigation');
 
