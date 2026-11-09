@@ -7,6 +7,7 @@ import {
   NDialogProvider,
   NInput,
   NMessageProvider,
+  NModal,
   NPagination,
   NSelect,
   NTag,
@@ -16,7 +17,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import type { HuaXingInventory } from '@/api/generated'
 import { huaXingInventoryApi } from '@/api/huaXingInventory'
+import { procurementApi } from '@/api/procurement'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
+import PurchaseRecordHistoryDialog from '@/components/PurchaseRecordHistoryDialog.vue'
 import HuaXingStockView from './HuaXingStockView.vue'
 
 vi.mock('@/api/huaXingInventory', () => ({
@@ -29,7 +32,14 @@ vi.mock('@/api/huaXingInventory', () => ({
   },
 }))
 
+vi.mock('@/api/procurement', () => ({
+  procurementApi: {
+    records: vi.fn(),
+  },
+}))
+
 const api = vi.mocked(huaXingInventoryApi)
+const procurement = vi.mocked(procurementApi)
 
 /** 东八区偏移：日期选择器给的是北京时间当天零点的时间戳。 */
 const SHANGHAI_OFFSET = 8 * 60 * 60 * 1000
@@ -48,6 +58,13 @@ const row: HuaXingInventory = {
   subitem_no_name: '201-冶炼主厂房',
 }
 
+const rowWithoutCode: HuaXingInventory = {
+  ...row,
+  id: 2,
+  material_code: null,
+  name: '临时物资',
+}
+
 const Host = defineComponent({
   render: () =>
     h(NDialogProvider, null, {
@@ -58,12 +75,13 @@ const Host = defineComponent({
 let wrapper: VueWrapper | null = null
 
 async function mountView(): Promise<void> {
-  api.list.mockResolvedValue({ items: [row], page: 1, page_size: 20, total: 1 })
+  api.list.mockResolvedValue({ items: [row, rowWithoutCode], page: 1, page_size: 20, total: 2 })
   api.filterOptions.mockResolvedValue({
     purchase_departments: ['生产调度中心'],
     purchasers: ['吴冰'],
   })
   api.lastImport.mockResolvedValue({ last_import_at: '2026-09-01T02:00:00Z' })
+  procurement.records.mockResolvedValue({ items: [], page: 1, page_size: 10, total: 0 })
   localStorage.setItem(
     'auth_user',
     JSON.stringify({ id: 7, username: 'tester', role: 'WAREHOUSE_ADMIN' }),
@@ -81,6 +99,7 @@ async function mountView(): Promise<void> {
         NDialogProvider,
         NInput,
         NMessageProvider,
+        NModal,
         NPagination,
         NSelect,
         NTag,
@@ -124,6 +143,16 @@ function tableColumnKeys(): string[] {
   if (!table) throw new Error('找不到数据表格')
   const columns = table.props('columns') as { key?: string }[]
   return columns.map((column) => column.key ?? '')
+}
+
+/** 点击表格第 index 行（整行点击会先经过 mousedown 守卫）。 */
+async function clickRow(index: number): Promise<void> {
+  const rows = wrapper?.element.querySelectorAll('.n-data-table-tbody .n-data-table-tr')
+  const target = rows?.[index] as HTMLElement | undefined
+  if (!target) throw new Error(`找不到表格行：${index}`)
+  target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+  target.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  await flushPromises()
 }
 
 afterEach(() => {
@@ -197,5 +226,33 @@ describe('HuaXingStockView', () => {
 
     await clickButton('收起筛选')
     expect(grid()?.classList.contains('is-collapsed')).toBe(true)
+  })
+
+  it('点击有货品编码的行按物料编码打开历史申购记录弹窗', async () => {
+    await mountView()
+
+    await clickRow(0)
+
+    const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
+    expect(dialog?.props('show')).toBe(true)
+    expect(dialog?.props('initialMaterialCode')).toBe('L012-05048')
+    expect(procurement.records).toHaveBeenCalledWith(
+      expect.objectContaining({
+        search_field: 'material_code',
+        search_value: 'L012-05048',
+        page: 1,
+        page_size: 10,
+      }),
+    )
+  })
+
+  it('点击没有货品编码的行不打开申购记录弹窗', async () => {
+    await mountView()
+
+    await clickRow(1)
+
+    const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
+    expect(dialog?.props('show')).toBe(false)
+    expect(procurement.records).not.toHaveBeenCalled()
   })
 })

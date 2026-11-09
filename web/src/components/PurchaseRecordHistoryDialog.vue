@@ -5,18 +5,22 @@ import type { PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { renderTwoLineText } from '@/utils/tableText'
 import { formatDate } from '@/utils/time'
+import PurchaseRecordDetailPanel from '@/components/PurchaseRecordDetailPanel.vue'
 
 const props = defineProps<{
   show: boolean
   initialName?: string
+  initialMaterialCode?: string
 }>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
 }>()
 
 const message = useMessage()
+const searchMaterialCode = ref('')
 const searchName = ref('')
 const searchModelSpec = ref('')
+const defaultMaterialCode = ref('')
 const defaultName = ref('')
 const defaultModelSpec = ref('')
 const items = ref<PurchaseRecord[]>([])
@@ -27,10 +31,21 @@ const loading = ref(false)
 
 const columns: DataTableColumns<PurchaseRecord> = [
   {
+    type: 'expand',
+    width: 36,
+    renderExpand: (row) => h(PurchaseRecordDetailPanel, { record: row }),
+  },
+  {
     title: '需求日期',
     key: 'plan_date',
     width: 100,
     render: (row) => formatDate(row.plan_date),
+  },
+  {
+    title: '申购日期',
+    key: 'purchase_date',
+    width: 100,
+    render: (row) => formatDate(row.purchase_date ?? undefined),
   },
   {
     title: '物资',
@@ -66,6 +81,12 @@ const columns: DataTableColumns<PurchaseRecord> = [
     render: (row) => renderTwoLineText(row.purchase_order_no, '—'),
   },
   {
+    title: '追溯号',
+    key: 'trace_no',
+    width: 120,
+    render: (row) => renderTwoLineText(row.trace_no),
+  },
+  {
     title: '状态',
     key: 'status',
     width: 90,
@@ -88,9 +109,13 @@ const columns: DataTableColumns<PurchaseRecord> = [
 async function load() {
   loading.value = true
   try {
+    const materialCode = searchMaterialCode.value.trim()
     const result = await procurementApi.records({
       name: searchName.value.trim() || undefined,
       model_spec: searchModelSpec.value.trim() || undefined,
+      // 按物料编码查同编码的历史申购记录；后端 search_field / search_value 成对生效。
+      search_field: materialCode ? 'material_code' : undefined,
+      search_value: materialCode || undefined,
       page: page.value,
       page_size: pageSize.value,
     })
@@ -104,6 +129,7 @@ async function load() {
 }
 
 function open() {
+  defaultMaterialCode.value = props.initialMaterialCode?.trim() || ''
   defaultName.value = props.initialName?.trim() || ''
   defaultModelSpec.value = ''
   restoreFilters()
@@ -112,6 +138,7 @@ function open() {
 }
 
 function restoreFilters() {
+  searchMaterialCode.value = defaultMaterialCode.value
   searchName.value = defaultName.value
   searchModelSpec.value = defaultModelSpec.value
 }
@@ -122,6 +149,7 @@ function search() {
 }
 
 function clearSearch() {
+  searchMaterialCode.value = ''
   searchName.value = ''
   searchModelSpec.value = ''
   search()
@@ -166,6 +194,16 @@ function changePage(value: number) {
   >
     <div class="history-search">
       <label class="filter-field">
+        <span>物料编码</span>
+        <n-input
+          v-model:value="searchMaterialCode"
+          clearable
+          maxlength="64"
+          placeholder="输入物料编码"
+          @keyup.enter="search"
+        />
+      </label>
+      <label class="filter-field">
         <span>物资名称</span>
         <n-input
           v-model:value="searchName"
@@ -189,6 +227,7 @@ function changePage(value: number) {
         <n-button type="primary" :loading="loading" @click="search">查询</n-button>
       </div>
     </div>
+    <div v-if="items.length" class="history-hint">点击行首箭头可展开该条申购记录的完整信息</div>
     <n-data-table
       remote
       size="small"
@@ -198,7 +237,7 @@ function changePage(value: number) {
       :data="items"
       :loading="loading"
       :row-key="(row: PurchaseRecord) => row.line_id"
-      :scroll-x="900"
+      :scroll-x="1160"
     />
     <div class="pagination-bar">
       <n-pagination
@@ -218,14 +257,15 @@ function changePage(value: number) {
 .history-search {
   display: flex;
   align-items: flex-end;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
 }
 
 .filter-field {
   display: flex;
-  min-width: 0;
-  flex: 1;
+  min-width: 180px;
+  flex: 1 1 180px;
   flex-direction: column;
   gap: 7px;
 }
@@ -244,9 +284,16 @@ function changePage(value: number) {
 .history-search-actions {
   display: flex;
   gap: 10px;
+  margin-left: auto;
 }
 
 .history-search-actions :deep(.n-button) {
   min-width: 88px;
+}
+
+.history-hint {
+  margin: -4px 0 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 </style>

@@ -4,6 +4,7 @@ const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { purchaseStatusTheme } = require('../../utils/purchase');
 const Toast = toastModule.default || toastModule;
 
 function present(value, fallback) {
@@ -86,14 +87,7 @@ Page(withTheme({
         consolidation_port_label: present(result.consolidation_port, t('notSet')),
         sailing_date_label: dateLabel(result.sailing_date, t('notSet')),
         image_count_label: t('imageCount', { count: (result.images || []).length }),
-        status_theme:
-          result.status === '已入库'
-            ? 'success'
-            : result.status === '部分入库'
-              ? 'warning'
-              : result.status === '已采购'
-                ? 'primary'
-                : 'default',
+        status_theme: purchaseStatusTheme(result.status),
         images: (result.images || []).map((image) => ({
           ...image,
           preview_url: imageUrl(image.id, 192),

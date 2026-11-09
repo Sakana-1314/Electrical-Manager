@@ -4,6 +4,7 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
+const { decoratePurchaseRecord } = require('../../utils/purchase');
 const {
   buildFieldQuery,
   buildFieldShare,
@@ -55,23 +56,6 @@ const FIELD_DEFS = [
   { key: 'usage', labelKey: 'filterSearchUsage', param: 'usage' },
 ];
 const PAGE_ROUTE = '/pages/purchase-records/purchase-records';
-
-function decorateRecord(item) {
-  return {
-    ...item,
-    plan_date_label: String(item.plan_date || '').replace(/-/g, '/'),
-    quantity_label: `${item.purchase_qty} ${item.unit_name}`,
-    purchase_order_no_label: item.purchase_order_no || t('notSet'),
-    status_theme:
-      item.status === '已入库'
-        ? 'success'
-        : item.status === '部分入库'
-          ? 'warning'
-          : item.status === '已采购'
-            ? 'primary'
-            : 'default',
-  };
-}
 
 /** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
 function toFieldDefs() {
@@ -285,7 +269,7 @@ Page(withTheme({
       };
       const result = await request({ url: '/mini-program/purchase-records', data });
       if (requestId !== this.requestId) return;
-      const incoming = (result.items || []).map(decorateRecord);
+      const incoming = (result.items || []).map(decoratePurchaseRecord);
       const items = reset ? incoming : [...this.data.items, ...incoming];
       this.setData({
         items,

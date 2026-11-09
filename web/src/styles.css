@@ -349,6 +349,10 @@ a {
   color: var(--color-text-muted);
   font-size: 12px;
 }
+/* 可点击的表格文本（如华星总库存的货品编码）：只做链接观感，点击由整行承担 */
+.table-link-strong {
+  color: var(--color-primary);
+}
 .filter-bar {
   display: flex;
   flex-wrap: wrap;

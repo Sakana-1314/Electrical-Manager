@@ -13,16 +13,21 @@ import {
 import { useImportConfirm } from '@/composables/useImportConfirm'
 import { useImportJob } from '@/composables/useImportJob'
 import { usePagedTable } from '@/composables/usePagedTable'
+import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import { formatShanghaiTime, toShanghaiDate } from '@/utils/time'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
 import FilterExpandButton from '@/components/FilterExpandButton.vue'
 import LoadingMask from '@/components/LoadingMask.vue'
+import PurchaseRecordHistoryDialog from '@/components/PurchaseRecordHistoryDialog.vue'
 
 const auth = useAuthStore()
 const dialog = useDialog()
 const message = useMessage()
 const fileInput = ref<HTMLInputElement | null>(null)
 const filterExpanded = ref(false)
+const rowClickGuard = createTableRowClickGuard()
+const showPurchaseRecords = ref(false)
+const purchaseRecordMaterialCode = ref('')
 type HuaXingFilters = {
   materialCode: string
   name: string
@@ -152,7 +157,10 @@ const availableColumns: {
       title: '货品编码',
       key: 'material_code',
       width: tableColumnWidths.code,
-      render: (row) => h('strong', row.material_code ?? '—'),
+      render: (row) => {
+        const code = row.material_code?.trim()
+        return h('strong', { class: code ? 'table-link-strong' : undefined }, code || '—')
+      },
     },
   },
   {
@@ -233,6 +241,24 @@ const tableScrollX = computed(() => getTableScrollX(columns.value))
 
 function setVisibleColumnKeys(value: string[]) {
   visibleColumnKeys.value = value as HuaXingColumnKey[]
+}
+
+/** 整行可点击：按该货品的物料编码打开历史申购记录弹窗。 */
+function rowProps(row: HuaXingInventory) {
+  return {
+    style: 'cursor: pointer',
+    onMousedown: rowClickGuard.onMouseDown,
+    onClick: (event: MouseEvent) => {
+      if (rowClickGuard.shouldIgnore(event)) return
+      const code = row.material_code?.trim()
+      if (!code) {
+        message.warning('该货品没有物料编码，无法查询申购记录')
+        return
+      }
+      purchaseRecordMaterialCode.value = code
+      showPurchaseRecords.value = true
+    },
+  }
 }
 
 function openFilePicker() {
@@ -393,12 +419,14 @@ function onFileChange(event: Event) {
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />
+      <div v-if="items.length" class="table-hint">点击行可查看该货品编码的申购记录</div>
       <n-data-table
         remote
         :columns="columns"
         :data="items"
         :loading="loading"
         :row-key="(row: HuaXingInventory) => row.id"
+        :row-props="rowProps"
         :scroll-x="tableScrollX"
       />
       <div class="pagination-bar">
@@ -413,12 +441,23 @@ function onFileChange(event: Event) {
         />
       </div>
     </n-card>
+
+    <PurchaseRecordHistoryDialog
+      v-model:show="showPurchaseRecords"
+      :initial-material-code="purchaseRecordMaterialCode"
+    />
   </div>
 </template>
 
 <style scoped>
 .hidden-file-input {
   display: none;
+}
+
+.table-hint {
+  margin-bottom: 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 
 .filter-heading,
