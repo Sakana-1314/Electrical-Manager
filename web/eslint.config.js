@@ -12,6 +12,11 @@ export default tseslint.config(
   prettier,
   { languageOptions: { globals: globals.browser } },
   {
+    // 构建脚本与 Vite 配置运行在 Node 里（process / child_process 等）
+    files: ['scripts/**/*.mjs', 'vite.config.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['**/*.vue'],
     languageOptions: { parserOptions: { parser: tseslint.parser } },
     rules: { 'vue/multi-word-component-names': 'off' },

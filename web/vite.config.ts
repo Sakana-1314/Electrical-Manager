@@ -18,6 +18,9 @@ export default defineConfig(({ mode }) => {
     build: {
       assetsDir: 'yangrucheng-assets',
       rollupOptions: {
+        // EdgeOne Pages 构建容器的 nofile 软限制较低：降低 Rollup 并行文件操作数，
+        // 避免并行读取 SFC 时触发 EMFILE；scripts/build.mjs 还会尽量提升 nofile。
+        maxParallelFileOps: 4,
         output: {
           // 框架运行时单独成块：业务代码每次发版哈希都会变，框架代码只在升级依赖时才变，
           // 拆开后老用户发版后只需重新下载业务块。Naive UI 不放进来——它按组件拆块、随页面按需加载，
