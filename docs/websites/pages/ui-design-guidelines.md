@@ -249,8 +249,10 @@
 
 ### 详情弹窗
 
-**网页端不再有详情页**：物资档案、操作记录、申购计划、申购记录四类详情统一用列表页弹窗承载
-（`StockMaterialFormModal.vue`、`OperationDetailModal.vue`，以及申购两个列表页里的详情弹窗）。
+**网页端不再有详情页**：物资档案、操作记录、申购计划、申购记录四类详情统一用弹窗承载
+（`StockMaterialFormModal.vue`、`OperationDetailModal.vue`、`PurchaseRecordDetailModal.vue`，
+以及 `PurchaseMaterialsView.vue` 里的计划详情弹窗）。申购记录详情弹窗由申购记录列表页与华星总库存页共用：
+华星页面点击历史记录时在当前页打开它，记录 id 写 URL 的 `record_detail`。
 有写权限时弹窗内直接编辑，与列表的「新建」共用同一套表单；无写权限时字段禁用、页脚只留「取消」
 （保存与页级操作都按写权限隐藏，`canWrite` 同时传给表单与图片/选择类子组件）。
 

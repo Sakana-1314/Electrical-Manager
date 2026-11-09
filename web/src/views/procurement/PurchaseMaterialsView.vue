@@ -18,6 +18,7 @@ import type {
   PurchasePlanResultExportRequest,
   PurchasePlanStatus,
   PurchaseMaterialWrite,
+  PurchaseRecord,
 } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { AppError } from '@/api/client'
@@ -225,6 +226,11 @@ const showBatchEdit = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const showHistory = ref(false)
+
+/** 历史申购记录点某条：跳到申购记录列表并复用其详情弹窗（本页没有记录详情弹窗）。 */
+function openHistoryRecord(record: PurchaseRecord) {
+  void router.push({ name: 'purchase-records', query: { detail: String(record.line_id) } })
+}
 const batchMoving = ref(false)
 const batchUpdating = ref(false)
 const batchExporting = ref(false)
@@ -1926,7 +1932,11 @@ onBeforeUnmount(() => {
         </n-space>
       </template>
     </n-modal>
-    <PurchaseRecordHistoryDialog v-model:show="showHistory" :initial-name="form.name" />
+    <PurchaseRecordHistoryDialog
+      v-model:show="showHistory"
+      :initial-name="form.name"
+      @select="openHistoryRecord"
+    />
     <ShareLinkDialog
       v-model:show="showShare"
       share-type="purchase_plan"

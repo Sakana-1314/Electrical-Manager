@@ -1,24 +1,15 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import {
-  NButton,
-  NCard,
-  NDataTable,
-  NDatePicker,
-  NDialogProvider,
-  NInput,
-  NMessageProvider,
-  NModal,
-  NPagination,
-  NSelect,
-  NTag,
-} from 'naive-ui'
+import * as naiveUi from 'naive-ui'
+import { NDataTable, NDatePicker, NDialogProvider, NMessageProvider } from 'naive-ui'
 import { createPinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
-import type { HuaXingInventory } from '@/api/generated'
+import { createMemoryHistory, createRouter, type Router } from 'vue-router'
+import type { HuaXingInventory, PurchaseRecord } from '@/api/generated'
 import { huaXingInventoryApi } from '@/api/huaXingInventory'
 import { procurementApi } from '@/api/procurement'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
+import PurchaseRecordDetailModal from '@/components/PurchaseRecordDetailModal.vue'
 import PurchaseRecordHistoryDialog from '@/components/PurchaseRecordHistoryDialog.vue'
 import HuaXingStockView from './HuaXingStockView.vue'
 
@@ -35,11 +26,20 @@ vi.mock('@/api/huaXingInventory', () => ({
 vi.mock('@/api/procurement', () => ({
   procurementApi: {
     records: vi.fn(),
+    record: vi.fn(),
+    updateRecord: vi.fn(),
+    restoreRecordToPlan: vi.fn(),
+    createMaterial: vi.fn(),
   },
 }))
 
 const api = vi.mocked(huaXingInventoryApi)
 const procurement = vi.mocked(procurementApi)
+
+/** 单测未启用 unplugin-vue-components，模板里的 n-* 需要显式注册。 */
+const naiveComponents = Object.fromEntries(
+  Object.entries(naiveUi).filter(([name, value]) => /^N[A-Z]/.test(name) && value !== null),
+) as Record<string, never>
 
 /** 东八区偏移：日期选择器给的是北京时间当天零点的时间戳。 */
 const SHANGHAI_OFFSET = 8 * 60 * 60 * 1000
@@ -65,6 +65,37 @@ const rowWithoutCode: HuaXingInventory = {
   name: '临时物资',
 }
 
+const historyRecord: PurchaseRecord = {
+  line_id: 7,
+  purchase_request_id: 5,
+  purchase_material_id: 1,
+  plan_no: 'JH20260101',
+  plan_date: '2026-01-02',
+  purchase_order_no: 'CG20260103',
+  trace_no: 'ZS-01',
+  unit_price: '12.5',
+  status: '已入库',
+  material_code: 'L012-05048',
+  category: '备品备件',
+  demand_department: '生产调度中心',
+  material_name: '内丝三通',
+  model_spec: 'DN15',
+  unit_name: '个',
+  purchase_qty: '2',
+  actual_demand_person: '吴冰',
+  purchase_responsible: '李建军',
+  salesperson: '马晓东',
+  plan_remark: '',
+  record_remark: '',
+  usage: '检修',
+  subitem_no: '201',
+  images: [],
+  purchase_date: '2026-01-04',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-05T00:00:00Z',
+  version: 1,
+}
+
 const Host = defineComponent({
   render: () =>
     h(NDialogProvider, null, {
@@ -73,37 +104,42 @@ const Host = defineComponent({
 })
 
 let wrapper: VueWrapper | null = null
+let router: Router
 
-async function mountView(): Promise<void> {
+async function mountView(path = '/warehouse/hua-xing-stock'): Promise<void> {
   api.list.mockResolvedValue({ items: [row, rowWithoutCode], page: 1, page_size: 20, total: 2 })
   api.filterOptions.mockResolvedValue({
     purchase_departments: ['生产调度中心'],
     purchasers: ['吴冰'],
   })
   api.lastImport.mockResolvedValue({ last_import_at: '2026-09-01T02:00:00Z' })
-  procurement.records.mockResolvedValue({ items: [], page: 1, page_size: 10, total: 0 })
+  procurement.records.mockResolvedValue({
+    items: [historyRecord],
+    page: 1,
+    page_size: 10,
+    total: 1,
+  })
+  procurement.record.mockResolvedValue(historyRecord)
   localStorage.setItem(
     'auth_user',
     JSON.stringify({ id: 7, username: 'tester', role: 'WAREHOUSE_ADMIN' }),
   )
+  router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/warehouse/hua-xing-stock', name: 'hua-xing-stock', component: { template: '' } },
+      { path: '/procurement/records', name: 'purchase-records', component: { template: '' } },
+      { path: '/procurement/materials', name: 'purchase-materials', component: { template: '' } },
+    ],
+  })
+  await router.push(path)
+  await router.isReady()
   wrapper = mount(Host, {
     attachTo: document.body,
     global: {
-      plugins: [createPinia()],
+      plugins: [createPinia(), router],
       // 单测环境未启用 unplugin-vue-components，需显式注册模板里的 n-* 组件。
-      components: {
-        NButton,
-        NCard,
-        NDataTable,
-        NDatePicker,
-        NDialogProvider,
-        NInput,
-        NMessageProvider,
-        NModal,
-        NPagination,
-        NSelect,
-        NTag,
-      },
+      components: { ...naiveComponents },
     },
   })
   await flushPromises()
@@ -169,6 +205,27 @@ describe('HuaXingStockView', () => {
     await clickButton('查询')
 
     expect(lastListParams()).toMatchObject({ date_from: '2023-05-01', date_to: '2023-06-30' })
+    expect(router.currentRoute.value.query).toMatchObject({
+      date_from: '2023-05-01',
+      date_to: '2023-06-30',
+    })
+  })
+
+  it('从 URL 恢复筛选条件与分页', async () => {
+    await mountView(
+      '/warehouse/hua-xing-stock?material_code=L012-05048&name=内丝&purchase_department=生产调度中心%7C设备管理部&purchaser=吴冰&date_from=2023-05-01&date_to=2023-06-30&page=2&page_size=50',
+    )
+
+    expect(lastListParams()).toMatchObject({
+      material_code: 'L012-05048',
+      name: '内丝',
+      purchase_department: '生产调度中心|设备管理部',
+      purchaser: '吴冰',
+      date_from: '2023-05-01',
+      date_to: '2023-06-30',
+      page: 2,
+      page_size: 50,
+    })
   })
 
   it('未选日期时不传区间参数；只填一端时只传对应那一端', async () => {
@@ -236,6 +293,10 @@ describe('HuaXingStockView', () => {
     const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
     expect(dialog?.props('show')).toBe(true)
     expect(dialog?.props('initialMaterialCode')).toBe('L012-05048')
+    expect(router.currentRoute.value.query).toMatchObject({
+      history: '1',
+      history_code: 'L012-05048',
+    })
     expect(procurement.records).toHaveBeenCalledWith(
       expect.objectContaining({
         search_field: 'material_code',
@@ -254,5 +315,38 @@ describe('HuaXingStockView', () => {
     const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
     expect(dialog?.props('show')).toBe(false)
     expect(procurement.records).not.toHaveBeenCalled()
+  })
+
+  it('点击历史记录行在当前页打开申购记录详情弹窗并写入 URL', async () => {
+    await mountView()
+    await clickRow(0)
+
+    const historyRow = document.querySelector(
+      '.purchase-record-history-modal .n-data-table-tbody .n-data-table-tr',
+    ) as HTMLElement | null
+    expect(historyRow).toBeTruthy()
+    historyRow?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+    historyRow?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await flushPromises()
+
+    const detail = wrapper?.findComponent(PurchaseRecordDetailModal)
+    expect(detail?.props('show')).toBe(true)
+    expect((detail?.props('record') as PurchaseRecord).line_id).toBe(7)
+    expect(router.currentRoute.value.query.record_detail).toBe('7')
+    expect(router.currentRoute.value.query.history).toBe('1')
+  })
+
+  it('刷新时从 URL 恢复历史记录弹窗与申购记录详情弹窗', async () => {
+    await mountView('/warehouse/hua-xing-stock?history=1&history_code=L012-05048&record_detail=7')
+    await flushPromises()
+
+    const dialog = wrapper?.findComponent(PurchaseRecordHistoryDialog)
+    expect(dialog?.props('show')).toBe(true)
+    expect(dialog?.props('initialMaterialCode')).toBe('L012-05048')
+
+    const detail = wrapper?.findComponent(PurchaseRecordDetailModal)
+    expect(detail?.props('show')).toBe(true)
+    expect((detail?.props('record') as PurchaseRecord).line_id).toBe(7)
+    expect(procurement.record).toHaveBeenCalledWith(7)
   })
 })
