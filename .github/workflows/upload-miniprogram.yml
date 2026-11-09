@@ -70,6 +70,18 @@ jobs:
       - name: 安装依赖
         run: npm ci
 
+      - name: 生成接口域名配置
+        env:
+          MINIPROGRAM_API_BASE_URL: ${{ secrets.MINIPROGRAM_API_BASE_URL }}
+        run: |
+          # 接口域名不进公开仓库：每次上传前用 Secret 生成被 .gitignore 忽略的 config/index.js。
+          API_BASE_URL="${MINIPROGRAM_API_BASE_URL%/}"
+          if [ -z "$API_BASE_URL" ]; then
+            echo "缺少 GitHub Secret：MINIPROGRAM_API_BASE_URL（形如 https://<域名>/api/v1）"
+            exit 1
+          fi
+          printf "module.exports = { apiBaseUrl: '%s' };\n" "$API_BASE_URL" > config/index.js
+
       - name: 检查小程序代码
         run: npm run check
 

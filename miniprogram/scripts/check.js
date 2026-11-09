@@ -7,6 +7,20 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
 
+// 接口域名不进版本库：本地从 config/index.example.js 复制，CI 上传前由工作流用 Secret 生成。
+const apiConfigPath = path.join(root, 'config/index.js');
+if (!fs.existsSync(apiConfigPath)) {
+  throw new Error(
+    '缺少 config/index.js：请复制 config/index.example.js 为 config/index.js 并填写接口地址（CI 由 MINIPROGRAM_API_BASE_URL 生成）。',
+  );
+}
+const { apiBaseUrl } = require(apiConfigPath);
+if (!/^https:\/\/[^/]+\/api\/v1$/.test(apiBaseUrl) || /example\.com/i.test(apiBaseUrl)) {
+  throw new Error(
+    'config/index.js 的 apiBaseUrl 必须是 https://<域名>/api/v1（结尾不带斜杠，不能是模板占位值）。',
+  );
+}
+
 const appConfig = JSON.parse(read('app.json'));
 JSON.parse(read('project.config.json'));
 

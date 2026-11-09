@@ -34,6 +34,7 @@ const IGNORES = [
   'package.json',
   'README.md',
   'project.config.json',
+  'config/index.example.js',
   'scripts/**/*',
 ];
 
