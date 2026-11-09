@@ -154,3 +154,137 @@
 .copy-btn::after {
   border: 0;
 }
+
+.records-btn {
+  margin-top: 16rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
+}
+
+.records-popup {
+  box-sizing: border-box;
+  width: 660rpx;
+  max-height: 82vh;
+  padding: 42rpx 30rpx 26rpx;
+  border-radius: 28rpx;
+  background: var(--app-surface);
+  overflow-y: auto;
+}
+
+.records-title {
+  color: var(--app-text-strong);
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.records-code {
+  margin-top: 8rpx;
+  color: var(--app-brand-text);
+  font-size: 26rpx;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.records-count {
+  margin-top: 8rpx;
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+}
+
+.records-state {
+  display: flex;
+  min-height: 320rpx;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18rpx;
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.records-item {
+  padding: 22rpx 22rpx 18rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 22rpx;
+  background: var(--app-surface-soft);
+}
+
+.records-item-active {
+  background: var(--app-brand-soft);
+}
+
+.records-item-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+}
+
+.records-item-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-text-strong);
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.records-item-spec {
+  margin-top: 4rpx;
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.records-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 10rpx;
+  color: var(--app-text-secondary);
+  font-size: 23rpx;
+  line-height: 1.4;
+}
+
+.records-item-arrow {
+  flex: none;
+  color: var(--app-text-placeholder);
+}
+
+.records-footer {
+  padding: 20rpx 0 4rpx;
+  color: var(--app-text-placeholder);
+  font-size: 22rpx;
+  text-align: center;
+}
+
+.records-more {
+  color: var(--app-brand-text);
+}
+
+.records-retry {
+  display: flex;
+  height: 72rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40rpx;
+  border: 0;
+  border-radius: 18rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.records-retry::after {
+  border: 0;
+}

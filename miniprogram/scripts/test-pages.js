@@ -551,6 +551,47 @@ async function run() {
   assert(huaxingRequest.data.date_from === '2026-01-01', 'inbound date from must be sent');
   assert(huaxingRequest.data.date_to === undefined, 'empty date to must be omitted');
 
+  // 华星库存行 → 按物料编码打开申购记录弹层
+  page.data.items = [
+    {
+      id: 1,
+      name: '内丝三通',
+      model_spec: 'DN15',
+      material_code: 'L012-05048',
+      qtyDisplay: '25 个',
+    },
+  ];
+  page.openDetail({ currentTarget: { dataset: { index: 0 } } });
+  assert(page.data.detailItem.material_code === 'L012-05048', 'detail must carry material code');
+  requests.length = 0;
+  page.openPurchaseRecords();
+  assert(page.data.recordsVisible === true, 'records popup must open');
+  await waitFor(() => page.data.recordsLoading === false, 'purchase records load');
+  const huaxingRecordRequest = requests.find(
+    (item) => item.url === '/mini-program/purchase-records',
+  );
+  assert(huaxingRecordRequest, 'purchase records request missing');
+  assert(huaxingRecordRequest.data.material_code === 'L012-05048', 'material code must be sent');
+  assert(huaxingRecordRequest.data.page === 1, 'first page must be requested');
+  // 点击记录进入现有申购记录详情页
+  page.data.records = [{ line_id: 99 }];
+  let detailUrl = '';
+  const originalNavigateTo = global.wx.navigateTo;
+  global.wx.navigateTo = (options) => {
+    detailUrl = options.url;
+  };
+  page.goPurchaseRecord({ currentTarget: { dataset: { index: 0 } } });
+  global.wx.navigateTo = originalNavigateTo;
+  assert(detailUrl.includes('line_id=99'), 'record detail navigation must carry line id');
+  // 无编码的行不打开记录弹层
+  page.data.detailItem = { name: '无编码物资', material_code: '' };
+  page.data.recordsVisible = false;
+  page.openPurchaseRecords();
+  assert(
+    page.data.recordsVisible === false,
+    'records popup must stay closed without material code',
+  );
+
   // ===== 重置后角标归零并重查（页面侧） =====
   requests.length = 0;
   page = await mountPage('pages/purchase-records/purchase-records.js');

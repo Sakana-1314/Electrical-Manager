@@ -51,6 +51,9 @@ export interface PurchaseRecordListQuery extends PagedQueryParams {
   empty_status?: boolean
   subitem_no?: string
   empty_subitem_no?: boolean
+  /** 单字段搜索的字段名（后端白名单，如 material_code）；需与 search_value 成对使用 */
+  search_field?: string
+  search_value?: string
   sort_by?: string
   sort_order?: 'asc' | 'desc'
 }

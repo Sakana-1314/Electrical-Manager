@@ -103,7 +103,7 @@ web/src/
 | `/warehouse/inbound` | `inbound` | `views/warehouse/OperationEditorView.vue`（`props: { operationType: 'INBOUND' }`） | `warehouse:write` | 入库登记（行编辑与校验） |
 | `/warehouse/outbound` | `outbound` | `views/warehouse/OperationEditorView.vue`（`props: { operationType: 'OUTBOUND' }`） | `warehouse:write` | 出库登记（行编辑与校验） |
 | `/warehouse/stock` | `stock` | `views/warehouse/StockView.vue` | 需登录 | 库存查询（余额/低库存）、生成补库草稿 |
-| `/warehouse/hua-xing-stock` | `hua-xing-stock` | `views/warehouse/HuaXingStockView.vue` | 需登录 | 华星总库存查询 + Excel 导入（`useImportJob`/`useImportConfirm`） |
+| `/warehouse/hua-xing-stock` | `hua-xing-stock` | `views/warehouse/HuaXingStockView.vue` | 需登录 | 华星总库存查询 + Excel 导入（`useImportJob`/`useImportConfirm`）；点击行按货品编码打开历史申购记录弹窗（可展开完整只读详情） |
 | `/warehouse/lite` | `warehouse-lite` | `views/warehouse/SecondaryWarehouseLiteView.vue` | 需登录 | 精简二级库：Excel 导入 + 只读查询 |
 | `/warehouse/operations` | `operations` | `views/warehouse/OperationsView.vue` | 需登录 | 流水列表；行点击/流水号/「详情」都打开 `OperationDetailModal`（单据信息、物资明细、修改、反向冲销） |
 | `/warehouse/operations/:id` | — | 无组件，`redirect` 到 `operations` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该流水的详情弹窗 |
@@ -238,7 +238,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 27 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 28 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -255,7 +255,8 @@ web/src/
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
-| `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按名称/型号检索历史记录表格） | props：`show: boolean`、`initialName?`；emit：`update:show` |
+| `PurchaseRecordDetailPanel.vue` | 申购记录只读详情面板（单据 / 物资 / 人员 / 备注 / 采购与发运 / 图片分组），用于历史记录表格的展开行 | props：`record: PurchaseRecord` |
+| `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按物料编码 / 名称 / 型号检索历史记录表格，行可展开完整只读详情） | props：`show: boolean`、`initialName?`、`initialMaterialCode?`；emit：`update:show` |
 | `QuantityInput.vue` | 数量输入框：正则限制 1 位小数，用 `isDecimalString` / `compareDecimal` 校验并显示 error/success 状态 | props：`value: string`、`decimalPlaces?`（默认 1）、`max?`、`disabled?`、`placeholder?`；emit：`update:value` |
 | `ReverseOperationDialog.vue` | 出入库流水冲减弹窗（按行填写冲减数量，`reversed` 回传操作 id） | props：`show: boolean`、`operation: StockOperation \| null`；emits：`update:show`、`reversed: [id: number]` |
 | `ShareLinkDialog.vue` | 分享链接生成弹窗（确认信息与失效时间 → 再次确认 → 生成并复制链接） | props：`show: boolean`、`shareType: ShareType`、`itemIds?: number[]`、`title: string`；emit：`update:show` |
@@ -907,7 +908,7 @@ flowchart LR
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 | 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
 
-公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 列表页筛选面板（`components/filter-panel`）
 
