@@ -419,7 +419,6 @@ function onFileChange(event: Event) {
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />
-      <div v-if="items.length" class="table-hint">点击行可查看该货品编码的申购记录</div>
       <n-data-table
         remote
         :columns="columns"
@@ -452,12 +451,6 @@ function onFileChange(event: Event) {
 <style scoped>
 .hidden-file-input {
   display: none;
-}
-
-.table-hint {
-  margin-bottom: 10px;
-  color: var(--color-text-muted);
-  font-size: 12px;
 }
 
 .filter-heading,

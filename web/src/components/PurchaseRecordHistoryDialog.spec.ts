@@ -1,16 +1,8 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import {
-  NButton,
-  NDataTable,
-  NImage,
-  NInput,
-  NMessageProvider,
-  NModal,
-  NPagination,
-  NTag,
-} from 'naive-ui'
+import { NButton, NDataTable, NInput, NMessageProvider, NModal, NPagination, NTag } from 'naive-ui'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
+import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import type { PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import PurchaseRecordHistoryDialog from './PurchaseRecordHistoryDialog.vue'
@@ -56,6 +48,7 @@ const record: PurchaseRecord = {
 
 const show = ref(false)
 let wrapper: VueWrapper | null = null
+let router: Router
 
 const Host = defineComponent({
   setup() {
@@ -75,14 +68,22 @@ const Host = defineComponent({
 
 async function mountDialog(): Promise<void> {
   procurement.records.mockResolvedValue({ items: [record], page: 1, page_size: 10, total: 1 })
+  router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/procurement/records', name: 'purchase-records', component: { template: '' } },
+    ],
+  })
+  await router.push('/procurement/records')
+  await router.isReady()
   wrapper = mount(Host, {
     attachTo: document.body,
     global: {
+      plugins: [router],
       // 单测环境未启用 unplugin-vue-components，需显式注册模板里的 n-* 组件。
       components: {
         NButton,
         NDataTable,
-        NImage,
         NInput,
         NMessageProvider,
         NModal,
@@ -118,16 +119,25 @@ describe('PurchaseRecordHistoryDialog', () => {
     expect(codeInput.value).toBe('L012-05048')
   })
 
-  it('展开行展示完整只读详情', async () => {
+  it('点击遮罩可关闭历史记录弹窗', async () => {
     await mountDialog()
 
-    const trigger = document.querySelector('.n-data-table-expand-trigger') as HTMLElement | null
-    expect(trigger).toBeTruthy()
-    trigger?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    const modal = wrapper?.findAllComponents(NModal)[0]
+    expect(modal?.props('maskClosable')).toBe(true)
+  })
+
+  it('点击记录行跳到申购记录列表并带 ?detail= 复用详情弹窗', async () => {
+    await mountDialog()
+
+    const row = document.querySelector('.n-data-table-tbody .n-data-table-tr') as HTMLElement
+    expect(row).toBeTruthy()
+    row.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+    row.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await flushPromises()
 
-    expect(document.body.textContent).toContain('申购记录备注')
-    expect(document.body.textContent).toContain('记录备注')
+    expect(show.value).toBe(false)
+    expect(router.currentRoute.value.name).toBe('purchase-records')
+    expect(router.currentRoute.value.query.detail).toBe('1')
   })
 
   it('清空后重置恢复初始物料编码并重新查询', async () => {
