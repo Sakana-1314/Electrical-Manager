@@ -179,3 +179,18 @@ func Search(s *db.Session, p SearchParams) ([]schema.MaterialCodeLibraryRead, in
 	}
 	return items, total, nil
 }
+
+// GetByID 按 id 读取单行编码；项目域过滤由会话 Scope 负责，无结果返回 (nil, nil)。
+func GetByID(s *db.Session, id int64) (*model.MaterialCodeLibrary, error) {
+	w := &common.Where{}
+	if err := w.Scope(s, ""); err != nil {
+		return nil, err
+	}
+	w.Add("id = ?", id)
+	var row model.MaterialCodeLibrary
+	found, err := s.Find(&row, "SELECT "+model.ColsMaterialCodeLibrary+" FROM material_code_library"+w.SQL(), w.Args...)
+	if err != nil || !found {
+		return nil, err
+	}
+	return &row, nil
+}

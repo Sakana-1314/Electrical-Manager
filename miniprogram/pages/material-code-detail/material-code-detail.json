@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "物料编码详情",
+  "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

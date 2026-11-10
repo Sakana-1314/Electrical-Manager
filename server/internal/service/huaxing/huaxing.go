@@ -238,3 +238,18 @@ func Search(s *db.Session, p SearchParams) ([]schema.HuaXingInventoryRead, int64
 	}
 	return items, total, nil
 }
+
+// GetByID 按 id 读取单行库存；项目域过滤由会话 Scope 负责，无结果返回 (nil, nil)。
+func GetByID(s *db.Session, id int64) (*model.HuaxingInventory, error) {
+	w := &common.Where{}
+	if err := w.Scope(s, ""); err != nil {
+		return nil, err
+	}
+	w.Add("id = ?", id)
+	var row model.HuaxingInventory
+	found, err := s.Find(&row, "SELECT "+model.ColsHuaxingInventory+" FROM huaxing_inventory"+w.SQL(), w.Args...)
+	if err != nil || !found {
+		return nil, err
+	}
+	return &row, nil
+}

@@ -9379,6 +9379,58 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/material-codes/{id}:
+    get:
+      tags:
+      - 小程序
+      summary: 物料编码详情
+      operationId: mini_program_material_code_detail_api_v1_mini_program_material_codes__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramMaterialCodeRead'
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/v1/mini-program/huaxing-inventory:
     get:
       tags:
@@ -9617,6 +9669,58 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/huaxing-inventory/{id}:
+    get:
+      tags:
+      - 小程序
+      summary: 华星库存详情
+      operationId: mini_program_huaxing_inventory_detail_api_v1_mini_program_huaxing_inventory__id__get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramHuaXingInventoryRead'
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/v1/mini-program/material-codes/last-import:
     get:
       tags:

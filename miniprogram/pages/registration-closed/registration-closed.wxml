@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.registrationClosedTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
 <view class="page-shell closed-page {{themeClass}}">
   <view class="closed-card">
     <t-result

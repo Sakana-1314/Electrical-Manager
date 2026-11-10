@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { createClientRequestId, extractMaterialUuid } = require('../../utils/material');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -24,7 +24,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('outboundTitle');
     const app = getApp();
     const materialUuid =
       extractMaterialUuid(options.uuid) ||

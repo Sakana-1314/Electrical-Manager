@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.ledgerDetailTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell ledger-detail-page {{themeClass}}">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingLedgerDetail}}" />
@@ -45,9 +46,9 @@
           wx:for="{{record.tags}}"
           wx:key="id"
           class="ledger-tag"
-          theme="primary"
+          theme="default"
           variant="light"
-          size="medium"
+          size="small"
         ><text user-select="{{true}}">{{item.path}}</text></t-tag>
       </view>
       <view wx:else class="empty-hint">{{i18n.noTags}}</view>

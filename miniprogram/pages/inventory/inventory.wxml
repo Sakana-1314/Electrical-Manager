@@ -1,7 +1,5 @@
+<app-navbar title="{{i18n.inventoryTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell inventory-page {{themeClass}}">
-  <view class="inventory-header">
-    <view class="page-title">{{i18n.inventoryTitle}}</view>
-  </view>
 
   <view class="inventory-tools">
     <filter-panel

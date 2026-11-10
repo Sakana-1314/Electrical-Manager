@@ -1,0 +1,45 @@
+<app-navbar title="{{i18n.materialCodeDetailTitle}}" theme-class="{{themeClass}}" />
+<view class="page-shell material-code-detail-page {{themeClass}}">
+  <view wx:if="{{loading}}" class="detail-state">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingMaterialCodeDetail}}" />
+  </view>
+  <view wx:elif="{{failed}}" class="detail-state failed-state">
+    <t-empty icon="error-circle" description="{{i18n.materialCodeDetailFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="retry">{{i18n.reload}}</t-button>
+  </view>
+
+  <block wx:elif="{{detail}}">
+    <view class="summary-card">
+      <view class="summary-name"><text user-select="{{true}}">{{detail.name || i18n.notSet}}</text></view>
+      <view wx:if="{{detail.model_spec}}" class="summary-spec"><text user-select="{{true}}">{{detail.model_spec}}</text></view>
+      <view class="summary-code"><text user-select="{{true}}">{{detail.material_code}}</text></view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-heading"><view class="section-title">{{i18n.materialCodeInfo}}</view></view>
+      <view class="section-divider"></view>
+      <view class="detail-list">
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.materialCodeLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.material_code}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.nameLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.name || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.modelSpecLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.model_spec || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.unitLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.unit_name || i18n.notSet}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <t-button class="copy-action" theme="primary" size="large" block bind:tap="copyMaterialCode">{{i18n.copyMaterialCode}}</t-button>
+  </block>
+
+  <t-toast id="material-code-detail-toast" />
+</view>

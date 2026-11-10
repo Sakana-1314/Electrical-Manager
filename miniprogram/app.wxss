@@ -198,7 +198,7 @@ page,
 
 .page-shell {
   box-sizing: border-box;
-  min-height: 100vh;
+  /* 导航栏由 app-navbar 在页面外占位：再设 100vh 会把页面撑出一屏多余滚动。 */
   padding: 36rpx 32rpx;
   background:
     var(--app-page-glow),

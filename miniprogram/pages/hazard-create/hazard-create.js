@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, uploadImage, requestCached, clearRequestCache } = require('../../utils/request');
 const { createClientRequestId } = require('../../utils/material');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const { decorateImage, todayString } = require('../../utils/hazard');
 const Toast = toastModule.default || toastModule;
@@ -49,7 +49,6 @@ Page(withTheme({
   },
 
   async onLoad() {
-    setNavigationBarTitle('hazardCreateTitle');
     const today = todayString();
     this.setData({
       'form.inspectionDate': today,

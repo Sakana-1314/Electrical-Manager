@@ -1,0 +1,71 @@
+<app-navbar title="{{i18n.huaxingInventoryDetailTitle}}" theme-class="{{themeClass}}" />
+<view class="page-shell huaxing-inventory-detail-page {{themeClass}}">
+  <view wx:if="{{loading}}" class="detail-state">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHuaxingInventoryDetail}}" />
+  </view>
+  <view wx:elif="{{failed}}" class="detail-state failed-state">
+    <t-empty icon="error-circle" description="{{i18n.huaxingInventoryDetailFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="retry">{{i18n.reload}}</t-button>
+  </view>
+
+  <block wx:elif="{{detail}}">
+    <view class="summary-card">
+      <view class="summary-name"><text user-select="{{true}}">{{detail.name || i18n.notSet}}</text></view>
+      <view wx:if="{{detail.model_spec}}" class="summary-spec"><text user-select="{{true}}">{{detail.model_spec}}</text></view>
+      <view class="summary-footer">
+        <view>
+          <view class="summary-label">{{i18n.quantityLabel}}</view>
+          <view class="summary-value"><text user-select="{{true}}">{{detail.quantity_label}}</text></view>
+        </view>
+        <view class="unit-block">
+          <view class="summary-label">{{i18n.unitLabel}}</view>
+          <view class="unit-value"><text user-select="{{true}}">{{detail.unit_name || i18n.notSet}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-card">
+      <view class="section-heading"><view class="section-title">{{i18n.huaxingInventoryInfo}}</view></view>
+      <view class="section-divider"></view>
+      <view class="detail-list">
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.materialCodeLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.material_code || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.warehouseLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.warehouse || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.firstInboundDateLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.first_inbound_date_label}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.purchaserLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.purchaser || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.purchaseDepartmentLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.purchase_department || i18n.notSet}}</text></view>
+        </view>
+        <view class="detail-row">
+          <view class="detail-label">{{i18n.subitemNoNameLabel}}</view>
+          <view class="detail-value"><text user-select="{{true}}">{{detail.subitem_no_name || i18n.notSet}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <t-button
+      wx:if="{{detail.material_code}}"
+      class="records-action"
+      theme="primary"
+      variant="outline"
+      size="large"
+      block
+      bind:tap="openPurchaseRecords"
+    >{{i18n.viewPurchaseRecords}}</t-button>
+    <t-button class="copy-action" theme="primary" size="large" block bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</t-button>
+  </block>
+
+  <t-toast id="huaxing-inventory-detail-toast" />
+</view>

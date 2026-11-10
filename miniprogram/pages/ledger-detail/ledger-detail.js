@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -21,7 +21,6 @@ Page(withTheme({
   },
 
   async onLoad(options) {
-    setNavigationBarTitle('ledgerDetailTitle');
     this.recordId = Number(options.id || 0);
     try {
       const session = await getApp().globalData.authPromise;

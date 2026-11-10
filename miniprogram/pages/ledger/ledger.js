@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -47,7 +47,6 @@ Page(withTheme({
   async onLoad(options = {}) {
     // 必须在第一个 await 之前置位：onShow 紧随 onLoad 同步触发（见 hazards.js 同名注释）。
     this.skipNextShow = true;
-    setNavigationBarTitle('ledgerTitle');
     // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
     const shared = readShareParams(options, SHARE_PARAMS);
     try {

@@ -38,7 +38,10 @@ JSON.parse(read('project.config.json'));
 // 页面清单以 app.json 为准，避免检查清单与实际页面漂移。
 const pages = appConfig.pages.map((page) => page.replace(/^pages\//, ''));
 const requiredFiles = ['app.js', 'app.json', 'app.wxss'];
-const sharedComponents = ['material-summary-card/material-summary-card'];
+const sharedComponents = [
+  'app-navbar/app-navbar',
+  'material-summary-card/material-summary-card',
+];
 for (const page of pages) {
   for (const extension of ['js', 'json', 'wxml', 'wxss']) {
     requiredFiles.push(`pages/${page}.${extension}`);
@@ -63,6 +66,9 @@ if (appConfig.pages[0] !== 'pages/home/home') {
 }
 if (appConfig.pages.some((page) => page.endsWith('/index'))) {
   throw new Error('Mini Program pages must use semantic file names.');
+}
+if (!appConfig.window || appConfig.window.navigationStyle !== 'custom') {
+  throw new Error('Mini Program must use navigationStyle: custom with the shared app-navbar.');
 }
 
 const appScript = read('app.js');
@@ -892,9 +898,15 @@ for (const page of pages) {
     throw new Error(`pages/${page}.js must wrap its config with withTheme.`);
   }
   const markup = read(`pages/${page}.wxml`);
-  const rootTag = markup.split('\n')[0];
+  // 全站使用 navigationStyle: custom，导航栏由共享 app-navbar 承担；
+  // 主题类仍必须落在页面内容根节点上，保证页面与组件都拿到明暗变量。
+  const lines = markup.split('\n');
+  if (!lines[0].startsWith('<app-navbar ') || !lines[0].includes('theme-class="{{themeClass}}"')) {
+    throw new Error(`pages/${page}.wxml must render app-navbar with the page theme class.`);
+  }
+  const rootTag = lines[1];
   if (!rootTag.includes('class="page-shell') || !rootTag.includes('{{themeClass}}')) {
-    throw new Error(`pages/${page}.wxml must bind the theme class on its root node.`);
+    throw new Error(`pages/${page}.wxml must bind the theme class on its content root node.`);
   }
   if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(markup) || /color="#/.test(markup)) {
     throw new Error(`pages/${page}.wxml must not hardcode icon colors.`);

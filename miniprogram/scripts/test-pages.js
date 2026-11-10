@@ -551,7 +551,7 @@ async function run() {
   assert(huaxingRequest.data.date_from === '2026-01-01', 'inbound date from must be sent');
   assert(huaxingRequest.data.date_to === undefined, 'empty date to must be omitted');
 
-  // 华星库存行 → 按物料编码打开申购记录弹层
+  // 华星库存行 → 打开独立库存详情页
   page.data.items = [
     {
       id: 1,
@@ -561,35 +561,53 @@ async function run() {
       qtyDisplay: '25 个',
     },
   ];
+  let huaxingDetailUrl = '';
+  let originalNavigateTo = global.wx.navigateTo;
+  global.wx.navigateTo = (options) => {
+    huaxingDetailUrl = options.url;
+  };
   page.openDetail({ currentTarget: { dataset: { index: 0 } } });
-  assert(page.data.detailItem.material_code === 'L012-05048', 'detail must carry material code');
+  global.wx.navigateTo = originalNavigateTo;
+  assert(
+    huaxingDetailUrl.includes('/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=1'),
+    'huaxing inventory row must open its detail page',
+  );
+
+  // 「该物料的申购记录」独立页：按物料编码查记录，行点击进入申购记录详情页
   requests.length = 0;
-  page.openPurchaseRecords();
-  assert(page.data.recordsVisible === true, 'records popup must open');
-  await waitFor(() => page.data.recordsLoading === false, 'purchase records load');
+  const huaxingRecords = await mountPage(
+    'pages/material-purchase-records/material-purchase-records.js',
+    { material_code: 'L012-05048', name: '内丝三通' },
+  );
   const huaxingRecordRequest = requests.find(
     (item) => item.url === '/mini-program/purchase-records',
   );
   assert(huaxingRecordRequest, 'purchase records request missing');
   assert(huaxingRecordRequest.data.material_code === 'L012-05048', 'material code must be sent');
   assert(huaxingRecordRequest.data.page === 1, 'first page must be requested');
-  // 点击记录进入现有申购记录详情页
-  page.data.records = [{ line_id: 99 }];
+  huaxingRecords.data.items = [{ line_id: 99 }];
   let detailUrl = '';
-  const originalNavigateTo = global.wx.navigateTo;
+  originalNavigateTo = global.wx.navigateTo;
   global.wx.navigateTo = (options) => {
     detailUrl = options.url;
   };
-  page.goPurchaseRecord({ currentTarget: { dataset: { index: 0 } } });
+  huaxingRecords.goDetail({ currentTarget: { dataset: { index: 0 } } });
   global.wx.navigateTo = originalNavigateTo;
   assert(detailUrl.includes('line_id=99'), 'record detail navigation must carry line id');
-  // 无编码的行不打开记录弹层
-  page.data.detailItem = { name: '无编码物资', material_code: '' };
-  page.data.recordsVisible = false;
-  page.openPurchaseRecords();
+
+  // 物料编码行 → 打开独立编码详情页
+  page = await mountPage('pages/material-codes/material-codes.js');
+  page.data.items = [{ id: 7, name: '交流接触器', material_code: 'E011' }];
+  let codeDetailUrl = '';
+  originalNavigateTo = global.wx.navigateTo;
+  global.wx.navigateTo = (options) => {
+    codeDetailUrl = options.url;
+  };
+  page.openDetail({ currentTarget: { dataset: { index: 0 } } });
+  global.wx.navigateTo = originalNavigateTo;
   assert(
-    page.data.recordsVisible === false,
-    'records popup must stay closed without material code',
+    codeDetailUrl.includes('/pages/material-code-detail/material-code-detail?id=7'),
+    'material code row must open its detail page',
   );
 
   // ===== 重置后角标归零并重查（页面侧） =====

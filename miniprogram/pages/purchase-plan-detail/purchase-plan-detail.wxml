@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.purchasePlanDetailTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell plan-detail-page {{themeClass}}">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingPurchasePlanDetail}}" />

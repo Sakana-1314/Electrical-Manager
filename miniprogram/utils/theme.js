@@ -193,7 +193,7 @@ function setThemeMode(page, value) {
  * 页面配置包装：注入主题字段与生命周期接线，页面只写 `Page(withTheme({ ... }))`。
  *
  * - data：先放主题字段，页面自有 data 优先（同名键不会被主题覆盖）。
- * - onLoad：先执行页面原逻辑（含 setNavigationBarTitle），再应用主题。
+ * - onLoad：先执行页面原逻辑，再应用主题。
  * - onShow：先执行页面原逻辑，再绑定系统主题变化（返回页面时也会重新校正档位与原生外观）。
  * - onUnload：先解绑，再执行页面原逻辑。
  */

@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { storeSession } = require('../../utils/auth');
 const { REDIRECT_KEY, extractRedirect, takeRedirect } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -16,7 +16,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('bindTitle');
     const redirect = extractRedirect(options);
     if (redirect) {
       wx.setStorageSync(REDIRECT_KEY, redirect);

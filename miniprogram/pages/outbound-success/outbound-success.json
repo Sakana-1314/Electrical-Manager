@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "出库成功",
   "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
     "t-button": "tdesign-miniprogram/button/button",
     "t-result": "tdesign-miniprogram/result/result",
     "t-toast": "tdesign-miniprogram/toast/toast"

@@ -1,0 +1,63 @@
+<app-navbar title="{{i18n.materialPurchaseRecordsTitle}}" theme-class="{{themeClass}}" />
+<view class="page-shell material-purchase-records-page {{themeClass}}">
+  <view wx:if="{{materialCode}}" class="material-caption">
+    <view class="caption-name">{{materialName || materialCode}}</view>
+    <view class="caption-code">{{materialCode}}</view>
+  </view>
+
+  <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
+
+  <view wx:if="{{loading && !items.length}}" class="state-panel">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingPurchaseRecords}}" />
+  </view>
+  <view wx:elif="{{failed && !items.length}}" class="state-panel failed-panel">
+    <t-empty icon="error-circle" description="{{i18n.purchaseRecordsLoadFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="retry">{{i18n.reload}}</t-button>
+  </view>
+  <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
+    <t-empty icon="file" description="{{i18n.purchaseRecordsEmpty}}" />
+  </view>
+
+  <view wx:else class="record-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="line_id"
+      class="record-card"
+      hover-class="record-card-active"
+      bind:tap="goDetail"
+      data-index="{{index}}"
+    >
+      <view class="card-topline">
+        <view class="plan-date">{{item.plan_date_label}}</view>
+        <view class="topline-right">
+          <t-tag theme="{{item.status_theme}}" variant="light" size="small">{{item.status}}</t-tag>
+        </view>
+      </view>
+      <view class="card-heading">
+        <view class="material-name">{{item.material_name}}</view>
+      </view>
+      <view class="material-spec">{{item.model_spec}}</view>
+      <view wx:if="{{item.trace_no}}" class="trace-line">{{i18n.traceNo}}：{{item.trace_no}}</view>
+      <view wx:if="{{item.subitem_no}}" class="trace-line">{{i18n.subitemNo}}：{{item.subitem_no}}</view>
+      <view class="card-divider"></view>
+      <view class="record-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.purchaseQuantity}}</view>
+          <view class="quantity-value">{{item.quantity_label}}</view>
+        </view>
+        <view class="meta-item responsible-item">
+          <view class="meta-label">{{i18n.purchaseOrderNo}}</view>
+          <view class="meta-value">{{item.purchase_order_no_label}}</view>
+        </view>
+        <t-icon class="plan-arrow" name="chevron-right" size="36rpx" />
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loadingMore}}" class="load-more">
+    <t-loading theme="circular" size="36rpx" text="{{i18n.loadMore}}" />
+  </view>
+  <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
+
+  <t-toast id="material-purchase-records-toast" />
+</view>

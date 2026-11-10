@@ -1,7 +1,7 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, uploadImage, clearRequestCache } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard, decorateImage } = require('../../utils/hazard');
@@ -29,7 +29,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('hazardDetailTitle');
     const hazardId = Number(options.id || 0);
     this.setData({ hazardId });
     try {

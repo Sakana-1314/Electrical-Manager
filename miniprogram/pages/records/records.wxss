@@ -3,14 +3,6 @@
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
-.records-header {
-  margin: 4rpx 4rpx 24rpx;
-}
-
-.records-header .page-title {
-  font-size: 44rpx;
-}
-
 .result-count {
   margin: 0 8rpx 14rpx;
   color: var(--app-text-muted);
@@ -29,6 +21,7 @@
   border-radius: 24rpx;
   background: var(--app-surface);
   box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 .card-heading {
@@ -58,7 +51,7 @@
 
 .material-name {
   color: var(--app-text-strong);
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 650;
   line-height: 1.4;
 }

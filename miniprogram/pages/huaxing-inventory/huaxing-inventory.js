@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
@@ -15,7 +15,6 @@ const {
   readFieldShare,
   sameFilters,
 } = require('../../utils/filters');
-const { decoratePurchaseRecord } = require('../../utils/purchase');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索 / 筛选参数（与页面 data 字段同名，便于直接回填）。
@@ -106,24 +105,11 @@ Page(withTheme({
     loadingMore: false,
     resultCount: '',
     backTopVisible: false,
-    detailVisible: false,
-    detailItem: null,
-    /** 「该物料的申购记录」弹层：按当前库存行的物料编码查申购记录。 */
-    recordsVisible: false,
-    recordsMaterialCode: '',
-    records: [],
-    recordsPage: 1,
-    recordsPageSize: 10,
-    recordsCountLabel: '',
-    recordsHasMore: false,
-    recordsLoading: false,
-    recordsFailed: false,
     lastImportAtLabel: '',
     i18n: getMessages(),
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('huaxingInventoryTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
     // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。
@@ -346,118 +332,8 @@ Page(withTheme({
   openDetail(event) {
     const item = this.data.items[event.currentTarget.dataset.index];
     if (!item) return;
-    this.setData({ detailItem: item, detailVisible: true });
-  },
-
-  onDetailVisibleChange(event) {
-    this.setData({ detailVisible: event.detail.visible });
-  },
-
-  /** 打开「该物料的申购记录」弹层：按当前库存行的物料编码查申购记录。 */
-  openPurchaseRecords() {
-    const item = this.data.detailItem;
-    const code = String((item && item.material_code) || '').trim();
-    if (!code) {
-      Toast({
-        context: this,
-        selector: '#huaxing-inventory-toast',
-        message: t('huaxingInventoryNoMaterialCode'),
-        theme: 'warning',
-        direction: 'column',
-      });
-      return;
-    }
-    this.setData({
-      recordsVisible: true,
-      recordsMaterialCode: code,
-      records: [],
-      recordsPage: 1,
-      recordsCountLabel: '',
-      recordsHasMore: false,
-      recordsLoading: false,
-      recordsFailed: false,
-    });
-    void this.loadPurchaseRecords(true);
-  },
-
-  onRecordsVisibleChange(event) {
-    this.setData({ recordsVisible: event.detail.visible });
-  },
-
-  async loadPurchaseRecords(reset) {
-    if (!reset && (this.data.recordsLoading || !this.data.recordsHasMore)) return;
-    const requestId = (this.recordsRequestId || 0) + 1;
-    this.recordsRequestId = requestId;
-    const page = reset ? 1 : this.data.recordsPage + 1;
-    this.setData({ recordsLoading: true, recordsFailed: false });
-    try {
-      const result = await request({
-        url: '/mini-program/purchase-records',
-        data: {
-          material_code: this.data.recordsMaterialCode,
-          page,
-          page_size: this.data.recordsPageSize,
-        },
-      });
-      if (requestId !== this.recordsRequestId) return;
-      const incoming = (result.items || []).map(decoratePurchaseRecord);
-      const records = reset ? incoming : [...this.data.records, ...incoming];
-      this.setData({
-        records,
-        recordsPage: page,
-        recordsCountLabel: t('purchaseRecordResultCount', { count: result.total || 0 }),
-        recordsHasMore: records.length < (result.total || 0),
-      });
-    } catch (error) {
-      if (requestId === this.recordsRequestId) {
-        this.setData({ recordsFailed: true });
-        this.showRecordsError(error);
-      }
-    } finally {
-      if (requestId === this.recordsRequestId) this.setData({ recordsLoading: false });
-    }
-  },
-
-  loadMorePurchaseRecords() {
-    void this.loadPurchaseRecords(false);
-  },
-
-  retryPurchaseRecords() {
-    void this.loadPurchaseRecords(this.data.records.length === 0);
-  },
-
-  goPurchaseRecord(event) {
-    const item = this.data.records[event.currentTarget.dataset.index];
-    if (!item) return;
     wx.navigateTo({
-      url: `/pages/purchase-record-detail/purchase-record-detail?line_id=${item.line_id}`,
-    });
-  },
-
-  copyNameAndCode() {
-    const item = this.data.detailItem;
-    if (!item) return;
-    wx.setClipboardData({
-      data: `${item.name || ''} ${item.material_code || ''}`.trim(),
-      success: () => {
-        Toast({
-          context: this,
-          selector: '#huaxing-inventory-toast',
-          message: t('copied'),
-          theme: 'success',
-          direction: 'column',
-        });
-      },
-    });
-  },
-
-  showRecordsError(error) {
-    Toast({
-      context: this,
-      selector: '#huaxing-inventory-toast',
-      message: error.message || t('purchaseRecordsLoadFailed'),
-      theme: 'error',
-      direction: 'column',
+      url: `/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${item.id}`,
     });
   },
 

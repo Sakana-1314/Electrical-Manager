@@ -1,5 +1,5 @@
+<app-navbar title="{{i18n.materialCodesTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell material-codes-page {{themeClass}}">
-  <view class="list-header"><view class="page-title">{{i18n.materialCodesTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
     <filter-panel
@@ -47,34 +47,4 @@
     <t-icon name="backtop" size="52rpx" />
   </button>
 
-  <t-popup
-    visible="{{detailVisible}}"
-    placement="center"
-    close-btn
-    close-on-overlay-click
-    bind:visible-change="onDetailVisibleChange"
-  >
-    <view class="detail-popup" wx:if="{{detailItem}}">
-      <view class="detail-title"><text user-select="{{true}}">{{detailItem.name || i18n.notSet}}</text></view>
-      <view class="detail-rows">
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.modelSpecLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.model_spec || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.materialCodeLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.material_code}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.unitLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.unit_name || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.unitPriceLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.unitPriceText}}</text></view>
-        </view>
-      </view>
-      <button class="copy-btn" bind:tap="copyMaterialCode">{{i18n.copyMaterialCode}}</button>
-    </view>
-  </t-popup>
 </view>

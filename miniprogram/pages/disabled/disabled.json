@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "账号待审核",
   "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
     "t-result": "tdesign-miniprogram/result/result"
   }
 }

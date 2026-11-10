@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "隐患详情",
   "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-input": "tdesign-miniprogram/input/input",

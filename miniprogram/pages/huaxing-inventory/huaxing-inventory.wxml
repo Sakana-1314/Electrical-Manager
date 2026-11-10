@@ -1,5 +1,5 @@
+<app-navbar title="{{i18n.huaxingInventoryTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell huaxing-inventory-page {{themeClass}}">
-  <view class="list-header"><view class="page-title">{{i18n.huaxingInventoryTitle}}</view></view>
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
     <filter-panel
@@ -33,7 +33,7 @@
     >
       <view class="card-heading">
         <view class="material-name">{{item.name || i18n.notSet}}</view>
-        <t-tag wx:if="{{item.purchaser}}" theme="primary" variant="light" size="small">{{item.purchaser}}</t-tag>
+        <t-tag wx:if="{{item.purchaser}}" theme="default" variant="light" size="small">{{item.purchaser}}</t-tag>
       </view>
       <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
@@ -57,124 +57,4 @@
     <t-icon name="backtop" size="52rpx" />
   </button>
 
-  <t-popup
-    visible="{{detailVisible}}"
-    placement="center"
-    close-btn
-    close-on-overlay-click
-    bind:visible-change="onDetailVisibleChange"
-  >
-    <view class="detail-popup" wx:if="{{detailItem}}">
-      <view class="detail-title"><text user-select="{{true}}">{{detailItem.name || i18n.notSet}}</text></view>
-      <view class="detail-rows">
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.modelSpecLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.model_spec || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.materialCodeLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.material_code}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.warehouseLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.warehouse || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.quantityLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.qtyDisplay || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.unitLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.unit_name || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.firstInboundDateLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.first_inbound_date || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.purchaserLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.purchaser || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.purchaseDepartmentLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.purchase_department || '—'}}</text></view>
-        </view>
-        <view class="detail-row">
-          <view class="detail-label">{{i18n.subitemNoNameLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detailItem.subitem_no_name || '—'}}</text></view>
-        </view>
-      </view>
-      <button
-        wx:if="{{detailItem.material_code}}"
-        class="copy-btn records-btn"
-        bind:tap="openPurchaseRecords"
-      >{{i18n.viewPurchaseRecords}}</button>
-      <button class="copy-btn" bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</button>
-    </view>
-  </t-popup>
-
-  <t-popup
-    visible="{{recordsVisible}}"
-    placement="center"
-    close-btn
-    close-on-overlay-click
-    bind:visible-change="onRecordsVisibleChange"
-  >
-    <view class="records-popup">
-      <view class="records-title">{{i18n.materialPurchaseRecordsTitle}}</view>
-      <view class="records-code">{{recordsMaterialCode}}</view>
-      <view wx:if="{{recordsCountLabel}}" class="records-count">{{recordsCountLabel}}</view>
-      <view wx:if="{{recordsLoading && !records.length}}" class="records-state">
-        <t-loading theme="circular" size="44rpx" text="{{i18n.loadingPurchaseRecords}}" />
-      </view>
-      <view wx:elif="{{recordsFailed && !records.length}}" class="records-state">
-        <t-empty icon="file" description="{{i18n.purchaseRecordsLoadFailed}}" />
-        <button class="records-retry" bind:tap="retryPurchaseRecords">{{i18n.filterOptionsRetry}}</button>
-      </view>
-      <view wx:elif="{{!records.length}}" class="records-state empty-panel">
-        <t-empty icon="file" description="{{i18n.purchaseRecordsEmpty}}" />
-      </view>
-      <view wx:else class="records-list">
-        <view
-          wx:for="{{records}}"
-          wx:for-item="record"
-          wx:key="line_id"
-          class="records-item"
-          hover-class="records-item-active"
-          bind:tap="goPurchaseRecord"
-          data-index="{{index}}"
-        >
-          <view class="records-item-head">
-            <view class="records-item-name">{{record.material_name}}</view>
-            <t-tag theme="{{record.status_theme}}" variant="light" size="small">{{record.status}}</t-tag>
-          </view>
-          <view class="records-item-spec">{{record.model_spec}}</view>
-          <view class="records-item-meta">
-            <text>{{record.plan_date_label}} · {{record.quantity_label}}</text>
-            <t-icon class="records-item-arrow" name="chevron-right" size="30rpx" />
-          </view>
-          <view class="records-item-meta">
-            <text>{{i18n.purchaseOrderNo}}：{{record.purchase_order_no_label}}</text>
-          </view>
-          <view wx:if="{{record.trace_no}}" class="records-item-meta">
-            <text>{{i18n.traceNo}}：{{record.trace_no}}</text>
-          </view>
-        </view>
-        <view wx:if="{{recordsLoading}}" class="records-footer">
-          <t-loading theme="circular" size="32rpx" text="{{i18n.loadMore}}" />
-        </view>
-        <view
-          wx:elif="{{recordsFailed}}"
-          class="records-footer records-more"
-          bind:tap="retryPurchaseRecords"
-        >{{i18n.filterOptionsRetry}}</view>
-        <view
-          wx:elif="{{recordsHasMore}}"
-          class="records-footer records-more"
-          bind:tap="loadMorePurchaseRecords"
-        >{{i18n.loadMore}}</view>
-        <view wx:else class="records-footer">{{i18n.noMore}}</view>
-      </view>
-    </view>
-  </t-popup>
 </view>

@@ -1,5 +1,5 @@
+<app-navbar title="{{i18n.hazardsTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell hazards-page {{themeClass}}">
-  <view class="list-header"><view class="page-title">{{i18n.hazardsTitle}}</view></view>
 
   <view class="list-tools">
     <filter-panel
@@ -49,7 +49,7 @@
         <view class="hazard-description">{{item.description}}</view>
       </view>
       <view class="hazard-meta-line">
-        <t-tag theme="{{item.level_theme}}" variant="outline" size="small">{{item.level}}</t-tag>
+        <t-tag theme="{{item.level_theme}}" variant="light" size="small">{{item.level}}</t-tag>
         <view class="hazard-type">{{item.type_label}}</view>
       </view>
       <view class="card-divider"></view>

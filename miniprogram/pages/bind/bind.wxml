@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.bindTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
 <view class="page-shell profile-page {{themeClass}}">
   <view class="brand-panel">
     <view class="brand-orbit brand-orbit-large"></view>
