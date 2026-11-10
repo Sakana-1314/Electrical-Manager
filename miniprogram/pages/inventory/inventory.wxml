@@ -41,10 +41,7 @@
           {{item.stock_status_label}}
         </t-tag>
       </view>
-      <view class="material-spec">
-        <text class="spec-label">{{i18n.modelSpec}}</text>
-        <text>{{item.model_spec}}</text>
-      </view>
+      <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
       <view class="inventory-meta">
         <view class="meta-item">
