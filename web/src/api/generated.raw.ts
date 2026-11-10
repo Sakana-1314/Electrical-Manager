@@ -24577,6 +24577,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "material_code": "E011-00237",
+                     *       "name": "交流接触器",
+                     *       "model_spec": "CJX2-2510 AC220V",
+                     *       "unit_name": "个"
+                     *     }
+                     */
                     "application/json": components["schemas"]["MiniProgramMaterialCodeRead"];
                 };
             };
@@ -24586,6 +24595,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24595,6 +24612,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24604,6 +24629,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24613,6 +24646,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24622,6 +24663,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24847,6 +24896,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": 3,
+                     *       "first_inbound_date": "2024-03-12",
+                     *       "warehouse": "P03电气仓",
+                     *       "material_code": "E011-00237",
+                     *       "name": "交流接触器",
+                     *       "model_spec": "CJX2-2510 AC220V",
+                     *       "quantity": "46",
+                     *       "unit_name": "个",
+                     *       "purchaser": "李振国",
+                     *       "purchase_department": "设备管理部",
+                     *       "subitem_no_name": "305-硫酸厂"
+                     *     }
+                     */
                     "application/json": components["schemas"]["MiniProgramHuaXingInventoryRead"];
                 };
             };
@@ -24856,6 +24920,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24865,6 +24937,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24874,6 +24954,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24883,6 +24971,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
@@ -24892,6 +24988,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
