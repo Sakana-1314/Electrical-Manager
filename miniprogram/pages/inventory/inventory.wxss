@@ -63,18 +63,11 @@
 }
 
 .material-spec {
-  display: flex;
-  gap: 12rpx;
   margin-top: 8rpx;
   color: var(--app-text-secondary);
   font-size: 24rpx;
   line-height: 1.45;
   word-break: break-all;
-}
-
-.spec-label {
-  flex: none;
-  color: var(--app-text-placeholder);
 }
 
 .card-divider {
