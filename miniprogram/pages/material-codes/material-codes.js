@@ -3,6 +3,7 @@ const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, t } = require('../../utils/i18n');
+const { importTimeLabel } = require('../../utils/time');
 const {
   buildFieldQuery,
   buildFieldShare,
@@ -23,13 +24,6 @@ const FIELD_DEFS = [
 ];
 const PAGE_ROUTE = '/pages/material-codes/material-codes';
 
-function formatDateTime(value) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const pad = (part) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 /** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
 function toFieldDefs() {
@@ -166,7 +160,7 @@ Page({
   async loadLastImport() {
     try {
       const result = await request({ url: '/mini-program/material-codes/last-import' });
-      this.setData({ lastImportAtLabel: formatDateTime(result.last_import_at) });
+      this.setData({ lastImportAtLabel: importTimeLabel(result.last_import_at) });
     } catch (error) {
       // 导入时间非关键，加载失败静默
     }

@@ -3,6 +3,12 @@
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
+.import-time {
+  margin: 0 8rpx 20rpx;
+  color: var(--app-text-subtle);
+  font-size: 22rpx;
+}
+
 .inventory-tools {
   margin-bottom: 20rpx;
   padding: 0;

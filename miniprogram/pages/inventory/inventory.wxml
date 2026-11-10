@@ -1,5 +1,6 @@
 <app-navbar title="{{i18n.inventoryTitle}}" />
 <view class="page-shell inventory-page">
+  <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
 
   <view class="inventory-tools">
     <filter-panel
