@@ -5,6 +5,7 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
+const { importTimeLabel } = require('../../utils/time');
 const {
   buildFieldQuery,
   buildFieldShare,
@@ -80,6 +81,7 @@ Page({
     loading: true,
     loadingMore: false,
     resultCount: '',
+    lastImportAtLabel: '',
     i18n: getMessages(),
   },
 
@@ -136,6 +138,7 @@ Page({
             ],
         filtered: !liteMode && (hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0),
       });
+      if (liteMode) void this.loadLastImport();
       await this.loadInventory(true);
     } catch (error) {
       this.setData({ loading: false });
@@ -148,6 +151,7 @@ Page({
   },
 
   async onPullDownRefresh() {
+    if (this.data.liteMode) void this.loadLastImport();
     await this.loadInventory(true);
     wx.stopPullDownRefresh();
   },
@@ -185,6 +189,16 @@ Page({
       filtered: hasActiveFilter(filters, FILTER_SECTIONS) || countFieldValues(fieldValues, FIELD_DEFS) > 0,
     });
     void this.loadInventory(true);
+  },
+
+  /** 精简版二级库来自 Excel 导入：读取最近一次成功导入时间，非关键信息，失败静默。 */
+  async loadLastImport() {
+    try {
+      const result = await request({ url: '/mini-program/lite-inventory/last-import' });
+      this.setData({ lastImportAtLabel: importTimeLabel(result.last_import_at) });
+    } catch (error) {
+      // 导入时间非关键，加载失败不影响库存列表。
+    }
   },
 
   async loadInventory(reset) {

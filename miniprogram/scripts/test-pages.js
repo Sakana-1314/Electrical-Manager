@@ -689,6 +689,18 @@ async function run() {
   assert(home.data.canScan === true, 'no-lite read_write mode allows scanning');
   assert(home.data.featureReady === true, 'home entries must be ready');
 
+  // ===== 导入时间：绝对时间 + 括号相对时间 =====
+  const { importTimeLabel, relativeLabel } = require(path.join(root, 'utils/time.js'));
+  const timeNow = new Date('2026-11-10T13:00:00+08:00').getTime();
+  assert(
+    relativeLabel('2026-11-08T10:00:00+08:00', timeNow) === '2天3时前',
+    'relative import time must include days and hours',
+  );
+  assert(
+    importTimeLabel('2026-11-08T10:00:00+08:00', timeNow).endsWith('（2天3时前）'),
+    'import time must append the relative label in parentheses',
+  );
+
   console.log('Mini Program page logic check passed.');
 }
 

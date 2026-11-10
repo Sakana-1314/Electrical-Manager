@@ -90,6 +90,7 @@
 | --- | --- |
 | 导航栏 | 全站 `app.json` 设 `navigationStyle: custom`，每个页面首行引入共享 `components/app-navbar`（内部用 `t-navbar`）：`title` 取 `i18n` 文案；外观由官方主题自动跟随，不传主题类。列表页不再另写顶部大标题，页面名只出现一次；非首页默认显示返回箭头，无历史可返回时回首页 |
 | 列表页骨架 | 根节点 `class="page-shell"`；页面首行 `app-navbar`，内容自上而下依次为 `<filter-panel>`（搜索 + 筛选）、结果计数、列表卡片、状态面板 |
+| 导入时间 | 精简版二级库、华星总库存、物料编码库在列表顶部显示「导入时间：YYYY/MM/DD HH:mm（相对时间）」；数据取各页 `last-import` 接口，相对时间统一用 `utils/time.js` 的 `importTimeLabel`（超过 1 天保留小时，如「2天3时前」），非导入型页面不显示 |
 | 列表卡片 | 统一 `24rpx` 内边距、`24rpx` 圆角、`2rpx` 边框、`0 10rpx 30rpx var(--app-shadow-color)` 阴影；卡片间距 `16rpx`。状态 tag 统一 `variant="light" size="small"`；非状态元信息（申购人、台账标签等）用 `theme="default"`，不抢状态色 |
 | 详情页 | 列表卡片点击后 `navigateTo` 对应详情页（按 `id` 请求详情接口），**不再用详情弹窗**；详情页统一 `app-navbar` + 摘要卡 + 分组卡片，页面内不重复页面标题 |
 | 搜索 | `t-search`（`shape="round"`、`confirm-type="search"`），只做「综合搜索」（跨字段 OR）；收起态**不放字段选择器**，组合搜索统一在面板里做，避免两个入口语义重叠 |
