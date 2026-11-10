@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.hazardDetailTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell hazard-detail-page {{themeClass}}">
   <view wx:if="{{loading}}" class="section-card loading-card">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazardDetail}}" />
@@ -14,7 +15,7 @@
       </view>
       <view class="summary-description"><text user-select="{{true}}">{{hazard.description}}</text></view>
       <view class="summary-meta">
-        <t-tag theme="{{hazard.level_theme}}" variant="outline" size="small">{{hazard.level}}</t-tag>
+        <t-tag theme="{{hazard.level_theme}}" variant="light" size="small">{{hazard.level}}</t-tag>
         <view class="summary-type"><text user-select="{{true}}">{{hazard.type_label}}</text></view>
       </view>
     </view>

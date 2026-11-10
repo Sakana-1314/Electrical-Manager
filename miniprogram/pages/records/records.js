@@ -1,7 +1,7 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -41,7 +41,6 @@ Page(withTheme({
   },
 
   async onLoad() {
-    setNavigationBarTitle('recordsTitle');
     try {
       const session = await getApp().globalData.authPromise;
       if (session.account_disabled) {

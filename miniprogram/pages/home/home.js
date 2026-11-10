@@ -1,7 +1,7 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
 const { canOutbound, isFeatureDisabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const {
   ensureProject,
   getCurrentProject,
@@ -71,7 +71,6 @@ Page(withTheme({
   },
 
   async onLoad() {
-    setNavigationBarTitle('appTitle');
     await this.loadSession();
   },
 

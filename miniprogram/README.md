@@ -32,13 +32,14 @@ storage 的 `miniProgramThemeMode`，不落库、不产生请求。首页「个�
 
 | 层 | 位置 | 约定 |
 | --- | --- | --- |
-| 原生外观 | `app.json` 的 `darkmode` / `themeLocation` + `theme.json` | 窗口与导航栏颜色用 `@变量` 引用 `theme.json`，自动档跟随系统 |
+| 原生外观 | `app.json` 的 `darkmode` / `themeLocation` + `theme.json` | 窗口颜色用 `@变量` 引用 `theme.json`；导航栏由共享 `components/app-navbar`（`t-navbar`）渲染，跟随页面 `themeClass` |
 | 主题运行时 | `utils/theme.js` | 解析档位（`auto` 读系统主题，显式档覆盖系统），把 `theme-dark` 类与原生配色同步到页面；页面统一用 `Page(withTheme({…}))` 接入 |
 | 样式令牌 | `app.wxss` | 浅色令牌定义在 `page`，深色同名覆盖在 `.theme-dark`；`page, .theme-dark` 把 `--td-*` 桥接到 `--app-*` 供 TDesign 组件使用 |
 
 - 页面与组件样式**只引用 `--app-*` 令牌，不写颜色字面量**（`npm run check` 会拦截），新增令牌时明暗两档必须同名同义。
 - 不引入 `tdesign-miniprogram` 自带的 `common/style/theme/*`（媒体查询版暗色）：媒体查询只跟随系统，无法支持显式档，两者混用会互相打架。
-- 显式档与系统档不一致时，导航栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统。
+- 显式档与系统档不一致时，状态栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统。
+- 全站 `navigationStyle: custom`，每个页面首行是 `<app-navbar title="{{i18n.xxx}}" theme-class="{{themeClass}}" />`；列表页不再写顶部大标题，详情统一走独立页面而不是弹窗（`npm run check` 会校验 app-navbar 接线）。
 
 后端需要配置：
 

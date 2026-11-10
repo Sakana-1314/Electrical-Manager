@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const { decoratePurchaseRecord } = require('../../utils/purchase');
 const {
@@ -100,7 +100,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('purchaseRecordsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
     // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。

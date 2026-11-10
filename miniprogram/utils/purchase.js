@@ -8,7 +8,7 @@ function purchaseStatusTheme(status) {
   return 'default'
 }
 
-/** 申购记录列表 / 华星库存记录弹层共用的展示字段。 */
+/** 申购记录列表 / 「该物料的申购记录」页共用的展示字段。 */
 function decoratePurchaseRecord(item) {
   return {
     ...item,

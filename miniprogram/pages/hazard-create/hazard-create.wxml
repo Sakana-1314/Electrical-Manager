@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.hazardCreateTitle}}" theme-class="{{themeClass}}" />
 <view class="page-shell hazard-create-page {{themeClass}}">
   <view wx:if="{{loading}}" class="section-card loading-card">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazards}}" />

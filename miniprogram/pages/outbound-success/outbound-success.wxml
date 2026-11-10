@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.outboundSuccessTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
 <view class="page-shell success-page {{themeClass}}">
   <view wx:if="{{loading}}" class="success-result">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />

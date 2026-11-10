@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
@@ -108,7 +108,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('purchasePlansTitle');
     // 分享链接带来的搜索 / 筛选：先解析出来，等筛选项加载完再回填——
     // 面板里的选项要靠 options 才能把当前值解析成文案，早于选项写入会显示成原值。
     const shared = readShareParams(options, SHARE_PARAMS);

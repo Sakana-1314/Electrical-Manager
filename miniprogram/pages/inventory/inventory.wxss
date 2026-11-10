@@ -3,21 +3,9 @@
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
-.inventory-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24rpx;
-  margin: 4rpx 4rpx 24rpx;
-}
-
-.inventory-header .page-title {
-  font-size: 44rpx;
-}
-
 .inventory-tools {
   margin-bottom: 20rpx;
-  padding: 4rpx 0;
+  padding: 0;
 }
 
 .result-count {
@@ -38,12 +26,12 @@
   border-radius: 24rpx;
   background: var(--app-surface);
   box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
-  transition: transform 120ms ease, background 120ms ease;
+  transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
 .inventory-card-active {
   transform: scale(0.99);
-  background: var(--app-surface-soft);
+  box-shadow: 0 6rpx 18rpx var(--app-shadow-color-strong);
 }
 
 .card-heading {
@@ -57,7 +45,7 @@
   flex: 1;
   min-width: 0;
   color: var(--app-text-strong);
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 650;
   line-height: 1.4;
 }
@@ -72,7 +60,7 @@
 
 .card-divider {
   height: 2rpx;
-  margin: 20rpx 0 16rpx;
+  margin: 22rpx 0 18rpx;
   background: var(--app-divider);
 }
 

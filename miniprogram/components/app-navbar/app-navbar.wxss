@@ -1,0 +1,5 @@
+/* 导航栏底色跟随页面底色，标题用正文强色；明暗档位由页面传入的 themeClass 决定。 */
+.app-navbar {
+  --td-navbar-background: var(--app-bg);
+  --td-navbar-color: var(--app-text-strong);
+}

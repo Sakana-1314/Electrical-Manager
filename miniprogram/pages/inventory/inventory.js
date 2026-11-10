@@ -4,7 +4,7 @@ const { decorateStock } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
@@ -85,7 +85,6 @@ Page(withTheme({
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('inventoryTitle');
     // 分享链接带来的搜索词 / 筛选；精简模式下没有筛选，忽略对应参数。
     const shared = readShareParams(options, SHARE_PARAMS);
     this.setData({ fieldDefs: toFieldDefs() });

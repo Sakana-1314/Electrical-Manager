@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "绑定账号",
   "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
     "t-button": "tdesign-miniprogram/button/button",
     "t-cell-group": "tdesign-miniprogram/cell-group/cell-group",
     "t-input": "tdesign-miniprogram/input/input",

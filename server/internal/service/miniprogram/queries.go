@@ -459,3 +459,33 @@ func ListLiteInventory(s *db.Session, keyword *string, page, pageSize int64) ([]
 	}
 	return out, total, nil
 }
+
+// MaterialCodeDetail 对应 material_code_detail：按 id 读取物料编码详情。
+func MaterialCodeDetail(s *db.Session, id int64) (schema.MiniProgramMaterialCodeRead, error) {
+	it, err := codelib.GetByID(s, id)
+	if err != nil {
+		return schema.MiniProgramMaterialCodeRead{}, err
+	}
+	if it == nil {
+		return schema.MiniProgramMaterialCodeRead{}, apperr.NotFound("物料编码")
+	}
+	return schema.MiniProgramMaterialCodeRead{
+		ID: it.ID, MaterialCode: it.MaterialCode, Name: it.Name, ModelSpec: it.ModelSpec, UnitName: it.UnitName,
+	}, nil
+}
+
+// HuaXingInventoryDetail 对应 huaxing_inventory_detail：按 id 读取华星库存详情。
+func HuaXingInventoryDetail(s *db.Session, id int64) (schema.MiniProgramHuaXingInventoryRead, error) {
+	it, err := huaxing.GetByID(s, id)
+	if err != nil {
+		return schema.MiniProgramHuaXingInventoryRead{}, err
+	}
+	if it == nil {
+		return schema.MiniProgramHuaXingInventoryRead{}, apperr.NotFound("华星库存")
+	}
+	return schema.MiniProgramHuaXingInventoryRead{
+		ID: it.ID, FirstInboundDate: it.FirstInboundDate, Warehouse: it.Warehouse, MaterialCode: it.MaterialCode,
+		Name: it.Name, ModelSpec: it.ModelSpec, Quantity: it.Quantity, UnitName: it.UnitName,
+		Purchaser: it.Purchaser, PurchaseDepartment: it.PurchaseDepartment, SubitemNoName: it.SubitemNoName,
+	}, nil
+}

@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
@@ -56,14 +56,11 @@ Page(withTheme({
     loadingMore: false,
     resultCount: '',
     backTopVisible: false,
-    detailVisible: false,
-    detailItem: null,
     lastImportAtLabel: '',
     i18n: getMessages(),
   },
 
   async onLoad(options = {}) {
-    setNavigationBarTitle('materialCodesTitle');
     // 分享链接带来的搜索词：解析后立刻回填，列表与搜索框都按它渲染。
     const shared = readShareParams(options, SHARE_PARAMS);
     this.setData({ fieldDefs: toFieldDefs() });
@@ -194,31 +191,8 @@ Page(withTheme({
   openDetail(event) {
     const item = this.data.items[event.currentTarget.dataset.index];
     if (!item) return;
-    // 单价来自「价格表」导入，可能没有：空值显示破折号，不显示 0 元。
-    this.setData({
-      detailItem: { ...item, unitPriceText: item.unit_price ? `${item.unit_price} 元` : '—' },
-      detailVisible: true,
-    });
-  },
-
-  onDetailVisibleChange(event) {
-    this.setData({ detailVisible: event.detail.visible });
-  },
-
-  copyMaterialCode() {
-    const item = this.data.detailItem;
-    if (!item) return;
-    wx.setClipboardData({
-      data: item.material_code || '',
-      success: () => {
-        Toast({
-          context: this,
-          selector: '#material-codes-toast',
-          message: t('copied'),
-          theme: 'success',
-          direction: 'column',
-        });
-      },
+    wx.navigateTo({
+      url: `/pages/material-code-detail/material-code-detail?id=${item.id}`,
     });
   },
 

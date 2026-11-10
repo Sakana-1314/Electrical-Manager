@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "物资详情",
   "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
     "material-summary-card": "/components/material-summary-card/material-summary-card",
     "t-button": "tdesign-miniprogram/button/button",
     "t-empty": "tdesign-miniprogram/empty/empty",

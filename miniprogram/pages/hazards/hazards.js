@@ -2,7 +2,7 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
@@ -102,7 +102,6 @@ Page(withTheme({
     // 必须在第一个 await 之前置位：onShow 紧随 onLoad 同步触发，放到 onLoad 末尾时它早已跑过，
     // 会在登录、筛选项都没就绪时多发一次列表请求，而「第一次从详情返回」反而被误当成首次 onShow 吞掉。
     this.skipNextShow = true;
-    setNavigationBarTitle('hazardsTitle');
     // 分享链接带来的搜索 / 筛选：先解析，等筛选项加载完再回填（面板要靠选项才能解析出文案）。
     const shared = readShareParams(options, SHARE_PARAMS);
     // 重试筛选项时复用同一份分享值，保证「分享值补进选项」在重试后仍然生效。

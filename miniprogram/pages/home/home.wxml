@@ -1,3 +1,4 @@
+<app-navbar title="{{i18n.homeTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
 <view class="page-shell home-page {{themeClass}}">
   <!-- 品牌头图：渐变实底 + 轨道装饰，承载标题、身份入口与首页唯一主动作（扫码出库）。
        与绑定页的品牌面板同一套语言，首屏先立住品牌，再往下铺功能入口。 -->

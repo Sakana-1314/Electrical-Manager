@@ -46,6 +46,9 @@ func Register(r *web.Router) {
 	g.GET("/huaxing-inventory/filter-options", huaxingFilterOptions, user)
 	g.GET("/material-codes/last-import", lastImport("MATERIAL_CODE_LIBRARY"), user)
 	g.GET("/huaxing-inventory/last-import", lastImport("HUAXING_INVENTORY"), user)
+	// 详情路由放在 last-import 之后，避免 {id} 抢占静态子路径。
+	g.GET("/material-codes/{id}", materialCodeDetail, user)
+	g.GET("/huaxing-inventory/{id}", huaxingInventoryDetail, user)
 	g.GET("/ledger-items", ledgerItems, user)
 	g.GET("/ledger-items/tag-options", ledgerTagOptions, user)
 	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user)
@@ -470,6 +473,34 @@ func huaxingInventory(c *web.Ctx) error {
 		return err
 	}
 	return c.OK(schema.NewPage(items, page, size, total))
+}
+
+// materialCodeDetail 小程序物料编码详情。
+func materialCodeDetail(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("id")
+	if err := p.Err(); err != nil {
+		return err
+	}
+	out, err := svc.MaterialCodeDetail(c.DB, id)
+	if err != nil {
+		return err
+	}
+	return c.OK(out)
+}
+
+// huaxingInventoryDetail 小程序华星库存详情。
+func huaxingInventoryDetail(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("id")
+	if err := p.Err(); err != nil {
+		return err
+	}
+	out, err := svc.HuaXingInventoryDetail(c.DB, id)
+	if err != nil {
+		return err
+	}
+	return c.OK(out)
 }
 
 // huaxingFilterOptions 小程序华星库存筛选：与网页端共用同一份申购部门 / 申购人选项。

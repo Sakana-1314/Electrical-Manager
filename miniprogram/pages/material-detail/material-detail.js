@@ -3,7 +3,7 @@ const { request } = require('../../utils/request');
 const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { canOutbound } = require('../../utils/features');
-const { getMessages, setNavigationBarTitle, t } = require('../../utils/i18n');
+const { getMessages, t } = require('../../utils/i18n');
 const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
@@ -16,7 +16,6 @@ Page(withTheme({
   },
 
   async onLoad(options) {
-    setNavigationBarTitle('materialDetailTitle');
     this.materialUuid = options.uuid || '';
     try {
       const session = await getApp().globalData.authPromise;
