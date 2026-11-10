@@ -3,7 +3,6 @@ const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { decoratePurchaseRecord } = require('../../utils/purchase');
 const {
   buildFieldQuery,
@@ -66,7 +65,7 @@ function toFieldDefs() {
   }));
 }
 
-Page(withTheme({
+Page({
   data: {
     items: [],
     keyword: '',
@@ -323,4 +322,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

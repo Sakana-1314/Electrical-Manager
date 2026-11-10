@@ -1,6 +1,6 @@
 # HXNI 电气无忧 小程序（简称「电气无忧」）
 
-原生微信小程序（扫码出库、隐患登记与整改跟进、台账查看），使用 TDesign Mini Program 组件库。启动后通过 `wx.login` 无感登录；未注册用户只有在提交姓名后才会创建 OpenID 与姓名映射，管理端不支持手工新增。之后可扫描物资小程序码直接进入对应物资的出库页面。
+原生微信小程序（扫码出库、隐患登记与整改跟进、台账查看），使用 TDesign Mini Program 组件库（^1.18.0）。启动后通过 `wx.login` 无感登录；未注册用户只有在提交姓名后才会创建 OpenID 与姓名映射，管理端不支持手工新增。之后可扫描物资小程序码直接进入对应物资的出库页面。
 
 ## 功能开关
 
@@ -15,7 +15,7 @@
 5. 在微信开发者工具中执行“工具 → 构建 npm”。
 6. 在小程序后台把 `config/index.js` 里的域名配置为 request 与 uploadFile 合法域名。
 
-提交前执行 `npm run check`（静态结构检查，含深色模式令牌、接线与接口域名配置校验）与 `npm test`（页面逻辑冒烟测试，用最小 wx 桩加载页面，不需要开发者工具）。
+提交前执行 `npm run check`（静态结构检查，含官方主题令牌、接线与接口域名配置校验）与 `npm test`（页面逻辑冒烟测试，用最小 wx 桩加载页面，不需要开发者工具）。
 
 ## 接口域名配置
 
@@ -25,21 +25,20 @@
 - CI 上传：工作流从 GitHub Secret `MINIPROGRAM_API_BASE_URL` 生成 `config/index.js`（结尾斜杠会被去掉），缺失时直接失败。
 - `npm run check` 会校验 `apiBaseUrl` 是纯域名（不带路径），且 `config/api.js` 能正确追加 `/api/v1`。
 
-## 深色模式（界面外观）
+## 深色模式（自动跟随设备）
 
-三档语义与网页端一致：`auto`（自动，跟随系统，默认）、`light`（浅色）、`dark`（深色）；档位按本机保存在
-storage 的 `miniProgramThemeMode`，不落库、不产生请求。首页「个人信息」弹窗里的「外观」一行可切换三档：点击后弹出 `t-picker` 滚轮选择器，默认停在当前档位，确认才生效（取消不改动）。
+小程序端不提供手动切换：`app.json` 保持 `darkmode: true` + `themeLocation: theme.json`，外观由 TDesign 官方主题文件 `theme.wxss` 的 `@media (prefers-color-scheme: light/dark)` 自动跟随设备。
 
 | 层 | 位置 | 约定 |
 | --- | --- | --- |
-| 原生外观 | `app.json` 的 `darkmode` / `themeLocation` + `theme.json` | 窗口颜色用 `@变量` 引用 `theme.json`；导航栏由共享 `components/app-navbar`（`t-navbar`）渲染，跟随页面 `themeClass` |
-| 主题运行时 | `utils/theme.js` | 解析档位（`auto` 读系统主题，显式档覆盖系统），把 `theme-dark` 类与原生配色同步到页面；页面统一用 `Page(withTheme({…}))` 接入 |
-| 样式令牌 | `app.wxss` | 浅色令牌定义在 `page`，深色同名覆盖在 `.theme-dark`；`page, .theme-dark` 把 `--td-*` 桥接到 `--app-*` 供 TDesign 组件使用 |
+| 官方主题 | `theme.wxss` | TDesign 官方浅 / 深两套 `--td-*` 令牌，靠 `prefers-color-scheme` 自动切换；不要手改其中的色值 |
+| 项目别名 | `app.wxss` | 第一行 `@import "theme.wxss";`；`page, .page` 把 `--app-*` 语义别名全部指向官方 `--td-*`（如 `--app-bg: var(--td-bg-color-page)`） |
+| 原生外观 | `theme.json` | 窗口底色与官方页面底色一致（浅色 `#f3f3f3` / 深色 `#181818`），`darkmode` 自动切换状态栏与下拉区域 |
+| 导航栏 | `components/app-navbar` | 内部用 `t-navbar`，底色 / 标题色引用 `--app-*`，自动跟随主题 |
 
-- 页面与组件样式**只引用 `--app-*` 令牌，不写颜色字面量**（`npm run check` 会拦截），新增令牌时明暗两档必须同名同义。
-- 不引入 `tdesign-miniprogram` 自带的 `common/style/theme/*`（媒体查询版暗色）：媒体查询只跟随系统，无法支持显式档，两者混用会互相打架。
-- 显式档与系统档不一致时，状态栏与窗口底色由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正；软键盘、原生选择器弹层等系统级外观仍跟随系统。
-- 全站 `navigationStyle: custom`，每个页面首行是 `<app-navbar title="{{i18n.xxx}}" theme-class="{{themeClass}}" />`；列表页不再写顶部大标题，详情统一走独立页面而不是弹窗（`npm run check` 会校验 app-navbar 接线）。
+- 页面与组件样式**只引用 `--app-*` / `--td-*` 变量，不写颜色字面量**（`npm run check` 会拦截），也不在页面里用 `@media (prefers-color-scheme)`。
+- 不再有 `utils/theme.js`、`withTheme`、`themeClass`、外观选择器或本机档位 storage；系统切换深色时无需任何 JS。
+- 全站 `navigationStyle: custom`，每个页面首行是 `<app-navbar title="{{i18n.xxx}}" />`；列表页不再写顶部大标题，详情统一走独立页面而不是弹窗（`npm run check` 会校验 app-navbar 接线）。
 
 后端需要配置：
 

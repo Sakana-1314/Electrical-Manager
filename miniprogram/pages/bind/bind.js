@@ -3,10 +3,9 @@ const { request } = require('../../utils/request');
 const { storeSession } = require('../../utils/auth');
 const { REDIRECT_KEY, extractRedirect, takeRedirect } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-Page(withTheme({
+Page({
   data: {
     displayName: '',
     departmentName: '华星检修维护部电气车间',
@@ -116,4 +115,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

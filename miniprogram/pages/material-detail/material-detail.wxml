@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.materialDetailTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell detail-page {{themeClass}}">
+<app-navbar title="{{i18n.materialDetailTitle}}" />
+<view class="page-shell detail-page">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingMaterialDetail}}" />
   </view>

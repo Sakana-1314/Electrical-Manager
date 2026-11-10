@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.purchaseRecordDetailTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell record-detail-page {{themeClass}}">
+<app-navbar title="{{i18n.purchaseRecordDetailTitle}}" />
+<view class="page-shell record-detail-page">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingPurchaseRecordDetail}}" />
   </view>

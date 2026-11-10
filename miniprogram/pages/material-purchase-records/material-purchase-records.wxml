@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.materialPurchaseRecordsTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell material-purchase-records-page {{themeClass}}">
+<app-navbar title="{{i18n.materialPurchaseRecordsTitle}}" />
+<view class="page-shell material-purchase-records-page">
   <view wx:if="{{materialCode}}" class="material-caption">
     <view class="caption-name">{{materialName || materialCode}}</view>
     <view class="caption-code">{{materialCode}}</view>

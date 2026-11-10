@@ -2,10 +2,9 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
-Page(withTheme({
+Page({
   data: {
     detail: null,
     loading: true,
@@ -96,4 +95,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

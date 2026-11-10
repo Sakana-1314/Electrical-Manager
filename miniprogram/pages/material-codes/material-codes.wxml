@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.materialCodesTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell material-codes-page {{themeClass}}">
+<app-navbar title="{{i18n.materialCodesTitle}}" />
+<view class="page-shell material-codes-page">
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
     <filter-panel

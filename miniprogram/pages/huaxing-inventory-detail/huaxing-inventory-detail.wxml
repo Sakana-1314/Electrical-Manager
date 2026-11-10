@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.huaxingInventoryDetailTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell huaxing-inventory-detail-page {{themeClass}}">
+<app-navbar title="{{i18n.huaxingInventoryDetailTitle}}" />
+<view class="page-shell huaxing-inventory-detail-page">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHuaxingInventoryDetail}}" />
   </view>

@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.hazardDetailTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell hazard-detail-page {{themeClass}}">
+<app-navbar title="{{i18n.hazardDetailTitle}}" />
+<view class="page-shell hazard-detail-page">
   <view wx:if="{{loading}}" class="section-card loading-card">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingHazardDetail}}" />
   </view>

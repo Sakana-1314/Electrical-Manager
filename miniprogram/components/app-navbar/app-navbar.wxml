@@ -1,5 +1,5 @@
 <t-navbar
-  class="app-navbar {{themeClass}}"
+  class="app-navbar"
   title="{{title}}"
   left-arrow="{{back}}"
   delta="{{delta}}"

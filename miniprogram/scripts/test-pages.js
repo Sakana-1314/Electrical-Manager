@@ -129,7 +129,7 @@ function loadPage(relative) {
 /**
  * 等页面的一轮异步加载结束。
  *
- * 真机的 onLoad 不需要返回 Promise（`withTheme` 包装后也不透传），所以这里不能 await onLoad 的返回值，
+ * 真机的 onLoad 不需要返回 Promise，所以这里不能 await onLoad 的返回值，
  * 只能轮询页面自己的加载态标志。
  */
 function waitFor(predicate, label, timeoutMs = 3000) {

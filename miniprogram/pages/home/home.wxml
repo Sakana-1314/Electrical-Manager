@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.homeTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
-<view class="page-shell home-page {{themeClass}}">
+<app-navbar title="{{i18n.homeTitle}}" back="{{false}}" />
+<view class="page-shell home-page">
   <!-- 品牌头图：渐变实底 + 轨道装饰，承载标题、身份入口与首页唯一主动作（扫码出库）。
        与绑定页的品牌面板同一套语言，首屏先立住品牌，再往下铺功能入口。 -->
   <view class="brand-panel">
@@ -162,21 +162,6 @@
           </view>
         </view>
       </view>
-      <view class="user-profile-appearance">
-        <view
-          class="appearance-trigger"
-          hover-class="appearance-trigger-active"
-          aria-role="button"
-          aria-expanded="{{appearancePickerVisible}}"
-          bind:tap="openAppearancePicker"
-        >
-          <view class="appearance-trigger-label">{{i18n.appearanceTitle}}</view>
-          <view class="appearance-trigger-value">
-            <view class="appearance-trigger-text">{{themeLabel}}</view>
-            <t-icon class="appearance-arrow" name="chevron-down" size="28rpx" />
-          </view>
-        </view>
-      </view>
       <view
         wx:if="{{!liteMode}}"
         class="user-profile-records"
@@ -191,21 +176,6 @@
       </view>
     </view>
   </t-popup>
-
-  <!-- 界面外观切换：与项目选择器同一套滚轮选择器，默认停在当前档位，确认后才生效（取消不改动）。 -->
-  <t-picker
-    visible="{{appearancePickerVisible}}"
-    title="{{i18n.appearanceTitle}}"
-    cancel-btn="{{i18n.cancel}}"
-    confirm-btn="{{i18n.confirm}}"
-    value="{{themePickerValue}}"
-    popup-props="{{pickerPopupProps}}"
-    bind:confirm="onAppearancePickerConfirm"
-    bind:cancel="closeAppearancePicker"
-    bind:visible-change="onAppearancePickerVisibleChange"
-  >
-    <t-picker-item options="{{themeOptions}}" />
-  </t-picker>
 
   <!-- 当前项目切换：滚轮选择器，默认停在当前项目，确认后才切换（取消不改动）。
        popup-props 抬高面板与遮罩的层级，避免被上层的个人信息弹窗压住。 -->

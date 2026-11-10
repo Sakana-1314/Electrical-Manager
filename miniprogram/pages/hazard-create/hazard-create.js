@@ -3,7 +3,6 @@ const { request, uploadImage, requestCached, clearRequestCache } = require('../.
 const { createClientRequestId } = require('../../utils/material');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { decorateImage, todayString } = require('../../utils/hazard');
 const Toast = toastModule.default || toastModule;
 
@@ -18,7 +17,7 @@ function addDays(dateString, days) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-Page(withTheme({
+Page({
   data: {
     loading: true,
     submitting: false,
@@ -282,4 +281,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

@@ -5,7 +5,6 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const {
   buildFieldQuery,
   buildFieldShare,
@@ -59,7 +58,7 @@ function toFieldDefs() {
   }));
 }
 
-Page(withTheme({
+Page({
   data: {
     items: [],
     keyword: '',
@@ -289,4 +288,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

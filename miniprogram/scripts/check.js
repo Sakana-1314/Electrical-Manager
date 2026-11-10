@@ -37,7 +37,7 @@ JSON.parse(read('project.config.json'));
 
 // 页面清单以 app.json 为准，避免检查清单与实际页面漂移。
 const pages = appConfig.pages.map((page) => page.replace(/^pages\//, ''));
-const requiredFiles = ['app.js', 'app.json', 'app.wxss'];
+const requiredFiles = ['app.js', 'app.json', 'app.wxss', 'theme.wxss'];
 const sharedComponents = [
   'app-navbar/app-navbar',
   'material-summary-card/material-summary-card',
@@ -101,8 +101,8 @@ const themeKeys = Object.keys(themeConfig.light).sort();
 if (JSON.stringify(themeKeys) !== JSON.stringify(Object.keys(themeConfig.dark).sort())) {
   throw new Error('theme.json light and dark palettes must define the same variables.');
 }
-if (themeConfig.light.bgColor !== '#f4f6fa') {
-  throw new Error('Mini Program background color must match the web theme.');
+if (themeConfig.light.bgColor !== '#f3f3f3' || themeConfig.dark.bgColor !== '#181818') {
+  throw new Error('Mini Program native background must match the official TDesign page tokens.');
 }
 for (const [key, name] of themeVariables) {
   if (!(name in themeConfig.light) || !(name in themeConfig.dark)) {
@@ -125,48 +125,43 @@ function tokenNames(block) {
 }
 
 const appStyles = read('app.wxss');
-const lightTokens = styleBlock(appStyles, 'page');
-const darkTokens = styleBlock(appStyles, '.theme-dark');
-const bridgeTokens = styleBlock(appStyles, 'page,\n.theme-dark');
-if (!lightTokens || !darkTokens || !bridgeTokens) {
-  throw new Error('app.wxss must define the page palette, the .theme-dark palette and the TDesign bridge.');
+const themeStyles = read('theme.wxss');
+if (!appStyles.includes('@import "theme.wxss";')) {
+  throw new Error('app.wxss must import the official TDesign theme.wxss.');
 }
-const lightTokenNames = tokenNames(lightTokens).filter((name) => name.startsWith('--app-'));
-const darkTokenNames = tokenNames(darkTokens).filter((name) => name.startsWith('--app-'));
-if (lightTokenNames.length < 40 || lightTokenNames.length !== new Set(lightTokenNames).size) {
-  throw new Error('app.wxss light palette must define every --app-* token exactly once.');
-}
-if (JSON.stringify(lightTokenNames) !== JSON.stringify(darkTokenNames)) {
-  throw new Error('app.wxss dark palette must override every light --app-* token.');
-}
-for (const declaration of bridgeTokens.split(';')) {
-  const trimmed = declaration.trim();
-  if (!trimmed) continue;
-  if (!/^--td-[a-z0-9-]+: var\(--app-[a-z0-9-]+\)$/.test(trimmed)) {
-    throw new Error(`TDesign bridge tokens must reference --app-* tokens only: ${trimmed}`);
-  }
-  const referenced = trimmed.slice(trimmed.indexOf('var(') + 4).replace(/\)$/, '');
-  if (!lightTokenNames.includes(referenced)) {
-    throw new Error(`TDesign bridge references an unknown token: ${referenced}`);
+for (const snippet of [
+  '@media (prefers-color-scheme: light)',
+  '@media (prefers-color-scheme: dark)',
+  '--td-brand-color-7',
+  '--td-bg-color-page',
+  '--td-text-color-primary',
+]) {
+  if (!themeStyles.includes(snippet)) {
+    throw new Error(`theme.wxss must keep the official TDesign theme token: ${snippet}`);
   }
 }
-for (const token of ['--td-brand-color: var(--app-brand)', '--td-text-color-primary: var(--app-text-strong)']) {
-  if (!appStyles.includes(token)) {
-    throw new Error(`Missing shared TDesign theme token: ${token}`);
-  }
+const aliasBlock = styleBlock(appStyles, 'page, .page');
+if (!aliasBlock) {
+  throw new Error('app.wxss must define the project token aliases on page, .page.');
 }
-if (!appStyles.includes('.theme-dark')) {
-  throw new Error('Mini Program styles must define the dark theme scope.');
+const appTokenNames = tokenNames(aliasBlock).filter((name) => name.startsWith('--app-'));
+if (appTokenNames.length < 40 || appTokenNames.length !== new Set(appTokenNames).size) {
+  throw new Error('app.wxss must define every --app-* alias exactly once.');
 }
-// 项目选择器（t-picker）的顶/底渐隐遮罩用 var(--td-picker-transparent-color) 收尾，
-// 桥接缺失会让整条渐变失效（组件默认值来自未被引入的媒体查询主题）。
 for (const token of [
-  '--td-picker-bg-color: var(--app-surface)',
+  '--app-bg: var(--td-bg-color-page)',
+  '--app-surface: var(--td-bg-color-container)',
+  '--app-brand: var(--td-brand-color)',
+  '--app-text-strong: var(--td-text-color-primary)',
   '--td-picker-transparent-color: var(--app-transparent)',
+  '--td-radius-default: 18rpx',
 ]) {
   if (!appStyles.includes(token)) {
-    throw new Error(`Missing TDesign picker bridge token: ${token}`);
+    throw new Error(`app.wxss is missing the theme alias: ${token}`);
   }
+}
+if (appStyles.includes('.theme-dark') || appStyles.includes('@media (prefers-color-scheme')) {
+  throw new Error('app.wxss must not keep manual theme scopes or media queries; use theme.wxss.');
 }
 
 function listStyles(dir) {
@@ -182,7 +177,7 @@ function listStyles(dir) {
     });
 }
 
-// 页面样式只引用令牌，颜色字面量只允许出现在 app.wxss 的令牌定义里。
+// 页面与组件样式只引用令牌，颜色字面量只允许出现在 theme.wxss 的官方令牌里。
 for (const file of listStyles('pages').concat(listStyles('components'))) {
   const styles = read(file);
   const literal = styles.match(/#[0-9a-fA-F]{3,8}\b|rgba?\(/);
@@ -190,7 +185,7 @@ for (const file of listStyles('pages').concat(listStyles('components'))) {
     throw new Error(`${file} must not hardcode colors, found: ${literal[0]}`);
   }
   if (styles.includes('prefers-color-scheme')) {
-    throw new Error(`${file} must not switch themes with media queries; use the .theme-dark scope.`);
+    throw new Error(`${file} must not switch themes with media queries; use the theme variables.`);
   }
 }
 for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('components'))) {
@@ -199,184 +194,13 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   }
 }
 
-// 引用的 --app-* 令牌必须在调色板里定义，避免拼错令牌名后静默失效。
+// 引用的 --app-* 令牌必须在 alias 块里定义，避免拼错令牌名后静默失效。
 for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('components'))) {
   for (const name of new Set(read(file).match(/var\((--app-[a-z0-9-]+)/g) || [])) {
     const token = name.replace('var(', '');
-    if (!lightTokenNames.includes(token)) {
+    if (!appTokenNames.includes(token)) {
       throw new Error(`${file} references an undefined theme token: ${token}`);
     }
-  }
-}
-
-const {
-  THEME_MODE_DEFAULT,
-  THEME_MODE_STORAGE_KEY,
-  normalizeThemeMode,
-  readThemeMode,
-  resolveTheme,
-  writeThemeMode,
-  themePageData,
-  withTheme,
-} = require(path.join(root, 'utils/theme.js'));
-
-if (THEME_MODE_STORAGE_KEY !== 'miniProgramThemeMode' || THEME_MODE_DEFAULT !== 'auto') {
-  throw new Error('Mini Program appearance preference must default to auto.');
-}
-if (normalizeThemeMode('dark') !== 'dark' || normalizeThemeMode('system') !== 'auto') {
-  throw new Error('Mini Program appearance preference must fall back to auto.');
-}
-if (JSON.stringify(resolveTheme('auto', 'dark')) !== JSON.stringify({ mode: 'auto', theme: 'dark', themeClass: 'theme-dark' })) {
-  throw new Error('Mini Program auto appearance must follow the system theme.');
-}
-if (resolveTheme('light', 'dark').theme !== 'light' || resolveTheme('dark', 'light').theme !== 'dark') {
-  throw new Error('Mini Program explicit appearance must override the system theme.');
-}
-if (resolveTheme('light', 'light').themeClass !== '') {
-  throw new Error('Mini Program light appearance must rely on the default palette.');
-}
-if (readThemeMode() !== 'auto' || themePageData().themeMode !== 'auto') {
-  throw new Error('Mini Program appearance must fall back to auto without storage.');
-}
-const themedPage = withTheme({ data: { i18n: {} }, onLoad() {}, onShow() {}, onUnload() {}, custom: 1 });
-if (themedPage.custom !== 1 || !themedPage.onLoad || !themedPage.onShow || !themedPage.onUnload) {
-  throw new Error('withTheme must keep the wrapped page config.');
-}
-if (themedPage.data.themeMode !== 'auto' || themedPage.data.theme !== 'light' || themedPage.data.themeClass !== '') {
-  throw new Error('withTheme must inject the resolved appearance into page data.');
-}
-if (themedPage.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeAuto')) {
-  throw new Error('withTheme must inject the appearance label shown by the closed dropdown.');
-}
-if (themedPage.data.i18n === undefined) {
-  throw new Error('withTheme must keep the page data.');
-}
-
-// 用最小 wx 桩验证运行时：档位持久化、页面 data 同步、原生配色与系统主题广播。
-{
-  let systemTheme = 'light';
-  const storage = new Map();
-  const nativeCalls = { nav: [], background: [] };
-  const listeners = [];
-  global.wx = {
-    getAppBaseInfo: () => ({ theme: systemTheme }),
-    getStorageSync: (key) => (storage.has(key) ? storage.get(key) : ''),
-    setStorageSync: (key, value) => storage.set(key, value),
-    setNavigationBarColor: (options) => nativeCalls.nav.push(options),
-    setBackgroundColor: (options) => nativeCalls.background.push(options),
-    onThemeChange: (listener) => listeners.push(listener),
-  };
-
-  const { applyThemeToPage, getAppearanceOptions, setThemeMode } = require(path.join(root, 'utils/theme.js'));
-  const page = {
-    data: themePageData(),
-    setData(patch) {
-      Object.assign(this.data, patch);
-    },
-  };
-
-  themedPage.onLoad.call(page);
-  if (page.data.theme !== 'light' || page.data.themeClass !== '' || nativeCalls.nav.length !== 1) {
-    throw new Error('Applying the light appearance must keep the default palette and set the native bar.');
-  }
-  if (page.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeAuto')) {
-    throw new Error('The appearance dropdown must show the current tier label.');
-  }
-  if (nativeCalls.nav[0].frontColor !== '#000000' || nativeCalls.background[0].backgroundColor !== '#f4f6fa') {
-    throw new Error('Light appearance must use the light native colors.');
-  }
-
-  themedPage.onShow.call(page);
-  if (listeners.length !== 1) {
-    throw new Error('Showing a themed page must register a single wx.onThemeChange listener.');
-  }
-  systemTheme = 'dark';
-  listeners[0]({ theme: 'dark' });
-  if (page.data.theme !== 'dark' || page.data.themeClass !== 'theme-dark') {
-    throw new Error('Auto appearance must follow the system theme change.');
-  }
-  if (nativeCalls.nav[1].frontColor !== '#ffffff' || nativeCalls.background[1].backgroundColor !== '#13171d') {
-    throw new Error('Dark appearance must use the dark native colors.');
-  }
-
-  setThemeMode(page, 'light');
-  if (storage.get(THEME_MODE_STORAGE_KEY) !== 'light' || page.data.theme !== 'light') {
-    throw new Error('Selecting an explicit appearance must persist and switch the page palette.');
-  }
-  if (page.data.themeLabel !== require(path.join(root, 'utils/i18n.js')).t('themeModeLight')) {
-    throw new Error('The appearance dropdown label must follow the selected tier.');
-  }
-  systemTheme = 'light';
-  listeners[0]({ theme: 'light' });
-  systemTheme = 'dark';
-  listeners[0]({ theme: 'dark' });
-  if (page.data.theme !== 'light' || page.data.themeMode !== 'light') {
-    throw new Error('Explicit appearance must override a system theme change.');
-  }
-
-  themedPage.onUnload.call(page);
-  systemTheme = 'light';
-  setThemeMode(page, 'auto');
-  systemTheme = 'dark';
-  listeners[0]({ theme: 'dark' });
-  if (page.data.theme !== 'light') {
-    throw new Error('Unloaded pages must not react to system theme changes.');
-  }
-  if (readThemeMode() !== 'auto' || writeThemeMode('unknown') !== 'auto' || readThemeMode() !== 'auto') {
-    throw new Error('Appearance storage must reject unknown tiers.');
-  }
-
-  const options = getAppearanceOptions();
-  if (options.map((option) => option.value).join(',') !== 'auto,light,dark' || options.some((option) => !option.label)) {
-    throw new Error('Appearance options must expose the three translated tiers.');
-  }
-  delete global.wx;
-}
-
-// 首页外观入口是一个滚轮选择器：收起时显示当前档位，弹出后列出三档（与项目切换同一套交互）。
-{
-  const homeScript = read('pages/home/home.js');
-  for (const snippet of [
-    'appearancePickerVisible',
-    'themePickerValue',
-    'openAppearancePicker',
-    'onAppearancePickerConfirm',
-    'onAppearancePickerVisibleChange',
-  ]) {
-    if (!homeScript.includes(snippet)) {
-      throw new Error(`pages/home/home.js must wire the appearance picker: ${snippet}`);
-    }
-  }
-  if (homeScript.includes('appearanceExpanded') || homeScript.includes('toggleAppearance')) {
-    throw new Error('The appearance switcher must not keep the hand-rolled expandable list.');
-  }
-  const homeMarkup = read('pages/home/home.wxml');
-  for (const snippet of [
-    '{{themeLabel}}',
-    'openAppearancePicker',
-    'onAppearancePickerConfirm',
-    'bind:visible-change="onAppearancePickerVisibleChange"',
-    'options="{{themeOptions}}"',
-  ]) {
-    if (!homeMarkup.includes(snippet)) {
-      throw new Error(`pages/home/home.wxml must render the appearance picker: ${snippet}`);
-    }
-  }
-  if (homeMarkup.includes('appearanceExpanded') || homeMarkup.includes('t-radio-group')) {
-    throw new Error('The appearance switcher must use t-picker, not an inline radio group.');
-  }
-  const homeConfig = JSON.parse(read('pages/home/home.json'));
-  const components = Object.values(homeConfig.usingComponents || {});
-  for (const component of [
-    'tdesign-miniprogram/picker/picker',
-    'tdesign-miniprogram/picker-item/picker-item',
-  ]) {
-    if (!components.includes(component)) {
-      throw new Error(`pages/home/home.json must register ${component} for the appearance picker.`);
-    }
-  }
-  if (components.includes('tdesign-miniprogram/radio-group/radio-group')) {
-    throw new Error('pages/home/home.json must not keep t-radio-group after the appearance picker.');
   }
 }
 
@@ -894,19 +718,25 @@ function checkProjectResolution() {
 
 for (const page of pages) {
   const pageScript = read(`pages/${page}.js`);
-  if (!pageScript.includes('Page(withTheme({')) {
-    throw new Error(`pages/${page}.js must wrap its config with withTheme.`);
+  if (!pageScript.includes('Page({')) {
+    throw new Error(`pages/${page}.js must define a Page({...}) config.`);
+  }
+  if (pageScript.includes('withTheme') || pageScript.includes('themeClass')) {
+    throw new Error(`pages/${page}.js must not keep manual theme wiring.`);
   }
   const markup = read(`pages/${page}.wxml`);
   // 全站使用 navigationStyle: custom，导航栏由共享 app-navbar 承担；
-  // 主题类仍必须落在页面内容根节点上，保证页面与组件都拿到明暗变量。
+  // 外观由 theme.wxss 的 prefers-color-scheme 自动切换，页面不再绑定主题类。
   const lines = markup.split('\n');
-  if (!lines[0].startsWith('<app-navbar ') || !lines[0].includes('theme-class="{{themeClass}}"')) {
-    throw new Error(`pages/${page}.wxml must render app-navbar with the page theme class.`);
+  if (!lines[0].startsWith('<app-navbar ')) {
+    throw new Error(`pages/${page}.wxml must render app-navbar.`);
+  }
+  if (markup.includes('themeClass') || markup.includes('theme-class=')) {
+    throw new Error(`pages/${page}.wxml must not bind a manual theme class.`);
   }
   const rootTag = lines[1];
-  if (!rootTag.includes('class="page-shell') || !rootTag.includes('{{themeClass}}')) {
-    throw new Error(`pages/${page}.wxml must bind the theme class on its content root node.`);
+  if (!rootTag.includes('class="page-shell')) {
+    throw new Error(`pages/${page}.wxml must use page-shell as its content root.`);
   }
   if (/#[0-9a-fA-F]{3,8}\b|rgba?\(/.test(markup) || /color="#/.test(markup)) {
     throw new Error(`pages/${page}.wxml must not hardcode icon colors.`);
@@ -946,11 +776,6 @@ if (
 }
 if (t('resultCount', { count: 3 }, LOCALE_ID_ID) !== '3 material') {
   throw new Error('Mini Program translations must support parameter interpolation.');
-}
-for (const key of ['appearanceTitle', 'themeModeAuto', 'themeModeLight', 'themeModeDark']) {
-  if (!dictionaries[LOCALE_ZH_CN][key] || !dictionaries[LOCALE_ID_ID][key]) {
-    throw new Error(`Mini Program appearance labels must be translated: ${key}`);
-  }
 }
 // 项目选择器（t-picker）的取消 / 确认文案：不能沿用 TDesign 自带的 zh_CN 词典，
 // 否则印尼语用户在微信里看到的是中文按钮。
