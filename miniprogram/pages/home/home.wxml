@@ -50,59 +50,59 @@
 
     <view class="action-grid">
       <view wx:if="{{entryVisible.inventory}}" class="action-card" hover-class="action-card-active" bind:tap="openInventory">
-        <view class="action-icon"><t-icon name="view-list" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="view-list" size="38rpx" /></view>
           <view class="action-title">{{i18n.allInventory}}</view>
-          <view class="action-description">{{i18n.inventoryDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.inventoryDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
-        <view class="action-icon"><t-icon name="layers" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="layers" size="38rpx" /></view>
           <view class="action-title">{{i18n.huaxingInventoryTitle}}</view>
-          <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
-        <view class="action-icon"><t-icon name="file-attachment" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="file-attachment" size="38rpx" /></view>
           <view class="action-title">{{i18n.purchasePlans}}</view>
-          <view class="action-description">{{i18n.purchasePlansDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.purchasePlansDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.purchaseRecords}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchaseRecords">
-        <view class="action-icon"><t-icon name="file-copy" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="file-copy" size="38rpx" /></view>
           <view class="action-title">{{i18n.purchaseRecordsTitle}}</view>
-          <view class="action-description">{{i18n.purchaseRecordsDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.purchaseRecordsDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.ledger}}" class="action-card" hover-class="action-card-active" bind:tap="openLedger">
-        <view class="action-icon"><t-icon name="folder" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="folder" size="38rpx" /></view>
           <view class="action-title">{{i18n.ledgerTitle}}</view>
-          <view class="action-description">{{i18n.ledgerDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.ledgerDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.hazards}}" class="action-card" hover-class="action-card-active" bind:tap="openHazards">
-        <view class="action-icon"><t-icon name="error-circle" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="error-circle" size="38rpx" /></view>
           <view class="action-title">{{i18n.hazardsTitle}}</view>
-          <view class="action-description">{{i18n.hazardsDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.hazardsDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
-        <view class="action-icon"><t-icon name="tag" size="52rpx" /></view>
-        <view class="action-content">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="tag" size="38rpx" /></view>
           <view class="action-title">{{i18n.materialCodesTitle}}</view>
-          <view class="action-description">{{i18n.materialCodesDescription}}</view>
         </view>
+        <view class="action-description">{{i18n.materialCodesDescription}}</view>
       </view>
     </view>
   </block>
