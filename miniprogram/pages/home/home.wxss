@@ -1,5 +1,5 @@
 .home-page {
-  padding: 24rpx 24rpx calc(48rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 24rpx calc(184rpx + env(safe-area-inset-bottom));
 }
 
 /* 品牌头图：与绑定页（pages/bind）同一套品牌面板语言，深色渐变 + 轨道装饰。
@@ -116,11 +116,11 @@
   color: var(--app-on-brand-soft);
 }
 
-/* 功能入口网格：两列等宽紧凑卡；入口数量为奇数时最后一张居中，不留半行空位。 */
+/* 功能入口网格：两列等宽紧凑卡；入口数量为奇数时最后一张靠左，不居中留空。 */
 .action-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16rpx;
   margin-bottom: 8rpx;
 }
@@ -479,9 +479,12 @@
   color: var(--app-text-placeholder);
 }
 
+/* 分享按钮固定在左下角，与列表页「返回顶部」FAB 同一位置与尺寸；
+ * 页面底部预留了 FAB 高度，避免滚到底时压住最后一行入口。 */
 .share-fab {
   position: fixed;
-  right: 32rpx;
+  left: 32rpx;
+  right: auto;
   bottom: calc(48rpx + env(safe-area-inset-bottom));
   z-index: 100;
   display: flex;
