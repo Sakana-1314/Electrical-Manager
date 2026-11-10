@@ -3,7 +3,6 @@ const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 // 分享链接携带的搜索词与标签筛选（与页面 data 字段同名，便于直接回填）。
@@ -24,7 +23,7 @@ function decorateLedger(item) {
   };
 }
 
-Page(withTheme({
+Page({
   data: {
     items: [],
     keyword: '',
@@ -207,4 +206,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

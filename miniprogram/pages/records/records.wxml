@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.recordsTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell records-page {{themeClass}}">
+<app-navbar title="{{i18n.recordsTitle}}" />
+<view class="page-shell records-page">
 
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
 

@@ -3,7 +3,6 @@ const { request, requestCached } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
 const {
@@ -65,7 +64,7 @@ function toFieldDefs() {
   }));
 }
 
-Page(withTheme({
+Page({
   data: {
     items: [],
     keyword: '',
@@ -375,4 +374,4 @@ Page(withTheme({
   onShareAppMessage() {
     return { title: t('shareHazards'), path: this.sharePath() };
   },
-}));
+});

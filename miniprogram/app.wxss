@@ -1,199 +1,98 @@
 /**
- * 全局主题令牌。
- *
- * 明暗两套调色板同名同义：浅色是 `page` 上的默认值，深色在 `.theme-dark` 里逐项覆盖；
- * `.theme-dark` 由 utils/theme.js 按「自动 / 浅色 / 深色」解析后加到每个页面的根节点上
- * （自动档跟随系统，显式档覆盖系统）。页面与组件样式只引用这里的令牌，不写颜色字面量。
- *
- * TDesign 组件库的 `--td-*` 语义令牌由第三个作用域（`page, .theme-dark`）桥接到 `--app-*`，
- * 两个作用域共用一套声明，各自按本作用域的调色板解析，因此组件库在两种档位下都跟着本项目配色，
- * 不依赖组件库自己的 `@media (prefers-color-scheme)` 主题（该主题文件未被引入）。
+ * TDesign 官方主题：浅色 / 深色由 `theme.wxss` 的 `prefers-color-scheme` 自动切换，
+ * 不再有手动外观档位、themeClass 或运行时 JS 同步。
  */
-page {
+@import "theme.wxss";
+
+/**
+ * 项目语义别名：页面与组件只引用 `--app-*`，取值全部来自官方主题的 `--td-*`，
+ * 系统切换深色时颜色自动跟随，无需任何 JS。
+ */
+page, .page {
   /* 底色与结构 */
-  --app-bg: #f4f6fa;
-  --app-surface: #ffffff;
-  --app-surface-soft: #f8faff;
-  --app-form-surface: #ffffff;
-  --app-control-surface: #e7e7e7;
-  --app-card-border: #edf0f5;
-  --app-border-strong: #e2e7ef;
-  --app-divider: #f0f2f6;
-  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(63, 99, 216, 0.08), transparent 28%);
-  --app-surface-gradient: linear-gradient(135deg, #ffffff 0%, #edf2ff 100%);
-  --app-surface-gradient-soft: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
-  --app-entry-gradient: linear-gradient(135deg, #f8faff 0%, #edf2ff 100%);
+  --app-bg: var(--td-bg-color-page);
+  --app-surface: var(--td-bg-color-container);
+  --app-surface-soft: var(--td-bg-color-secondarycontainer);
+  --app-form-surface: var(--td-bg-color-container);
+  --app-control-surface: var(--td-bg-color-component);
+  --app-card-border: var(--td-border-level-1-color);
+  --app-border-strong: var(--td-border-level-2-color);
+  --app-divider: var(--td-border-level-1-color);
+  --app-page-glow: radial-gradient(circle at 100% 0%, var(--td-brand-color-light), transparent 28%);
+  --app-surface-gradient: linear-gradient(135deg, var(--td-bg-color-container) 0%, var(--td-brand-color-light) 100%);
+  --app-surface-gradient-soft: linear-gradient(145deg, var(--td-bg-color-container) 0%, var(--td-bg-color-secondarycontainer) 100%);
+  --app-entry-gradient: linear-gradient(135deg, var(--td-brand-color-light) 0%, var(--td-bg-color-secondarycontainer) 100%);
   /* 主色 */
-  --app-brand: #3f63d8;
-  --app-brand-active: #3151bd;
-  --app-brand-disabled: #aebce8;
-  --app-brand-soft: #edf2ff;
-  --app-brand-soft-active: #e3eaff;
-  --app-brand-border: #dce5ff;
-  --app-brand-text: #3658c7;
-  --app-brand-icon: #5573d1;
-  --app-brand-strong-gradient: linear-gradient(145deg, #2947a6, #5579e7);
-  --app-on-brand: #ffffff;
-  --app-on-brand-soft: rgba(255, 255, 255, 0.82);
-  --app-on-brand-line: rgba(255, 255, 255, 0.16);
-  --app-on-brand-glow: rgba(255, 255, 255, 0.18);
-  --app-on-brand-ring: rgba(255, 255, 255, 0.04);
-  --app-on-brand-ring-soft: rgba(255, 255, 255, 0.025);
-  /* 阴影（只抽颜色，偏移与模糊由各页面决定） */
-  --app-shadow-color: rgba(15, 23, 42, 0.05);
-  --app-shadow-color-strong: rgba(15, 23, 42, 0.08);
-  --app-brand-shadow-color: rgba(63, 99, 216, 0.2);
-  --app-brand-shadow-color-strong: rgba(63, 99, 216, 0.35);
-  --app-brand-shadow-color-soft: rgba(63, 99, 216, 0.08);
-  --app-brand-strong-shadow-color: rgba(41, 71, 166, 0.2);
-  --app-brand-halo-color: rgba(63, 99, 216, 0.12);
+  --app-brand: var(--td-brand-color);
+  --app-brand-active: var(--td-brand-color-active);
+  --app-brand-disabled: var(--td-brand-color-disabled);
+  --app-brand-soft: var(--td-brand-color-light);
+  --app-brand-soft-active: var(--td-brand-color-light-active);
+  --app-brand-border: var(--td-brand-color-2);
+  --app-brand-text: var(--td-text-color-brand);
+  --app-brand-icon: var(--td-brand-color);
+  --app-brand-strong-gradient: linear-gradient(145deg, var(--td-brand-color-7), var(--td-brand-color-6));
+  --app-on-brand: var(--td-text-color-anti);
+  --app-on-brand-soft: var(--td-font-white-1);
+  --app-on-brand-line: var(--td-font-white-4);
+  --app-on-brand-glow: var(--td-font-white-4);
+  --app-on-brand-ring: var(--td-font-white-4);
+  --app-on-brand-ring-soft: var(--td-font-white-4);
+  /* 阴影：用官方 table 阴影色，深色自动加深 */
+  --app-shadow-color: var(--td-table-shadow-color);
+  --app-shadow-color-strong: var(--td-table-shadow-color);
+  --app-brand-shadow-color: var(--td-table-shadow-color);
+  --app-brand-shadow-color-strong: var(--td-table-shadow-color);
+  --app-brand-shadow-color-soft: var(--td-table-shadow-color);
+  --app-brand-strong-shadow-color: var(--td-table-shadow-color);
+  --app-brand-halo-color: var(--td-brand-color-light);
   /* 文本 */
-  --app-text-strong: #172033;
-  --app-text-title: #243765;
-  --app-text: #4b5565;
-  --app-text-value: #30394a;
-  --app-text-secondary: #687386;
-  --app-text-muted: #7d8798;
-  --app-text-subtle: #8a94a5;
-  --app-text-placeholder: #a1a9b7;
-  /* 状态语义（沿用单主色的蓝色语义） */
-  --app-status-success: #2e7ad6;
-  --app-status-success-soft: #e8f1fd;
-  --app-status-warning: #3f63d8;
-  --app-status-warning-soft: #edf2ff;
-  --app-status-danger: #1d4fa8;
-  --app-status-danger-soft: #dfe9fb;
-  --app-scrim: rgba(0, 0, 0, 0.6);
-  /* 结构令牌（明暗共用一套） */
+  --app-text-strong: var(--td-text-color-primary);
+  --app-text-title: var(--td-text-color-primary);
+  --app-text: var(--td-text-color-secondary);
+  --app-text-value: var(--td-text-color-primary);
+  --app-text-secondary: var(--td-text-color-secondary);
+  --app-text-muted: var(--td-text-color-placeholder);
+  --app-text-subtle: var(--td-text-color-placeholder);
+  --app-text-placeholder: var(--td-text-color-placeholder);
+  /* 状态语义：直接使用 TDesign 的 success / warning / error */
+  --app-status-success: var(--td-success-color);
+  --app-status-success-soft: var(--td-success-color-light);
+  --app-status-warning: var(--td-warning-color);
+  --app-status-warning-soft: var(--td-warning-color-light);
+  --app-status-danger: var(--td-error-color);
+  --app-status-danger-soft: var(--td-error-color-light);
+  --app-scrim: var(--td-mask-active);
   --app-transparent: transparent;
+  /* TDesign 组件补充语义（官方主题未覆盖的部分） */
+  --td-toast-bg-color: var(--td-mask-active);
+  --td-toast-color: var(--td-text-color-anti);
+  --td-popup-bg-color: var(--td-bg-color-container);
+  --td-input-bg-color: var(--td-bg-color-container);
+  --td-input-border-color: var(--td-border-level-1-color);
+  --td-search-bg-color: var(--td-bg-color-secondarycontainer);
+  --td-dropdown-menu-bg-color: var(--td-bg-color-container);
+  --td-dropdown-menu-color: var(--td-text-color-secondary);
+  --td-dropdown-menu-active-color: var(--td-brand-color);
+  --td-picker-bg-color: var(--td-bg-color-container);
+  --td-picker-title-color: var(--td-text-color-primary);
+  --td-picker-cancel-color: var(--td-text-color-secondary);
+  --td-picker-confirm-color: var(--td-brand-color);
+  --td-picker-indicator-bg-color: var(--td-bg-color-secondarycontainer);
+  --td-picker-item-color: var(--td-text-color-secondary);
+  --td-picker-item-active-color: var(--td-text-color-primary);
+  --td-picker-transparent-color: var(--app-transparent);
+  /* 结构令牌：保留项目圆角，不随明暗变化 */
   --td-radius-default: 18rpx;
   --td-radius-large: 28rpx;
   --td-button-border-radius: 18rpx;
+}
+
+page {
   min-height: 100%;
   background: var(--app-bg);
   color: var(--app-text-strong);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-}
-
-/* 深色档：与浅色档一一对应，只覆盖颜色 / 阴影 / 渐变类令牌。
- * 深色刻意用比网页端更大的明度台阶：手机在环境光下容易糊成一片，
- * 因此页面底（--app-bg）压到近黑，卡片/弹窗再抬高一级，搜索框与输入框等控件再高一级。 */
-.theme-dark {
-  --app-bg: #0a0d12;
-  --app-surface: #222c39;
-  --app-surface-soft: #2e3a49;
-  --app-form-surface: #2e3a49;
-  --app-control-surface: #2e3a49;
-  --app-card-border: #3d4956;
-  --app-border-strong: #4e5d70;
-  --app-divider: #333f4d;
-  --app-page-glow: radial-gradient(circle at 100% 0%, rgba(107, 140, 240, 0.14), transparent 30%);
-  --app-surface-gradient: linear-gradient(135deg, #222c39 0%, #2b3956 100%);
-  --app-surface-gradient-soft: linear-gradient(145deg, #222c39 0%, #2e3a49 100%);
-  --app-entry-gradient: linear-gradient(135deg, #2e3a49 0%, #2b3956 100%);
-  --app-brand: #6b8cf0;
-  --app-brand-active: #5f7fe0;
-  --app-brand-disabled: #46557d;
-  --app-brand-soft: #2b3956;
-  --app-brand-soft-active: #35456a;
-  --app-brand-border: #435a80;
-  --app-brand-text: #9fb5ff;
-  --app-brand-icon: #9fb5ff;
-  --app-brand-strong-gradient: linear-gradient(145deg, #1f3a86, #2f55c4);
-  --app-on-brand: #ffffff;
-  --app-on-brand-soft: rgba(255, 255, 255, 0.82);
-  --app-on-brand-line: rgba(255, 255, 255, 0.16);
-  --app-on-brand-glow: rgba(255, 255, 255, 0.18);
-  --app-on-brand-ring: rgba(255, 255, 255, 0.04);
-  --app-on-brand-ring-soft: rgba(255, 255, 255, 0.025);
-  --app-shadow-color: rgba(0, 0, 0, 0.45);
-  --app-shadow-color-strong: rgba(0, 0, 0, 0.6);
-  --app-brand-shadow-color: rgba(0, 0, 0, 0.5);
-  --app-brand-shadow-color-strong: rgba(0, 0, 0, 0.62);
-  --app-brand-shadow-color-soft: rgba(0, 0, 0, 0.35);
-  --app-brand-strong-shadow-color: rgba(0, 0, 0, 0.55);
-  --app-brand-halo-color: rgba(107, 140, 240, 0.24);
-  --app-text-strong: #e6eaf2;
-  --app-text-title: #cfd9f2;
-  --app-text: #aeb8c9;
-  --app-text-value: #c6cedb;
-  --app-text-secondary: #9aa4b5;
-  --app-text-muted: #8b95a6;
-  --app-text-subtle: #98a2b3;
-  --app-text-placeholder: #8d97a8;
-  --app-status-success: #7aa2f7;
-  --app-status-success-soft: #27354f;
-  --app-status-warning: #6b8cf0;
-  --app-status-warning-soft: #2b3956;
-  --app-status-danger: #9fb5ff;
-  --app-status-danger-soft: #303d59;
-  --app-scrim: rgba(4, 6, 10, 0.68);
-  /* 结构令牌与浅色档同名同义（明暗共用，不随档位变化）。 */
-  --app-transparent: transparent;
-  --td-toast-bg-color: rgba(0, 0, 0, 0.82);
-  --td-toast-color: #ffffff;
-}
-
-/* TDesign 桥接：两个作用域共用一套声明，取值一律引用 --app-* 令牌。 */
-page,
-.theme-dark {
-  --td-brand-color: var(--app-brand);
-  --td-brand-color-active: var(--app-brand-active);
-  --td-brand-color-disabled: var(--app-brand-disabled);
-  --td-brand-color-light: var(--app-brand-soft);
-  --td-brand-color-light-active: var(--app-brand-soft-active);
-  --td-brand-color-focus: var(--app-brand-soft);
-  --td-text-color-brand: var(--app-brand);
-  --td-text-color-link: var(--app-brand);
-  --td-success-color: var(--app-status-success);
-  --td-success-color-1: var(--app-status-success-soft);
-  --td-success-color-5: var(--app-status-success);
-  --td-warning-color: var(--app-status-warning);
-  --td-warning-color-1: var(--app-status-warning-soft);
-  --td-warning-color-5: var(--app-status-warning);
-  --td-error-color: var(--app-status-danger);
-  --td-error-color-1: var(--app-status-danger-soft);
-  --td-error-color-6: var(--app-status-danger);
-  --td-bg-color-page: var(--app-bg);
-  --td-bg-color-container: var(--app-surface);
-  --td-bg-color-container-active: var(--app-brand-soft);
-  --td-bg-color-secondarycontainer: var(--app-surface-soft);
-  --td-bg-color-secondarycontainer-active: var(--app-brand-soft-active);
-  --td-bg-color-component: var(--app-control-surface);
-  --td-bg-color-component-active: var(--app-brand-soft-active);
-  --td-bg-color-component-disabled: var(--app-control-surface);
-  --td-text-color-primary: var(--app-text-strong);
-  --td-text-color-secondary: var(--app-text);
-  --td-text-color-placeholder: var(--app-text-placeholder);
-  --td-text-color-disabled: var(--app-text-placeholder);
-  --td-text-color-anti: var(--app-on-brand);
-  --td-border-level-1-color: var(--app-card-border);
-  --td-border-level-2-color: var(--app-border-strong);
-  --td-component-stroke: var(--app-card-border);
-  --td-component-border: var(--app-border-strong);
-  --td-mask-active: var(--app-scrim);
-  --td-popup-bg-color: var(--app-surface);
-  --td-input-bg-color: var(--app-form-surface);
-  --td-input-border-color: var(--app-card-border);
-  --td-search-bg-color: var(--app-surface-soft);
-  --td-dropdown-menu-bg-color: var(--app-surface);
-  --td-dropdown-menu-color: var(--app-text);
-  --td-dropdown-menu-active-color: var(--app-brand);
-  --td-picker-bg-color: var(--app-surface);
-  --td-picker-title-color: var(--app-text-strong);
-  --td-picker-cancel-color: var(--app-text-secondary);
-  --td-picker-confirm-color: var(--app-brand);
-  --td-picker-indicator-bg-color: var(--app-surface-soft);
-  --td-picker-item-color: var(--app-text-secondary);
-  --td-picker-item-active-color: var(--app-text-strong);
-  --td-picker-transparent-color: var(--app-transparent);
-}
-
-/* 系统深色时 page 元素自身的底色（显式浅色档由 wx.setBackgroundColor 纠正）。 */
-@media (prefers-color-scheme: dark) {
-  page {
-    background: #13171d;
-  }
+  font-family: var(--td-font-family), sans-serif;
 }
 
 .page-shell {

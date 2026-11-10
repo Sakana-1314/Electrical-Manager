@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.ledgerDetailTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell ledger-detail-page {{themeClass}}">
+<app-navbar title="{{i18n.ledgerDetailTitle}}" />
+<view class="page-shell ledger-detail-page">
   <view wx:if="{{loading}}" class="detail-state">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingLedgerDetail}}" />
   </view>

@@ -2,7 +2,6 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { extractMaterialUuid } = require('../../utils/material');
 const Toast = toastModule.default || toastModule;
 
@@ -24,7 +23,7 @@ function decorate(result) {
   };
 }
 
-Page(withTheme({
+Page({
   data: {
     result: null,
     loading: false,
@@ -126,4 +125,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

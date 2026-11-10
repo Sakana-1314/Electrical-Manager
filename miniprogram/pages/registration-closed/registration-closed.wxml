@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.registrationClosedTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
-<view class="page-shell closed-page {{themeClass}}">
+<app-navbar title="{{i18n.registrationClosedTitle}}" back="{{false}}" />
+<view class="page-shell closed-page">
   <view class="closed-card">
     <t-result
       theme="warning"

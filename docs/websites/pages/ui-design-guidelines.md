@@ -72,27 +72,24 @@
 | 不设快捷按钮 | 用户菜单之外不放独立的明暗切换图标，外观只从「外观」二级菜单切换（避免同一功能两个入口） |
 | 新增样式 | 只引用上文令牌，不写死颜色；确需新颜色时先在设计令牌表里加一组浅 / 深值，再引用变量 |
 
-小程序端沿用同一套三档语义与令牌分层；深色档的**页面底比网页端更暗、容器更亮**（手机在环境光下容易糊成一片），
-因此深色档按「页面底 < 卡片/弹窗 < 搜索框与输入框」三级递增明度，不直接照搬网页端色值：
+小程序端**不提供手动档位**，直接使用 TDesign 官方主题文件 `miniprogram/theme.wxss`，靠 `prefers-color-scheme` 自动跟随设备深色模式：
 
 | 项 | 要求 |
 | --- | --- |
-| 档位与存储 | 同样三档 `auto`（跟随系统，默认）/ `light` / `dark`，档位存本机 storage `miniProgramThemeMode`，不落库、不产生请求 |
-| 入口 | 首页「个人信息」弹窗里的「外观」一行（收起态显示当前档位），点击后弹出 `t-picker` + `t-picker-item` 滚轮选择器（`options` 传三档、`value` 传 `[当前档位]` 以定位当前项），确认才写入本机偏好；不另加切换入口 |
-| 落地 | 浅色令牌定义在 `app.wxss` 的 `page`，深色同名覆盖在 `.theme-dark`（由 `themeClass` 加到各页面根节点）；`page, .theme-dark` 把 TDesign 的 `--td-*` 桥接到 `--app-*` |
-| 深色层次 | 深色邻接色阶至少留出可辨差异（页面底 → 卡片/弹窗 → 控件），不靠描边单独撑层次；`--app-bg` / `--app-surface` / `--app-surface-soft` 三级递增 |
-| 原生外观 | `app.json` 的 `darkmode` + `themeLocation` 让窗口跟随系统；导航栏由 `app-navbar` 内的 `t-navbar` 渲染，显式档由 `wx.setNavigationBarColor` / `wx.setBackgroundColor` 纠正状态栏与窗口底色 |
-| 新增样式 | 页面与组件样式只引用 `--app-*` 令牌，不写颜色字面量，也不用 `@media (prefers-color-scheme)` 切换主题；新增令牌时明暗两档必须同名同义（`npm run check` 在 `miniprogram/` 下校验） |
+| 跟随方式 | `app.json` 保持 `darkmode: true` + `themeLocation: theme.json`；`theme.wxss` 的 `@media (prefers-color-scheme: light/dark)` 自动切换 `--td-*`。不写 storage、不提供「外观」入口、不注入 `themeClass` |
+| 样式令牌 | `app.wxss` 第一行 `@import "theme.wxss";`；页面与组件只引用 `--app-*` 语义别名，别名全部指向官方 `--td-*`（如 `--app-bg: var(--td-bg-color-page)`、`--app-brand: var(--td-brand-color)`），因此颜色自动跟随系统 |
+| 原生外观 | `theme.json` 的窗口底色与官方主题页面底色一致（浅色 `#f3f3f3` / 深色 `#181818`），状态栏与下拉区域由 `darkmode` 自动切换；导航栏由 `app-navbar` 内的 `t-navbar` 渲染 |
+| 新增样式 | 页面与组件样式只引用 `--app-*` / `--td-*` 变量，不写颜色字面量，也不在页面里用 `@media (prefers-color-scheme)`；新增语义时先在 `app.wxss` 的 `page, .page` 别名块里映射到官方 `--td-*`（`npm run check` 在 `miniprogram/` 下校验） |
 
 ## 小程序页面约定
 
-小程序与网页端共用同一套令牌、三档语义与文案（`utils/i18n.js` 的 `zh-CN` / `id-ID` 键集合必须一致），
+小程序与网页端共用同一套语义与文案（`utils/i18n.js` 的 `zh-CN` / `id-ID` 键集合必须一致），
 交互控件按移动端实现：列表页统一「搜索 + 筛选面板 + 结果计数 + 状态面板」，登记与详情统一「卡片分组 + 底部主按钮」。
 
 | 项 | 要求 |
 | --- | --- |
-| 导航栏 | 全站 `app.json` 设 `navigationStyle: custom`，每个页面首行引入共享 `components/app-navbar`（内部用 `t-navbar`）：`title` 取 `i18n` 文案，`theme-class` 传页面主题类。列表页不再另写顶部大标题，页面名只出现一次；非首页默认显示返回箭头，无历史可返回时回首页 |
-| 列表页骨架 | 根节点 `class="page-shell … {{themeClass}}"`；页面首行 `app-navbar`，内容自上而下依次为 `<filter-panel>`（搜索 + 筛选）、结果计数、列表卡片、状态面板 |
+| 导航栏 | 全站 `app.json` 设 `navigationStyle: custom`，每个页面首行引入共享 `components/app-navbar`（内部用 `t-navbar`）：`title` 取 `i18n` 文案；外观由官方主题自动跟随，不传主题类。列表页不再另写顶部大标题，页面名只出现一次；非首页默认显示返回箭头，无历史可返回时回首页 |
+| 列表页骨架 | 根节点 `class="page-shell"`；页面首行 `app-navbar`，内容自上而下依次为 `<filter-panel>`（搜索 + 筛选）、结果计数、列表卡片、状态面板 |
 | 列表卡片 | 统一 `24rpx` 内边距、`24rpx` 圆角、`2rpx` 边框、`0 10rpx 30rpx var(--app-shadow-color)` 阴影；卡片间距 `16rpx`。状态 tag 统一 `variant="light" size="small"`；非状态元信息（申购人、台账标签等）用 `theme="default"`，不抢状态色 |
 | 详情页 | 列表卡片点击后 `navigateTo` 对应详情页（按 `id` 请求详情接口），**不再用详情弹窗**；详情页统一 `app-navbar` + 摘要卡 + 分组卡片，页面内不重复页面标题 |
 | 搜索 | `t-search`（`shape="round"`、`confirm-type="search"`），只做「综合搜索」（跨字段 OR）；收起态**不放字段选择器**，组合搜索统一在面板里做，避免两个入口语义重叠 |

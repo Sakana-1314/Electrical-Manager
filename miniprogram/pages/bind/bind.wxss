@@ -45,6 +45,7 @@
 }
 
 .brand-orbit-large {
+  opacity: 0.18;
   right: -112rpx;
   bottom: -184rpx;
   width: 380rpx;

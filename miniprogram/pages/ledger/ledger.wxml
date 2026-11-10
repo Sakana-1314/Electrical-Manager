@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.ledgerTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell ledger-page {{themeClass}}">
+<app-navbar title="{{i18n.ledgerTitle}}" />
+<view class="page-shell ledger-page">
   <view class="list-tools">
     <filter-panel
       keyword="{{keyword}}"

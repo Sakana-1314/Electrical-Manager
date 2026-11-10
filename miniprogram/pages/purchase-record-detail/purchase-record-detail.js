@@ -3,7 +3,6 @@ const { request } = require('../../utils/request');
 const { imageUrl } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { purchaseStatusTheme } = require('../../utils/purchase');
 const Toast = toastModule.default || toastModule;
 
@@ -24,7 +23,7 @@ function priceLabel(value, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? `${parsed.toFixed(2)} 元` : fallback;
 }
 
-Page(withTheme({
+Page({
   data: {
     record: null,
     loading: true,
@@ -147,4 +146,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

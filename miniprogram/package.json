@@ -8,7 +8,7 @@
     "upload": "node scripts/upload.js"
   },
   "dependencies": {
-    "tdesign-miniprogram": "^1.15.3"
+    "tdesign-miniprogram": "^1.18.0"
   },
   "devDependencies": {
     "miniprogram-ci": "2.1.31"

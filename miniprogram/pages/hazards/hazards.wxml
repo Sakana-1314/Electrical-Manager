@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.hazardsTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell hazards-page {{themeClass}}">
+<app-navbar title="{{i18n.hazardsTitle}}" />
+<view class="page-shell hazards-page">
 
   <view class="list-tools">
     <filter-panel

@@ -1,8 +1,7 @@
 const { getMessages } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 
-Page(withTheme({
+Page({
   data: { i18n: getMessages() },
   onLoad() {
   },
-}));
+});

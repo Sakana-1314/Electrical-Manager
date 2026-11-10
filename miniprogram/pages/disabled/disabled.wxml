@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.disabledTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
-<view class="page-shell disabled-page {{themeClass}}">
+<app-navbar title="{{i18n.disabledTitle}}" back="{{false}}" />
+<view class="page-shell disabled-page">
   <view class="disabled-card">
     <t-result
       theme="warning"

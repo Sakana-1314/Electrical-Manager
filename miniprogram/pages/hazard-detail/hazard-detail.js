@@ -2,7 +2,6 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request, uploadImage, clearRequestCache } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard, decorateImage } = require('../../utils/hazard');
 const Toast = toastModule.default || toastModule;
@@ -11,7 +10,7 @@ const HAZARD_STATUSES = ['待整改', '整改受阻', '已整改'];
 // 单侧图片上限与网页端一致（后端同样是 9 张）。
 const MAX_IMAGES = 9;
 
-Page(withTheme({
+Page({
   data: {
     hazardId: 0,
     hazard: null,
@@ -196,4 +195,4 @@ Page(withTheme({
       path: `/pages/hazard-detail/hazard-detail?id=${this.data.hazardId}`,
     };
   },
-}));
+});

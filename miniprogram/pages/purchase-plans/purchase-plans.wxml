@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.purchasePlansTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell purchase-plans-page {{themeClass}}">
+<app-navbar title="{{i18n.purchasePlansTitle}}" />
+<view class="page-shell purchase-plans-page">
   <view class="list-tools">
     <filter-panel
       keyword="{{keyword}}"

@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.outboundSuccessTitle}}" back="{{false}}" theme-class="{{themeClass}}" />
-<view class="page-shell success-page {{themeClass}}">
+<app-navbar title="{{i18n.outboundSuccessTitle}}" back="{{false}}" />
+<view class="page-shell success-page">
   <view wx:if="{{loading}}" class="success-result">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
   </view>

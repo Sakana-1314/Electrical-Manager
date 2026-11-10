@@ -2,7 +2,6 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 /** 数量 + 单位：数量为空时不拼出孤立单位。 */
@@ -18,7 +17,7 @@ function dateLabel(value) {
   return text ? text.replace(/-/g, '/') : t('notSet');
 }
 
-Page(withTheme({
+Page({
   data: {
     detail: null,
     loading: true,
@@ -128,4 +127,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

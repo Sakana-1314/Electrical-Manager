@@ -1,5 +1,5 @@
-<app-navbar title="{{i18n.outboundTitle}}" theme-class="{{themeClass}}" />
-<view class="page-shell outbound-page {{themeClass}}">
+<app-navbar title="{{i18n.outboundTitle}}" />
+<view class="page-shell outbound-page">
   <view wx:if="{{loading}}" class="section-card loading-card">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingMaterial}}" />
   </view>

@@ -10,7 +10,6 @@ const {
   takeProjectSwitchNotice,
 } = require('../../utils/project');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
-const { getAppearanceOptions, readThemeMode, setThemeMode, withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 // 分享卡片图放在代码包里，不依赖接口域名（接口域名只提供 API，不保证有 /logo.png）。
@@ -25,7 +24,7 @@ function formatDateTime(value) {
   return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-Page(withTheme({
+Page({
   data: {
     user: null,
     scanning: false,
@@ -49,12 +48,6 @@ Page(withTheme({
     // 扫码出库入口：精简模式或库存只读/禁用时不渲染（原来常驻、点了才提示未开放）。
     canScan: false,
     userProfileVisible: false,
-    // 界面外观：与「当前项目」同一套交互，走 t-picker 滚轮选择器（确认后才写入本机偏好）。
-    appearancePickerVisible: false,
-    // 外观选项同样是组件约定的 `{ label, value }`，value 为档位（auto / light / dark）；
-    // value 是「每列选中值」数组，初值取本机已存档位以正确定位当前项。
-    themeOptions: getAppearanceOptions(),
-    themePickerValue: [readThemeMode()],
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
     projectPickerVisible: false,
@@ -243,37 +236,12 @@ Page(withTheme({
 
   onUserProfileVisibleChange(event) {
     const visible = event.detail.visible;
-    // 关闭弹窗时收起两个选择器，下次打开恢复收起状态。
+    // 关闭弹窗时收起项目选择器，下次打开恢复收起状态。
     this.setData(
       visible
         ? { userProfileVisible: true }
-        : { userProfileVisible: false, appearancePickerVisible: false, projectPickerVisible: false },
+        : { userProfileVisible: false, projectPickerVisible: false },
     );
-  },
-
-  /** 打开外观选择器：三档固定存在，直接弹出并定位到当前档位。 */
-  openAppearancePicker() {
-    this.setData({
-      appearancePickerVisible: true,
-      themePickerValue: [this.data.themeMode],
-    });
-  },
-
-  closeAppearancePicker() {
-    this.setData({ appearancePickerVisible: false });
-  },
-
-  /** 点遮罩或自动收起也会走 visible-change，必须同步回 data，否则下次点开不再弹出。 */
-  onAppearancePickerVisibleChange(event) {
-    this.setData({ appearancePickerVisible: event.detail.visible });
-  },
-
-  /** 确认档位：写入本机偏好并立即应用（取消不改动）。 */
-  onAppearancePickerConfirm(event) {
-    const [mode] = event.detail.value || [];
-    this.setData({ appearancePickerVisible: false });
-    if (!mode) return;
-    setThemeMode(this, mode);
   },
 
   /** 打开项目选择器：没有可选项目时只提示，不弹空选择器。 */
@@ -311,7 +279,6 @@ Page(withTheme({
   openRecords() {
     this.setData({
       userProfileVisible: false,
-      appearancePickerVisible: false,
       projectPickerVisible: false,
     });
     wx.navigateTo({ url: '/pages/records/records' });
@@ -350,4 +317,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});

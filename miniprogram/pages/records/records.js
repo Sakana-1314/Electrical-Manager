@@ -2,7 +2,6 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
-const { withTheme } = require('../../utils/theme');
 const Toast = toastModule.default || toastModule;
 
 function formatDateTime(value) {
@@ -27,7 +26,7 @@ function decorateRecord(item) {
   };
 }
 
-Page(withTheme({
+Page({
   data: {
     items: [],
     page: 1,
@@ -119,4 +118,4 @@ Page(withTheme({
       direction: 'column',
     });
   },
-}));
+});
