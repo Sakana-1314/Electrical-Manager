@@ -71,8 +71,9 @@ docker compose up -d
 
 | 变量 | 必填 | 示例 | 说明 |
 | --- | --- | --- | --- |
-| `VITE_API_BASE_URL` | 分离部署时必填 | `https://api.example.com` | 后端地址；只填域名会自动补 `/api/v1`，也可填完整 API 根地址 |
-| `VITE_IMAGE_BASE_URL` | 否 | `https://img.example.com` | 图床/CDN；只填域名会自动补 `/api/v1/files/images`，留空则从后端读 |
+| `VITE_API_BASE_URLS` | 否 | `https://api-a.example.com,https://api-b.example.com` | 多后端线路，英文逗号分隔；配置后优先于 `VITE_API_BASE_URL`，首次进入并发探测并选延迟更低的一条，见[双后端线路](#双后端线路) |
+| `VITE_API_BASE_URL` | 单后端时必填 | `https://api.example.com` | 后端地址（兼容旧配置）；只填域名会自动补 `/api/v1`，也可填完整 API 根地址 |
+| `VITE_IMAGE_BASE_URL` | 否 | `https://img.example.com` | 图床/CDN；只填域名会自动补 `/api/v1/files/images`，留空则从当前后端线路读 |
 | `VITE_API_PROXY` | 否 | `http://localhost:8000` | 仅 `npm run dev` 的本地代理 |
 | `VITE_BASE_PATH` | 否 | `/Electrical-Manager/demo/` | 部署到子路径时用，默认 `/` |
 
@@ -86,6 +87,17 @@ docker compose up -d
 | PowerShell | `Set-Location web; npm ci; $env:VITE_API_BASE_URL='https://api.example.com'; $env:VITE_IMAGE_BASE_URL='https://img.example.com'; npm run build` |
 
 产物在 `web/dist/`，CD 阶段把它发布到静态站点、对象存储或 CDN 即可。
+
+### 双后端线路
+
+`VITE_API_BASE_URLS` 用英文逗号配置多条后端地址后，网页首次进入会并发请求每条线路的 `GET /api/v1/version`，选耗时最低的一条；结果存在浏览器 `sessionStorage`，同一标签页刷新不重复探测。请求遇到连接失败、超时或网关 `502 / 503 / 504` 时自动切到下一条并记入会话，后续请求都走新线路；左下角用户菜单的「线路」子菜单也可手动切换（切换后整页刷新）。只配置一条地址时不发探测请求，行为与旧版一致。
+
+| 项 | 要求 |
+| --- | --- |
+| 数据一致性 | 多条线路应指向同一套数据库（主备入口 / 同库多域名），否则切换后看到的数据会不同 |
+| 跨域 | 每条线路都要在后端 `APP_CORS_ORIGINS` 放行前端站点；探测与业务请求走同一套 CORS 规则 |
+| 探测口径 | 只比较 `/version` 首包延迟，不做数据库健康检查；某条线路数据库不可用不会被判为「线路不可用」 |
+| 切换范围 | 网络类错误与网关不可用会切；业务 `5xx`、`401`、用户主动取消不切 |
 
 ### 环境划分
 

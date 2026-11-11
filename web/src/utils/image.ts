@@ -1,18 +1,38 @@
-import { apiBaseUrl, imageBaseUrl, joinUrl, resolveImageBaseUrl } from '@/config/env'
+import { activeBackendUrl } from '@/api/backend'
+import { joinUrl, resolveImageBaseUrl } from '@/config/env'
 import { readBlobBytes, sha256Hex } from './sha256'
 
 export const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'] as const
 export const maxImageBytes = 10 * 1024 * 1024
 /** 「本地摘要校验、命中免上传」的阈值：只对大于 1MB 的图片查重（与后端 `DEDUP_MIN_BYTES` 对应）。 */
 export const dedupMinBytes = 1024 * 1024
-let activeImageBaseUrl = imageBaseUrl
+
+/** 系统设置里的图片加速地址；留空表示跟随当前后端线路。 */
+let imageAccelerationServerUrl = ''
+
+/** 解析结果缓存：列表里每张缩略图都会拼地址，避免每次重复解析线路与 URL。 */
+let cachedImageBaseUrl = ''
+let cachedForApiBaseUrl = ''
+let cachedForServerUrl = ''
+
+function currentImageBaseUrl(): string {
+  const apiBaseUrl = activeBackendUrl()
+  if (apiBaseUrl !== cachedForApiBaseUrl || imageAccelerationServerUrl !== cachedForServerUrl) {
+    cachedForApiBaseUrl = apiBaseUrl
+    cachedForServerUrl = imageAccelerationServerUrl
+    cachedImageBaseUrl = resolveImageBaseUrl(imageAccelerationServerUrl || undefined, apiBaseUrl)
+  }
+  return cachedImageBaseUrl
+}
 
 export function configureImageBaseUrl(serverUrl: string): void {
-  activeImageBaseUrl = serverUrl.trim() ? resolveImageBaseUrl(serverUrl, apiBaseUrl) : imageBaseUrl
+  imageAccelerationServerUrl = serverUrl.trim()
 }
 
 export function imageUrl(fileId: string): string {
-  return joinUrl(activeImageBaseUrl, encodeURIComponent(fileId))
+  // 每次拼接时对齐当前线路：后端自动 / 手动切换后，图片也跟着走新线路；
+  // 配置了独立图床时仍以图床为准。
+  return joinUrl(currentImageBaseUrl(), encodeURIComponent(fileId))
 }
 
 export function imagePreviewUrl(fileId: string, size: number): string {
