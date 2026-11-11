@@ -6,8 +6,14 @@ import { LogOutOutline, PersonCircleOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { useThemeStore } from '@/stores/theme'
+import { activeBackendIndex, backendCandidates, selectBackend } from '@/api/backend'
 import { roleLabels } from '@/types/navigation'
 import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
+import {
+  backendIndexFromMenuKey,
+  buildBackendMenuSubmenu,
+  isBackendMenuKey,
+} from '@/layouts/backendMenu'
 import {
   buildProjectMenuSubmenu,
   isProjectMenuKey,
@@ -35,13 +41,15 @@ const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () =>
 const displayName = computed(() => auth.user?.display_name || auth.user?.username || '未登录')
 const roleLabel = computed(() => (auth.user ? roleLabels[auth.user.role] : ''))
 
-/* ============ 左下角用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色） ============
+/* ============ 左下角用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色）+ 线路 ============
  * 入口在侧栏（移动端在抽屉）左下角，下拉向上展开，子菜单向右浮现。
  * 「项目」二级菜单列出所有启用项目（父项显示当前项目名称，子项也只显示名称），切换后布局
  * 会整页刷新（页面大量使用 keep-alive，不刷新会继续显示上一个项目的数据）；
  * 菜单结构在 projectMenu.ts（有单测）。
  * 「外观」一级同样是二级菜单：当前档位显示对勾，父项图标反映当前实际明暗；
- * 菜单结构在 appearanceMenu.ts（有单测）。 */
+ * 菜单结构在 appearanceMenu.ts（有单测）。
+ * 「线路」只在配置了多条后端地址时出现：当前线路显示对勾，切换后整页刷新；
+ * 菜单结构在 backendMenu.ts（有单测）。 */
 const userMenuOptions = computed<MenuOption[]>(() => [
   ...buildThemeMenuSubmenu(theme.mode, theme.isDark, renderIcon),
   ...buildProjectMenuSubmenu(
@@ -49,11 +57,12 @@ const userMenuOptions = computed<MenuOption[]>(() => [
     project.currentProject?.id ?? null,
     renderIcon,
   ),
+  ...buildBackendMenuSubmenu(backendCandidates(), activeBackendIndex(), renderIcon),
   { type: 'divider', key: 'logout-divider' },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ])
 
-/** 用户菜单选择：退出登录 + 外观三档（key 与档位同名）+ 项目切换（key 为 project:<id>）。 */
+/** 用户菜单选择：退出登录 + 外观三档 + 项目切换 + 线路切换。 */
 function onUserMenuSelect(key: string) {
   if (key === 'logout') {
     logout()
@@ -66,6 +75,12 @@ function onUserMenuSelect(key: string) {
   if (isProjectMenuKey(key)) {
     const id = projectIdFromMenuKey(key)
     if (id !== null) project.select(id)
+    return
+  }
+  if (isBackendMenuKey(key)) {
+    const index = backendIndexFromMenuKey(key)
+    // 页面大量使用 keep-alive，换线路后整页刷新，避免继续显示上一条线路的数据。
+    if (index !== null && selectBackend(index)) location.reload()
   }
 }
 

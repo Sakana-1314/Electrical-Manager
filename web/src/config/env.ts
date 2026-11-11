@@ -32,6 +32,24 @@ export function resolveApiBaseUrl(value: string | undefined): string {
   return isAbsoluteOrigin(baseUrl) ? joinUrl(baseUrl, 'api/v1') : baseUrl
 }
 
+/**
+ * 解析后端线路列表：优先读逗号分隔的 `VITE_API_BASE_URLS`，未配置时兼容旧的单地址
+ * `VITE_API_BASE_URL`；都为空时退回 `/api/v1`。逐项规范化、去重，顺序即配置顺序
+ * （探测延迟相同时选靠前的一条，全部不可用时也以第一条为默认）。
+ */
+export function resolveApiBaseUrls(
+  listValue: string | undefined,
+  singleValue: string | undefined,
+  fallback = '/api/v1',
+): string[] {
+  const raw = listValue?.trim() ? listValue : singleValue
+  const values = (raw ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+  return [...new Set((values.length ? values : [fallback]).map(resolveApiBaseUrl))]
+}
+
 export function resolveImageBaseUrl(value: string | undefined, resolvedApiBaseUrl: string): string {
   if (!value?.trim()) return joinUrl(resolvedApiBaseUrl, 'files/images')
   const baseUrl = normalizeBaseUrl(value, resolvedApiBaseUrl)
@@ -54,6 +72,9 @@ export function resolveMcpUrl(
   return url.toString()
 }
 
-export const apiBaseUrl = resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL)
-export const imageBaseUrl = resolveImageBaseUrl(import.meta.env.VITE_IMAGE_BASE_URL, apiBaseUrl)
+/** 后端线路候选（至少一条）：实际使用哪条由 `api/backend.ts` 在启动时探测决定。 */
+export const apiBaseUrls = resolveApiBaseUrls(
+  import.meta.env.VITE_API_BASE_URLS,
+  import.meta.env.VITE_API_BASE_URL,
+)
 export const buildTime = __BUILD_TIME__

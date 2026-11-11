@@ -9,7 +9,8 @@ import {
   tableColumnWidths,
 } from '@/constants/table'
 import { roleLabels } from '@/types/navigation'
-import { apiBaseUrl, resolveMcpUrl } from '@/config/env'
+import { activeBackendUrl } from '@/api/backend'
+import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
 
@@ -28,7 +29,7 @@ const project = useProjectStore()
 // MCP 地址带上当前项目：Agent 连上后就按这个项目读写数据（不带则用系统默认项目）
 const mcpUrl = computed(() =>
   editing.value?.api_token
-    ? resolveMcpUrl(apiBaseUrl, editing.value.api_token, project.currentProjectId)
+    ? resolveMcpUrl(activeBackendUrl(), editing.value.api_token, project.currentProjectId)
     : '',
 )
 const form = reactive({

@@ -8,6 +8,10 @@ COPY . .
 ARG VITE_API_BASE_URL=/api/v1
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
+# 可选：多条后端线路（英文逗号分隔），配置后优先于 VITE_API_BASE_URL
+ARG VITE_API_BASE_URLS=
+ENV VITE_API_BASE_URLS=${VITE_API_BASE_URLS}
+
 RUN npm run build
 
 FROM nginx:1.27-alpine

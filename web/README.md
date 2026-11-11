@@ -26,9 +26,11 @@ npm run dev
 ```dotenv
 VITE_API_BASE_URL=https://api.example.com
 VITE_IMAGE_BASE_URL=https://img.example.com
+# 可选：多后端线路，逗号分隔；配置后优先于 VITE_API_BASE_URL
+VITE_API_BASE_URLS=https://api-a.example.com,https://api-b.example.com
 ```
 
-`VITE_API_BASE_URL` 和 `VITE_IMAGE_BASE_URL` 只填写服务器域名时会自动补全接口路径；`VITE_IMAGE_BASE_URL` 可省略，省略后图片从后端 API 读取。完整的前后端分离、跨域和 CDN 配置见 [部署指南](../docs/websites/pages/guide.md#前后端分离部署)。
+`VITE_API_BASE_URLS` / `VITE_API_BASE_URL` 和 `VITE_IMAGE_BASE_URL` 只填写服务器域名时会自动补全接口路径；`VITE_IMAGE_BASE_URL` 可省略，省略后图片跟随当前后端线路。配置多条线路时，网页首次进入并发探测并选延迟更低的一条，会话内保持；请求遇到网络类错误自动切到下一条，左下角用户菜单的「线路」子菜单也可手动切换。完整的前后端分离、跨域、CDN 与双线路配置见 [部署指南](../docs/websites/pages/guide.md#前后端分离部署)。
 
 运行 `npm run generate:api` 可依据 `../docs/openapi.yaml` 更新 `src/api/generated.ts`；页面和组件没有另建 DTO。
 

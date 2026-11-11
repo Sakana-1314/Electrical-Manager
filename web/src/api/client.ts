@@ -1,5 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios'
-import { apiBaseUrl } from '@/config/env'
+import { activeBackendUrl, installBackendSwitchInterceptor, withBackendFallback } from './backend'
 import { installRetryInterceptor, REQUEST_TIMEOUT_MS } from './retry'
 import type { ApiError, TokenPairResponse } from './generated'
 
@@ -28,10 +28,14 @@ function clearSession() {
 async function renewAccessToken(): Promise<string> {
   const refreshToken = localStorage.getItem('refresh_token')
   if (!refreshToken) throw new Error('missing refresh token')
-  const response = await axios.post<TokenPairResponse>(
-    `${apiBaseUrl}/auth/refresh`,
-    { refresh_token: refreshToken },
-    { timeout: REQUEST_TIMEOUT_MS, headers: { 'X-Request-ID': crypto.randomUUID() } },
+  // 刷新令牌不走 apiClient（避免 401 拦截器递归）；网络类错误时切到另一条线路重放一次。
+  const requestId = crypto.randomUUID()
+  const response = await withBackendFallback((baseUrl) =>
+    axios.post<TokenPairResponse>(
+      `${baseUrl}/auth/refresh`,
+      { refresh_token: refreshToken },
+      { timeout: REQUEST_TIMEOUT_MS, headers: { 'X-Request-ID': requestId } },
+    ),
   )
   localStorage.setItem('access_token', response.data.access_token)
   localStorage.setItem('refresh_token', response.data.refresh_token)
@@ -53,12 +57,15 @@ export class AppError extends Error {
 }
 
 export const apiClient = axios.create({
-  baseURL: apiBaseUrl,
+  // 只是初始值：每条请求由拦截器按当前选中的线路覆盖，切换线路后无需重建实例。
+  baseURL: activeBackendUrl(),
   timeout: REQUEST_TIMEOUT_MS,
   paramsSerializer: { indexes: null },
 })
 
 apiClient.interceptors.request.use((config) => {
+  // 双后端：请求发出时现取当前线路，自动 / 手动切换后所有后续请求立即生效。
+  config.baseURL = activeBackendUrl()
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   // 业务数据按项目隔离：所有业务请求都带上当前项目，未选择时后端回 PROJECT_REQUIRED。
@@ -69,6 +76,8 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+// 网络类错误先切线路，再交给重试拦截器：可重放的请求本轮就会打到新线路。
+installBackendSwitchInterceptor(apiClient)
 // 弱网下瞬时失败自动重试；必须排在 401 刷新与错误归一化之前，那里才拿得到原始 AxiosError。
 installRetryInterceptor(apiClient)
 

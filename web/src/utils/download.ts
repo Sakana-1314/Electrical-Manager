@@ -1,4 +1,5 @@
-import { apiBaseUrl, joinUrl } from '@/config/env'
+import { activeBackendUrl } from '@/api/backend'
+import { joinUrl } from '@/config/env'
 
 export function downloadBlob(content: Blob, filename: string): void {
   const url = URL.createObjectURL(content)
@@ -11,7 +12,7 @@ export function downloadBlob(content: Blob, filename: string): void {
 
 /** 导出文件匿名下载链接（后端该端点不鉴权，凭 uuid7 直接拉取）。 */
 export function exportDownloadUrl(fileUuid: string): string {
-  return joinUrl(apiBaseUrl, `excel-export-jobs/files/${encodeURIComponent(fileUuid)}`)
+  return joinUrl(activeBackendUrl(), `excel-export-jobs/files/${encodeURIComponent(fileUuid)}`)
 }
 
 /** 以浏览器原生下载方式从 URL 保存文件（无 Authorization 头，不依赖 blob 拉取）。

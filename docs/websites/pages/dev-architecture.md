@@ -165,22 +165,22 @@ web/src/
 | `stores/project.ts`（`useProjectStore`） | `projects: Project[]`、`currentProjectId: number \| null`（初值读本地 `current_project_id`）、`loaded: boolean` | `enabledProjects`、`currentProject` | `ensureLoaded()`（首次导航前拉 `projectApi.list()`，失败不抛出）、`select(id)`（写本地并 `location.reload()`）、`clear()`、`fetchProjects()` | `localStorage` key `current_project_id`；已存项目被停用/删除时回退默认项目 | 当前项目：由 `web/src/api/client.ts` 注入 `X-Project-Id`，左下角用户菜单与 MCP 链接共用 |
 | `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`webFeatures: WebFeatureVisibility`（初值全部可见）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'` + 全部可见）、`isFeatureVisible(key)`（主 tab 是否可见，缺字段/全关按可见处理） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式与后台可见功能，供路由守卫、落地页与侧边菜单在首次导航前同步读取 |
 | `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
-`main.ts` 在 `app.mount('#app')` 之前 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
+`main.ts` 在 `app.mount('#app')` 之前先 `await ensureBackendSelected()`（多后端时探测选路，见下文），再 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
 
 
 
 ### API 客户端与契约生成
 #### `web/src/api/client.ts`
-- 实例：`axios.create({ baseURL: apiBaseUrl, timeout: 30_000, paramsSerializer: { indexes: null } })`（数组参数序列化为重复 key，不带 `[]`）。
+- 实例：`axios.create({ baseURL: activeBackendUrl(), timeout: 30_000, paramsSerializer: { indexes: null } })`（数组参数序列化为重复 key，不带 `[]`）。
+  实例上的 `baseURL` 只是初始值，每条请求由请求拦截器按当前选中的线路覆盖，换线路无需重建实例。
 | 导出 | 来源 | 缺省行为 |
 | --- | --- | --- |
-| `apiBaseUrl` | `VITE_API_BASE_URL` | 回退 `/api/v1`；只填域名（纯 origin）时自动补 `/api/v1` |
-| `imageBaseUrl` | `VITE_IMAGE_BASE_URL` | 缺省 = `apiBaseUrl/files/images` |
+| `apiBaseUrls` | `VITE_API_BASE_URLS` / `VITE_API_BASE_URL` | 逗号分隔的多条线路；未配置时回退 `/api/v1`；只填域名（纯 origin）时逐项自动补 `/api/v1`，规范化后去重 |
 | `buildTime` | 构建期注入的 `__BUILD_TIME__` | — |
 | `resolveMcpUrl(resolvedApiBaseUrl, token, projectId?, origin?)` | — | 拼出 `mcp/?project_id=&token=` 地址（`project_id` 在前，未选项目时不带该参数） |
 
-位置：`web/src/config/env.ts`。
-- 请求拦截器：`localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；有 `current_project_id` 时注入 `X-Project-Id`（项目隔离必需）；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。
+位置：`web/src/config/env.ts`；当前线路的运行时状态在 `web/src/api/backend.ts`（`activeBackendUrl()`）。
+- 请求拦截器：先 `config.baseURL = activeBackendUrl()`，再在 `localStorage` 有 `access_token` 时注入 `Authorization: Bearer <token>`；有 `current_project_id` 时注入 `X-Project-Id`（项目隔离必需）；`config.headers['X-Request-ID']` 缺失时生成 `crypto.randomUUID()`（一个逻辑请求一个 id，重试复用同一个，服务端日志里多次尝试能串起来）。
 - 版本头：客户端**不统一注入**，由业务模块按需传 `If-Match`（值均为 `String(version)`），共 13 处：
   `procurement.deleteMaterial`、`procurement.restoreRecordToPlan`、`purchasePlanTemplates.deleteTemplate`、
   `inventory.deleteMaterial`、`dictionaries.deleteMiniProgramUser`、`projects.deleteProject`、
@@ -205,6 +205,20 @@ web/src/
 | 最坏耗时 | 单次 30s × 3 + 退避 ≈ 92s |
 | 重放方式 | 复用同一份 config 重发：`X-Request-ID` 不变、`Authorization` 重新读取（等待期间 token 可能刚刷新） |
 | 拦截器顺序 | 重试拦截器注册在 401 刷新与错误归一化**之前**：只有它拿得到原始 `AxiosError`（状态码、取消标记） |
+
+#### 双后端线路（`web/src/api/backend.ts`）
+
+`VITE_API_BASE_URLS` 用英文逗号配置多条后端地址（旧的 `VITE_API_BASE_URL` 仍兼容单地址）。行为：
+
+| 项 | 规则 |
+| --- | --- |
+| 首次进入 | `main.ts` 在挂载前 `await ensureBackendSelected()`，并发 `GET <base>/version?probe=<时间戳>` 探测所有候选；只配置一条时不发探测请求 |
+| 选路 | 取 2xx 响应中耗时最低的一条；延迟相同选配置顺序靠前；全部失败时保持第一条，不写会话 |
+| 会话保持 | 选择写入 `sessionStorage` 的 `active_api_base_url`，同一标签页刷新直接复用；构建配置里已移除的地址自动作废重测 |
+| 运行期切换 | 请求遇到连接失败 / 超时 / 502 / 503 / 504 时自动切离失败线路并写回会话；一次逻辑请求最多切一次，并发请求晚到的失败不会把线路切回刚失败的地址。业务 5xx、401、主动取消不切 |
+| 手动切换 | 左下角用户菜单的「线路」子菜单（仅多地址时出现），切换后整页刷新 |
+| 调用面 | 请求拦截器逐请求设置 `baseURL`；刷新令牌（裸 axios）用 `withBackendFallback` 切线路重放一次；图片、导出下载、MCP 链接都取 `activeBackendUrl()` |
+| 探测接口 | `/version` 公开、轻量、不查数据库；带时间戳参数避免 CDN / 浏览器缓存伪造低延迟；无自定义请求头，不触发 CORS 预检 |
 
 #### 契约生成
 | 文件 | 说明 |
@@ -362,8 +376,9 @@ Apifox 智能 Mock，按字段名自己编数据（见 [/api](/api)）。
 
 | 变量 | 说明 |
 | --- | --- |
-| `VITE_API_BASE_URL` | 接口基础地址，缺省 `/api/v1`；只填域名时自动补 `/api/v1` |
-| `VITE_IMAGE_BASE_URL` | 图片读取前缀，缺省为 `VITE_API_BASE_URL/files/images` |
+| `VITE_API_BASE_URLS` | 多后端线路，英文逗号分隔；配置后优先于 `VITE_API_BASE_URL`，启动时探测选延迟最低的一条 |
+| `VITE_API_BASE_URL` | 单后端地址（兼容旧配置），缺省 `/api/v1`；只填域名时自动补 `/api/v1` |
+| `VITE_IMAGE_BASE_URL` | 图片读取前缀，缺省为当前后端线路的 `/files/images` |
 | `VITE_API_PROXY` | **仅供 `npm run dev` 的 Vite 代理目标**，生产构建不读取 |
 | `VITE_BASE_PATH` | 子路径部署前缀（如 `/Electrical-Manager/demo/`），写进 Vite `base`；缺省 `/` 与既有部署一致（演示构建见 `web/.env.demo`） |
 这些值在**构建阶段**被写入静态产物，部署后改环境变量无效，需重新构建（详见 [前后端分离部署](/guide#前后端分离部署)）。
