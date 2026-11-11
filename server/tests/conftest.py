@@ -71,13 +71,8 @@ async def _seed() -> None:
             [Role(name=name, permissions=perms, is_system=True) for name, perms in SYSTEM_ROLES]
         )
         await session.flush()
-        role_ids = {
-            name: role.id
-            for name, role in (
-                (role.name, role)
-                for role in session.execute(select(Role)).scalars()
-            )
-        }
+        role_rows = (await session.execute(select(Role))).scalars()
+        role_ids = {role.name: role.id for role in role_rows}
         for username, display_name, role_name in SEED_USERS:
             user = User(
                 username=username,
