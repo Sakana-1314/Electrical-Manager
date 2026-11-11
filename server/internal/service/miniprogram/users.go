@@ -229,7 +229,7 @@ func MergeUsers(s *db.Session, targetID int64, data schema.MiniProgramUserMergeR
 		return nil, apperr.New("MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT", "不能将小程序账号合并到自身").WithStatus(400)
 	}
 	var rows []model.User
-	if err := s.Select(&rows, "SELECT "+model.ColsUser+" FROM `user` WHERE id IN (?) AND source = ? FOR UPDATE",
+	if err := s.SelectIn(&rows, "SELECT "+model.ColsUser+" FROM `user` WHERE id IN (?) AND source = ? FOR UPDATE",
 		[]int64{targetID, data.SourceUserID}, domain.UserSourceMiniProgram); err != nil {
 		return nil, err
 	}

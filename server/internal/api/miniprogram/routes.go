@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/deps"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/file"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/hazard"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/huaxing"
@@ -56,9 +57,9 @@ func Register(r *web.Router) {
 	g.GET("/ledger-items/tag-options", ledgerTagOptions, user, readPerm(domain.PermLedgerRead))
 	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user, readPerm(domain.PermLedgerRead))
 	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user, readPerm(domain.PermPurchaseRead))
-	// 精简模式拦截先于权限依赖：lite 模式下对任何用户都返回 OUTBOUND_DISABLED（与网页端语义一致）。
-	g.POST("/outbound", outbound, user, deps.RequireFullSecondaryWarehouse, readPerm(domain.PermWarehouseWrite))
-	g.GET("/outbound-reasons", outboundReasons, user, deps.RequireFullSecondaryWarehouse, readPerm(domain.PermWarehouseWrite))
+	// 精简模式拦截先于权限依赖：lite 模式下对任何用户都返回 OUTBOUND_DISABLED（与出库服务层同码）。
+	g.POST("/outbound", outbound, user, liteOutboundBlocked, readPerm(domain.PermWarehouseWrite))
+	g.GET("/outbound-reasons", outboundReasons, user, liteOutboundBlocked, readPerm(domain.PermWarehouseWrite))
 	g.GET("/operations", operations, user, readPerm(domain.PermWarehouseRead))
 	g.GET("/outbound/{operation_no}", outboundByNo, user, readPerm(domain.PermWarehouseRead))
 	// 隐患管理：静态子路径（filter-options / form-options / images）先于 /hazards/{hazard_id}。
@@ -74,6 +75,18 @@ func Register(r *web.Router) {
 		// 测试钩子：把微信接口改投到本地桩服务（{"base_url": ""} 恢复），同时清空 access_token / 小程序码缓存。
 		r.POST("/__test__/mini-program/upstream", setWechatUpstream)
 	}
+}
+
+// liteOutboundBlocked 精简模式下小程序出库整体禁用：先于权限依赖执行，保持服务层 OUTBOUND_DISABLED 语义。
+func liteOutboundBlocked(c *web.Ctx) error {
+	lite, err := aisearch.IsLiteSecondaryWarehouse(c.DB)
+	if err != nil {
+		return err
+	}
+	if lite {
+		return apperr.New("OUTBOUND_DISABLED", "精简模式下不支持出入库").WithStatus(403)
+	}
+	return nil
 }
 
 // readPerm 可读别名：小程序路由的权限依赖（与 auth.RequirePermission 同一实现，命名只为可读）。
