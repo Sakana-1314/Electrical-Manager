@@ -1,0 +1,165 @@
+/* 个人信息页（原首页个人信息弹窗改为独立页面）。
+ * 数据同步走 getApp().globalData：用户与功能模式直接读全局，不经页面参数。 */
+.profile-page {
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.detail-state {
+  display: flex;
+  min-height: 420rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.failed-state {
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 身份卡：头像 + 姓名 + 部门。 */
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24rpx;
+  padding: 40rpx 32rpx 36rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 28rpx;
+  background: var(--app-surface);
+  box-shadow: 0 16rpx 48rpx var(--app-shadow-color);
+}
+
+.profile-avatar {
+  display: flex;
+  width: 88rpx;
+  height: 88rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+}
+
+.profile-name {
+  margin-top: 18rpx;
+  color: var(--app-text-strong);
+  font-size: 32rpx;
+  font-weight: 650;
+  line-height: 1.4;
+  text-align: center;
+  word-break: break-all;
+}
+
+.profile-department {
+  margin-top: 6rpx;
+  color: var(--app-text-secondary);
+  font-size: 24rpx;
+  line-height: 1.45;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* 账号信息行：标签在左、值在右，值可长按复制。 */
+.info-list {
+  padding: 4rpx 32rpx 8rpx;
+}
+
+.info-row {
+  display: flex;
+  gap: 24rpx;
+  padding: 22rpx 0;
+  border-bottom: 2rpx solid var(--app-card-border);
+}
+
+.info-row:last-child {
+  border-bottom: 0;
+}
+
+.info-label {
+  flex: none;
+  width: 240rpx;
+  color: var(--app-text-subtle);
+  font-size: 23rpx;
+}
+
+.info-value {
+  flex: 1;
+  color: var(--app-text-value);
+  font-size: 24rpx;
+  line-height: 1.45;
+  text-align: right;
+  word-break: break-all;
+}
+
+/* 当前项目行：整行可点，弹 t-picker 滚轮选择器。 */
+.project-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 26rpx 32rpx;
+  transition: opacity 120ms ease;
+}
+
+.project-trigger-active {
+  opacity: 0.6;
+}
+
+.project-trigger-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-brand-text);
+  font-size: 24rpx;
+  font-weight: 550;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-trigger-empty {
+  color: var(--app-text-placeholder);
+  font-weight: 400;
+}
+
+.project-arrow {
+  flex: none;
+  color: var(--app-brand-icon);
+}
+
+/* 查看出入库记录入口：与项目卡同一套描边语言。 */
+.records-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding: 24rpx 28rpx;
+  border: 2rpx solid var(--app-brand-border);
+  border-radius: 20rpx;
+  background: var(--app-surface-soft);
+  transition: background 120ms ease;
+}
+
+.records-entry-active {
+  background: var(--app-brand-soft);
+}
+
+.records-entry-main {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.records-entry-text {
+  color: var(--app-brand-text);
+  font-size: 26rpx;
+  font-weight: 550;
+}
+
+.records-entry-icon {
+  color: var(--app-brand-icon);
+}
+
+.records-entry-arrow {
+  color: var(--app-text-placeholder);
+}

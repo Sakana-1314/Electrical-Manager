@@ -7,10 +7,10 @@
     <view class="brand-orbit brand-orbit-small"></view>
     <view class="brand-top">
       <view class="brand-eyebrow">ELECTRICAL WORKSHOP</view>
-      <view wx:if="{{user}}" class="operator-badge" hover-class="operator-badge-active" bind:tap="showUserProfile">
+      <view wx:if="{{user}}" class="operator-badge" hover-class="operator-badge-active" bind:tap="openProfile">
         <view class="operator-dot"></view>
         <view class="operator-name">{{user.display_name}}</view>
-        <t-icon class="operator-chevron" name="chevron-down" size="24rpx" />
+        <t-icon class="operator-chevron" name="chevron-right" size="24rpx" />
       </view>
     </view>
     <view class="brand-title">{{i18n.brandTitle}}</view>
@@ -119,79 +119,6 @@
   </view>
 
   <t-toast id="home-toast" />
-  <t-popup
-    visible="{{userProfileVisible}}"
-    placement="center"
-    close-btn
-    close-on-overlay-click
-    bind:visible-change="onUserProfileVisibleChange"
-  >
-    <view class="user-profile-popup">
-      <view class="user-profile-avatar"><t-icon name="user" size="48rpx" /></view>
-      <view class="user-profile-title">{{i18n.personalInfo}}</view>
-      <view class="user-profile-list">
-        <view class="user-profile-row">
-          <view class="user-profile-label">{{i18n.name}}</view>
-          <view class="user-profile-value">{{user.display_name}}</view>
-        </view>
-        <view class="user-profile-row">
-          <view class="user-profile-label">{{i18n.department}}</view>
-          <view class="user-profile-value">{{user.department_name}}</view>
-        </view>
-        <view class="user-profile-row">
-          <view class="user-profile-label">{{i18n.registeredAt}}</view>
-          <view class="user-profile-value">{{user.registered_at}}</view>
-        </view>
-        <view class="user-profile-row">
-          <view class="user-profile-label">{{i18n.miniProgramUpdatedAt}}</view>
-          <view class="user-profile-value">{{miniProgramUpdatedAt}}</view>
-        </view>
-      </view>
-      <view class="user-profile-projects">
-        <view
-          class="project-trigger"
-          hover-class="project-trigger-active"
-          aria-role="button"
-          aria-expanded="{{projectPickerVisible}}"
-          bind:tap="openProjectPicker"
-        >
-          <view class="project-trigger-label">{{i18n.currentProject}}</view>
-          <view class="project-trigger-value">
-            <view class="project-trigger-text {{currentProjectId ? '' : 'project-trigger-empty'}}">{{currentProjectLabel}}</view>
-            <t-icon class="project-arrow" name="chevron-down" size="28rpx" />
-          </view>
-        </view>
-      </view>
-      <view
-        wx:if="{{!liteMode}}"
-        class="user-profile-records"
-        hover-class="user-profile-records-active"
-        bind:tap="openRecords"
-      >
-        <view class="records-entry">
-          <t-icon class="records-icon" name="time" size="36rpx" />
-          <view class="records-entry-text">{{i18n.viewRecords}}</view>
-        </view>
-        <t-icon class="records-arrow" name="chevron-right" size="36rpx" />
-      </view>
-    </view>
-  </t-popup>
-
-  <!-- 当前项目切换：滚轮选择器，默认停在当前项目，确认后才切换（取消不改动）。
-       popup-props 抬高面板与遮罩的层级，避免被上层的个人信息弹窗压住。 -->
-  <t-picker
-    visible="{{projectPickerVisible}}"
-    title="{{i18n.switchProject}}"
-    cancel-btn="{{i18n.cancel}}"
-    confirm-btn="{{i18n.confirm}}"
-    value="{{projectPickerValue}}"
-    popup-props="{{pickerPopupProps}}"
-    bind:confirm="onProjectPickerConfirm"
-    bind:cancel="closeProjectPicker"
-    bind:visible-change="onProjectPickerVisibleChange"
-  >
-    <t-picker-item options="{{projectOptions}}" />
-  </t-picker>
 
   <button class="share-fab" open-type="share" aria-label="{{i18n.shareApp}}">
     <t-icon name="share" size="52rpx" />

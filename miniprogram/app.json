@@ -17,6 +17,7 @@
     "pages/purchase-plan-detail/purchase-plan-detail",
     "pages/purchase-record-detail/purchase-record-detail",
     "pages/records/records",
+    "pages/profile/profile",
     "pages/hazards/hazards",
     "pages/hazard-detail/hazard-detail",
     "pages/hazard-create/hazard-create",

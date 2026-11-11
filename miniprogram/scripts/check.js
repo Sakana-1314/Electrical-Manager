@@ -204,59 +204,73 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   }
 }
 
-// 首页个人信息弹窗里的「当前项目」：展示当前项目并用 t-picker 滚轮选择器切换到其它启用项目（切换后整页重启）。
+// 个人信息独立页（原首页弹窗改为 pages/profile）里的「当前项目」：展示当前项目并用 t-picker
+// 滚轮选择器切换到其它启用项目（切换后整页重启回首页）；用户与功能模式经 getApp().globalData
+// 同步，不经页面参数传递。
 {
-  const homeScript = read('pages/home/home.js');
+  const profileScript = read('pages/profile/profile.js');
   for (const snippet of [
     'ensureProject',
     'getEnabledProjects',
     'switchProject',
-    'takeProjectSwitchNotice',
     'projectPickerVisible',
     'projectPickerValue',
-    'pickerPopupProps',
     'openProjectPicker',
     'onProjectPickerConfirm',
     'onProjectPickerVisibleChange',
+    'getApp().globalData.authPromise',
+    'getApp().globalData.featureModes',
   ]) {
-    if (!homeScript.includes(snippet)) {
-      throw new Error(`pages/home/home.js must wire the current project picker: ${snippet}`);
+    if (!profileScript.includes(snippet)) {
+      throw new Error(`pages/profile/profile.js must wire the current project picker: ${snippet}`);
     }
   }
-  const homeMarkup = read('pages/home/home.wxml');
+  const profileMarkup = read('pages/profile/profile.wxml');
   for (const snippet of [
     'i18n.currentProject',
     'projectOptions',
     'openProjectPicker',
     'onProjectPickerConfirm',
     'bind:visible-change="onProjectPickerVisibleChange"',
-    'popup-props="{{pickerPopupProps}}"',
     'visible="{{projectPickerVisible}}"',
     'options="{{projectOptions}}"',
   ]) {
-    if (!homeMarkup.includes(snippet)) {
-      throw new Error(`pages/home/home.wxml must render the current project picker: ${snippet}`);
+    if (!profileMarkup.includes(snippet)) {
+      throw new Error(`pages/profile/profile.wxml must render the current project picker: ${snippet}`);
     }
   }
-  if (homeMarkup.includes('projectsExpanded') || homeScript.includes('projectsExpanded')) {
+  if (profileMarkup.includes('projectsExpanded') || profileScript.includes('projectsExpanded')) {
     throw new Error('The current project switcher must not keep the hand-rolled expandable list.');
   }
   // 选项必须是组件约定的 { label, value }：t-picker-item 用 value 作 wx:key 并据它回显选中项，
   // 自定义 keys 映射到别的字段名会让 wx:key 落空。
   for (const snippet of ['label: project.label', 'value: project.id']) {
-    if (!homeScript.includes(snippet)) {
+    if (!profileScript.includes(snippet)) {
       throw new Error(`The project picker options must use the TDesign label/value contract: ${snippet}`);
     }
   }
-  if (homeMarkup.includes('keys="{{projectPickerKeys}}"') || homeScript.includes('projectPickerKeys')) {
+  if (profileMarkup.includes('keys="{{projectPickerKeys}}"') || profileScript.includes('projectPickerKeys')) {
     throw new Error('The project picker must not remap option keys; use label/value instead.');
   }
-  const homeConfig = JSON.parse(read('pages/home/home.json'));
-  const components = Object.values(homeConfig.usingComponents || {});
+  const profileConfig = JSON.parse(read('pages/profile/profile.json'));
+  const profileComponents = Object.values(profileConfig.usingComponents || {});
   for (const component of ['tdesign-miniprogram/picker/picker', 'tdesign-miniprogram/picker-item/picker-item']) {
-    if (!components.includes(component)) {
-      throw new Error(`pages/home/home.json must register ${component} for the project picker.`);
+    if (!profileComponents.includes(component)) {
+      throw new Error(`pages/profile/profile.json must register ${component} for the project picker.`);
     }
+  }
+  // 首页只保留入口：操作员徽标整块跳转个人信息页，弹窗与页面内选择器退场；
+  // 项目解析与「已切换项目」提示仍由首页 onShow 承担。
+  const homeScript = read('pages/home/home.js');
+  const homeMarkup = read('pages/home/home.wxml');
+  if (!homeMarkup.includes('bind:tap="openProfile"') || !homeScript.includes('/pages/profile/profile')) {
+    throw new Error('The home operator badge must navigate to the profile page.');
+  }
+  if (homeMarkup.includes('user-profile-popup') || homeMarkup.includes('<t-popup') || homeMarkup.includes('<t-picker')) {
+    throw new Error('The home page must not keep the profile popup or the project picker.');
+  }
+  if (!homeScript.includes('ensureProject') || !homeScript.includes('takeProjectSwitchNotice')) {
+    throw new Error('pages/home/home.js must keep project resolution and the switch notice.');
   }
 }
 

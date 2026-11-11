@@ -689,6 +689,32 @@ async function run() {
   assert(home.data.canScan === true, 'no-lite read_write mode allows scanning');
   assert(home.data.featureReady === true, 'home entries must be ready');
 
+  // ===== 个人信息页：用户 / 功能模式走 getApp().globalData，项目选择器在此页 =====
+  global.__cachedResponse = {};
+  page = await mountPage('pages/profile/profile.js');
+  assert(
+    page.data.user && page.data.user.display_name === '张三',
+    'profile must read the user from globalData session',
+  );
+  assert(page.data.liteMode === false, 'full secondary warehouse mode must keep the records entry');
+  assert(page.data.currentProjectLabel === i18n.t('projectNotSelected'), 'project label falls back to 未选择');
+  // 没有可选项目时打开选择器只提示，不弹空选择器
+  page.openProjectPicker();
+  assert(
+    toasts.some((item) => item.message === i18n.t('noAvailableProject')),
+    'empty project list must toast instead of opening the picker',
+  );
+  // 确认选择：同项目不动作，不同项目整页重启回首页
+  let relaunchedTo = '';
+  global.wx.reLaunch = (options) => {
+    relaunchedTo = options.url;
+  };
+  page.data.currentProjectId = 7;
+  page.onProjectPickerConfirm({ detail: { value: [7] } });
+  assert(!relaunchedTo, 'confirming the same project must not relaunch');
+  page.onProjectPickerConfirm({ detail: { value: [8] } });
+  assert(relaunchedTo === '/pages/home/home', 'switching project must relaunch home');
+
   // ===== 导入时间：绝对时间 + 括号相对时间 =====
   const { importTimeLabel, relativeLabel } = require(path.join(root, 'utils/time.js'));
   const timeNow = new Date('2026-11-10T13:00:00+08:00').getTime();

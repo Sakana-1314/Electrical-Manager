@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "个人信息",
+  "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-loading": "tdesign-miniprogram/loading/loading",
+    "t-picker": "tdesign-miniprogram/picker/picker",
+    "t-picker-item": "tdesign-miniprogram/picker-item/picker-item",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}
