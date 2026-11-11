@@ -31,9 +31,27 @@ paths:
                   username: admin
                   display_name: 系统管理员
                   roles:
-                  - 超级管理员
+                  - id: 1
+                    name: 超级管理员
+                    is_system: true
                   enabled: true
                   version: 1
+                  department_name: 华星检修维护部电气车间
+                  source: MANAGE
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - hazard:write
+                  - huaxing:read
+                  - ledger:read
+                  - ledger:write
+                  - purchase:read
+                  - purchase:write
+                  - settings:write
+                  - warehouse:read
+                  - warehouse:write
+                  - work:read
+                  - work:write
         '400':
           description: 业务校验失败
           content:
@@ -185,9 +203,27 @@ paths:
                 username: admin
                 display_name: 系统管理员
                 roles:
-                - 超级管理员
+                - id: 1
+                  name: 超级管理员
+                  is_system: true
                 enabled: true
                 version: 1
+                department_name: 华星检修维护部电气车间
+                source: MANAGE
+                permissions:
+                - codes:read
+                - hazard:read
+                - hazard:write
+                - huaxing:read
+                - ledger:read
+                - ledger:write
+                - purchase:read
+                - purchase:write
+                - settings:write
+                - warehouse:read
+                - warehouse:write
+                - work:read
+                - work:write
         '400':
           description: 业务校验失败
           content:
@@ -6985,10 +7021,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: PERMISSION_DENIED
+                code: FORBIDDEN
                 message: 没有执行此操作的权限
                 details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
     post:
       tags:
       - 基础数据
@@ -7014,9 +7050,8 @@ paths:
                 id: 2
                 name: 库房管理员
                 description: 二级库与出入库、华星库存、编码库查询
-                permissions:
+                permissions: &id001
                 - codes:read
-                - dashboard:read
                 - huaxing:read
                 - warehouse:read
                 - warehouse:write
@@ -7043,10 +7078,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: PERMISSION_DENIED
+                code: FORBIDDEN
                 message: 没有执行此操作的权限
                 details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
   /api/v1/roles/permissions:
     get:
       tags:
@@ -7088,10 +7123,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: PERMISSION_DENIED
+                code: FORBIDDEN
                 message: 没有执行此操作的权限
                 details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
   /api/v1/roles/{item_id}:
     patch:
       tags:
@@ -7125,12 +7160,7 @@ paths:
                 id: 2
                 name: 库房管理员
                 description: 二级库与出入库、华星库存、编码库查询
-                permissions:
-                - codes:read
-                - dashboard:read
-                - huaxing:read
-                - warehouse:read
-                - warehouse:write
+                permissions: *id001
                 is_system: true
                 user_count: 1
                 created_at: '2026-01-01T00:00:00+00:00'
@@ -7143,8 +7173,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: ROLE_SYSTEM_LOCKED
-                message: 内置角色不可编辑
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
                 details: {}
                 request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
         '401':
@@ -7165,10 +7195,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: PERMISSION_DENIED
+                code: FORBIDDEN
                 message: 没有执行此操作的权限
                 details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
     delete:
       tags:
       - 基础数据
@@ -7200,8 +7230,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: ROLE_IN_USE
-                message: 仍有用户挂载此角色，请先解除关联
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
                 details: {}
                 request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
         '401':
@@ -7222,10 +7252,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
               example:
-                code: PERMISSION_DENIED
+                code: FORBIDDEN
                 message: 没有执行此操作的权限
                 details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
   /api/v1/mini-program-users:
     get:
       tags:
@@ -7288,6 +7318,19 @@ paths:
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
+                  source: MINI_PROGRAM
+                  roles:
+                  - id: 7
+                    name: 只读用户
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - huaxing:read
+                  - ledger:read
+                  - purchase:read
+                  - warehouse:read
+                  - work:read
                 - id: 2
                   display_name: 李建军
                   department_name: 检修维护部电气自动化车间
@@ -7301,6 +7344,19 @@ paths:
                   updated_at: '2026-08-14T10:26:00+08:00'
                   last_used_at: '2026-09-06T14:05:00+08:00'
                   version: 1
+                  source: MINI_PROGRAM
+                  roles:
+                  - id: 7
+                    name: 只读用户
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - huaxing:read
+                  - ledger:read
+                  - purchase:read
+                  - warehouse:read
+                  - work:read
                 - id: 3
                   display_name: 王海涛
                   department_name: 检修维护部电气自动化车间
@@ -7314,6 +7370,19 @@ paths:
                   updated_at: '2026-09-04T11:02:00+08:00'
                   last_used_at: '2026-08-15T08:12:00+08:00'
                   version: 2
+                  source: MINI_PROGRAM
+                  roles:
+                  - id: 7
+                    name: 只读用户
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - huaxing:read
+                  - ledger:read
+                  - purchase:read
+                  - warehouse:read
+                  - work:read
                 page: 1
                 page_size: 20
                 total: 3
@@ -7419,6 +7488,19 @@ paths:
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
+                source: MINI_PROGRAM
+                roles:
+                - id: 7
+                  name: 只读用户
+                  is_system: true
+                permissions:
+                - codes:read
+                - hazard:read
+                - huaxing:read
+                - ledger:read
+                - purchase:read
+                - warehouse:read
+                - work:read
         '400':
           description: 业务校验失败
           content:
@@ -7602,6 +7684,19 @@ paths:
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
+                source: MINI_PROGRAM
+                roles:
+                - id: 7
+                  name: 只读用户
+                  is_system: true
+                permissions:
+                - codes:read
+                - hazard:read
+                - huaxing:read
+                - ledger:read
+                - purchase:read
+                - warehouse:read
+                - work:read
         '400':
           description: 业务校验失败
           content:
@@ -7698,6 +7793,19 @@ paths:
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
+                  source: MINI_PROGRAM
+                  roles:
+                  - id: 7
+                    name: 只读用户
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - huaxing:read
+                  - ledger:read
+                  - purchase:read
+                  - warehouse:read
+                  - work:read
                 requires_profile: false
         '400':
           description: 业务校验失败
@@ -7785,6 +7893,19 @@ paths:
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
+                source: MINI_PROGRAM
+                roles:
+                - id: 7
+                  name: 只读用户
+                  is_system: true
+                permissions:
+                - codes:read
+                - hazard:read
+                - huaxing:read
+                - ledger:read
+                - purchase:read
+                - warehouse:read
+                - work:read
         '400':
           description: 业务校验失败
           content:
@@ -7970,6 +8091,19 @@ paths:
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
+                  source: MINI_PROGRAM
+                  roles:
+                  - id: 7
+                    name: 只读用户
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - hazard:read
+                  - huaxing:read
+                  - ledger:read
+                  - purchase:read
+                  - warehouse:read
+                  - work:read
                 requires_profile: false
         '400':
           description: 业务校验失败
@@ -17307,11 +17441,20 @@ paths:
                 - id: 2
                   username: warehouse
                   display_name: 仓库管理员
-                  role_ids:
-                  - 2
                   enabled: true
                   version: 1
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+                  department_name: 华星检修维护部电气车间
+                  source: MANAGE
+                  roles:
+                  - id: 2
+                    name: 库房管理员
+                    is_system: true
+                  permissions:
+                  - codes:read
+                  - huaxing:read
+                  - warehouse:read
+                  - warehouse:write
                 page: 1
                 page_size: 20
                 total: 1
@@ -17395,11 +17538,20 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role_ids:
-                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+                department_name: 华星检修维护部电气车间
+                source: MANAGE
+                roles:
+                - id: 2
+                  name: 库房管理员
+                  is_system: true
+                permissions:
+                - codes:read
+                - huaxing:read
+                - warehouse:read
+                - warehouse:write
         '400':
           description: 业务校验失败
           content:
@@ -17488,11 +17640,20 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role_ids:
-                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+                department_name: 华星检修维护部电气车间
+                source: MANAGE
+                roles:
+                - id: 2
+                  name: 库房管理员
+                  is_system: true
+                permissions:
+                - codes:read
+                - huaxing:read
+                - warehouse:read
+                - warehouse:write
         '400':
           description: 业务校验失败
           content:
@@ -17654,11 +17815,20 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role_ids:
-                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+                department_name: 华星检修维护部电气车间
+                source: MANAGE
+                roles:
+                - id: 2
+                  name: 库房管理员
+                  is_system: true
+                permissions:
+                - codes:read
+                - huaxing:read
+                - warehouse:read
+                - warehouse:write
         '400':
           description: 业务校验失败
           content:
@@ -26679,9 +26849,27 @@ components:
           username: admin
           display_name: 系统管理员
           roles:
-          - 超级管理员
+          - id: 1
+            name: 超级管理员
+            is_system: true
           enabled: true
           version: 1
+          department_name: 华星检修维护部电气车间
+          source: MANAGE
+          permissions:
+          - codes:read
+          - hazard:read
+          - hazard:write
+          - huaxing:read
+          - ledger:read
+          - ledger:write
+          - purchase:read
+          - purchase:write
+          - settings:write
+          - warehouse:read
+          - warehouse:write
+          - work:read
+          - work:write
     MaterialCodeExistsRead:
       properties:
         material_code:
@@ -27414,6 +27602,19 @@ components:
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
+          source: MINI_PROGRAM
+          roles:
+          - id: 7
+            name: 只读用户
+            is_system: true
+          permissions:
+          - codes:read
+          - hazard:read
+          - huaxing:read
+          - ledger:read
+          - purchase:read
+          - warehouse:read
+          - work:read
         requires_profile: false
     MiniProgramMaterialCodeRead:
       properties:
@@ -30631,6 +30832,19 @@ components:
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
+          source: MINI_PROGRAM
+          roles:
+          - id: 7
+            name: 只读用户
+            is_system: true
+          permissions:
+          - codes:read
+          - hazard:read
+          - huaxing:read
+          - ledger:read
+          - purchase:read
+          - warehouse:read
+          - work:read
         - id: 2
           display_name: 李建军
           department_name: 检修维护部电气自动化车间
@@ -30644,6 +30858,19 @@ components:
           updated_at: '2026-08-14T10:26:00+08:00'
           last_used_at: '2026-09-06T14:05:00+08:00'
           version: 1
+          source: MINI_PROGRAM
+          roles:
+          - id: 7
+            name: 只读用户
+            is_system: true
+          permissions:
+          - codes:read
+          - hazard:read
+          - huaxing:read
+          - ledger:read
+          - purchase:read
+          - warehouse:read
+          - work:read
         - id: 3
           display_name: 王海涛
           department_name: 检修维护部电气自动化车间
@@ -30657,6 +30884,19 @@ components:
           updated_at: '2026-09-04T11:02:00+08:00'
           last_used_at: '2026-08-15T08:12:00+08:00'
           version: 2
+          source: MINI_PROGRAM
+          roles:
+          - id: 7
+            name: 只读用户
+            is_system: true
+          permissions:
+          - codes:read
+          - hazard:read
+          - huaxing:read
+          - ledger:read
+          - purchase:read
+          - warehouse:read
+          - work:read
         page: 1
         page_size: 20
         total: 3
@@ -32401,11 +32641,20 @@ components:
         - id: 2
           username: warehouse
           display_name: 仓库管理员
-          role_ids:
-          - 2
           enabled: true
           version: 1
           api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+          department_name: 华星检修维护部电气车间
+          source: MANAGE
+          roles:
+          - id: 2
+            name: 库房管理员
+            is_system: true
+          permissions:
+          - codes:read
+          - huaxing:read
+          - warehouse:read
+          - warehouse:write
         page: 1
         page_size: 20
         total: 1
@@ -35374,12 +35623,7 @@ components:
       - id: 2
         name: 库房管理员
         description: 二级库与出入库、华星库存、编码库查询
-        permissions:
-        - codes:read
-        - dashboard:read
-        - huaxing:read
-        - warehouse:read
-        - warehouse:write
+        permissions: *id001
         is_system: true
         user_count: 1
         created_at: '2026-01-01T00:00:00+00:00'
@@ -36294,10 +36538,10 @@ components:
           name: 库房管理员
           is_system: true
         permissions:
+        - codes:read
+        - huaxing:read
         - warehouse:read
         - warehouse:write
-        - huaxing:read
-        - codes:read
         enabled: true
         version: 1
         api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -36356,9 +36600,17 @@ components:
         password: '123456'
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
-        role_ids:
-        - 2
         enabled: true
+        source: MANAGE
+        roles:
+        - id: 2
+          name: 库房管理员
+          is_system: true
+        permissions:
+        - codes:read
+        - huaxing:read
+        - warehouse:read
+        - warehouse:write
     UserRead:
       properties:
         id:
@@ -36415,17 +36667,17 @@ components:
           name: 超级管理员
           is_system: true
         permissions:
+        - codes:read
+        - hazard:read
+        - hazard:write
+        - huaxing:read
+        - ledger:read
+        - ledger:write
+        - purchase:read
+        - purchase:write
         - settings:write
         - warehouse:read
         - warehouse:write
-        - purchase:read
-        - purchase:write
-        - huaxing:read
-        - codes:read
-        - ledger:read
-        - ledger:write
-        - hazard:read
-        - hazard:write
         - work:read
         - work:write
         enabled: true
@@ -36484,11 +36736,25 @@ components:
       - username: warehouse
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
-        role_ids:
-        - 2
-        - 7
         enabled: true
         version: 2
+        source: MANAGE
+        roles:
+        - id: 2
+          name: 库房管理员
+          is_system: true
+        - id: 7
+          name: 只读用户
+          is_system: true
+        permissions:
+        - codes:read
+        - hazard:read
+        - huaxing:read
+        - ledger:read
+        - purchase:read
+        - warehouse:read
+        - warehouse:write
+        - work:read
     VersionInfoRead:
       properties:
         app_name:

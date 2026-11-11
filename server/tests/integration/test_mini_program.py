@@ -13,9 +13,10 @@ from sqlalchemy import select
 from tests.conftest import DEFAULT_PROJECT_ID, api_client, auth_headers, project_session
 from tests.go_upstream import StartWechat
 from tests.go_upstream import go_wechat as _go_wechat_fixture
+from tests.testkit.accounts import grant_role
 from tests.testkit.database import system_session
 from tests.testkit.enums import MiniProgramCodeEnv, WebhookEventType
-from tests.testkit.models import HuaXingInventory, MiniProgramUser, WebhookDelivery
+from tests.testkit.models import HuaXingInventory, User, WebhookDelivery
 from tests.testkit.security import create_mini_program_registration_token
 
 go_wechat = _go_wechat_fixture  # 微信接口桩（pytest fixture）
@@ -81,6 +82,9 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     ]
     assert created_user["display_name"] == "扫码出库员"
     assert created_user["department_name"] == "华星检修维护部电气车间"
+    # 新注册用户默认只读：出库是写操作，给该用户挂「库房管理员」角色（权限并集生效）。
+    async with project_session() as session:
+        await grant_role(session, created_user["id"], "库房管理员")
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
 
     replayed_profile = await client.post(
@@ -1601,7 +1605,7 @@ async def test_last_used_at_tracks_mini_program_sign_in(
 
     # 制造「很久没登录」：把最近使用时间改写到 2020 年，再由登录刷新。
     async with project_session() as session:
-        row = await session.get(MiniProgramUser, created["id"])
+        row = await session.get(User, created["id"])
         assert row is not None
         row.last_used_at = datetime(2020, 1, 1)
         await session.commit()

@@ -3,14 +3,29 @@
 from enum import StrEnum
 
 
-class Role(StrEnum):
-    SUPER_ADMIN = "SUPER_ADMIN"
-    WAREHOUSE_ADMIN = "WAREHOUSE_ADMIN"
-    PURCHASE_ADMIN = "PURCHASE_ADMIN"
-    HAZARD_ADMIN = "HAZARD_ADMIN"
-    READ_ONLY = "READ_ONLY"
-    LEDGER_ADMIN = "LEDGER_ADMIN"
-    WORK_ADMIN = "WORK_ADMIN"
+class UserSource(StrEnum):
+    MANAGE = "MANAGE"
+    MINI_PROGRAM = "MINI_PROGRAM"
+
+
+# 内置角色（与 init.sql 种子同名同权限）：测试按角色名挂 user_role。
+ROLE_PERMISSIONS: dict[str, list[str]] = {
+    "超级管理员": ["*"],
+    "库房管理员": ["warehouse:read", "warehouse:write", "huaxing:read", "codes:read"],
+    "采购管理员": ["purchase:read", "purchase:write", "huaxing:read", "codes:read"],
+    "隐患管理员": ["hazard:read", "hazard:write"],
+    "台账管理员": ["ledger:read", "ledger:write"],
+    "工单管理员": ["work:read", "work:write"],
+    "只读用户": [
+        "warehouse:read",
+        "purchase:read",
+        "huaxing:read",
+        "codes:read",
+        "ledger:read",
+        "hazard:read",
+        "work:read",
+    ],
+}
 
 
 class PurchasePlanStatus(StrEnum):

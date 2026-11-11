@@ -8,18 +8,14 @@ from __future__ import annotations
 from httpx import AsyncClient
 
 from tests.conftest import SECOND_PROJECT_ID, auth_headers, project_session
-from tests.testkit.models import MiniProgramUser
+from tests.testkit.accounts import create_mini_program_user
 from tests.testkit.security import create_mini_program_access_token
 
 
 async def mini_headers(display_name: str = "台账查看员") -> dict[str, str]:
-    """直接造一个已启用的小程序用户并签发令牌（跳过微信登录链路）。"""
+    """直接造一个已启用的小程序用户（默认「只读用户」角色）并签发令牌。"""
     async with project_session() as session:
-        user = MiniProgramUser(display_name=display_name, enabled=True)
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        user_id = user.id
+        user_id = await create_mini_program_user(session, display_name)
     return {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
 
