@@ -127,6 +127,8 @@ func getUser(s *db.Session, id int64) (*UserWithToken, error) {
 		return nil, apperr.NotFound("用户")
 	}
 	out := &UserWithToken{User: *u}
+	// 令牌回显约定：每次读取都解密回显明文令牌（加密入库、哈希认证查找）。
+	echoAPIToken(out)
 	roles := map[int64][]schema.UserRoleRead{}
 	if err := role.WithRoles(s, []int64{u.ID}, roles); err != nil {
 		return nil, err
@@ -177,12 +179,7 @@ func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken
 			return nil, err
 		}
 	}
-	out, err := getUser(s, id)
-	if err != nil {
-		return nil, err
-	}
-	echoAPIToken(out)
-	return out, nil
+	return getUser(s, id)
 }
 
 func RegenerateAPIToken(s *db.Session, id, version int64) (*UserWithToken, error) {
