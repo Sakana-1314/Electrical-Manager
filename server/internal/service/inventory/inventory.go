@@ -342,7 +342,7 @@ func replayMaterials(s *db.Session, materialIDs []int64, inMemory map[int64]*mod
 type CreateOptions struct {
 	ReversalOfID    *int64
 	ReversalOf      *Operation
-	MiniProgramUser *model.MiniProgramUser
+	MiniProgramUser *model.User
 }
 
 // CreateOperation 对应 create_operation：同 client_request_id 幂等返回既有流水；锁定余额与物资后写流水、回放、

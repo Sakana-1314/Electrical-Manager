@@ -47,7 +47,7 @@ func archivedForbidden() error {
 	return apperr.New("ARCHIVED_PURCHASE_PLAN_FORBIDDEN", "仅超级管理员可查询已归档申购计划").WithStatus(403)
 }
 
-func isSuperAdmin(c *web.Ctx) bool { return auth.User(c).Role == domain.RoleSuperAdmin }
+func isSuperAdmin(c *web.Ctx) bool { return auth.HasPermission(c, domain.PermSettingsWrite) }
 
 func containsStr(items []string, s string) bool {
 	for _, it := range items {

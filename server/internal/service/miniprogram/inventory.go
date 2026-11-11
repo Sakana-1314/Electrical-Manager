@@ -197,7 +197,7 @@ func MaterialRead(item *material.Stock, language *string) schema.MiniProgramMate
 // ---------------- 出库 ----------------
 
 // outboundRead 对应 _outbound_read：流水必须是该物资的单行出库，否则视为请求标识被其他业务占用。
-func outboundRead(op *inventory.Operation, materialID int64, materialUUID string, user *model.MiniProgramUser) (schema.MiniProgramOutboundRead, error) {
+func outboundRead(op *inventory.Operation, materialID int64, materialUUID string, user *model.User) (schema.MiniProgramOutboundRead, error) {
 	if op.OperationType != domain.OperationOutbound || len(op.Lines) != 1 || op.Lines[0].StockMaterialID != materialID {
 		return schema.MiniProgramOutboundRead{}, apperr.New("CLIENT_REQUEST_ID_CONFLICT", "请求标识已被其他出库业务使用").WithStatus(409)
 	}
@@ -232,7 +232,7 @@ func ensureNotLiteSecondaryWarehouse(s *db.Session) error {
 }
 
 // RecentOutboundReasons 对应 recent_outbound_reasons：当前用户与全员各自最近使用的 3 个（子项号, 用途）。
-func RecentOutboundReasons(s *db.Session, user *model.MiniProgramUser) ([]schema.MiniProgramOutboundReason, []schema.MiniProgramOutboundReason, error) {
+func RecentOutboundReasons(s *db.Session, user *model.User) ([]schema.MiniProgramOutboundReason, []schema.MiniProgramOutboundReason, error) {
 	if err := ensureNotLiteSecondaryWarehouse(s); err != nil {
 		return nil, nil, err
 	}
@@ -274,7 +274,7 @@ func RecentOutboundReasons(s *db.Session, user *model.MiniProgramUser) ([]schema
 
 // CreateOutbound 对应 create_outbound：扫码出库（同 client_request_id 幂等返回既有流水）。
 // data.MaterialUUID / data.OccurredAtTime 必须已填（请求校验或调用方赋值）。
-func CreateOutbound(s *db.Session, data schema.MiniProgramOutboundCreate, user *model.MiniProgramUser) (schema.MiniProgramOutboundRead, error) {
+func CreateOutbound(s *db.Session, data schema.MiniProgramOutboundCreate, user *model.User) (schema.MiniProgramOutboundRead, error) {
 	if err := ensureNotLiteSecondaryWarehouse(s); err != nil {
 		return schema.MiniProgramOutboundRead{}, err
 	}
@@ -340,7 +340,7 @@ func loadOperationLines(s *db.Session, ops []*inventory.Operation) error {
 }
 
 // GetOutboundByNo 对应 get_outbound_by_no：只接受小程序扫码产生的出库流水（快照姓名非空），供分享结果页恢复数据。
-func GetOutboundByNo(s *db.Session, operationNo string, user *model.MiniProgramUser) (schema.MiniProgramOutboundRead, error) {
+func GetOutboundByNo(s *db.Session, operationNo string, user *model.User) (schema.MiniProgramOutboundRead, error) {
 	scope, sargs, err := scopeAnd(s, "")
 	if err != nil {
 		return schema.MiniProgramOutboundRead{}, err
@@ -393,7 +393,7 @@ func OperationReadRows(op *inventory.Operation) []schema.MiniProgramOperationRea
 
 // ListOperationsByUser 对应 list_operations_by_user：按当前用户姓名匹配领用人或小程序执行人（含管理端操作），
 // 按发生时间倒序分页后按行展平；total 是流水条数。
-func ListOperationsByUser(s *db.Session, user *model.MiniProgramUser, page, pageSize int64) ([]schema.MiniProgramOperationRead, int64, error) {
+func ListOperationsByUser(s *db.Session, user *model.User, page, pageSize int64) ([]schema.MiniProgramOperationRead, int64, error) {
 	w := &common.Where{}
 	w.Add("(receiver_name = ? OR mini_program_user_name_snapshot = ?)", user.DisplayName, user.DisplayName)
 	if err := w.Scope(s, ""); err != nil {

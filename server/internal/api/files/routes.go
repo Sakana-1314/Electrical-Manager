@@ -16,7 +16,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/attachment"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
@@ -30,14 +29,7 @@ import (
 const CacheControl = "public, max-age=31536000, s-maxage=31536000, immutable"
 
 // fileWriter 各业务模块的写角色都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
-var fileWriter = auth.Roles(
-	domain.RoleSuperAdmin,
-	domain.RoleWarehouseAdmin,
-	domain.RolePurchaseAdmin,
-	domain.RoleHazardAdmin,
-	domain.RoleLedgerAdmin,
-	domain.RoleWorkAdmin,
-)
+var fileWriter = auth.FileWriter
 
 func Register(r *web.Router) {
 	g := r.Group("/files/images", auth.SystemScope)

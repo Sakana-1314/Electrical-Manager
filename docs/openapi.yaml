@@ -30,7 +30,8 @@ paths:
                   id: 1
                   username: admin
                   display_name: 系统管理员
-                  role: SUPER_ADMIN
+                  roles:
+                  - 超级管理员
                   enabled: true
                   version: 1
         '400':
@@ -183,7 +184,8 @@ paths:
                 id: 1
                 username: admin
                 display_name: 系统管理员
-                role: SUPER_ADMIN
+                roles:
+                - 超级管理员
                 enabled: true
                 version: 1
         '400':
@@ -6932,6 +6934,249 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/roles:
+    get:
+      tags:
+      - 基础数据
+      summary: 角色列表（含各角色挂载的用户数）
+      operationId: roles_api_v1_roles_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/RoleRead'
+                type: array
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: PERMISSION_DENIED
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+    post:
+      tags:
+      - 基础数据
+      summary: 新建角色
+      operationId: create_role_api_v1_roles_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreate'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleRead'
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: PERMISSION_DENIED
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+  /api/v1/roles/permissions:
+    get:
+      tags:
+      - 基础数据
+      summary: 权限目录（角色编辑界面的可选项）
+      operationId: permission_catalog_api_v1_roles_permissions_get
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/PermissionDef'
+                type: array
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: PERMISSION_DENIED
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+  /api/v1/roles/{item_id}:
+    patch:
+      tags:
+      - 基础数据
+      summary: 编辑角色（内置角色不可编辑）
+      operationId: update_role_api_v1_roles_item_id_patch
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleRead'
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: ROLE_SYSTEM_LOCKED
+                message: 内置角色不可编辑
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: PERMISSION_DENIED
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+    delete:
+      tags:
+      - 基础数据
+      summary: 删除角色（内置角色不可删除；仍有用户挂载时拒绝）
+      operationId: delete_role_api_v1_roles_item_id_delete
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      - name: If-Match
+        in: header
+        required: true
+        schema:
+          type: integer
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: ROLE_IN_USE
+                message: 仍有用户挂载此角色，请先解除关联
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: PERMISSION_DENIED
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+
   /api/v1/mini-program-users:
     get:
       tags:
@@ -17013,7 +17258,8 @@ paths:
                 - id: 2
                   username: warehouse
                   display_name: 仓库管理员
-                  role: WAREHOUSE_ADMIN
+                  role_ids:
+                  - 2
                   enabled: true
                   version: 1
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -17100,7 +17346,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role: WAREHOUSE_ADMIN
+                role_ids:
+                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -17192,7 +17439,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role: WAREHOUSE_ADMIN
+                role_ids:
+                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -17357,7 +17605,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
-                role: WAREHOUSE_ADMIN
+                role_ids:
+                - 2
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -26380,7 +26629,8 @@ components:
           id: 1
           username: admin
           display_name: 系统管理员
-          role: SUPER_ADMIN
+          roles:
+          - 超级管理员
           enabled: true
           version: 1
     MaterialCodeExistsRead:
@@ -28024,6 +28274,19 @@ components:
         enabled:
           type: boolean
           title: Enabled
+        source:
+          $ref: '#/components/schemas/UserSource'
+        roles:
+          items:
+            $ref: '#/components/schemas/UserRoleRead'
+          type: array
+          title: Roles
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+          description: 角色权限并集（通配已展开），小程序端按它门禁功能入口与写操作
         last_used_at:
           anyOf:
           - type: string
@@ -28052,6 +28315,9 @@ components:
       - display_name
       - department_name
       - enabled
+      - source
+      - roles
+      - permissions
       - identities
       - created_at
       - updated_at
@@ -28062,18 +28328,22 @@ components:
         display_name: 孙浩宇
         department_name: 检修维护部电气自动化车间
         enabled: true
+        source: MINI_PROGRAM
+        roles:
+        - id: 7
+          name: 只读用户
+          is_system: true
+        permissions:
+        - dashboard:read
+        - warehouse:read
+        last_used_at: '2026-09-13T09:12:00+08:00'
         identities:
         - id: 11
           app_id: wx9d2f1c8a5b3e4701
           wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
           created_at: '2026-08-14T10:20:00+08:00'
-        - id: 12
-          app_id: wx4b7e0a6d2c918f35
-          wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-          created_at: '2026-09-02T09:35:00+08:00'
         created_at: '2026-08-14T10:20:00+08:00'
         updated_at: '2026-09-02T09:35:00+08:00'
-        last_used_at: '2026-09-13T09:12:00+08:00'
         version: 2
     MiniProgramUserUpdate:
       properties:
@@ -28096,6 +28366,14 @@ components:
           - type: boolean
           - type: 'null'
           title: Enabled
+        role_ids:
+          anyOf:
+          - items:
+              type: integer
+            type: array
+          - type: 'null'
+          title: Role Ids
+          description: 全量替换用户的角色（缺省表示不修改）
         version:
           type: integer
           title: Version
@@ -28108,6 +28386,9 @@ components:
       - display_name: 孙浩宇
         department_name: 检修维护部电气自动化车间
         enabled: true
+        role_ids:
+        - 7
+        - 4
         version: 2
     MiniProgramWechatLoginRequest:
       properties:
@@ -32071,7 +32352,8 @@ components:
         - id: 2
           username: warehouse
           display_name: 仓库管理员
-          role: WAREHOUSE_ADMIN
+          role_ids:
+          - 2
           enabled: true
           version: 1
           api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -34967,17 +35249,183 @@ components:
         lines:
         - stock_material_id: 1
           quantity: '1'
-    Role:
+    UserSource:
       type: string
       enum:
-      - SUPER_ADMIN
-      - WAREHOUSE_ADMIN
-      - PURCHASE_ADMIN
-      - HAZARD_ADMIN
-      - READ_ONLY
-      - LEDGER_ADMIN
-      - WORK_ADMIN
-      title: Role
+      - MANAGE
+      - MINI_PROGRAM
+      title: UserSource
+    UserRoleRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        is_system:
+          type: boolean
+          title: Is System
+      type: object
+      required:
+      - id
+      - name
+      - is_system
+      title: UserRoleRead
+      examples:
+      - id: 2
+        name: 库房管理员
+        is_system: true
+    RoleRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        name:
+          type: string
+          title: Name
+        description:
+          type: string
+          title: Description
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+        is_system:
+          type: boolean
+          title: Is System
+        user_count:
+          type: integer
+          title: User Count
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - id
+      - name
+      - description
+      - permissions
+      - is_system
+      - user_count
+      - created_at
+      - updated_at
+      - version
+      title: RoleRead
+      examples:
+      - id: 2
+        name: 库房管理员
+        description: 二级库与出入库、华星库存、编码库查询
+        permissions:
+        - codes:read
+        - dashboard:read
+        - huaxing:read
+        - warehouse:read
+        - warehouse:write
+        is_system: true
+        user_count: 1
+        created_at: '2026-01-01T00:00:00+00:00'
+        updated_at: '2026-01-01T00:00:00+00:00'
+        version: 1
+    RoleCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Name
+        description:
+          type: string
+          maxLength: 255
+          title: Description
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: RoleCreate
+      examples:
+      - name: 采购查询
+        description: 只看申购模块
+        permissions:
+        - dashboard:read
+        - purchase:read
+    RoleUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+            maxLength: 64
+            minLength: 1
+          - type: 'null'
+          title: Name
+        description:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Description
+        permissions:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Permissions
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - version
+      title: RoleUpdate
+      examples:
+      - name: 采购查询
+        description: 只看申购模块（含仪表盘）
+        permissions:
+        - dashboard:read
+        - purchase:read
+        version: 1
+    PermissionDef:
+      properties:
+        key:
+          type: string
+          title: Key
+        module:
+          type: string
+          title: Module
+        action:
+          type: string
+          title: Action
+        label:
+          type: string
+          title: Label
+      type: object
+      required:
+      - key
+      - module
+      - action
+      - label
+      title: PermissionDef
+      examples:
+      - key: warehouse:write
+        module: inventory
+        action: write
+        label: 二级库出入库与库存调整
     SecondaryWarehouseMode:
       type: string
       enum:
@@ -35745,8 +36193,22 @@ components:
         display_name:
           type: string
           title: Display Name
-        role:
-          $ref: '#/components/schemas/Role'
+        department_name:
+          type: string
+          title: Department Name
+        source:
+          $ref: '#/components/schemas/UserSource'
+        roles:
+          items:
+            $ref: '#/components/schemas/UserRoleRead'
+          type: array
+          title: Roles
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+          description: 角色权限并集（通配已展开）
         enabled:
           type: boolean
           title: Enabled
@@ -35765,7 +36227,10 @@ components:
       - id
       - username
       - display_name
-      - role
+      - department_name
+      - source
+      - roles
+      - permissions
       - enabled
       - version
       title: UserApiTokenRead
@@ -35773,7 +36238,17 @@ components:
       - id: 2
         username: warehouse
         display_name: 仓库管理员
-        role: WAREHOUSE_ADMIN
+        department_name: 华星检修维护部电气车间
+        source: MANAGE
+        roles:
+        - id: 2
+          name: 库房管理员
+          is_system: true
+        permissions:
+        - warehouse:read
+        - warehouse:write
+        - huaxing:read
+        - codes:read
         enabled: true
         version: 1
         api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -35806,8 +36281,16 @@ components:
           maxLength: 128
           minLength: 1
           title: Display Name
-        role:
-          $ref: '#/components/schemas/Role'
+        department_name:
+          type: string
+          maxLength: 128
+          title: Department Name
+        role_ids:
+          items:
+            type: integer
+          type: array
+          title: Role Ids
+          description: 挂载的角色 id 列表（多角色，权限取并集）
         enabled:
           type: boolean
           title: Enabled
@@ -35818,13 +36301,14 @@ components:
       - username
       - password
       - display_name
-      - role
       title: UserCreate
       examples:
       - username: warehouse
         password: '123456'
         display_name: 仓库管理员
-        role: WAREHOUSE_ADMIN
+        department_name: 华星检修维护部电气车间
+        role_ids:
+        - 2
         enabled: true
     UserRead:
       properties:
@@ -35837,8 +36321,22 @@ components:
         display_name:
           type: string
           title: Display Name
-        role:
-          $ref: '#/components/schemas/Role'
+        department_name:
+          type: string
+          title: Department Name
+        source:
+          $ref: '#/components/schemas/UserSource'
+        roles:
+          items:
+            $ref: '#/components/schemas/UserRoleRead'
+          type: array
+          title: Roles
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+          description: 角色权限并集（通配已展开）
         enabled:
           type: boolean
           title: Enabled
@@ -35850,7 +36348,10 @@ components:
       - id
       - username
       - display_name
-      - role
+      - department_name
+      - source
+      - roles
+      - permissions
       - enabled
       - version
       title: UserRead
@@ -35858,7 +36359,26 @@ components:
       - id: 1
         username: admin
         display_name: 系统管理员
-        role: SUPER_ADMIN
+        department_name: 华星检修维护部电气车间
+        source: MANAGE
+        roles:
+        - id: 1
+          name: 超级管理员
+          is_system: true
+        permissions:
+        - settings:write
+        - warehouse:read
+        - warehouse:write
+        - purchase:read
+        - purchase:write
+        - huaxing:read
+        - codes:read
+        - ledger:read
+        - ledger:write
+        - hazard:read
+        - hazard:write
+        - work:read
+        - work:write
         enabled: true
         version: 1
     UserUpdate:
@@ -35877,6 +36397,12 @@ components:
             minLength: 1
           - type: 'null'
           title: Display Name
+        department_name:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Department Name
         password:
           anyOf:
           - type: string
@@ -35884,10 +36410,14 @@ components:
             minLength: 6
           - type: 'null'
           title: Password
-        role:
+        role_ids:
           anyOf:
-          - $ref: '#/components/schemas/Role'
+          - items:
+              type: integer
+            type: array
           - type: 'null'
+          title: Role Ids
+          description: 全量替换用户的角色（缺省表示不修改）
         enabled:
           anyOf:
           - type: boolean
@@ -35904,8 +36434,10 @@ components:
       examples:
       - username: warehouse
         display_name: 仓库管理员
-        password: '123456'
-        role: WAREHOUSE_ADMIN
+        department_name: 华星检修维护部电气车间
+        role_ids:
+        - 2
+        - 7
         enabled: true
         version: 2
     VersionInfoRead:

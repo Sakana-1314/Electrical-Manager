@@ -34,7 +34,7 @@ type Ctx struct {
 	DB *db.Session
 
 	// 鉴权依赖填充（未登录接口为 nil / 0）。
-	User   any // *model.User 或 *model.MiniProgramUser，由 auth 包写入
+	User   any // *model.User（管理端 / 小程序统一用户），由 auth 包写入
 	UserID int64
 
 	// 已解析的项目（require_current_project / 小程序项目解析写入）。

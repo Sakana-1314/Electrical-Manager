@@ -32,6 +32,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 )
 
 // Processor 是导出处理器：s 是任务所属项目的独立会话（只读查询即可，调用方负责关闭），
@@ -135,8 +136,8 @@ func EnqueueExport(s *db.Session, exportType string, params any, processor Proce
 }
 
 // visibleTo 任务可见性：创建者本人或超级管理员（无创建者的任务所有人可见）。
-func visibleTo(job *model.ExcelExportJob, user *model.User) bool {
-	return job.CreatedBy == nil || *job.CreatedBy == user.ID || user.Role == domain.RoleSuperAdmin
+func visibleTo(s *db.Session, job *model.ExcelExportJob, user *model.User) bool {
+	return job.CreatedBy == nil || *job.CreatedBy == user.ID || role.UserIsSuperAdmin(s, user.ID)
 }
 
 // GetExportJob 读取当前项目的导出任务（属主校验，不可见按不存在处理）。
@@ -150,7 +151,7 @@ func GetExportJob(s *db.Session, jobID int64, user *model.User) (schema.ExcelExp
 	if err != nil {
 		return schema.ExcelExportJobRead{}, err
 	}
-	if !ok || !visibleTo(&job, user) {
+	if !ok || !visibleTo(s, &job, user) {
 		return schema.ExcelExportJobRead{}, apperr.New("NOT_FOUND", "导出任务不存在")
 	}
 	return schema.NewExcelExportJobRead(&job), nil

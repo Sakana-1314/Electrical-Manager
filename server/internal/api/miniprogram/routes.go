@@ -28,48 +28,55 @@ func Register(r *web.Router) {
 
 	g := r.Group("/mini-program")
 	user := auth.MiniProgramUser
+	// RBAC：只读能力按模块 read 权限门禁，写操作（出库 / 隐患整改）按 write 权限；
+	// 权限取用户全部角色的并集（见 internal/domain 的 PermissionCatalog）。
 	g.POST("/auth/wx-login", wechatLogin)
 	g.GET("/me", me, user)
 	g.GET("/projects", projects, user)
 	g.POST("/profile", createProfile, auth.MiniProgramRegistration)
-	g.GET("/materials/{material_uuid}", scanMaterial, user)
-	g.GET("/inventory", inventoryList, user)
-	g.GET("/lite-inventory", liteInventory, user)
-	g.GET("/lite-inventory/last-import", lastImport("LITE_INVENTORY"), user)
-	g.GET("/purchase-plans", purchasePlans, user)
-	g.GET("/purchase-plans/filter-options", purchasePlanFilterOptions, user)
-	g.GET("/purchase-records", purchaseRecords, user)
-	g.GET("/purchase-records/filter-options", purchaseRecordFilterOptions, user)
-	g.GET("/purchase-records/{line_id}", purchaseRecordDetail, user)
-	g.GET("/material-codes", materialCodes, user)
-	g.GET("/huaxing-inventory", huaxingInventory, user)
-	g.GET("/huaxing-inventory/filter-options", huaxingFilterOptions, user)
-	g.GET("/material-codes/last-import", lastImport("MATERIAL_CODE_LIBRARY"), user)
-	g.GET("/huaxing-inventory/last-import", lastImport("HUAXING_INVENTORY"), user)
+	g.GET("/materials/{material_uuid}", scanMaterial, user, readPerm(domain.PermWarehouseRead))
+	g.GET("/inventory", inventoryList, user, readPerm(domain.PermWarehouseRead))
+	g.GET("/lite-inventory", liteInventory, user, readPerm(domain.PermWarehouseRead))
+	g.GET("/lite-inventory/last-import", lastImport("LITE_INVENTORY"), user, readPerm(domain.PermWarehouseRead))
+	g.GET("/purchase-plans", purchasePlans, user, readPerm(domain.PermPurchaseRead))
+	g.GET("/purchase-plans/filter-options", purchasePlanFilterOptions, user, readPerm(domain.PermPurchaseRead))
+	g.GET("/purchase-records", purchaseRecords, user, readPerm(domain.PermPurchaseRead))
+	g.GET("/purchase-records/filter-options", purchaseRecordFilterOptions, user, readPerm(domain.PermPurchaseRead))
+	g.GET("/purchase-records/{line_id}", purchaseRecordDetail, user, readPerm(domain.PermPurchaseRead))
+	g.GET("/material-codes", materialCodes, user, readPerm(domain.PermCodesRead))
+	g.GET("/huaxing-inventory", huaxingInventory, user, readPerm(domain.PermHuaxingRead))
+	g.GET("/huaxing-inventory/filter-options", huaxingFilterOptions, user, readPerm(domain.PermHuaxingRead))
+	g.GET("/material-codes/last-import", lastImport("MATERIAL_CODE_LIBRARY"), user, readPerm(domain.PermCodesRead))
+	g.GET("/huaxing-inventory/last-import", lastImport("HUAXING_INVENTORY"), user, readPerm(domain.PermHuaxingRead))
 	// 详情路由放在 last-import 之后，避免 {id} 抢占静态子路径。
-	g.GET("/material-codes/{id}", materialCodeDetail, user)
-	g.GET("/huaxing-inventory/{id}", huaxingInventoryDetail, user)
-	g.GET("/ledger-items", ledgerItems, user)
-	g.GET("/ledger-items/tag-options", ledgerTagOptions, user)
-	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user)
-	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user)
-	g.POST("/outbound", outbound, user)
-	g.GET("/outbound-reasons", outboundReasons, user)
-	g.GET("/operations", operations, user)
-	g.GET("/outbound/{operation_no}", outboundByNo, user)
+	g.GET("/material-codes/{id}", materialCodeDetail, user, readPerm(domain.PermCodesRead))
+	g.GET("/huaxing-inventory/{id}", huaxingInventoryDetail, user, readPerm(domain.PermHuaxingRead))
+	g.GET("/ledger-items", ledgerItems, user, readPerm(domain.PermLedgerRead))
+	g.GET("/ledger-items/tag-options", ledgerTagOptions, user, readPerm(domain.PermLedgerRead))
+	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user, readPerm(domain.PermLedgerRead))
+	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user, readPerm(domain.PermPurchaseRead))
+	g.POST("/outbound", outbound, user, readPerm(domain.PermWarehouseWrite))
+	g.GET("/outbound-reasons", outboundReasons, user, readPerm(domain.PermWarehouseWrite))
+	g.GET("/operations", operations, user, readPerm(domain.PermWarehouseRead))
+	g.GET("/outbound/{operation_no}", outboundByNo, user, readPerm(domain.PermWarehouseRead))
 	// 隐患管理：静态子路径（filter-options / form-options / images）先于 /hazards/{hazard_id}。
-	g.GET("/hazards", hazards, user)
-	g.GET("/hazards/filter-options", hazardFilterOptions, user)
-	g.GET("/hazards/form-options", hazardFormOptions, user)
-	g.POST("/hazards/images", uploadHazardImage, user)
-	g.POST("/hazards", createHazard, user)
-	g.GET("/hazards/{hazard_id}", hazardDetail, user)
-	g.PATCH("/hazards/{hazard_id}", updateHazard, user)
+	g.GET("/hazards", hazards, user, readPerm(domain.PermHazardRead))
+	g.GET("/hazards/filter-options", hazardFilterOptions, user, readPerm(domain.PermHazardRead))
+	g.GET("/hazards/form-options", hazardFormOptions, user, readPerm(domain.PermHazardRead))
+	g.POST("/hazards/images", uploadHazardImage, user, readPerm(domain.PermHazardWrite))
+	g.POST("/hazards", createHazard, user, readPerm(domain.PermHazardWrite))
+	g.GET("/hazards/{hazard_id}", hazardDetail, user, readPerm(domain.PermHazardRead))
+	g.PATCH("/hazards/{hazard_id}", updateHazard, user, readPerm(domain.PermHazardWrite))
 
 	if os.Getenv("APP_TEST_HOOKS") == "1" {
 		// 测试钩子：把微信接口改投到本地桩服务（{"base_url": ""} 恢复），同时清空 access_token / 小程序码缓存。
 		r.POST("/__test__/mini-program/upstream", setWechatUpstream)
 	}
+}
+
+// readPerm 可读别名：小程序路由的权限依赖（与 auth.RequirePermission 同一实现，命名只为可读）。
+func readPerm(perm string) web.Dep {
+	return auth.RequirePermission(perm)
 }
 
 // acceptLanguage 读取 Accept-Language 头（缺失为 nil）。
@@ -97,7 +104,7 @@ func listUsers(c *web.Ctx) error {
 	}
 	reads := make([]schema.MiniProgramUserRead, len(items))
 	for i, it := range items {
-		reads[i] = svc.UserRead(it)
+		reads[i] = svc.UserRead(c.DB, it)
 	}
 	return c.OK(schema.NewPage(reads, page, size, total))
 }
@@ -114,7 +121,7 @@ func updateUser(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.OK(svc.UserRead(u))
+	return c.OK(svc.UserRead(c.DB, u))
 }
 
 func deleteUser(c *web.Ctx) error {
@@ -142,7 +149,7 @@ func mergeUsers(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.OK(svc.UserRead(u))
+	return c.OK(svc.UserRead(c.DB, u))
 }
 
 // ---------------- 登录 / 建档 ----------------
@@ -163,7 +170,7 @@ func wechatLogin(c *web.Ctx) error {
 		return c.OK(schema.MiniProgramLoginResponse{RegistrationToken: &token, TokenType: "bearer", RequiresProfile: true})
 	}
 	token := security.CreateMiniProgramAccessToken(u.ID)
-	read := svc.UserRead(u)
+	read := svc.UserRead(c.DB, u)
 	return c.OK(schema.MiniProgramLoginResponse{AccessToken: &token, TokenType: "bearer", User: &read, RequiresProfile: false})
 }
 
@@ -172,7 +179,7 @@ func me(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return c.OK(svc.UserRead(u))
+	return c.OK(svc.UserRead(c.DB, u))
 }
 
 func projects(c *web.Ctx) error {
@@ -204,7 +211,7 @@ func createProfile(c *web.Ctx) error {
 		t := security.CreateMiniProgramAccessToken(u.ID)
 		token = &t
 	}
-	read := svc.UserRead(u)
+	read := svc.UserRead(c.DB, u)
 	return c.OK(schema.MiniProgramLoginResponse{AccessToken: token, TokenType: "bearer", User: &read, RequiresProfile: false})
 }
 

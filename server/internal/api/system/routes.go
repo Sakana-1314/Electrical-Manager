@@ -5,12 +5,14 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/dictionary"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/memo"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/project"
+	roleSrv "github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -25,6 +27,14 @@ func Register(r *web.Router) {
 	r.PATCH("/users/{item_id}", editUser, auth.SuperAdmin)
 	r.POST("/users/{item_id}/api-token/regenerate", regenerateToken, auth.SuperAdmin)
 	r.DELETE("/users/{item_id}", removeUser, auth.SuperAdmin)
+
+	// 角色（RBAC）：内置角色不可改名 / 删除；用户可挂多个角色，实际权限取并集。
+	ro := r.Group("/roles", auth.SuperAdmin)
+	ro.GET("", listRoles)
+	ro.GET("/permissions", permissionCatalog)
+	ro.POST("", addRole)
+	ro.PATCH("/{item_id}", editRole)
+	ro.DELETE("/{item_id}", removeRole)
 
 	m := r.Group("/memos")
 	m.GET("", listMemos, auth.CurrentUser)
@@ -60,11 +70,17 @@ func login(c *web.Ctx) error {
 	if !ok || !u.Enabled || !security.VerifyPassword(data.Password, u.PasswordHash) {
 		return apperr.New("INVALID_CREDENTIALS", "用户名或密码错误").WithStatus(401)
 	}
+	read := schema.NewUserRead(&u)
+	perms, err := roleSrv.UserPermissionKeys(c.DB, u.ID)
+	if err != nil {
+		return err
+	}
+	read.Permissions = perms
 	return c.OK(schema.LoginResponse{
 		AccessToken:  security.CreateAccessToken(u.ID),
 		RefreshToken: security.CreateRefreshToken(u.ID, u.Version),
 		TokenType:    "bearer",
-		User:         schema.NewUserRead(&u),
+		User:         read,
 	})
 }
 
@@ -102,7 +118,87 @@ func refresh(c *web.Ctx) error {
 	})
 }
 
-func me(c *web.Ctx) error { return c.OK(schema.NewUserRead(auth.User(c))) }
+func me(c *web.Ctx) error {
+	read := schema.NewUserRead(auth.User(c))
+	roles := map[int64][]schema.UserRoleRead{}
+	if err := roleSrv.WithRoles(c.DB, []int64{read.ID}, roles); err != nil {
+		return err
+	}
+	read.Roles = roles[read.ID]
+	perms, err := roleSrv.UserPermissionKeys(c.DB, read.ID)
+	if err != nil {
+		return err
+	}
+	read.Permissions = perms
+	return c.OK(read)
+}
+
+// ---------------- 角色（RBAC） ----------------
+
+func listRoles(c *web.Ctx) error {
+	items, err := roleSrv.List(c.DB)
+	if err != nil {
+		return err
+	}
+	return c.OK(items)
+}
+
+func permissionCatalog(c *web.Ctx) error {
+	return c.OK(domain.PermissionCatalog)
+}
+
+func addRole(c *web.Ctx) error {
+	p := c.Params()
+	var data schema.RoleCreate
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	r, err := roleSrv.Create(c.DB, data)
+	if err != nil {
+		return err
+	}
+	return c.Created(roleSrv.NewRoleRead(*r, 0))
+}
+
+func editRole(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("item_id")
+	var data schema.RoleUpdate
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	r, err := roleSrv.Update(c.DB, id, data)
+	if err != nil {
+		return err
+	}
+	read := roleSrv.NewRoleRead(*r, 0)
+	// user_count 由列表接口维护，单读路径重查一次保证准确。
+	all, err := roleSrv.List(c.DB)
+	if err != nil {
+		return err
+	}
+	for _, item := range all {
+		if item.ID == read.ID {
+			read.UserCount = item.UserCount
+		}
+	}
+	return c.OK(read)
+}
+
+func removeRole(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("item_id")
+	ifMatch := p.IfMatch()
+	if err := p.Err(); err != nil {
+		return err
+	}
+	if err := roleSrv.Delete(c.DB, id, ifMatch); err != nil {
+		return err
+	}
+	return c.NoContent()
+}
 
 // ---------------- 用户 ----------------
 

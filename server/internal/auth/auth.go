@@ -1,8 +1,7 @@
-// Package auth 对应原 core/permissions.py：管理端 / 小程序鉴权、角色校验、项目上下文依赖。
+// Package auth 对应原 core/permissions.py：管理端 / 小程序鉴权、权限校验（RBAC）、项目上下文依赖。
 package auth
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -19,6 +19,7 @@ const (
 	keyRegAppID    = "auth.reg_app_id"
 	keyRegOpenID   = "auth.reg_openid"
 	keyProjectDone = "auth.project_resolved"
+	keyPermissions = "auth.permissions"
 )
 
 // bearerToken 复刻 FastAPI HTTPBearer(auto_error=False)：返回 Bearer 凭证，不是 Bearer 时为 ""。
@@ -145,29 +146,81 @@ func User(c *web.Ctx) *model.User {
 	return u
 }
 
-// Roles 依赖：登录用户且角色在列表内，否则 403 FORBIDDEN。
-func Roles(roles ...string) web.Dep {
+// ---------------- RBAC 权限 ----------------
+
+// permissionsOf 汇总当前登录用户的角色权限并集（通配键展开为具体权限键），整个请求内只算一次。
+func permissionsOf(c *web.Ctx) map[string]bool {
+	if v, ok := c.Get(keyPermissions); ok {
+		return v.(map[string]bool)
+	}
+	perms := map[string]bool{}
+	keys, err := role.UserPermissionKeys(c.DB, User(c).ID)
+	if err == nil {
+		for _, key := range domain.ExpandPermissions(keys) {
+			perms[key] = true
+		}
+	}
+	// 汇总失败按无权限处理（fail-closed），错误在 RequirePermission 里返回。
+	c.Set(keyPermissions, perms)
+	return perms
+}
+
+// HasPermission 当前登录用户是否拥有某权限（需先执行 CurrentUser 依赖）。
+func HasPermission(c *web.Ctx, perm string) bool {
+	return permissionsOf(c)[perm]
+}
+
+// HasPermissionIn 当前登录用户是否拥有列表中的任一权限。
+func HasPermissionIn(c *web.Ctx, perms ...string) bool {
+	set := permissionsOf(c)
+	for _, perm := range perms {
+		if set[perm] {
+			return true
+		}
+	}
+	return false
+}
+
+// RequirePermission 依赖：登录用户且角色权限并集包含 perm，否则 403 PERMISSION_DENIED。
+func RequirePermission(perm string) web.Dep {
 	return func(c *web.Ctx) error {
 		if err := CurrentUser(c); err != nil {
 			return err
 		}
-		role := User(c).Role
-		for _, r := range roles {
-			if r == role {
-				return nil
-			}
+		if !HasPermission(c, perm) {
+			return apperr.New("PERMISSION_DENIED", "没有执行此操作的权限").WithStatus(403)
 		}
-		return apperr.New("FORBIDDEN", "没有执行此操作的权限").WithStatus(403)
+		return nil
+	}
+}
+
+// RequireAnyPermission 依赖：登录用户且权限并集命中任一 perm（跨模块写操作用）。
+func RequireAnyPermission(perms ...string) web.Dep {
+	return func(c *web.Ctx) error {
+		if err := CurrentUser(c); err != nil {
+			return err
+		}
+		if !HasPermissionIn(c, perms...) {
+			return apperr.New("PERMISSION_DENIED", "没有执行此操作的权限").WithStatus(403)
+		}
+		return nil
 	}
 }
 
 var (
-	WarehouseWriter = Roles(domain.RoleSuperAdmin, domain.RoleWarehouseAdmin)
-	PurchaseWriter  = Roles(domain.RoleSuperAdmin, domain.RolePurchaseAdmin)
-	HazardWriter    = Roles(domain.RoleSuperAdmin, domain.RoleHazardAdmin)
-	LedgerWriter    = Roles(domain.RoleSuperAdmin, domain.RoleLedgerAdmin)
-	WorkWriter      = Roles(domain.RoleSuperAdmin, domain.RoleWorkAdmin)
-	SuperAdmin      = Roles(domain.RoleSuperAdmin)
+	SuperAdmin      = RequirePermission(domain.PermSettingsWrite)
+	WarehouseWriter = RequirePermission(domain.PermWarehouseWrite)
+	PurchaseWriter  = RequirePermission(domain.PermPurchaseWrite)
+	HazardWriter    = RequirePermission(domain.PermHazardWrite)
+	LedgerWriter    = RequirePermission(domain.PermLedgerWrite)
+	WorkWriter      = RequirePermission(domain.PermWorkWrite)
+	// LinkAnyWriter 跨模块写操作（如申购物资关联二级库物资）：命中任一模块写权限即可。
+	LinkAnyWriter = RequireAnyPermission(domain.PermPurchaseWrite, domain.PermWarehouseWrite)
+	// FileWriter 各业务模块的写角色都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
+	FileWriter = RequireAnyPermission(
+		domain.PermWarehouseWrite, domain.PermPurchaseWrite, domain.PermHazardWrite,
+		domain.PermLedgerWrite, domain.PermWorkWrite,
+	)
 )
 
 // ---------------- 项目 ----------------
@@ -290,19 +343,10 @@ func ResolveMiniProgramProject(c *web.Ctx) (*model.Project, error) {
 
 // ---------------- 小程序 ----------------
 
-// GetMiniProgramUser 按主键读取小程序用户。
-func GetMiniProgramUser(s *db.Session, id int64) (*model.MiniProgramUser, error) {
-	var u model.MiniProgramUser
-	ok, err := s.Find(&u, "SELECT "+model.ColsMiniProgramUser+" FROM mini_program_user WHERE id = ?", id)
-	if err != nil || !ok {
-		return nil, err
-	}
-	return &u, nil
-}
-
-// MiniProgramUser 依赖：小程序登录用户，并落定项目上下文（缺头用默认项目）。
+// MiniProgramUser 依赖：小程序登录用户（统一 user 表里 source = MINI_PROGRAM 的账号），
+// 并落定项目上下文（缺头用默认项目）。JWT 里 token_type = mini_program、sub = user.id。
 func MiniProgramUser(c *web.Ctx) error {
-	if _, ok := c.User.(*model.MiniProgramUser); ok {
+	if _, ok := c.User.(*model.User); ok {
 		return nil
 	}
 	raw := bearerToken(c)
@@ -321,7 +365,7 @@ func MiniProgramUser(c *web.Ctx) error {
 	if !ok {
 		return invalid
 	}
-	u, err := GetMiniProgramUser(c.DB, userID)
+	u, err := GetUser(c.DB, userID)
 	if err != nil {
 		return err
 	}
@@ -336,14 +380,19 @@ func MiniProgramUser(c *web.Ctx) error {
 	}
 	c.User = u
 	c.UserID = u.ID
-	c.SetUsername(fmt.Sprintf("mini:%d", u.ID))
+	c.SetUsername(u.Username)
 	return nil
 }
 
-// MiniUser 返回已鉴权的小程序用户。
-func MiniUser(c *web.Ctx) *model.MiniProgramUser {
-	u, _ := c.User.(*model.MiniProgramUser)
+// MiniUser 返回已鉴权的小程序用户（统一 user 表记录）。
+func MiniUser(c *web.Ctx) *model.User {
+	u, _ := c.User.(*model.User)
 	return u
+}
+
+// MiniUserHasPermission 小程序用户是否拥有某权限（需先执行 MiniProgramUser 依赖）。
+func MiniUserHasPermission(c *web.Ctx, perm string) bool {
+	return permissionsOf(c)[perm]
 }
 
 // MiniProgramRegistration 依赖：注册凭证（微信登录后、完善资料前），写入 app_id / openid。

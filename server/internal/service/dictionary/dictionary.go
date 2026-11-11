@@ -1,24 +1,30 @@
 // Package dictionary 对应原 services/dictionary_service.py：管理端用户维护与接口令牌回显。
+// 用户角色为多角色（user_role），实际权限取并集；角色维护见 service/role。
 package dictionary
 
 import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 )
 
-// UserWithToken 是带明文令牌回显的用户。
+// UserWithToken 是带明文令牌回显与角色列表的用户。
 type UserWithToken struct {
 	model.User
 	APIToken *string
+	Roles    []schema.UserRoleRead
 }
 
 func (u *UserWithToken) Read() schema.UserApiTokenRead {
-	return schema.UserApiTokenRead{UserRead: schema.NewUserRead(&u.User), APIToken: u.APIToken}
+	read := schema.UserApiTokenRead{UserRead: schema.NewUserRead(&u.User), APIToken: u.APIToken}
+	read.Roles = u.Roles
+	return read
 }
 
 // issueAPIToken 生成新令牌：库中存哈希 + Fernet 密文，明文回显。
@@ -36,11 +42,25 @@ func duplicateUsername() error {
 	return apperr.New("DUPLICATE_USERNAME", "用户名已存在").WithStatus(409)
 }
 
+// loadRolesMap 批量加载用户角色（key 为用户 id）。
+func loadRolesMap(s *db.Session, users []UserWithToken) (map[int64][]schema.UserRoleRead, error) {
+	ids := make([]int64, len(users))
+	for i := range users {
+		ids[i] = users[i].ID
+	}
+	out := map[int64][]schema.UserRoleRead{}
+	if err := role.WithRoles(s, ids, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ListUsers 对应 list_users：关键字匹配用户名 / 姓名 / 部门（含小程序来源用户），按 id 分页。
 func ListUsers(s *db.Session, keyword *string, page, pageSize int64) ([]UserWithToken, int64, error) {
 	w := common.Where{}
 	if keyword != nil && *keyword != "" {
-		like := "%" + *keyword + "%"
-		w.Add("(username LIKE ? OR display_name LIKE ?)", like, like)
+		like := "%" + common.LikeEscape(*keyword) + "%"
+		w.Add("(username LIKE ? ESCAPE '/' OR display_name LIKE ? ESCAPE '/' OR department_name LIKE ? ESCAPE '/')", like, like, like)
 	}
 	var total int64
 	if err := s.Get(&total, "SELECT COUNT(*) FROM `user`"+w.SQL(), w.Args...); err != nil {
@@ -56,18 +76,30 @@ func ListUsers(s *db.Session, keyword *string, page, pageSize int64) ([]UserWith
 		out[i] = UserWithToken{User: users[i]}
 		echoAPIToken(&out[i])
 	}
+	roles, err := loadRolesMap(s, out)
+	if err != nil {
+		return nil, 0, err
+	}
+	for i := range out {
+		out[i].Roles = roles[out[i].ID]
+	}
 	return out, total, nil
 }
 
 func CreateUser(s *db.Session, data schema.UserCreate) (*UserWithToken, error) {
+	roleIDs, err := role.ValidateRoleIDs(s, data.RoleIDs)
+	if err != nil {
+		return nil, err
+	}
 	now := common.UTCNow()
 	u := &UserWithToken{User: model.User{
 		Username: data.Username, PasswordHash: security.HashPassword(data.Password), DisplayName: data.DisplayName,
-		Role: data.Role, Enabled: data.Enabled, CreatedAt: now, UpdatedAt: now, Version: 1,
+		DepartmentName: data.DepartmentName, Source: domain.UserSourceManage, Enabled: data.Enabled,
+		CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	issueAPIToken(u)
-	id, err := s.Insert("INSERT INTO `user` (username, password_hash, api_token_hash, api_token_enc, display_name, role, enabled, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		u.Username, u.PasswordHash, u.APITokenHash, u.APITokenEnc, u.DisplayName, u.Role, u.Enabled, u.CreatedAt, u.UpdatedAt, u.Version)
+	id, err := s.Insert("INSERT INTO `user` (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, enabled, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		u.Username, u.PasswordHash, u.APITokenHash, u.APITokenEnc, u.DisplayName, u.DepartmentName, u.Source, u.Enabled, u.CreatedAt, u.UpdatedAt, u.Version)
 	if err != nil {
 		if db.IsIntegrity(err) {
 			return nil, duplicateUsername()
@@ -75,6 +107,14 @@ func CreateUser(s *db.Session, data schema.UserCreate) (*UserWithToken, error) {
 		return nil, err
 	}
 	u.ID = id
+	if err := role.ReplaceUserRoles(s, u.ID, roleIDs); err != nil {
+		return nil, err
+	}
+	roles := map[int64][]schema.UserRoleRead{}
+	if err := role.WithRoles(s, []int64{u.ID}, roles); err != nil {
+		return nil, err
+	}
+	u.Roles = roles[u.ID]
 	return u, nil
 }
 
@@ -86,7 +126,13 @@ func getUser(s *db.Session, id int64) (*UserWithToken, error) {
 	if u == nil {
 		return nil, apperr.NotFound("用户")
 	}
-	return &UserWithToken{User: *u}, nil
+	out := &UserWithToken{User: *u}
+	roles := map[int64][]schema.UserRoleRead{}
+	if err := role.WithRoles(s, []int64{u.ID}, roles); err != nil {
+		return nil, err
+	}
+	out.Roles = roles[u.ID]
+	return out, nil
 }
 
 func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken, error) {
@@ -103,8 +149,8 @@ func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken
 	if data.DisplayName != nil {
 		u.DisplayName = *data.DisplayName
 	}
-	if data.Role != nil {
-		u.Role = *data.Role
+	if data.DepartmentName != nil {
+		u.DepartmentName = *data.DepartmentName
 	}
 	if data.Enabled != nil {
 		u.Enabled = *data.Enabled
@@ -114,16 +160,29 @@ func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken
 	}
 	u.Version++
 	u.UpdatedAt = common.UTCNow()
-	_, err = s.Exec("UPDATE `user` SET username = ?, display_name = ?, role = ?, enabled = ?, password_hash = ?, version = ?, updated_at = ? WHERE id = ?",
-		u.Username, u.DisplayName, u.Role, u.Enabled, u.PasswordHash, u.Version, u.UpdatedAt, u.ID)
+	_, err = s.Exec("UPDATE `user` SET username = ?, display_name = ?, department_name = ?, enabled = ?, password_hash = ?, version = ?, updated_at = ? WHERE id = ?",
+		u.Username, u.DisplayName, u.DepartmentName, u.Enabled, u.PasswordHash, u.Version, u.UpdatedAt, u.ID)
 	if err != nil {
 		if db.IsIntegrity(err) {
 			return nil, duplicateUsername()
 		}
 		return nil, err
 	}
-	echoAPIToken(u)
-	return u, nil
+	if data.RoleIDs != nil {
+		roleIDs, err := role.ValidateRoleIDs(s, *data.RoleIDs)
+		if err != nil {
+			return nil, err
+		}
+		if err := role.ReplaceUserRoles(s, u.ID, roleIDs); err != nil {
+			return nil, err
+		}
+	}
+	out, err := getUser(s, id)
+	if err != nil {
+		return nil, err
+	}
+	echoAPIToken(out)
+	return out, nil
 }
 
 func RegenerateAPIToken(s *db.Session, id, version int64) (*UserWithToken, error) {
@@ -137,9 +196,11 @@ func RegenerateAPIToken(s *db.Session, id, version int64) (*UserWithToken, error
 	issueAPIToken(u)
 	u.Version++
 	u.UpdatedAt = common.UTCNow()
-	_, err = s.Exec("UPDATE `user` SET api_token_hash = ?, api_token_enc = ?, version = ?, updated_at = ? WHERE id = ?",
-		u.APITokenHash, u.APITokenEnc, u.Version, u.UpdatedAt, u.ID)
-	return u, err
+	if _, err := s.Exec("UPDATE `user` SET api_token_hash = ?, api_token_enc = ?, version = ?, updated_at = ? WHERE id = ?",
+		u.APITokenHash, u.APITokenEnc, u.Version, u.UpdatedAt, u.ID); err != nil {
+		return nil, err
+	}
+	return getUser(s, id)
 }
 
 func DeleteUser(s *db.Session, id, currentUserID int64) error {
