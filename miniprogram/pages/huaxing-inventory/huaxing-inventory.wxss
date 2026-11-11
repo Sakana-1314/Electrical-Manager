@@ -1,6 +1,12 @@
-/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担。 */
+/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担，这里只保留本页的列宽。 */
 .record-list {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+}
+
+/* 编码列是本卡的主信息，吃掉剩余宽度；数量列保持内容宽。 */
+.code-item {
+  flex: 1;
+  min-width: 0;
 }

@@ -279,10 +279,9 @@ page {
   line-height: 1.2;
 }
 
-/* 物料编码列：编码是该卡的主信息，用主色文本（华星精简库存 / 物料编码页）。 */
+/* 物料编码值：编码是该卡的主信息，用主色文本（华星精简库存 / 物料编码页）。
+ * 与其它数值一样包在 .meta-item 里（标签在上），列宽由页面给 meta-item 加 flex。 */
 .list-card .meta-code {
-  flex: 1;
-  min-width: 0;
   color: var(--app-brand-text);
   font-size: 25rpx;
   font-weight: 600;

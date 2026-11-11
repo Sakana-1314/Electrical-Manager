@@ -1,6 +1,11 @@
-/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担（编码列用 .meta-code）。 */
+/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担（编码值用 .meta-code）。 */
 .code-list {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+}
+
+.meta-item {
+  flex: 1;
+  min-width: 0;
 }
