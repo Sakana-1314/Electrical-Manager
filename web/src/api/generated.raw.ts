@@ -22059,6 +22059,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 2,
+                     *         "name": "库房管理员",
+                     *         "description": "二级库与出入库、华星库存、编码库查询",
+                     *         "permissions": [
+                     *           "codes:read",
+                     *           "dashboard:read",
+                     *           "huaxing:read",
+                     *           "warehouse:read",
+                     *           "warehouse:write"
+                     *         ],
+                     *         "is_system": true,
+                     *         "user_count": 1,
+                     *         "created_at": "2026-01-01T00:00:00+00:00",
+                     *         "updated_at": "2026-01-01T00:00:00+00:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["RoleRead"][];
                 };
             };
@@ -22117,6 +22138,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "name": "库房管理员",
+                     *       "description": "二级库与出入库、华星库存、编码库查询",
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "dashboard:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ],
+                     *       "is_system": true,
+                     *       "user_count": 1,
+                     *       "created_at": "2026-01-01T00:00:00+00:00",
+                     *       "updated_at": "2026-01-01T00:00:00+00:00",
+                     *       "version": 1
+                     *     }
+                     */
                     "application/json": components["schemas"]["RoleRead"];
                 };
             };
@@ -22171,6 +22211,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "key": "warehouse:write",
+                     *         "module": "inventory",
+                     *         "action": "write",
+                     *         "label": "二级库出入库与库存调整"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["PermissionDef"][];
                 };
             };
@@ -22304,6 +22354,25 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "name": "库房管理员",
+                     *       "description": "二级库与出入库、华星库存、编码库查询",
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "dashboard:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ],
+                     *       "is_system": true,
+                     *       "user_count": 1,
+                     *       "created_at": "2026-01-01T00:00:00+00:00",
+                     *       "updated_at": "2026-01-01T00:00:00+00:00",
+                     *       "version": 1
+                     *     }
+                     */
                     "application/json": components["schemas"]["RoleRead"];
                 };
             };
