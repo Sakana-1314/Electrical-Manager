@@ -129,11 +129,3 @@
   text-align: right;
   word-break: break-all;
 }
-
-.records-action {
-  margin-top: 28rpx;
-}
-
-.copy-action {
-  margin-top: 16rpx;
-}

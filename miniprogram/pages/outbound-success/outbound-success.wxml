@@ -70,9 +70,9 @@
     </view>
   </view>
 
-  <view class="success-actions">
+  <view class="detail-actions">
     <t-button
-      class="success-action home-action"
+      class="detail-action"
       theme="default"
       variant="outline"
       size="large"
@@ -80,7 +80,7 @@
       bind:tap="goHome"
     >{{i18n.goHome}}</t-button>
     <t-button
-      class="success-action finish-action"
+      class="detail-action finish-action"
       theme="primary"
       size="large"
       icon="scan"

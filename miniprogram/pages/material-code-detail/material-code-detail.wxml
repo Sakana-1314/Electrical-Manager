@@ -38,7 +38,9 @@
       </view>
     </view>
 
-    <t-button class="copy-action" theme="primary" size="large" block bind:tap="copyMaterialCode">{{i18n.copyMaterialCode}}</t-button>
+    <view class="detail-actions">
+      <t-button class="detail-action" theme="primary" size="large" block bind:tap="copyMaterialCode">{{i18n.copyMaterialCode}}</t-button>
+    </view>
   </block>
 
   <t-toast id="material-code-detail-toast" />

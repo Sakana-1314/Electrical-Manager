@@ -362,3 +362,16 @@ page {
 .back-top-fab::after {
   border: 0;
 }
+
+/* ===== 详情页底部操作条：横向 flex，两个动作并排各占一半（单个动作占满整行） =====
+ * 与出库成功页先前的 .success-actions 同一套版式，统一收到这里供各详情页复用。 */
+.detail-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 32rpx;
+}
+
+.detail-action {
+  flex: 1;
+  min-width: 0;
+}

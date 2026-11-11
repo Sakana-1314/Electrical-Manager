@@ -107,7 +107,3 @@
   text-align: right;
   word-break: break-all;
 }
-
-.copy-action {
-  margin-top: 28rpx;
-}

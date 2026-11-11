@@ -55,16 +55,18 @@
       </view>
     </view>
 
-    <t-button
-      wx:if="{{detail.material_code}}"
-      class="records-action"
-      theme="primary"
-      variant="outline"
-      size="large"
-      block
-      bind:tap="openPurchaseRecords"
-    >{{i18n.viewPurchaseRecords}}</t-button>
-    <t-button class="copy-action" theme="primary" size="large" block bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</t-button>
+    <view class="detail-actions">
+      <t-button
+        wx:if="{{detail.material_code}}"
+        class="detail-action"
+        theme="primary"
+        variant="outline"
+        size="large"
+        block
+        bind:tap="openPurchaseRecords"
+      >{{i18n.viewPurchaseRecords}}</t-button>
+      <t-button class="detail-action" theme="primary" size="large" block bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</t-button>
+    </view>
   </block>
 
   <t-toast id="huaxing-inventory-detail-toast" />
