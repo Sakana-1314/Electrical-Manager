@@ -1,5 +1,5 @@
 <app-navbar title="{{i18n.recordsTitle}}" />
-<view class="page-shell records-page">
+<view class="page-shell list-page">
 
   <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
 
@@ -12,7 +12,7 @@
   </view>
 
   <view wx:else class="records-list">
-    <view wx:for="{{items}}" wx:key="operation_id" class="record-card">
+    <view wx:for="{{items}}" wx:key="operation_id" class="list-card">
       <view class="card-heading">
         <view class="record-type">
           <t-tag theme="{{item.operation_type_theme}}" variant="light" size="small">

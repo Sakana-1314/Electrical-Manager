@@ -1,73 +1,15 @@
-.purchase-records-page {
-  padding: 24rpx;
-  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
-}
-
-.list-tools {
-  margin-bottom: 20rpx;
-  padding: 0;
-}
-
-.result-count {
-  margin: 0 8rpx 14rpx;
-  color: var(--app-text-muted);
-  font-size: 23rpx;
-}
-.record-list { display: flex; flex-direction: column; gap: 16rpx; }
-
-.record-card {
-  padding: 24rpx;
-  border: 2rpx solid var(--app-card-border);
-  border-radius: 24rpx;
-  background: var(--app-surface);
-  box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-
-.card-topline, .card-heading, .record-meta { display: flex; align-items: center; }
-.card-topline { justify-content: flex-start; gap: 12rpx; margin-bottom: 14rpx; }
-.plan-date { color: var(--app-text-subtle); font-size: 22rpx; }
-.topline-right { margin-left: auto; }
-.card-heading { margin-bottom: 6rpx; }
-.material-name { flex: 1; min-width: 0; color: var(--app-text-strong); font-size: 30rpx; font-weight: 650; line-height: 1.4; }
-.material-spec { color: var(--app-text-secondary); font-size: 24rpx; line-height: 1.45; word-break: break-all; padding-left: 2rpx; }
-.trace-line { margin-top: 10rpx; color: var(--app-text-subtle); font-size: 22rpx; }
-.card-divider { height: 2rpx; margin: 22rpx 0 18rpx; background: var(--app-divider); }
-.meta-item { min-width: 190rpx; }
-.responsible-item { flex: 1; }
-.meta-label { color: var(--app-text-subtle); font-size: 21rpx; }
-.quantity-value { margin-top: 4rpx; color: var(--app-brand-text); font-size: 31rpx; font-weight: 750; }
-.meta-value { margin-top: 8rpx; color: var(--app-text); font-size: 25rpx; font-weight: 550; }
-.plan-arrow { color: var(--app-text-placeholder); }
-.state-panel { display: flex; min-height: 420rpx; align-items: center; justify-content: center; }
-.empty-panel { box-sizing: border-box; padding-top: 40rpx; }
-.load-more, .load-finished { padding: 28rpx 0 8rpx; color: var(--app-text-placeholder); font-size: 22rpx; text-align: center; }
-
-.back-top-fab {
-  position: fixed;
-  left: 32rpx;
-  right: auto;
-  bottom: calc(48rpx + env(safe-area-inset-bottom));
-  z-index: 100;
+/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担，这里只保留本页的列宽。 */
+.record-list {
   display: flex;
-  width: 96rpx;
-  height: 96rpx;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--app-brand);
-  color: var(--app-on-brand);
-  box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color-strong);
-  line-height: 1;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
-.back-top-fab::after {
-  border: 0;
+.meta-item {
+  min-width: 190rpx;
 }
 
-.record-card-active {
-  transform: scale(0.99);
-  box-shadow: 0 6rpx 18rpx var(--app-shadow-color-strong);
+.responsible-item {
+  flex: 1;
+  min-width: 0;
 }

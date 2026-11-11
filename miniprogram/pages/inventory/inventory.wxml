@@ -1,8 +1,8 @@
 <app-navbar title="{{i18n.inventoryTitle}}" />
-<view class="page-shell inventory-page">
+<view class="page-shell list-page">
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
 
-  <view class="inventory-tools">
+  <view class="list-tools">
     <filter-panel
       keyword="{{keyword}}"
       placeholder="{{i18n.searchPlaceholder}}"
@@ -29,8 +29,8 @@
     <view
       wx:for="{{items}}"
       wx:key="key"
-      class="inventory-card"
-      hover-class="inventory-card-active"
+      class="list-card"
+      hover-class="list-card-active"
       data-uuid="{{item.uuid}}"
       bind:tap="openDetail"
     >
@@ -42,10 +42,10 @@
       </view>
       <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
-      <view class="inventory-meta">
+      <view class="card-meta">
         <view class="meta-item">
           <view class="meta-label">{{i18n.stockQuantity}}</view>
-          <view class="stock-quantity">{{item.current_qty}}</view>
+          <view class="quantity-value">{{item.current_qty}}</view>
         </view>
         <view class="meta-item unit-item">
           <view class="meta-label">{{i18n.unit}}</view>

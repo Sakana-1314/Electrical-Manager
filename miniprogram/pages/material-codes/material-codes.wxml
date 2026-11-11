@@ -1,5 +1,5 @@
 <app-navbar title="{{i18n.materialCodesTitle}}" />
-<view class="page-shell material-codes-page">
+<view class="page-shell list-page">
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
   <view class="list-tools">
     <filter-panel
@@ -22,15 +22,20 @@
     <view
       wx:for="{{items}}"
       wx:key="id"
-      class="code-card"
-      hover-class="code-card-active"
+      class="list-card"
+      hover-class="list-card-active"
       bind:tap="openDetail"
       data-index="{{index}}"
     >
-      <view class="code-name">{{item.name || i18n.notSet}}</view>
-      <view wx:if="{{item.model_spec}}" class="code-model">{{item.model_spec}}</view>
+      <view class="card-heading">
+        <view class="material-name">{{item.name || i18n.notSet}}</view>
+      </view>
+      <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
-      <view class="code-value">{{item.material_code}}</view>
+      <view class="card-meta">
+        <view class="meta-code">{{item.material_code}}</view>
+        <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
+      </view>
     </view>
   </view>
   <view wx:if="{{loadingMore}}" class="load-more">
