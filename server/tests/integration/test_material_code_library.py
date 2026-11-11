@@ -24,13 +24,17 @@ def build_workbook(rows: list[list[object]]) -> bytes:
     return content.getvalue()
 
 
-def build_csv(rows: list[list[object]]) -> bytes:
+def build_csv_with_headers(headers: list[str], rows: list[list[object]]) -> bytes:
     buffer = StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["状态", "编码", "名称", "记账单位名称", "型号", "其他列"])
+    writer.writerow(headers)
     for row in rows:
         writer.writerow(row)
     return buffer.getvalue().encode("utf-8")
+
+
+def build_csv(rows: list[list[object]]) -> bytes:
+    return build_csv_with_headers(["状态", "编码", "名称", "记账单位名称", "型号", "其他列"], rows)
 
 
 def build_xls(rows: list[list[object]]) -> bytes:
@@ -94,6 +98,7 @@ async def test_import_replaces_and_searches_material_code_library(client: AsyncC
         "imported_count": 3,
         "blank_name_count": 1,
         "blank_model_spec_count": 1,
+        "truncated_model_spec_count": 0,
     }
 
     by_name = await client.get(
@@ -307,6 +312,7 @@ async def test_import_csv(client: AsyncClient) -> None:
         "imported_count": 1,
         "blank_name_count": 0,
         "blank_model_spec_count": 0,
+        "truncated_model_spec_count": 0,
     }
 
     listed = await client.get("/api/v1/material-code-library", headers=purchase_headers)
@@ -331,8 +337,94 @@ async def test_import_xls(client: AsyncClient) -> None:
         "imported_count": 1,
         "blank_name_count": 0,
         "blank_model_spec_count": 0,
+        "truncated_model_spec_count": 0,
     }
 
     listed = await client.get("/api/v1/material-code-library", headers=purchase_headers)
     assert listed.status_code == 200, listed.text
     assert listed.json()["items"][0]["material_code"] == "X001"
+
+
+@pytest.mark.asyncio
+async def test_import_warehouse_export_headers(client: AsyncClient) -> None:
+    """仓储管理导出的物料编码表：表头叫法不同（型号列头还带 Tab），超长型号截断。"""
+    purchase_headers = await auth_headers(client, "purchase")
+    warehouse_headers = [
+        "序号",
+        "物料编码",
+        "物料名称",
+        "旧物料编码",
+        "物料大类",
+        "物料小类",
+        "型号\t",
+        "单位",
+        "启用状态",
+        "资产类型",
+        "是否一次性申购",
+        "参考美元单价",
+        "原厂件号",
+        "适配设备型号",
+        "设备厂商",
+    ]
+    response = await _submit_import(
+        client,
+        purchase_headers,
+        "warehouse-codes.csv",
+        build_csv_with_headers(
+            warehouse_headers,
+            [
+                [
+                    "1",
+                    "C011-00001",
+                    "吨袋(停)",
+                    "L110501-00001",
+                    "包装储运物资",
+                    "生产用包装",
+                    "Φ115×120cm",
+                    "个",
+                    "停用",
+                    "非资产",
+                    "否",
+                    "11.4",
+                    "",
+                    "",
+                    "",
+                ],
+                [
+                    "2",
+                    "N004-00012",
+                    "葡萄糖酸钠",
+                    "L110301-00015",
+                    "生产原料及产品",
+                    "小宗辅料",
+                    "型" * 300,
+                    "kg",
+                    "启用",
+                    "非资产",
+                    "否",
+                    "",
+                    "",
+                    "",
+                    "",
+                ],
+            ],
+        ),
+    )
+    assert response.status_code == 202, response.text
+    job = await _wait_job(client, purchase_headers, response.json()["id"])
+    assert job["status"] == "SUCCEEDED", job
+    assert job["result"] == {
+        "imported_count": 2,
+        "blank_name_count": 0,
+        "blank_model_spec_count": 0,
+        "truncated_model_spec_count": 1,
+    }
+
+    listed = await client.get("/api/v1/material-code-library", headers=purchase_headers)
+    assert listed.status_code == 200, listed.text
+    items = {item["material_code"]: item for item in listed.json()["items"]}
+    assert set(items) == {"C011-00001", "N004-00012"}
+    assert items["C011-00001"]["name"] == "吨袋(停)"
+    assert items["C011-00001"]["model_spec"] == "Φ115×120cm"
+    assert items["C011-00001"]["unit_name"] == "个"
+    assert items["N004-00012"]["model_spec"] == "型" * 255

@@ -148,10 +148,14 @@ function showImportSummary(result: Record<string, unknown> | null, table: Materi
   }
   const blankNameCount = Number(result?.blank_name_count ?? 0)
   const blankModelCount = Number(result?.blank_model_spec_count ?? 0)
+  const truncatedModelCount = Number(result?.truncated_model_spec_count ?? 0)
   const notes = [
     `已全量更新 ${importedCount.toLocaleString()} 条物料编码。`,
     blankNameCount ? `${blankNameCount.toLocaleString()} 条名称为空。` : '',
     blankModelCount ? `${blankModelCount.toLocaleString()} 条型号为空。` : '',
+    truncatedModelCount
+      ? `${truncatedModelCount.toLocaleString()} 条型号超过 255 个字符，已截断保存。`
+      : '',
   ].filter(Boolean)
   dialog.success({
     draggable: true,
@@ -188,7 +192,7 @@ function onFileChange(event: Event) {
   const extra =
     table === 'price'
       ? '只取「货品编码 + 全成本单价-人民币」两列；货品编码为「没有货品编码」或单价不是数值的行会跳过。'
-      : ''
+      : '支持旧模板「编码 / 名称 / 型号 / 记账单位名称」与仓储导出的「物料编码 / 物料名称 / 型号 / 单位」两种表头；超过 255 个字符的型号会截断保存。'
   confirmImport({
     title: `全量更新${replacing}`,
     content: `确认导入“${file.name}”吗？现有${replacing}将被全部删除，并由该文件完整替换。${extra}`,

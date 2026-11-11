@@ -121,7 +121,7 @@
 | `HUAXING_IMPORT_CODE_REQUIRED` / `LITE_IMPORT_NAME_REQUIRED` / `MATERIAL_CODE_IMPORT_CODE_REQUIRED` | 400 | 某行缺少必需字段 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
 | `HUAXING_IMPORT_INVALID_QUANTITY` / `LITE_IMPORT_INVALID_QUANTITY` | 400 | 某行数量不是有效数值 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
 | `HUAXING_IMPORT_VALUE_TOO_LONG` / `LITE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_CODE_IMPORT_VALUE_TOO_LONG` / `MATERIAL_PRICE_IMPORT_VALUE_TOO_LONG` | 400 | 某行单元格超长 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
-| `MATERIAL_CODE_IMPORT_UNIT_REQUIRED` | 400 | 某行缺少记账单位名称 | `service/codelib` |
+| `MATERIAL_CODE_IMPORT_UNIT_REQUIRED` | 400 | 某行缺少记账单位名称（仓储导出表里叫「单位」） | `service/codelib` |
 | `MATERIAL_CODE_IMPORT_DUPLICATE` / `MATERIAL_PRICE_IMPORT_DUPLICATE` | 400 | 表格内编码重复 | `service/huaxing`、`service/lite`、`service/codelib`、`service/price`（按导入类型） |
 | `MATERIAL_PRICE_IMPORT_INVALID_PRICE` | 400 | 「全成本单价-人民币」能解析成数值但超出可存范围（负数 / 整数超 12 位）；空值、「配件」这类非数值文本按「没有价格」跳过，不报错 | `service/price` |
 
