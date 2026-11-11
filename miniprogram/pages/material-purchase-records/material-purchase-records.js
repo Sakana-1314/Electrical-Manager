@@ -16,6 +16,7 @@ Page({
     hasMore: false,
     loading: true,
     loadingMore: false,
+    backTopVisible: false,
     failed: false,
     resultCount: '',
     i18n: getMessages(),
@@ -56,6 +57,19 @@ Page({
 
   onReachBottom() {
     if (this.data.hasMore && !this.data.loadingMore) void this.loadRecords(false);
+  },
+
+  onPageScroll(event) {
+    const scrollTop = event.scrollTop || 0;
+    if (scrollTop > 400 && !this.data.backTopVisible) {
+      this.setData({ backTopVisible: true });
+    } else if (scrollTop <= 400 && this.data.backTopVisible) {
+      this.setData({ backTopVisible: false });
+    }
+  },
+
+  scrollToTop() {
+    wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
   async loadRecords(reset) {

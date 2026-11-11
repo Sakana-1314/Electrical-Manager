@@ -15,7 +15,7 @@
     />
   </view>
 
-  <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
+  <view wx:if="{{items.length}}" class="result-count">{{resultCount}}</view>
 
   <view wx:if="{{loading && !items.length}}" class="state-panel">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingInventory}}" />
@@ -61,4 +61,12 @@
   </view>
   <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
   <t-toast id="inventory-toast" />
+  <button
+    wx:if="{{backTopVisible}}"
+    class="back-top-fab"
+    aria-label="{{i18n.backToTop}}"
+    bind:tap="scrollToTop"
+  >
+    <t-icon name="backtop" size="52rpx" />
+  </button>
 </view>
