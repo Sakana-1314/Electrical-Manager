@@ -170,3 +170,196 @@ page {
   margin-top: 32rpx;
   box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color);
 }
+
+/* ===== 列表页通用件：卡片骨架与分割线上下排版全站一致 =====
+ * 结构约定：卡片 = [顶栏(日期+标签)] → 标题(名称+标签) → 型号/附加行 → 分割线 → 数据区(标签+数值)[→ 箭头]。
+ * 箭头是「可点进详情」的标识：能进详情页的列表卡都带（精简模式条目除外），操作记录这类没有详情页的不带。 */
+.list-card {
+  padding: 24rpx;
+  border: 2rpx solid var(--app-card-border);
+  border-radius: 24rpx;
+  background: var(--app-surface);
+  box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.list-card-active {
+  transform: scale(0.99);
+  box-shadow: 0 6rpx 18rpx var(--app-shadow-color-strong);
+}
+
+/* 顶栏：日期在左、标签在右（日期用弱化文本，与标签拉开层级）。 */
+.list-card .card-topline {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.list-card .card-date {
+  color: var(--app-text-subtle);
+  font-size: 22rpx;
+}
+
+.list-card .topline-right {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: auto;
+}
+
+/* 标题区：名称一行（长名换行），标签顶对齐；型号规格紧随其下。 */
+.list-card .card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 6rpx;
+}
+
+.list-card .material-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-text-strong);
+  font-size: 30rpx;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.list-card .material-spec {
+  color: var(--app-text-secondary);
+  font-size: 24rpx;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+/* 附加行：追溯号 / 分项号这类补充信息，弱化文本。 */
+.list-card .trace-line {
+  margin-top: 10rpx;
+  color: var(--app-text-subtle);
+  font-size: 22rpx;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+/* 分割线：标题区与数据区的分界，间距全站统一。 */
+.list-card .card-divider {
+  height: 2rpx;
+  margin: 22rpx 0 18rpx;
+  background: var(--app-divider);
+}
+
+/* 数据区：标签在上、数值在下，底部对齐；间距统一 16rpx；
+ * 数量用主色加粗强调（quantity-value），普通数值用次要文本（meta-value）。
+ * 各页自行约束列宽：固定首列加 min-width，末列信息加 flex: 1 吃掉剩余宽度。 */
+.list-card .card-meta {
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+}
+
+.list-card .meta-label {
+  color: var(--app-text-subtle);
+  font-size: 21rpx;
+}
+
+.list-card .meta-value {
+  margin-top: 8rpx;
+  color: var(--app-text);
+  font-size: 25rpx;
+  font-weight: 550;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.list-card .quantity-value {
+  margin-top: 4rpx;
+  color: var(--app-brand-text);
+  font-size: 31rpx;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+/* 物料编码列：编码是该卡的主信息，用主色文本（华星精简库存 / 物料编码页）。 */
+.list-card .meta-code {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-brand-text);
+  font-size: 25rpx;
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-all;
+}
+
+.list-card .card-arrow {
+  flex: none;
+  align-self: center;
+  color: var(--app-text-placeholder);
+}
+
+/* ===== 列表页公共骨架：页面留白 / 筛选区 / 结果数 / 导入时间 / 加载与空态 / 返回顶部 ===== */
+.list-page {
+  box-sizing: border-box;
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.list-tools {
+  margin-bottom: 20rpx;
+}
+
+.result-count {
+  margin: 0 8rpx 14rpx;
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+}
+
+.import-time {
+  margin: 0 8rpx 20rpx;
+  color: var(--app-text-subtle);
+  font-size: 22rpx;
+}
+
+.state-panel {
+  display: flex;
+  min-height: 420rpx;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-panel {
+  box-sizing: border-box;
+  padding-top: 40rpx;
+}
+
+.load-more,
+.load-finished {
+  padding: 28rpx 0 8rpx;
+  color: var(--app-text-placeholder);
+  font-size: 22rpx;
+  text-align: center;
+}
+
+/* 返回顶部：固定左下角，与首页分享按钮同位同尺寸。 */
+.back-top-fab {
+  position: fixed;
+  left: 32rpx;
+  right: auto;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 100;
+  display: flex;
+  width: 96rpx;
+  height: 96rpx;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--app-brand);
+  color: var(--app-on-brand);
+  box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color-strong);
+  line-height: 1;
+}
+
+.back-top-fab::after {
+  border: 0;
+}

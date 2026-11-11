@@ -1,8 +1,4 @@
-.material-purchase-records-page {
-  padding: 24rpx;
-  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
-}
-
+/* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担。 */
 .material-caption {
   margin-bottom: 16rpx;
   padding: 20rpx 24rpx;
@@ -26,24 +22,6 @@
   letter-spacing: 1rpx;
 }
 
-.result-count {
-  margin: 0 8rpx 14rpx;
-  color: var(--app-text-muted);
-  font-size: 23rpx;
-}
-
-.state-panel {
-  display: flex;
-  min-height: 420rpx;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-panel {
-  box-sizing: border-box;
-  padding-top: 40rpx;
-}
-
 .failed-panel {
   flex-direction: column;
   gap: 24rpx;
@@ -55,116 +33,11 @@
   gap: 16rpx;
 }
 
-.record-card {
-  padding: 24rpx;
-  border: 2rpx solid var(--app-card-border);
-  border-radius: 24rpx;
-  background: var(--app-surface);
-  box-shadow: 0 10rpx 30rpx var(--app-shadow-color);
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-
-.record-card-active {
-  transform: scale(0.99);
-  box-shadow: 0 6rpx 18rpx var(--app-shadow-color-strong);
-}
-
-.card-topline {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  margin-bottom: 14rpx;
-}
-
-.plan-date {
-  color: var(--app-text-subtle);
-  font-size: 22rpx;
-}
-
-.topline-right {
-  margin-left: auto;
-}
-
-.card-heading {
-  display: flex;
-  align-items: center;
-  margin-bottom: 6rpx;
-}
-
-.material-name {
-  flex: 1;
-  min-width: 0;
-  color: var(--app-text-strong);
-  font-size: 30rpx;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.material-spec {
-  color: var(--app-text-muted);
-  font-size: 24rpx;
-  line-height: 1.45;
-  padding-left: 2rpx;
-  word-break: break-all;
-}
-
-.trace-line {
-  margin-top: 6rpx;
-  color: var(--app-text-secondary);
-  font-size: 23rpx;
-  line-height: 1.45;
-  word-break: break-all;
-}
-
-.card-divider {
-  height: 2rpx;
-  margin: 22rpx 0 18rpx;
-  background: var(--app-divider);
-}
-
-.record-meta {
-  display: flex;
-  align-items: flex-end;
-}
-
 .meta-item {
   min-width: 190rpx;
 }
 
 .responsible-item {
   flex: 1;
-}
-
-.meta-label {
-  color: var(--app-text-subtle);
-  font-size: 21rpx;
-}
-
-.quantity-value {
-  margin-top: 4rpx;
-  color: var(--app-brand-text);
-  font-size: 34rpx;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.meta-value {
-  margin-top: 8rpx;
-  color: var(--app-text);
-  font-size: 24rpx;
-  word-break: break-all;
-}
-
-.plan-arrow {
-  flex: none;
-  margin-left: 16rpx;
-  color: var(--app-text-placeholder);
-}
-
-.load-more,
-.load-finished {
-  padding: 28rpx 0 8rpx;
-  color: var(--app-text-placeholder);
-  font-size: 22rpx;
-  text-align: center;
+  min-width: 0;
 }

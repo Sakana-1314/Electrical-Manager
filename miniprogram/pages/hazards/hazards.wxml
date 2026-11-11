@@ -1,5 +1,5 @@
 <app-navbar title="{{i18n.hazardsTitle}}" />
-<view class="page-shell hazards-page">
+<view class="page-shell list-page">
 
   <view class="list-tools">
     <filter-panel
@@ -33,8 +33,8 @@
     <view
       wx:for="{{items}}"
       wx:key="id"
-      class="hazard-card"
-      hover-class="hazard-card-active"
+      class="list-card"
+      hover-class="list-card-active"
       data-id="{{item.id}}"
       bind:tap="goDetail"
     >
@@ -53,7 +53,7 @@
         <view class="hazard-type">{{item.type_label}}</view>
       </view>
       <view class="card-divider"></view>
-      <view class="hazard-meta">
+      <view class="card-meta">
         <view class="meta-item">
           <view class="meta-label">{{i18n.hazardAreaLabel}}</view>
           <view class="meta-value">{{item.inspection_area}}</view>
@@ -66,6 +66,7 @@
           <view class="meta-label">{{i18n.hazardDueLabel}}</view>
           <view class="meta-value">{{item.due_label}}</view>
         </view>
+        <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>
   </view>

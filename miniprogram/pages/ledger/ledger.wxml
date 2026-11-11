@@ -1,5 +1,5 @@
 <app-navbar title="{{i18n.ledgerTitle}}" />
-<view class="page-shell ledger-page">
+<view class="page-shell list-page">
   <view class="list-tools">
     <filter-panel
       keyword="{{keyword}}"
@@ -23,18 +23,17 @@
     <view
       wx:for="{{items}}"
       wx:key="id"
-      class="ledger-card"
-      hover-class="ledger-card-active"
+      class="list-card"
+      hover-class="list-card-active"
       data-id="{{item.id}}"
       bind:tap="openDetail"
     >
       <view class="card-heading">
-        <view class="ledger-name">{{item.name}}</view>
-        <t-icon class="ledger-arrow" name="chevron-right" size="36rpx" />
+        <view class="material-name">{{item.name}}</view>
       </view>
-      <view class="ledger-spec">{{item.model_spec}}</view>
+      <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
-      <view class="ledger-meta">
+      <view class="card-meta">
         <view class="meta-item">
           <view class="meta-label">{{i18n.quantityLabel}}</view>
           <view class="quantity-value">{{item.quantity_label}}</view>
@@ -43,6 +42,7 @@
           <view class="meta-label">{{i18n.subitemNo}}</view>
           <view class="meta-value">{{item.subitem_no_label}}</view>
         </view>
+        <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>
   </view>
