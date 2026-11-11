@@ -77,6 +77,8 @@ Page({
       if (!user) {
         throw new Error(t('requestFailed'));
       }
+      // 角色名列表（多角色，权限取并集）展示在账号信息里；后端 user.roles 为摘要数组。
+      const roleNamesLabel = (user.roles || []).map((role) => role.name).join('、') || t('notSet');
       const featureModes =
         getApp().globalData.featureModes || (await getApp().globalData.featureSettingsPromise);
       this.setData({
@@ -84,6 +86,7 @@ Page({
           ...user,
           registered_at: formatDateTime(user.created_at),
         },
+        roleNamesLabel,
         liteMode: featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE,
         loading: false,
       });
