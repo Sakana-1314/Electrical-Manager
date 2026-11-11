@@ -126,7 +126,8 @@ web/src/
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、后台可见功能、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
-| `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：角色、启停、令牌回显/重置、MCP 链接 |
+| `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：多角色分配、启停、部门、令牌回显/重置、MCP 链接（统一含小程序来源用户） |
+| `/settings/roles` | `roles` | `views/settings/RolesView.vue` | `settings:write` | 角色管理：角色 CRUD 与按模块的权限勾选（内置角色锁定） |
 | `/settings/mini-program-users` | `mini-program-users` | `views/settings/MiniProgramUsersView.vue` | `settings:write` | 小程序用户查询/更新/删除/合并 |
 | `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `settings:write` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
 | `/settings/about` | `about` | `views/settings/AboutView.vue` | `settings:write` | 版本信息与构建时间（`versionApi.get()`） |
