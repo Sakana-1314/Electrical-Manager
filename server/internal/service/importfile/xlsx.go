@@ -514,7 +514,7 @@ func (b *xlsxBook) readSheet() ([][]any, error) {
 	}
 	defer rc.Close()
 	dec := xml.NewDecoder(rc)
-	maxCol, maxRow := 0, 0
+	maxCol := 0
 	seenData := false
 	var rows [][]any
 	counter, idx := 1, 1
@@ -525,8 +525,7 @@ func (b *xlsxBook) readSheet() ([][]any, error) {
 		}
 		return []any{}
 	}
-	stop := false
-	for !stop {
+	for {
 		tok, err := dec.Token()
 		if err == io.EOF {
 			break
@@ -540,9 +539,11 @@ func (b *xlsxBook) readSheet() ([][]any, error) {
 		}
 		switch se.Name.Local {
 		case "dimension":
+			// dimension 只作空行宽度的提示，不按它截断行列：部分导出工具（如仓储管理导出的
+			// 物料编码表）会把 dimension 错写成 A1，而 sheetData 里实际有几十万行。
 			if !seenData {
-				if _, _, c2, r2, ok := rangeBoundaries(attr(se, "ref")); ok {
-					maxCol, maxRow = c2, r2
+				if _, _, c2, _, ok := rangeBoundaries(attr(se, "ref")); ok {
+					maxCol = c2
 				}
 			}
 		case "sheetData":
@@ -566,9 +567,10 @@ func (b *xlsxBook) readSheet() ([][]any, error) {
 				return nil, err
 			}
 			idx = rowCounter
-			if maxRow > 0 && idx > maxRow {
-				stop = true
-				break
+			for _, c := range cells {
+				if c.col > maxCol {
+					maxCol = c.col
+				}
 			}
 			for ; counter < idx; counter++ {
 				rows = append(rows, emptyRow())
@@ -577,11 +579,6 @@ func (b *xlsxBook) readSheet() ([][]any, error) {
 				rows = append(rows, buildRow(cells, maxCol))
 				counter++
 			}
-		}
-	}
-	if maxRow > 0 && maxRow < idx {
-		for ; counter <= maxRow; counter++ {
-			rows = append(rows, emptyRow())
 		}
 	}
 	return rows, nil
@@ -712,7 +709,10 @@ func (b *xlsxBook) parseCell(dec *xml.Decoder, se xml.StartElement, colCounter *
 	case "n":
 		num, err := castNumber(raw)
 		if err != nil {
-			return parsedCell{}, err
+			// 部分导出工具会把文本写进 t="n" 单元格（仓储导出的「原厂件号」就有 E5784-12601
+			// 这样的值），按文本兜底，避免一个坏单元格让整表读取失败。
+			value = raw
+			break
 		}
 		value = num
 		if b.dateStyles[styleID] {
