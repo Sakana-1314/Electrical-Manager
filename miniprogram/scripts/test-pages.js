@@ -85,7 +85,21 @@ require.cache[requestPath] = {
 global.getApp = () => ({
   globalData: {
     authPromise: Promise.resolve({
-      user: { display_name: '张三', created_at: '2026-01-01T00:00:00Z' },
+      user: {
+        display_name: '张三',
+        created_at: '2026-01-01T00:00:00Z',
+        roles: [{ id: 7, name: '只读用户', is_system: true }],
+        permissions: [
+          'warehouse:read',
+          'warehouse:write',
+          'purchase:read',
+          'huaxing:read',
+          'codes:read',
+          'ledger:read',
+          'hazard:read',
+          'hazard:write',
+        ],
+      },
       account_disabled: false,
       registration_disabled: false,
       requires_profile: false,
@@ -95,6 +109,21 @@ global.getApp = () => ({
       inventory_mode: 'read_write',
       hazards_mode: 'read_write',
     }),
+    user: {
+      display_name: '张三',
+      created_at: '2026-01-01T00:00:00Z',
+      roles: [{ id: 7, name: '只读用户', is_system: true }],
+      permissions: [
+        'warehouse:read',
+        'warehouse:write',
+        'purchase:read',
+        'huaxing:read',
+        'codes:read',
+        'ledger:read',
+        'hazard:read',
+        'hazard:write',
+      ],
+    },
     pendingMaterialUuid: '',
     imageSettingsPromise: Promise.resolve(),
   },

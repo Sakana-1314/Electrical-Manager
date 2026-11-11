@@ -6,7 +6,7 @@
 -- 枚举类型：库内保存枚举「名」（如 PENDING），接口按枚举「值」输出中文字段见各表注释。
 DO $$
 BEGIN
-  CREATE TYPE role AS ENUM ('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN', 'WORK_ADMIN');
+  CREATE TYPE usersource AS ENUM ('MANAGE', 'MINI_PROGRAM');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END
 $$;
@@ -119,38 +119,61 @@ CREATE TABLE IF NOT EXISTS project (
   CONSTRAINT uq_project_name UNIQUE (name)
 );
 
+-- 统一用户：管理端（source = MANAGE，用户名密码 / 接口令牌登录）与小程序端
+-- （source = MINI_PROGRAM，微信 openid 身份登录，username 由 openid 派生、无密码）共用同一张表与角色体系。
+-- 小程序用户不使用接口令牌：api_token_hash 为空串，唯一性只约束非空值（部分唯一索引）。
 CREATE TABLE IF NOT EXISTS "user" (
   id BIGSERIAL NOT NULL,
   username VARCHAR(64) NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  api_token_hash VARCHAR(64) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL DEFAULT '',
+  api_token_hash VARCHAR(64) NOT NULL DEFAULT '',
   api_token_enc VARCHAR(512) NOT NULL DEFAULT '',
   display_name VARCHAR(128) NOT NULL,
-  role role NOT NULL,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_user PRIMARY KEY (id),
-  CONSTRAINT uq_user_username UNIQUE (username),
-  CONSTRAINT uq_user_api_token_hash UNIQUE (api_token_hash)
-);
-
-CREATE TABLE IF NOT EXISTS mini_program_user (
-  id BIGSERIAL NOT NULL,
-  display_name VARCHAR(128) NOT NULL,
-  department_name VARCHAR(128) NOT NULL DEFAULT '华星检修维护部电气车间',
+  department_name VARCHAR(128) NOT NULL DEFAULT '',
+  source usersource NOT NULL DEFAULT 'MANAGE',
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   last_used_at TIMESTAMP WITHOUT TIME ZONE NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_mini_program_user PRIMARY KEY (id)
+  CONSTRAINT pk_user PRIMARY KEY (id),
+  CONSTRAINT uq_user_username UNIQUE (username)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_api_token_hash ON "user" (api_token_hash) WHERE api_token_hash <> '';
+
+-- 角色（RBAC）：permissions 为权限键数组（JSONB），`*` 通配全部权限、`模块:*` 通配模块内权限；
+-- 用户可挂多个角色，实际权限取并集。is_system 的内置角色不可改名 / 删除。
+CREATE TABLE IF NOT EXISTS role (
+  id BIGSERIAL NOT NULL,
+  name VARCHAR(64) NOT NULL,
+  description VARCHAR(255) NOT NULL DEFAULT '',
+  permissions JSONB NOT NULL DEFAULT '[]',
+  is_system BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+  version INTEGER NOT NULL DEFAULT 1,
+  CONSTRAINT pk_role PRIMARY KEY (id),
+  CONSTRAINT uq_role_name UNIQUE (name)
+);
+
+CREATE TABLE IF NOT EXISTS user_role (
+  id BIGSERIAL NOT NULL,
+  user_id BIGINT NOT NULL,
+  role_id BIGINT NOT NULL,
+  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
+  version INTEGER NOT NULL DEFAULT 1,
+  CONSTRAINT pk_user_role PRIMARY KEY (id),
+  CONSTRAINT uq_user_role_user_id_role_id UNIQUE (user_id, role_id),
+  CONSTRAINT fk_user_role_user_id_user FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_role_role_id_role FOREIGN KEY (role_id) REFERENCES role (id) ON DELETE CASCADE
+);
+
+-- 微信身份：openid ↔ 统一用户（source = MINI_PROGRAM）。
 CREATE TABLE IF NOT EXISTS mini_program_identity (
   id BIGSERIAL NOT NULL,
-  mini_program_user_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
   app_id VARCHAR(64) NOT NULL,
   wechat_openid VARCHAR(128) NOT NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
@@ -158,9 +181,9 @@ CREATE TABLE IF NOT EXISTS mini_program_identity (
   version INTEGER NOT NULL DEFAULT 1,
   CONSTRAINT pk_mini_program_identity PRIMARY KEY (id),
   CONSTRAINT uq_mini_program_identity_app_id UNIQUE (app_id, wechat_openid),
-  CONSTRAINT uq_mini_program_identity_mini_program_user_id UNIQUE (mini_program_user_id, app_id),
-  CONSTRAINT fk_mini_program_identity_mini_program_user_id_mini_program_user
-    FOREIGN KEY (mini_program_user_id) REFERENCES mini_program_user (id) ON DELETE CASCADE
+  CONSTRAINT uq_mini_program_identity_user_id UNIQUE (user_id, app_id),
+  CONSTRAINT fk_mini_program_identity_user_id_user
+    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS business_event_log (
@@ -1191,18 +1214,49 @@ CROSS JOIN (VALUES
 WHERE p.is_default = TRUE
 ON CONFLICT (project_id, major, minor) DO NOTHING;
 
+-- 内置角色：permissions 为权限键数组，`*` 通配全部权限。管理端与小程序共用同一套角色体系；
+-- 小程序新用户（默认只读）注册时自动挂「只读用户」角色。重复导入按角色名更新。
+INSERT INTO role (name, description, permissions, is_system)
+VALUES
+  ('超级管理员', '系统管理 + 全部业务模块读写', '["*"]', TRUE),
+  ('库房管理员', '二级库与出入库、华星库存、编码库查询', '["warehouse:read","warehouse:write","huaxing:read","codes:read"]', TRUE),
+  ('采购管理员', '申购计划 / 请购 / 申购记录与编码库导入', '["purchase:read","purchase:write","huaxing:read","codes:read"]', TRUE),
+  ('隐患管理员', '隐患管理', '["hazard:read","hazard:write"]', TRUE),
+  ('台账管理员', '台账管理', '["ledger:read","ledger:write"]', TRUE),
+  ('工单管理员', '工单管理', '["work:read","work:write"]', TRUE),
+  ('只读用户', '各业务模块只读（小程序新用户默认角色）', '["warehouse:read","purchase:read","huaxing:read","codes:read","ledger:read","hazard:read","work:read"]', TRUE)
+ON CONFLICT (name) DO UPDATE
+SET description = EXCLUDED.description,
+    permissions = EXCLUDED.permissions,
+    is_system = EXCLUDED.is_system;
+
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
-INSERT INTO "user" (username, password_hash, api_token_hash, display_name, role, enabled)
+INSERT INTO "user" (username, password_hash, api_token_hash, display_name, department_name, source, enabled)
 VALUES
-  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', 'SUPER_ADMIN', TRUE),
-  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', 'WAREHOUSE_ADMIN', TRUE),
-  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', 'PURCHASE_ADMIN', TRUE),
-  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', 'HAZARD_ADMIN', TRUE),
-  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', 'LEDGER_ADMIN', TRUE),
-  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', 'WORK_ADMIN', TRUE),
-  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', 'READ_ONLY', TRUE)
+  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
+  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 'MANAGE', TRUE)
 ON CONFLICT (username) DO UPDATE
 SET display_name = EXCLUDED.display_name,
-    role = EXCLUDED.role,
+    department_name = EXCLUDED.department_name,
     enabled = EXCLUDED.enabled;
+
+-- 种子用户按用户名挂到同名内置角色（幂等，不覆盖管理员手工调整过的角色分配）。
+INSERT INTO user_role (user_id, role_id)
+SELECT u.id, r.id
+FROM "user" u
+JOIN role r ON (
+  (u.username = 'admin' AND r.name = '超级管理员') OR
+  (u.username = 'warehouse' AND r.name = '库房管理员') OR
+  (u.username = 'purchase' AND r.name = '采购管理员') OR
+  (u.username = 'hazard' AND r.name = '隐患管理员') OR
+  (u.username = 'ledger' AND r.name = '台账管理员') OR
+  (u.username = 'work' AND r.name = '工单管理员') OR
+  (u.username = 'readonly' AND r.name = '只读用户')
+)
+ON CONFLICT (user_id, role_id) DO NOTHING;

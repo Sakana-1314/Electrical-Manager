@@ -1,6 +1,6 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
-const { canOutbound, isFeatureDisabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
+const { canOutbound, entryEnabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
@@ -68,14 +68,15 @@ Page({
       this.setData({
         user: session.user,
         featureReady: true,
+        // 入口 = 全局功能开关开启 且 用户权限并集里有对应模块的读权限（RBAC 下放：有权限才看得到）。
         entryVisible: {
-          inventory: !isFeatureDisabled('inventory_mode'),
-          huaxing: !isFeatureDisabled('huaxing_inventory_mode'),
-          purchasePlans: !isFeatureDisabled('purchase_plans_mode'),
-          purchaseRecords: !isFeatureDisabled('purchase_records_mode'),
-          ledger: !isFeatureDisabled('ledger_mode'),
-          hazards: !isFeatureDisabled('hazards_mode'),
-          materialCodes: !isFeatureDisabled('material_codes_mode'),
+          inventory: entryEnabled('inventory'),
+          huaxing: entryEnabled('huaxing'),
+          purchasePlans: entryEnabled('purchasePlans'),
+          purchaseRecords: entryEnabled('purchaseRecords'),
+          ledger: entryEnabled('ledger'),
+          hazards: entryEnabled('hazards'),
+          materialCodes: entryEnabled('materialCodes'),
         },
         liteMode,
         canScan: canOutbound(),

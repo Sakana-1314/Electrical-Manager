@@ -12,7 +12,8 @@
 | `UNAUTHORIZED` | 401 | 请先登录 | `auth` |
 | `USER_DISABLED` | 401 | 用户不存在或已停用 | `auth` |
 | `ACCOUNT_DISABLED` | 403 | 账号待审核或已停用，请联系管理员 | `auth`、`service/miniprogram` |
-| `FORBIDDEN` | 403 | 没有执行此操作的权限 | `auth`、`service/share` |
+| `FORBIDDEN` | 403 | 没有执行此操作的权限 | `auth`（旧 `Roles` 依赖，逐步被 `PERMISSION_DENIED` 取代）、`service/share` |
+| `PERMISSION_DENIED` | 403 | 没有执行此操作的权限（角色权限并集不包含所需权限） | `auth`（`RequirePermission`） |
 | `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `service/miniprogram` |
 | `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `service/miniprogram` |
 | `SECONDARY_WAREHOUSE_LITE_MODE` | 403 | 精简模式下二级库仅支持导入与查询 | `api/deps` |
@@ -43,6 +44,12 @@
 | `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `service/miniprogram` |
 | `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `service/material` |
 | `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `service/dictionary` |
+| `ROLE_NAME_CONFLICT` | 409 | 角色名称已存在 | `service/role` |
+| `ROLE_SYSTEM_LOCKED` | 409 | 内置角色不可编辑或删除 | `service/role` |
+| `ROLE_IN_USE` | 409 | 仍有用户挂载此角色，请先解除关联 | `service/role` |
+| `ROLE_NOT_FOUND` | 500 | 内置「只读用户」角色缺失（种子数据被破坏） | `service/role` |
+| `INVALID_ROLES` | 422 | 存在无效的角色 id（用户保存时的角色列表校验） | `service/role` |
+| `INVALID_PERMISSIONS` | 422 | 权限键不在权限目录内或重复（角色保存校验） | `service/role` |
 | `PLAN_NO_CONFLICT` | 409 | 计划号生成冲突，请稍后重试 | `service/material` |
 | `PLAN_ALREADY_MOVED` | 409 | 部分申购计划已转入申购记录 | `service/purchaserequest` |
 | `PLAN_DAILY_LIMIT_EXCEEDED` | 409 | 同一计划日期最多创建 999 条申购计划 | `service/material` |

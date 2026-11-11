@@ -12,6 +12,7 @@ export const tableColumnWidths = {
   code: 150,
   identifier: 176,
   name: 220,
+  description: 260,
   material: 280,
   model: 240,
   text: 200,

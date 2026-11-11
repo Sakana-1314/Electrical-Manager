@@ -774,6 +774,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 角色列表（含各角色挂载的用户数） */
+        get: operations["roles_api_v1_roles_get"];
+        put?: never;
+        /** 新建角色 */
+        post: operations["create_role_api_v1_roles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 权限目录（角色编辑界面的可选项） */
+        get: operations["permission_catalog_api_v1_roles_permissions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** 删除角色（内置角色不可删除；仍有用户挂载时拒绝） */
+        delete: operations["delete_role_api_v1_roles_item_id_delete"];
+        options?: never;
+        head?: never;
+        /** 编辑角色（内置角色不可编辑） */
+        patch: operations["update_role_api_v1_roles_item_id_patch"];
+        trace?: never;
+    };
     "/api/v1/mini-program-users": {
         parameters: {
             query?: never;
@@ -4383,9 +4436,32 @@ export interface components {
          *         "id": 1,
          *         "username": "admin",
          *         "display_name": "系统管理员",
-         *         "role": "SUPER_ADMIN",
+         *         "roles": [
+         *           {
+         *             "id": 1,
+         *             "name": "超级管理员",
+         *             "is_system": true
+         *           }
+         *         ],
          *         "enabled": true,
-         *         "version": 1
+         *         "version": 1,
+         *         "department_name": "华星检修维护部电气车间",
+         *         "source": "MANAGE",
+         *         "permissions": [
+         *           "codes:read",
+         *           "hazard:read",
+         *           "hazard:write",
+         *           "huaxing:read",
+         *           "ledger:read",
+         *           "ledger:write",
+         *           "purchase:read",
+         *           "purchase:write",
+         *           "settings:write",
+         *           "warehouse:read",
+         *           "warehouse:write",
+         *           "work:read",
+         *           "work:write"
+         *         ]
          *       }
          *     }
          */
@@ -4887,7 +4963,24 @@ export interface components {
          *         "created_at": "2026-08-14T10:20:00+08:00",
          *         "updated_at": "2026-09-02T09:35:00+08:00",
          *         "last_used_at": "2026-09-13T09:12:00+08:00",
-         *         "version": 2
+         *         "version": 2,
+         *         "source": "MINI_PROGRAM",
+         *         "roles": [
+         *           {
+         *             "id": 7,
+         *             "name": "只读用户",
+         *             "is_system": true
+         *           }
+         *         ],
+         *         "permissions": [
+         *           "codes:read",
+         *           "hazard:read",
+         *           "huaxing:read",
+         *           "ledger:read",
+         *           "purchase:read",
+         *           "warehouse:read",
+         *           "work:read"
+         *         ]
          *       },
          *       "requires_profile": false
          *     }
@@ -5531,23 +5624,29 @@ export interface components {
          *       "display_name": "孙浩宇",
          *       "department_name": "检修维护部电气自动化车间",
          *       "enabled": true,
+         *       "source": "MINI_PROGRAM",
+         *       "roles": [
+         *         {
+         *           "id": 7,
+         *           "name": "只读用户",
+         *           "is_system": true
+         *         }
+         *       ],
+         *       "permissions": [
+         *         "dashboard:read",
+         *         "warehouse:read"
+         *       ],
+         *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "identities": [
          *         {
          *           "id": 11,
          *           "app_id": "wx9d2f1c8a5b3e4701",
          *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *           "created_at": "2026-08-14T10:20:00+08:00"
-         *         },
-         *         {
-         *           "id": 12,
-         *           "app_id": "wx4b7e0a6d2c918f35",
-         *           "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-         *           "created_at": "2026-09-02T09:35:00+08:00"
          *         }
          *       ],
          *       "created_at": "2026-08-14T10:20:00+08:00",
          *       "updated_at": "2026-09-02T09:35:00+08:00",
-         *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "version": 2
          *     }
          */
@@ -5560,6 +5659,14 @@ export interface components {
             department_name: string;
             /** Enabled */
             enabled: boolean;
+            source: components["schemas"]["UserSource"];
+            /** Roles */
+            roles: components["schemas"]["UserRoleRead"][];
+            /**
+             * Permissions
+             * @description 角色权限并集（通配已展开），小程序端按它门禁功能入口与写操作
+             */
+            permissions: string[];
             /** Last Used At */
             last_used_at?: string | null;
             /** Identities */
@@ -5583,6 +5690,10 @@ export interface components {
          *       "display_name": "孙浩宇",
          *       "department_name": "检修维护部电气自动化车间",
          *       "enabled": true,
+         *       "role_ids": [
+         *         7,
+         *         4
+         *       ],
          *       "version": 2
          *     }
          */
@@ -5593,6 +5704,11 @@ export interface components {
             department_name?: string | null;
             /** Enabled */
             enabled?: boolean | null;
+            /**
+             * Role Ids
+             * @description 全量替换用户的角色（缺省表示不修改）
+             */
+            role_ids?: number[] | null;
             /** Version */
             version: number;
         };
@@ -7844,7 +7960,24 @@ export interface components {
          *           "created_at": "2026-08-14T10:20:00+08:00",
          *           "updated_at": "2026-09-02T09:35:00+08:00",
          *           "last_used_at": "2026-09-13T09:12:00+08:00",
-         *           "version": 2
+         *           "version": 2,
+         *           "source": "MINI_PROGRAM",
+         *           "roles": [
+         *             {
+         *               "id": 7,
+         *               "name": "只读用户",
+         *               "is_system": true
+         *             }
+         *           ],
+         *           "permissions": [
+         *             "codes:read",
+         *             "hazard:read",
+         *             "huaxing:read",
+         *             "ledger:read",
+         *             "purchase:read",
+         *             "warehouse:read",
+         *             "work:read"
+         *           ]
          *         },
          *         {
          *           "id": 2,
@@ -7862,7 +7995,24 @@ export interface components {
          *           "created_at": "2026-08-14T10:26:00+08:00",
          *           "updated_at": "2026-08-14T10:26:00+08:00",
          *           "last_used_at": "2026-09-06T14:05:00+08:00",
-         *           "version": 1
+         *           "version": 1,
+         *           "source": "MINI_PROGRAM",
+         *           "roles": [
+         *             {
+         *               "id": 7,
+         *               "name": "只读用户",
+         *               "is_system": true
+         *             }
+         *           ],
+         *           "permissions": [
+         *             "codes:read",
+         *             "hazard:read",
+         *             "huaxing:read",
+         *             "ledger:read",
+         *             "purchase:read",
+         *             "warehouse:read",
+         *             "work:read"
+         *           ]
          *         },
          *         {
          *           "id": 3,
@@ -7880,7 +8030,24 @@ export interface components {
          *           "created_at": "2026-08-15T08:12:00+08:00",
          *           "updated_at": "2026-09-04T11:02:00+08:00",
          *           "last_used_at": "2026-08-15T08:12:00+08:00",
-         *           "version": 2
+         *           "version": 2,
+         *           "source": "MINI_PROGRAM",
+         *           "roles": [
+         *             {
+         *               "id": 7,
+         *               "name": "只读用户",
+         *               "is_system": true
+         *             }
+         *           ],
+         *           "permissions": [
+         *             "codes:read",
+         *             "hazard:read",
+         *             "huaxing:read",
+         *             "ledger:read",
+         *             "purchase:read",
+         *             "warehouse:read",
+         *             "work:read"
+         *           ]
          *         }
          *       ],
          *       "page": 1,
@@ -9796,10 +9963,24 @@ export interface components {
          *           "id": 2,
          *           "username": "warehouse",
          *           "display_name": "仓库管理员",
-         *           "role": "WAREHOUSE_ADMIN",
          *           "enabled": true,
          *           "version": 1,
-         *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+         *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
+         *           "department_name": "华星检修维护部电气车间",
+         *           "source": "MANAGE",
+         *           "roles": [
+         *             {
+         *               "id": 2,
+         *               "name": "库房管理员",
+         *               "is_system": true
+         *             }
+         *           ],
+         *           "permissions": [
+         *             "codes:read",
+         *             "huaxing:read",
+         *             "warehouse:read",
+         *             "warehouse:write"
+         *           ]
          *         }
          *       ],
          *       "page": 1,
@@ -11858,10 +12039,131 @@ export interface components {
             lines: components["schemas"]["OperationLineWrite"][];
         };
         /**
-         * Role
+         * UserSource
          * @enum {string}
          */
-        Role: "SUPER_ADMIN" | "WAREHOUSE_ADMIN" | "PURCHASE_ADMIN" | "HAZARD_ADMIN" | "READ_ONLY" | "LEDGER_ADMIN" | "WORK_ADMIN";
+        UserSource: "MANAGE" | "MINI_PROGRAM";
+        /**
+         * UserRoleRead
+         * @example {
+         *       "id": 2,
+         *       "name": "库房管理员",
+         *       "is_system": true
+         *     }
+         */
+        UserRoleRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Is System */
+            is_system: boolean;
+        };
+        /**
+         * RoleRead
+         * @example {
+         *       "id": 2,
+         *       "name": "库房管理员",
+         *       "description": "二级库与出入库、华星库存、编码库查询",
+         *       "permissions": [
+         *         "codes:read",
+         *         "huaxing:read",
+         *         "warehouse:read",
+         *         "warehouse:write"
+         *       ],
+         *       "is_system": true,
+         *       "user_count": 1,
+         *       "created_at": "2026-01-01T00:00:00+00:00",
+         *       "updated_at": "2026-01-01T00:00:00+00:00",
+         *       "version": 1
+         *     }
+         */
+        RoleRead: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Permissions */
+            permissions: string[];
+            /** Is System */
+            is_system: boolean;
+            /** User Count */
+            user_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * RoleCreate
+         * @example {
+         *       "name": "采购查询",
+         *       "description": "只看申购模块",
+         *       "permissions": [
+         *         "dashboard:read",
+         *         "purchase:read"
+         *       ]
+         *     }
+         */
+        RoleCreate: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string;
+            /** Permissions */
+            permissions?: string[];
+        };
+        /**
+         * RoleUpdate
+         * @example {
+         *       "name": "采购查询",
+         *       "description": "只看申购模块（含仪表盘）",
+         *       "permissions": [
+         *         "dashboard:read",
+         *         "purchase:read"
+         *       ],
+         *       "version": 1
+         *     }
+         */
+        RoleUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Permissions */
+            permissions?: string[] | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * PermissionDef
+         * @example {
+         *       "key": "warehouse:write",
+         *       "module": "inventory",
+         *       "action": "write",
+         *       "label": "二级库出入库与库存调整"
+         *     }
+         */
+        PermissionDef: {
+            /** Key */
+            key: string;
+            /** Module */
+            module: string;
+            /** Action */
+            action: string;
+            /** Label */
+            label: string;
+        };
         /**
          * SecondaryWarehouseMode
          * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
@@ -12423,7 +12725,21 @@ export interface components {
          *       "id": 2,
          *       "username": "warehouse",
          *       "display_name": "仓库管理员",
-         *       "role": "WAREHOUSE_ADMIN",
+         *       "department_name": "华星检修维护部电气车间",
+         *       "source": "MANAGE",
+         *       "roles": [
+         *         {
+         *           "id": 2,
+         *           "name": "库房管理员",
+         *           "is_system": true
+         *         }
+         *       ],
+         *       "permissions": [
+         *         "codes:read",
+         *         "huaxing:read",
+         *         "warehouse:read",
+         *         "warehouse:write"
+         *       ],
          *       "enabled": true,
          *       "version": 1,
          *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
@@ -12436,7 +12752,16 @@ export interface components {
             username: string;
             /** Display Name */
             display_name: string;
-            role: components["schemas"]["Role"];
+            /** Department Name */
+            department_name: string;
+            source: components["schemas"]["UserSource"];
+            /** Roles */
+            roles: components["schemas"]["UserRoleRead"][];
+            /**
+             * Permissions
+             * @description 角色权限并集（通配已展开）
+             */
+            permissions: string[];
             /** Enabled */
             enabled: boolean;
             /** Version */
@@ -12463,8 +12788,22 @@ export interface components {
          *       "username": "warehouse",
          *       "password": "123456",
          *       "display_name": "仓库管理员",
-         *       "role": "WAREHOUSE_ADMIN",
-         *       "enabled": true
+         *       "department_name": "华星检修维护部电气车间",
+         *       "enabled": true,
+         *       "source": "MANAGE",
+         *       "roles": [
+         *         {
+         *           "id": 2,
+         *           "name": "库房管理员",
+         *           "is_system": true
+         *         }
+         *       ],
+         *       "permissions": [
+         *         "codes:read",
+         *         "huaxing:read",
+         *         "warehouse:read",
+         *         "warehouse:write"
+         *       ]
          *     }
          */
         UserCreate: {
@@ -12474,7 +12813,13 @@ export interface components {
             password: string;
             /** Display Name */
             display_name: string;
-            role: components["schemas"]["Role"];
+            /** Department Name */
+            department_name?: string;
+            /**
+             * Role Ids
+             * @description 挂载的角色 id 列表（多角色，权限取并集）
+             */
+            role_ids?: number[];
             /**
              * Enabled
              * @default true
@@ -12487,7 +12832,30 @@ export interface components {
          *       "id": 1,
          *       "username": "admin",
          *       "display_name": "系统管理员",
-         *       "role": "SUPER_ADMIN",
+         *       "department_name": "华星检修维护部电气车间",
+         *       "source": "MANAGE",
+         *       "roles": [
+         *         {
+         *           "id": 1,
+         *           "name": "超级管理员",
+         *           "is_system": true
+         *         }
+         *       ],
+         *       "permissions": [
+         *         "codes:read",
+         *         "hazard:read",
+         *         "hazard:write",
+         *         "huaxing:read",
+         *         "ledger:read",
+         *         "ledger:write",
+         *         "purchase:read",
+         *         "purchase:write",
+         *         "settings:write",
+         *         "warehouse:read",
+         *         "warehouse:write",
+         *         "work:read",
+         *         "work:write"
+         *       ],
          *       "enabled": true,
          *       "version": 1
          *     }
@@ -12499,7 +12867,16 @@ export interface components {
             username: string;
             /** Display Name */
             display_name: string;
-            role: components["schemas"]["Role"];
+            /** Department Name */
+            department_name: string;
+            source: components["schemas"]["UserSource"];
+            /** Roles */
+            roles: components["schemas"]["UserRoleRead"][];
+            /**
+             * Permissions
+             * @description 角色权限并集（通配已展开）
+             */
+            permissions: string[];
             /** Enabled */
             enabled: boolean;
             /** Version */
@@ -12510,10 +12887,32 @@ export interface components {
          * @example {
          *       "username": "warehouse",
          *       "display_name": "仓库管理员",
-         *       "password": "123456",
-         *       "role": "WAREHOUSE_ADMIN",
+         *       "department_name": "华星检修维护部电气车间",
          *       "enabled": true,
-         *       "version": 2
+         *       "version": 2,
+         *       "source": "MANAGE",
+         *       "roles": [
+         *         {
+         *           "id": 2,
+         *           "name": "库房管理员",
+         *           "is_system": true
+         *         },
+         *         {
+         *           "id": 7,
+         *           "name": "只读用户",
+         *           "is_system": true
+         *         }
+         *       ],
+         *       "permissions": [
+         *         "codes:read",
+         *         "hazard:read",
+         *         "huaxing:read",
+         *         "ledger:read",
+         *         "purchase:read",
+         *         "warehouse:read",
+         *         "warehouse:write",
+         *         "work:read"
+         *       ]
          *     }
          */
         UserUpdate: {
@@ -12521,9 +12920,15 @@ export interface components {
             username?: string | null;
             /** Display Name */
             display_name?: string | null;
+            /** Department Name */
+            department_name?: string | null;
             /** Password */
             password?: string | null;
-            role?: components["schemas"]["Role"] | null;
+            /**
+             * Role Ids
+             * @description 全量替换用户的角色（缺省表示不修改）
+             */
+            role_ids?: number[] | null;
             /** Enabled */
             enabled?: boolean | null;
             /** Version */
@@ -13194,9 +13599,32 @@ export interface operations {
                      *         "id": 1,
                      *         "username": "admin",
                      *         "display_name": "系统管理员",
-                     *         "role": "SUPER_ADMIN",
+                     *         "roles": [
+                     *           {
+                     *             "id": 1,
+                     *             "name": "超级管理员",
+                     *             "is_system": true
+                     *           }
+                     *         ],
                      *         "enabled": true,
-                     *         "version": 1
+                     *         "version": 1,
+                     *         "department_name": "华星检修维护部电气车间",
+                     *         "source": "MANAGE",
+                     *         "permissions": [
+                     *           "codes:read",
+                     *           "hazard:read",
+                     *           "hazard:write",
+                     *           "huaxing:read",
+                     *           "ledger:read",
+                     *           "ledger:write",
+                     *           "purchase:read",
+                     *           "purchase:write",
+                     *           "settings:write",
+                     *           "warehouse:read",
+                     *           "warehouse:write",
+                     *           "work:read",
+                     *           "work:write"
+                     *         ]
                      *       }
                      *     }
                      */
@@ -13426,9 +13854,32 @@ export interface operations {
                      *       "id": 1,
                      *       "username": "admin",
                      *       "display_name": "系统管理员",
-                     *       "role": "SUPER_ADMIN",
+                     *       "roles": [
+                     *         {
+                     *           "id": 1,
+                     *           "name": "超级管理员",
+                     *           "is_system": true
+                     *         }
+                     *       ],
                      *       "enabled": true,
-                     *       "version": 1
+                     *       "version": 1,
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "source": "MANAGE",
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "hazard:read",
+                     *         "hazard:write",
+                     *         "huaxing:read",
+                     *         "ledger:read",
+                     *         "ledger:write",
+                     *         "purchase:read",
+                     *         "purchase:write",
+                     *         "settings:write",
+                     *         "warehouse:read",
+                     *         "warehouse:write",
+                     *         "work:read",
+                     *         "work:write"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["UserRead"];
@@ -21765,6 +22216,389 @@ export interface operations {
             };
         };
     };
+    roles_api_v1_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": 2,
+                     *         "name": "库房管理员",
+                     *         "description": "二级库与出入库、华星库存、编码库查询",
+                     *         "permissions": [
+                     *           "codes:read",
+                     *           "dashboard:read",
+                     *           "huaxing:read",
+                     *           "warehouse:read",
+                     *           "warehouse:write"
+                     *         ],
+                     *         "is_system": true,
+                     *         "user_count": 1,
+                     *         "created_at": "2026-01-01T00:00:00+00:00",
+                     *         "updated_at": "2026-01-01T00:00:00+00:00",
+                     *         "version": 1
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["RoleRead"][];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_role_api_v1_roles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "name": "库房管理员",
+                     *       "description": "二级库与出入库、华星库存、编码库查询",
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ],
+                     *       "is_system": true,
+                     *       "user_count": 1,
+                     *       "created_at": "2026-01-01T00:00:00+00:00",
+                     *       "updated_at": "2026-01-01T00:00:00+00:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RoleRead"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    permission_catalog_api_v1_roles_permissions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "key": "warehouse:write",
+                     *         "module": "inventory",
+                     *         "action": "write",
+                     *         "label": "二级库出入库与库存调整"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["PermissionDef"][];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    delete_role_api_v1_roles_item_id_delete: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": number;
+            };
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    update_role_api_v1_roles_item_id_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 2,
+                     *       "name": "库房管理员",
+                     *       "description": "二级库与出入库、华星库存、编码库查询",
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ],
+                     *       "is_system": true,
+                     *       "user_count": 1,
+                     *       "created_at": "2026-01-01T00:00:00+00:00",
+                     *       "updated_at": "2026-01-01T00:00:00+00:00",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RoleRead"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     list_mini_program_users_api_v1_mini_program_users_get: {
         parameters: {
             query?: {
@@ -21809,7 +22643,24 @@ export interface operations {
                      *           "created_at": "2026-08-14T10:20:00+08:00",
                      *           "updated_at": "2026-09-02T09:35:00+08:00",
                      *           "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *           "version": 2
+                     *           "version": 2,
+                     *           "source": "MINI_PROGRAM",
+                     *           "roles": [
+                     *             {
+                     *               "id": 7,
+                     *               "name": "只读用户",
+                     *               "is_system": true
+                     *             }
+                     *           ],
+                     *           "permissions": [
+                     *             "codes:read",
+                     *             "hazard:read",
+                     *             "huaxing:read",
+                     *             "ledger:read",
+                     *             "purchase:read",
+                     *             "warehouse:read",
+                     *             "work:read"
+                     *           ]
                      *         },
                      *         {
                      *           "id": 2,
@@ -21827,7 +22678,24 @@ export interface operations {
                      *           "created_at": "2026-08-14T10:26:00+08:00",
                      *           "updated_at": "2026-08-14T10:26:00+08:00",
                      *           "last_used_at": "2026-09-06T14:05:00+08:00",
-                     *           "version": 1
+                     *           "version": 1,
+                     *           "source": "MINI_PROGRAM",
+                     *           "roles": [
+                     *             {
+                     *               "id": 7,
+                     *               "name": "只读用户",
+                     *               "is_system": true
+                     *             }
+                     *           ],
+                     *           "permissions": [
+                     *             "codes:read",
+                     *             "hazard:read",
+                     *             "huaxing:read",
+                     *             "ledger:read",
+                     *             "purchase:read",
+                     *             "warehouse:read",
+                     *             "work:read"
+                     *           ]
                      *         },
                      *         {
                      *           "id": 3,
@@ -21845,7 +22713,24 @@ export interface operations {
                      *           "created_at": "2026-08-15T08:12:00+08:00",
                      *           "updated_at": "2026-09-04T11:02:00+08:00",
                      *           "last_used_at": "2026-08-15T08:12:00+08:00",
-                     *           "version": 2
+                     *           "version": 2,
+                     *           "source": "MINI_PROGRAM",
+                     *           "roles": [
+                     *             {
+                     *               "id": 7,
+                     *               "name": "只读用户",
+                     *               "is_system": true
+                     *             }
+                     *           ],
+                     *           "permissions": [
+                     *             "codes:read",
+                     *             "hazard:read",
+                     *             "huaxing:read",
+                     *             "ledger:read",
+                     *             "purchase:read",
+                     *             "warehouse:read",
+                     *             "work:read"
+                     *           ]
                      *         }
                      *       ],
                      *       "page": 1,
@@ -22094,7 +22979,24 @@ export interface operations {
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "version": 2
+                     *       "version": 2,
+                     *       "source": "MINI_PROGRAM",
+                     *       "roles": [
+                     *         {
+                     *           "id": 7,
+                     *           "name": "只读用户",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "hazard:read",
+                     *         "huaxing:read",
+                     *         "ledger:read",
+                     *         "purchase:read",
+                     *         "warehouse:read",
+                     *         "work:read"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramUserRead"];
@@ -22231,7 +23133,24 @@ export interface operations {
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "version": 2
+                     *       "version": 2,
+                     *       "source": "MINI_PROGRAM",
+                     *       "roles": [
+                     *         {
+                     *           "id": 7,
+                     *           "name": "只读用户",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "hazard:read",
+                     *         "huaxing:read",
+                     *         "ledger:read",
+                     *         "purchase:read",
+                     *         "warehouse:read",
+                     *         "work:read"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramUserRead"];
@@ -22370,7 +23289,24 @@ export interface operations {
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *         "version": 2
+                     *         "version": 2,
+                     *         "source": "MINI_PROGRAM",
+                     *         "roles": [
+                     *           {
+                     *             "id": 7,
+                     *             "name": "只读用户",
+                     *             "is_system": true
+                     *           }
+                     *         ],
+                     *         "permissions": [
+                     *           "codes:read",
+                     *           "hazard:read",
+                     *           "huaxing:read",
+                     *           "ledger:read",
+                     *           "purchase:read",
+                     *           "warehouse:read",
+                     *           "work:read"
+                     *         ]
                      *       },
                      *       "requires_profile": false
                      *     }
@@ -22503,7 +23439,24 @@ export interface operations {
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "version": 2
+                     *       "version": 2,
+                     *       "source": "MINI_PROGRAM",
+                     *       "roles": [
+                     *         {
+                     *           "id": 7,
+                     *           "name": "只读用户",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "hazard:read",
+                     *         "huaxing:read",
+                     *         "ledger:read",
+                     *         "purchase:read",
+                     *         "warehouse:read",
+                     *         "work:read"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramUserRead"];
@@ -22761,7 +23714,24 @@ export interface operations {
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *         "version": 2
+                     *         "version": 2,
+                     *         "source": "MINI_PROGRAM",
+                     *         "roles": [
+                     *           {
+                     *             "id": 7,
+                     *             "name": "只读用户",
+                     *             "is_system": true
+                     *           }
+                     *         ],
+                     *         "permissions": [
+                     *           "codes:read",
+                     *           "hazard:read",
+                     *           "huaxing:read",
+                     *           "ledger:read",
+                     *           "purchase:read",
+                     *           "warehouse:read",
+                     *           "work:read"
+                     *         ]
                      *       },
                      *       "requires_profile": false
                      *     }
@@ -33327,10 +34297,24 @@ export interface operations {
                      *           "id": 2,
                      *           "username": "warehouse",
                      *           "display_name": "仓库管理员",
-                     *           "role": "WAREHOUSE_ADMIN",
                      *           "enabled": true,
                      *           "version": 1,
-                     *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
+                     *           "department_name": "华星检修维护部电气车间",
+                     *           "source": "MANAGE",
+                     *           "roles": [
+                     *             {
+                     *               "id": 2,
+                     *               "name": "库房管理员",
+                     *               "is_system": true
+                     *             }
+                     *           ],
+                     *           "permissions": [
+                     *             "codes:read",
+                     *             "huaxing:read",
+                     *             "warehouse:read",
+                     *             "warehouse:write"
+                     *           ]
                      *         }
                      *       ],
                      *       "page": 1,
@@ -33452,10 +34436,24 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
-                     *       "role": "WAREHOUSE_ADMIN",
                      *       "enabled": true,
                      *       "version": 1,
-                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "source": "MANAGE",
+                     *       "roles": [
+                     *         {
+                     *           "id": 2,
+                     *           "name": "库房管理员",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["UserApiTokenRead"];
@@ -33679,10 +34677,24 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
-                     *       "role": "WAREHOUSE_ADMIN",
                      *       "enabled": true,
                      *       "version": 1,
-                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "source": "MANAGE",
+                     *       "roles": [
+                     *         {
+                     *           "id": 2,
+                     *           "name": "库房管理员",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["UserApiTokenRead"];
@@ -33801,10 +34813,24 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
-                     *       "role": "WAREHOUSE_ADMIN",
                      *       "enabled": true,
                      *       "version": 1,
-                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "source": "MANAGE",
+                     *       "roles": [
+                     *         {
+                     *           "id": 2,
+                     *           "name": "库房管理员",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "codes:read",
+                     *         "huaxing:read",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["UserApiTokenRead"];

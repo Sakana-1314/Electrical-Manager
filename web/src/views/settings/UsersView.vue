@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue'
+import { computed, h, onMounted, reactive, ref } from 'vue'
 import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
-import type { ManagedUser, Role } from '@/api/generated'
-import { dictionaryApi } from '@/api/dictionaries'
+import type { ManagedUser, RoleRead } from '@/api/generated'
+import { dictionaryApi, roleApi } from '@/api/dictionaries'
 import {
   getTableScrollX,
   preventTableColumnCompression,
   tableColumnWidths,
 } from '@/constants/table'
-import { roleLabels } from '@/types/navigation'
 import { activeBackendUrl } from '@/api/backend'
 import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
+
+// 可选角色列表（RBAC）：用户可挂多个角色，权限取并集；「角色管理」页维护角色本体。
+const roleOptions = ref<RoleRead[]>([])
 
 const message = useMessage()
 const dialog = useDialog()
@@ -35,19 +37,34 @@ const mcpUrl = computed(() =>
 const form = reactive({
   username: '',
   display_name: '',
-  role: 'READ_ONLY' as Role,
+  department_name: '',
+  role_ids: [] as number[],
   enabled: true,
   password: '',
   version: 0,
+})
+onMounted(() => {
+  roleApi.roles().then((roles) => (roleOptions.value = roles))
 })
 const columns = preventTableColumnCompression<ManagedUser>([
   { title: '用户名', key: 'username', width: tableColumnWidths.identifier },
   { title: '显示名称', key: 'display_name', width: tableColumnWidths.name },
   {
     title: '角色',
-    key: 'role',
-    width: tableColumnWidths.code,
-    render: (r) => roleLabels[r.role],
+    key: 'roles',
+    width: tableColumnWidths.description,
+    render: (r) =>
+      h(
+        'div',
+        { style: 'display:flex;flex-wrap:wrap;gap:4px' },
+        (r.roles ?? []).map((role) =>
+          h(
+            NTag,
+            { key: role.id, size: 'small', type: role.is_system ? 'info' : 'default', round: true },
+            { default: () => role.name },
+          ),
+        ),
+      ),
   },
   {
     title: '状态',
@@ -84,7 +101,8 @@ function open(row?: ManagedUser) {
       ? {
           username: row.username,
           display_name: row.display_name,
-          role: row.role,
+          department_name: row.department_name,
+          role_ids: (row.roles ?? []).map((role) => role.id),
           enabled: row.enabled,
           password: '',
           version: row.version,
@@ -92,7 +110,8 @@ function open(row?: ManagedUser) {
       : {
           username: '',
           display_name: '',
-          role: 'READ_ONLY',
+          department_name: '',
+          role_ids: [],
           enabled: true,
           password: '',
           version: 0,
@@ -109,7 +128,8 @@ async function save() {
     const payload = {
       username: form.username,
       display_name: form.display_name,
-      role: form.role,
+      department_name: form.department_name,
+      role_ids: form.role_ids,
       enabled: form.enabled,
       ...(form.password ? { password: form.password } : {}),
     }
@@ -194,7 +214,7 @@ function remove(row: ManagedUser) {
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">管理端用户</h1>
+        <h1 class="page-title">用户管理</h1>
       </div>
       <div class="page-actions">
         <n-button type="primary" @click="open()">新建用户</n-button>
@@ -212,18 +232,20 @@ function remove(row: ManagedUser) {
       v-model:show="show"
       preset="card"
       draggable
-      :title="editing ? '编辑管理端用户' : '新建管理端用户'"
+      :title="editing ? '编辑用户' : '新建用户'"
       style="width: min(620px, calc(100vw - 32px))"
       ><n-form label-placement="top"
         ><n-form-item label="用户名" required><n-input v-model:value="form.username" /></n-form-item
         ><n-form-item label="显示名称" required
           ><n-input v-model:value="form.display_name" /></n-form-item
-        ><n-form-item label="角色"
+        ><n-form-item label="部门单位"
+          ><n-input v-model:value="form.department_name" /></n-form-item
+        ><n-form-item label="角色（可多选，权限取并集）"
           ><n-select
-            v-model:value="form.role"
-            :options="
-              Object.entries(roleLabels).map(([value, label]) => ({ value, label }))
-            " /></n-form-item
+            v-model:value="form.role_ids"
+            multiple
+            clearable
+            :options="roleOptions.map((role) => ({ value: role.id, label: role.name }))" /></n-form-item
         ><n-form-item
           :label="editing ? '重置密码（不修改可留空）' : '初始密码'"
           :required="!editing"

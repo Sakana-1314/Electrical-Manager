@@ -1,6 +1,6 @@
 # 数据模型
 
-PostgreSQL 16+，共 **42 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+PostgreSQL 16+，共 **43 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -117,7 +117,7 @@ flowchart TD
 
 ### 项目：业务数据的隔离维度
 
-所有业务数据都挂在「项目」下：同一用户可访问全部项目，但同一时刻只处理一个项目的数据（网页端在右上角用户菜单里切换，小程序在首页「个人信息」弹窗里切换）。项目表本身是全局表，项目域表都带 `project_id`。
+所有业务数据都挂在「项目」下：同一用户可访问全部项目，但同一时刻只处理一个项目的数据（网页端在右上角用户菜单里切换，小程序在「个人信息」页里切换）。项目表本身是全局表，项目域表都带 `project_id`。
 
 ```mermaid
 erDiagram
@@ -148,14 +148,14 @@ erDiagram
 
 每张表都有 `project_id BIGINT NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。Go 侧清单登记在 `server/internal/model` 的 `ProjectScopedTables`（新增业务表必须同时改 `init.sql`、Go 表结构体并登记），业务 SQL 显式按 `project_id` 过滤。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
-### 全局表（10 张，不隔离）
+### 全局表（11 张，不隔离）
 
-`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
+`project`、`user`、`role`、`user_role`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
 
 | 表 | 不隔离的原因 |
 | --- | --- |
 | `project` | 项目自身就是隔离维度 |
-| `user`、`mini_program_user`、`mini_program_identity` | 用户与身份绑定属用户管理 |
+| `user`、`role`、`user_role`、`mini_program_identity` | 用户与身份绑定属用户管理 |
 | `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、后台主 tab 可见性、AI 搜索配置、Webhook 渠道与订阅） |
 | `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
@@ -203,9 +203,10 @@ flowchart TD
 
 | 表名 | Go 结构体（`model.<名称>`） | 中文含义 | 所属域 |
 | --- | --- | --- | --- |
-| `user` | `User` | 管理端登录账号（含角色与接口令牌双列） | 用户 |
-| `mini_program_user` | `MiniProgramUser` | 小程序用户档案 | 用户 |
-| `mini_program_identity` | `MiniProgramIdentity` | 小程序用户与微信 OpenID 的绑定关系 | 用户 |
+| `user` | `User` | 统一用户（管理端 + 小程序端，角色在 `user_role`，权限取并集） | 用户 |
+| `role` | `Role` | 角色（RBAC）：权限键数组，`*` 通配全部权限 | 用户 |
+| `user_role` | `UserRole` | 用户 ↔ 角色多对多（一个用户可挂多个角色） | 用户 |
+| `mini_program_identity` | `MiniProgramIdentity` | 用户与微信 OpenID 的绑定关系（`user_id` → 统一用户） | 用户 |
 | `system_setting` | `SystemSetting` | 系统设置键值表 | 系统配置 |
 | `business_event_log` | `BusinessEventLog` | 业务事件日志（状态流转与数据快照） | 系统配置 |
 | `webhook_channel` | `WebhookChannel` | Webhook 渠道配置（飞书 / 钉钉） | Webhook |
@@ -255,10 +256,12 @@ erDiagram
     user ||--o{ share_link : "创建分享链接"
     user ||--o{ excel_import_job : "创建导入任务"
     user ||--o{ excel_export_job : "创建导出任务"
-    mini_program_user ||--o{ mini_program_identity : "绑定微信身份（一个用户多个 AppID 身份）"
+    user ||--o{ user_role : "挂载角色（多角色，权限取并集）"
+    role ||--o{ user_role : "被用户挂载"
+    user ||--o{ mini_program_identity : "绑定微信身份（一个用户多个 AppID 身份）"
 ```
 
-`user` 一人一个角色，接口令牌双列存储（查询用哈希 + 回显用密文）。
+`user` 是管理端与小程序端的统一账号：角色挂在 `user_role`（可多个，权限取并集），接口令牌双列存储（查询用哈希 + 回显用密文）；小程序来源用户（`source = 'MINI_PROGRAM'`）`username` 由 openid 派生、无密码。
 
 ### 二级库库存
 
@@ -366,25 +369,30 @@ erDiagram
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
 | --- | --- | --- | --- | --- | --- |
 | `user` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一 |
-| `user` | `password_hash` | VARCHAR(255) | 否 | 无 | Argon2id 密码哈希 |
-| `user` | `api_token_hash` | VARCHAR(64) | 否 | 无 | 接口令牌 SHA-256，唯一，用于认证查找 |
+| `user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`） |
+| `user` | `password_hash` | VARCHAR(255) | 否 | `''` | Argon2id 密码哈希（小程序来源用户为空串，不可密码登录） |
+| `user` | `api_token_hash` | VARCHAR(64) | 否 | `''` | 接口令牌 SHA-256，非空值唯一（部分唯一索引，小程序用户为空串），用于认证查找 |
 | `user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
 | `user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
-| `user` | `role` | ENUM('SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'PURCHASE_ADMIN', 'HAZARD_ADMIN', 'READ_ONLY', 'LEDGER_ADMIN', 'WORK_ADMIN') | 否 | 无 | 角色，接口同名字符串 |
+| `user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
+| `user` | `source` | ENUM('MANAGE', 'MINI_PROGRAM') | 否 | `'MANAGE'` | 账号来源，接口同名字符串 |
 | `user` | `enabled` | TINYINT(1) | 否 | 1 | 账号是否启用 |
-| `user` | *索引 / 外键* | — | — | — | 索引 `pk_user(id)`；唯一 `uq_user_username(username)`、`uq_user_api_token_hash(api_token_hash)`；外键：无 |
-| `mini_program_user` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `mini_program_user` | `display_name` | VARCHAR(128) | 否 | 无 | 姓名 |
-| `mini_program_user` | `department_name` | VARCHAR(128) | 否 | `'华星检修维护部电气车间'` | 部门 |
-| `mini_program_user` | `enabled` | TINYINT(1) | 否 | 1 | 是否允许使用小程序 |
-| `mini_program_user` | `last_used_at` | DATETIME(6) | 是 | NULL | 最近一次登录小程序的时间（登录即刷新，不自增 version；本字段上线前建档的历史数据为 NULL） |
-| `mini_program_user` | *索引 / 外键* | — | — | — | 索引 `pk_mini_program_user(id)`；外键：无 |
+| `user` | `last_used_at` | DATETIME(6) | 是 | NULL | 小程序来源用户的最近登录时间（登录即刷新，不自增 version） |
+| `user` | *索引 / 外键* | — | — | — | 索引 `pk_user(id)`；唯一 `uq_user_username(username)`；部分唯一索引 `uq_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`；外键：无 |
+| `role` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
+| `role` | `name` | VARCHAR(64) | 否 | 无 | 角色名，唯一（内置角色为系统种子） |
+| `role` | `description` | VARCHAR(255) | 否 | `''` | 角色说明 |
+| `role` | `permissions` | JSON | 否 | `'[]'` | 权限键数组（`system:admin` / `inventory:write` 等；`*` 通配全部、`模块:*` 通配模块） |
+| `role` | `is_system` | TINYINT(1) | 否 | 0 | 是否内置角色（内置角色不可改名 / 删除） |
+| `role` | *索引 / 外键* | — | — | — | 索引 `pk_role(id)`；唯一 `uq_role_name(name)`；外键：无 |
+| `user_role` | `user_id` | BIGINT UNSIGNED | 否 | 无 | 关联用户 |
+| `user_role` | `role_id` | BIGINT UNSIGNED | 否 | 无 | 关联角色 |
+| `user_role` | *索引 / 外键* | — | — | — | 索引 `pk_user_role(id)`；唯一 `uq_user_role_user_id_role_id(user_id, role_id)`；外键 `user_id → user.id`、`role_id → role.id`，均 `ON DELETE CASCADE` |
 | `mini_program_identity` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `mini_program_identity` | `mini_program_user_id` | BIGINT UNSIGNED | 否 | 无 | 关联小程序用户 |
+| `mini_program_identity` | `user_id` | BIGINT UNSIGNED | 否 | 无 | 关联统一用户（source = MINI_PROGRAM） |
 | `mini_program_identity` | `app_id` | VARCHAR(64) | 否 | 无 | 小程序 AppID |
 | `mini_program_identity` | `wechat_openid` | VARCHAR(128) | 否 | 无 | 微信 OpenID |
-| `mini_program_identity` | *索引 / 外键* | — | — | — | 索引 `pk_mini_program_identity(id)`；唯一 `uq_mini_program_identity_app_id(app_id, wechat_openid)`、`uq_mini_program_identity_mini_program_user_id(mini_program_user_id, app_id)`；外键 `mini_program_user_id → mini_program_user.id`，`ON DELETE CASCADE` |
+| `mini_program_identity` | *索引 / 外键* | — | — | — | 索引 `pk_mini_program_identity(id)`；唯一 `uq_mini_program_identity_app_id(app_id, wechat_openid)`、`uq_mini_program_identity_user_id(user_id, app_id)`；外键 `user_id → user.id`，`ON DELETE CASCADE` |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
 | `system_setting` | `setting_value` | JSON | 否 | 无 | 设置值（JSON 文档） |
 | `system_setting` | *索引 / 外键* | — | — | — | 索引 `pk_system_setting(setting_key)`；外键：无 |

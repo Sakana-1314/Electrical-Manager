@@ -26,6 +26,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/purchaserequest"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 )
 
 func init() {
@@ -356,8 +357,8 @@ func findShare(s *db.Session, token string) (*Link, error) {
 	return decode(row)
 }
 
-func canManage(l *Link, user *model.User) bool {
-	return (l.CreatedBy != nil && *l.CreatedBy == user.ID) || user.Role == domain.RoleSuperAdmin
+func canManage(s *db.Session, l *Link, user *model.User) bool {
+	return (l.CreatedBy != nil && *l.CreatedBy == user.ID) || role.UserIsSuperAdmin(s, user.ID)
 }
 
 // RevokeShare 对应 revoke_share：仅创建者本人或超级管理员可执行。
@@ -366,7 +367,7 @@ func RevokeShare(s *db.Session, token string, user *model.User) error {
 	if err != nil {
 		return err
 	}
-	if !canManage(l, user) {
+	if !canManage(s, l, user) {
 		return apperr.New("FORBIDDEN", "只能撤回自己创建的分享链接").WithStatus(403)
 	}
 	_, err = s.Exec("DELETE FROM share_link WHERE id = ? AND project_id = ?", l.ID, l.ProjectID)
@@ -379,7 +380,7 @@ func ListShares(s *db.Session, user *model.User, page, pageSize int64) ([]schema
 	if err := w.Scope(s, "s."); err != nil {
 		return nil, 0, err
 	}
-	if user.Role != domain.RoleSuperAdmin {
+	if !role.UserIsSuperAdmin(s, user.ID) {
 		w.Add("s.created_by = ?", user.ID)
 	}
 	var total int64
@@ -428,7 +429,7 @@ func UpdateShare(s *db.Session, token string, user *model.User, columns *[]strin
 	if err != nil {
 		return nil, err
 	}
-	if !canManage(l, user) {
+	if !canManage(s, l, user) {
 		return nil, apperr.New("FORBIDDEN", "只能修改自己创建的分享链接").WithStatus(403)
 	}
 	changed := false

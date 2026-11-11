@@ -51,7 +51,12 @@ async function mountView(memos: Memo[]): Promise<VueWrapper> {
   api.listMemos.mockResolvedValue(memos)
   localStorage.setItem(
     'auth_user',
-    JSON.stringify({ id: 7, username: 'tester', role: 'SUPER_ADMIN' }),
+    JSON.stringify({
+      id: 7,
+      username: 'tester',
+      roles: [{ id: 1, name: '超级管理员', is_system: true }],
+      permissions: ['settings:write'],
+    }),
   )
   wrapper = mount(Host, {
     attachTo: document.body,

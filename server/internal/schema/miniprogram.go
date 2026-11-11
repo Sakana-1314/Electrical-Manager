@@ -20,12 +20,16 @@ type MiniProgramIdentityRead struct {
 	CreatedAt    jtype.UTCTime `json:"created_at"`
 }
 
-// MiniProgramUserRead 是小程序用户。last_used_at 为最近一次登录小程序的时间（历史数据为 null）。
+// MiniProgramUserRead 是小程序用户（统一 user 表里 source = MINI_PROGRAM 的账号）。
+// last_used_at 为最近一次登录小程序的时间（历史数据为 null）；roles / permissions 供小程序端按权限门禁。
 type MiniProgramUserRead struct {
 	ID             int64                     `json:"id"`
 	DisplayName    string                    `json:"display_name"`
 	DepartmentName string                    `json:"department_name"`
 	Enabled        bool                      `json:"enabled"`
+	Source         string                    `json:"source"`
+	Roles          []UserRoleRead            `json:"roles"`
+	Permissions    []string                  `json:"permissions"`
 	LastUsedAt     *jtype.UTCTime            `json:"last_used_at"`
 	Identities     []MiniProgramIdentityRead `json:"identities"`
 	CreatedAt      jtype.UTCTime             `json:"created_at"`
@@ -33,12 +37,13 @@ type MiniProgramUserRead struct {
 	Version        int64                     `json:"version"`
 }
 
-// MiniProgramUserUpdate 管理端编辑小程序用户。
+// MiniProgramUserUpdate 管理端编辑小程序用户（角色以全量 role_ids 下发）。
 type MiniProgramUserUpdate struct {
-	DisplayName    *string `json:"display_name" v:"min=1,max=64"`
-	DepartmentName *string `json:"department_name" v:"min=1,max=128"`
-	Enabled        *bool   `json:"enabled"`
-	Version        int64   `json:"version" v:"required"`
+	DisplayName    *string  `json:"display_name" v:"min=1,max=64"`
+	DepartmentName *string  `json:"department_name" v:"min=1,max=128"`
+	Enabled        *bool    `json:"enabled"`
+	RoleIDs        *[]int64 `json:"role_ids"`
+	Version        int64    `json:"version" v:"required"`
 }
 
 // MiniProgramUserMergeRequest 把 source 账号合并进路径里的 target 账号。

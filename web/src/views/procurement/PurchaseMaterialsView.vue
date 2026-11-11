@@ -76,7 +76,8 @@ const rowClickGuard = createTableRowClickGuard()
 const filterExpanded = ref(false)
 const EMPTY_DEMAND_PERSON_FILTER = '__empty_actual_demand_person__'
 const EMPTY_SUBITEM_FILTER = '__empty_subitem_no__'
-const canViewArchivedPlans = computed(() => auth.user?.role === 'SUPER_ADMIN')
+// 归档计划的可见性跟系统管理权限走（原「仅超级管理员」，统一 RBAC 后同键）。
+const canViewArchivedPlans = computed(() => auth.can('settings:write'))
 /** 详情弹窗的写权限：无写权限时字段禁用、页脚只留「取消」（与原详情页一致）。 */
 const canWrite = computed(() => auth.can('purchase:write'))
 const statusFilterOptions = computed(() =>

@@ -9,7 +9,7 @@ from httpx import AsyncClient
 
 from tests.conftest import auth_headers, project_session
 from tests.testkit.constants import SHANGHAI
-from tests.testkit.models import MiniProgramUser
+from tests.testkit.accounts import create_mini_program_user
 from tests.testkit.security import create_mini_program_access_token
 
 
@@ -18,13 +18,11 @@ def today() -> date:
 
 
 async def mini_headers(display_name: str = "隐患巡检员") -> dict[str, str]:
-    """直接造一个已启用的小程序用户并签发令牌（跳过微信登录链路）。"""
+    """直接造一个已启用的小程序用户（挂「隐患管理员」角色）并签发令牌。"""
     async with project_session() as session:
-        user = MiniProgramUser(display_name=display_name, enabled=True)
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
-        user_id = user.id
+        user_id = await create_mini_program_user(
+            session, display_name, role_names=("隐患管理员",)
+        )
     return {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
 
@@ -290,11 +288,9 @@ async def test_mini_program_hazard_identity_isolation(client: AsyncClient) -> No
 
     # 未启用的小程序用户被拒（账号待审核）
     async with project_session() as session:
-        disabled = MiniProgramUser(display_name="待审核用户", enabled=False)
-        session.add(disabled)
-        await session.commit()
-        await session.refresh(disabled)
-        disabled_id = disabled.id
+        disabled_id = await create_mini_program_user(
+            session, "待审核用户", role_names=(), enabled=False
+        )
     disabled_headers = {
         "Authorization": f"Bearer {create_mini_program_access_token(disabled_id)}"
     }

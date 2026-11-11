@@ -244,7 +244,13 @@ const router = createRouter({
           path: 'settings/users',
           name: 'users',
           component: () => import('@/views/settings/UsersView.vue'),
-          meta: { title: '管理端用户', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '用户管理', parent: '系统管理', permission: 'settings:write' },
+        },
+        {
+          path: 'settings/roles',
+          name: 'roles',
+          component: () => import('@/views/settings/RolesView.vue'),
+          meta: { title: '角色管理', parent: '系统管理', permission: 'settings:write' },
         },
         {
           path: 'settings/mini-program-users',

@@ -24,10 +24,10 @@ from tests.testkit.enums import (
     ExcelExportJobStatus,
     ExcelImportJobStatus,
     PurchasePlanStatus,
-    Role,
     ShareType,
     WebhookDeliveryStatus,
     WebhookEventType,
+    UserSource,
     WebhookPlatform,
 )
 
@@ -73,26 +73,34 @@ class User(AuditColumns, Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String(64))
-    password_hash: Mapped[str] = mapped_column(String(255))
+    password_hash: Mapped[str] = mapped_column(String(255), server_default="")
     api_token_hash: Mapped[str] = mapped_column(
         String(64), default=lambda: hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()
     )
     api_token_enc: Mapped[str] = mapped_column(String(512), server_default="")
     display_name: Mapped[str] = mapped_column(String(128))
-    role: Mapped[Role] = mapped_column(_enum(Role))
-    enabled: Mapped[bool] = mapped_column(server_default="true")
-
-
-class MiniProgramUser(AuditColumns, Base):
-    __tablename__ = "mini_program_user"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    display_name: Mapped[str] = mapped_column(String(128))
-    department_name: Mapped[str] = mapped_column(
-        String(128), server_default="华星检修维护部电气车间"
-    )
+    department_name: Mapped[str] = mapped_column(String(128), server_default="")
+    source: Mapped[UserSource] = mapped_column(_enum(UserSource), server_default="MANAGE")
     enabled: Mapped[bool] = mapped_column(server_default="true")
     last_used_at: Mapped[datetime | None]
+
+
+class Role(AuditColumns, Base):
+    __tablename__ = "role"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(64))
+    description: Mapped[str] = mapped_column(String(255), server_default="")
+    permissions: Mapped[dict[str, Any]] = mapped_column(JSON, server_default="[]")
+    is_system: Mapped[bool] = mapped_column(server_default="false")
+
+
+class UserRole(AuditColumns, Base):
+    __tablename__ = "user_role"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger)
+    role_id: Mapped[int] = mapped_column(BigInteger)
 
 
 class BusinessEventLog(Base):

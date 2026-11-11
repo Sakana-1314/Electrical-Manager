@@ -29,6 +29,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/openapi"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -80,7 +81,7 @@ type identity struct {
 	ID            int64
 	Username      string
 	DisplayName   string
-	Role          string
+	Roles         []string
 	ProjectID     *int64
 	ProjectSource *string
 }
@@ -129,7 +130,7 @@ func authenticate(c *gin.Context) (*identity, bool) {
 		sendAuthError(c, "MCP 接口令牌无效或用户已停用")
 		return nil, false
 	}
-	return &identity{Token: token, ID: user.ID, Username: user.Username, DisplayName: user.DisplayName, Role: user.Role, ProjectID: pid, ProjectSource: source}, true
+	return &identity{Token: token, ID: user.ID, Username: user.Username, DisplayName: user.DisplayName, Roles: role.UserRoleNames(s, user.ID), ProjectID: pid, ProjectSource: source}, true
 }
 
 // resolveProject MCP 请求的项目：X-Project-Id 头 → 链接 ?project_id= → 默认项目。
@@ -365,7 +366,7 @@ func systemWhoami(c *gin.Context, ident *identity) (map[string]any, error) {
 		"id":             ident.ID,
 		"username":       ident.Username,
 		"display_name":   ident.DisplayName,
-		"role":           ident.Role,
+		"roles":          ident.Roles,
 		"project_id":     ident.ProjectID,
 		"project_source": ident.ProjectSource,
 	}

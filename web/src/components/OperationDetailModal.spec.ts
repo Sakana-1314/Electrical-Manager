@@ -100,7 +100,7 @@ async function mountModal(props: {
   useAuthStore().user = {
     id: 7,
     username: 'tester',
-    role: props.write === false ? 'READ_ONLY' : 'WAREHOUSE_ADMIN',
+    permissions: props.write === false ? [] : ['warehouse:read', 'warehouse:write'],
   } as never
   wrapper = mount(NDialogProvider, {
     attachTo: document.body,

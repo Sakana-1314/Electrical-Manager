@@ -76,7 +76,11 @@ async function mountView(): Promise<void> {
   // auth store 在模块加载时就固化了 localStorage 快照，直接写 store 的 user 才生效。
   const pinia = createPinia()
   setActivePinia(pinia)
-  useAuthStore().user = { id: 7, username: 'tester', role: 'PURCHASE_ADMIN' } as never
+  useAuthStore().user = {
+    id: 7,
+    username: 'tester',
+    permissions: ['purchase:read', 'purchase:write'],
+  } as never
   wrapper = mount(Host, {
     attachTo: document.body,
     global: {

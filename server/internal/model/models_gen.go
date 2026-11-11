@@ -302,34 +302,48 @@ type Memo struct {
 const TableMemo = "memo"
 const ColsMemo = `"id", "title", "content", "created_by", "created_at", "updated_at", "version"`
 
-// MiniProgramIdentity ↔ 表 `mini_program_identity`。
+// MiniProgramIdentity ↔ 表 `mini_program_identity`。user_id 指向统一用户（source = MINI_PROGRAM）。
 type MiniProgramIdentity struct {
-	ID                int64     `db:"id" json:"id"`
-	MiniProgramUserID int64     `db:"mini_program_user_id" json:"mini_program_user_id"`
-	AppID             string    `db:"app_id" json:"app_id"`
-	WechatOpenid      string    `db:"wechat_openid" json:"wechat_openid"`
-	CreatedAt         time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt         time.Time `db:"updated_at" json:"updated_at"`
-	Version           int64     `db:"version" json:"version"`
+	ID           int64     `db:"id" json:"id"`
+	UserID       int64     `db:"user_id" json:"user_id"`
+	AppID        string    `db:"app_id" json:"app_id"`
+	WechatOpenid string    `db:"wechat_openid" json:"wechat_openid"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+	Version      int64     `db:"version" json:"version"`
 }
 
 const TableMiniProgramIdentity = "mini_program_identity"
-const ColsMiniProgramIdentity = `"id", "mini_program_user_id", "app_id", "wechat_openid", "created_at", "updated_at", "version"`
+const ColsMiniProgramIdentity = `"id", "user_id", "app_id", "wechat_openid", "created_at", "updated_at", "version"`
 
-// MiniProgramUser ↔ 表 `mini_program_user`。
-type MiniProgramUser struct {
-	ID             int64      `db:"id" json:"id"`
-	DisplayName    string     `db:"display_name" json:"display_name"`
-	DepartmentName string     `db:"department_name" json:"department_name"`
-	Enabled        bool       `db:"enabled" json:"enabled"`
-	LastUsedAt     *time.Time `db:"last_used_at" json:"last_used_at"`
-	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
-	Version        int64      `db:"version" json:"version"`
+// Role ↔ 表 `role`。permissions 为权限键数组（JSONB），`*` 通配全部权限、`模块:*` 通配模块内权限；
+// 用户可挂多个角色（user_role），实际权限取并集。is_system 的内置角色不可改名 / 删除。
+type Role struct {
+	ID          int64      `db:"id" json:"id"`
+	Name        string     `db:"name" json:"name"`
+	Description string     `db:"description" json:"description"`
+	Permissions jtype.JSON `db:"permissions" json:"permissions"`
+	IsSystem    bool       `db:"is_system" json:"is_system"`
+	CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
+	Version     int64      `db:"version" json:"version"`
 }
 
-const TableMiniProgramUser = "mini_program_user"
-const ColsMiniProgramUser = `"id", "display_name", "department_name", "enabled", "last_used_at", "created_at", "updated_at", "version"`
+const TableRole = "role"
+const ColsRole = `"id", "name", "description", "permissions", "is_system", "created_at", "updated_at", "version"`
+
+// UserRole ↔ 表 `user_role`。用户 ↔ 角色的多对多关联。
+type UserRole struct {
+	ID        int64     `db:"id" json:"id"`
+	UserID    int64     `db:"user_id" json:"user_id"`
+	RoleID    int64     `db:"role_id" json:"role_id"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
+	Version   int64     `db:"version" json:"version"`
+}
+
+const TableUserRole = "user_role"
+const ColsUserRole = `"id", "user_id", "role_id", "created_at", "updated_at", "version"`
 
 // Project ↔ 表 `project`。
 type Project struct {
@@ -619,22 +633,26 @@ const TableSystemSetting = "system_setting"
 const ColsSystemSetting = `"setting_key", "setting_value", "version", "updated_at"`
 
 // User ↔ 表 `user`。
+// User ↔ 表 `user`。管理端（MANAGE，用户名密码 / 接口令牌登录）与小程序端（MINI_PROGRAM，
+// 微信 openid 身份、username 由 openid 派生且无密码）统一账号；角色在 user_role，权限取并集。
 type User struct {
-	ID           int64     `db:"id" json:"id"`
-	Username     string    `db:"username" json:"username"`
-	PasswordHash string    `db:"password_hash" json:"password_hash"`
-	APITokenHash string    `db:"api_token_hash" json:"api_token_hash"`
-	APITokenEnc  string    `db:"api_token_enc" json:"api_token_enc"`
-	DisplayName  string    `db:"display_name" json:"display_name"`
-	Role         string    `db:"role" json:"role"` // enum: SUPER_ADMIN, WAREHOUSE_ADMIN, PURCHASE_ADMIN, HAZARD_ADMIN, READ_ONLY, LEDGER_ADMIN, WORK_ADMIN
-	Enabled      bool      `db:"enabled" json:"enabled"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
-	Version      int64     `db:"version" json:"version"`
+	ID             int64      `db:"id" json:"id"`
+	Username       string     `db:"username" json:"username"`
+	PasswordHash   string     `db:"password_hash" json:"password_hash"`
+	APITokenHash   string     `db:"api_token_hash" json:"api_token_hash"`
+	APITokenEnc    string     `db:"api_token_enc" json:"api_token_enc"`
+	DisplayName    string     `db:"display_name" json:"display_name"`
+	DepartmentName string     `db:"department_name" json:"department_name"`
+	Source         string     `db:"source" json:"source"` // enum: MANAGE, MINI_PROGRAM
+	Enabled        bool       `db:"enabled" json:"enabled"`
+	LastUsedAt     *time.Time `db:"last_used_at" json:"last_used_at"`
+	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
+	Version        int64      `db:"version" json:"version"`
 }
 
 const TableUser = "user"
-const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "role", "enabled", "created_at", "updated_at", "version"`
+const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "source", "enabled", "last_used_at", "created_at", "updated_at", "version"`
 
 // WebhookChannel ↔ 表 `webhook_channel`。
 type WebhookChannel struct {

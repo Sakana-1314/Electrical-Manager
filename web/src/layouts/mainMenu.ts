@@ -143,7 +143,8 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
       key: 'settings-group',
       icon: renderIcon(SettingsOutline),
       children: [
-        link('管理端用户', 'users'),
+        link('用户管理', 'users'),
+        link('角色管理', 'roles'),
         link('小程序用户', 'mini-program-users'),
         link('项目管理', 'projects'),
         link('附件管理', 'attachments'),

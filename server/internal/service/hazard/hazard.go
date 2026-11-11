@@ -947,7 +947,7 @@ func HazardFormOptions(s *db.Session) (schema.HazardFormOptionsRead, error) {
 }
 
 // MiniProgramCreateHazard 小程序登记隐患：检查人员缺省为当前小程序用户姓名，幂等键防重复登记。
-func MiniProgramCreateHazard(s *db.Session, data schema.MiniProgramHazardCreate, user *model.MiniProgramUser) (schema.HazardRead, error) {
+func MiniProgramCreateHazard(s *db.Session, data schema.MiniProgramHazardCreate, user *model.User) (schema.HazardRead, error) {
 	crid := data.ClientRequestID
 	return CreateHazard(s, data.Base(), &crid, user.DisplayName)
 }

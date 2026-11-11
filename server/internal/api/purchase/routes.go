@@ -5,12 +5,11 @@ package purchase
 
 import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
-// linkWriter 关联二级库物资：超级管理员 / 仓库管理员 / 申购管理员。
-var linkWriter = auth.Roles(domain.RoleSuperAdmin, domain.RoleWarehouseAdmin, domain.RolePurchaseAdmin)
+// linkWriter 关联二级库物资：申购或二级库任一模块的写角色（权限并集命中即可）。
+var linkWriter = auth.LinkAnyWriter
 
 // Register 注册申购模块全部路由（顺序与原 api/v1/__init__.py 一致）。
 func Register(r *web.Router) {
