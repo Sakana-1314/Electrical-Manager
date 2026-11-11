@@ -31,7 +31,7 @@ page, .page {
   --app-brand-border: var(--td-brand-color-2);
   --app-brand-text: var(--td-text-color-brand);
   --app-brand-icon: var(--td-brand-color);
-  --app-brand-strong-gradient: linear-gradient(145deg, var(--td-brand-color-7), var(--td-brand-color-6));
+  --app-brand-strong-gradient: var(--td-brand-strong-gradient);
   --app-on-brand: var(--td-text-color-anti);
   --app-on-brand-soft: var(--td-font-white-1);
   --app-on-brand-line: var(--td-font-white-4);
