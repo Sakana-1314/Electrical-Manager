@@ -5,7 +5,7 @@ package domain
 // 权限键：`模块:动作`（键名与网页端既有菜单门禁一致）。角色数据里可用 `*` 通配全部权限、
 // `模块:*` 通配模块内权限（加载时展开成具体键）。
 const (
-	PermSettingsWrite = "settings:write" // 系统管理：用户 / 角色 / 项目 / 系统设置 / 附件池 / 小程序用户
+	PermSettingsWrite  = "settings:write"  // 系统管理：用户 / 角色 / 项目 / 系统设置 / 附件池 / 小程序用户
 	PermWarehouseRead  = "warehouse:read"  // 二级库与出入库记录查看
 	PermWarehouseWrite = "warehouse:write" // 二级库出入库 / 导入 / 库存调整
 	PermPurchaseRead   = "purchase:read"   // 申购计划 / 请购 / 申购记录查看
