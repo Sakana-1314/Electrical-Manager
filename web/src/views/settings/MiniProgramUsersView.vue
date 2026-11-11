@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, h, reactive, ref } from 'vue'
+import { computed, h, onMounted, reactive, ref } from 'vue'
 import { NButton, NEllipsis, NTag, useDialog, useMessage } from 'naive-ui'
-import type { MiniProgramUser } from '@/api/generated'
-import { dictionaryApi } from '@/api/dictionaries'
+import type { MiniProgramUser, RoleRead } from '@/api/generated'
+import { dictionaryApi, roleApi } from '@/api/dictionaries'
 import { formatShanghaiTime } from '@/utils/time'
+
+// 可选角色（RBAC）：小程序用户可挂多个角色，权限取并集；默认注册挂「只读用户」。
 import {
   getTableScrollX,
   preventTableColumnCompression,
@@ -29,12 +31,34 @@ const mergeTargetId = ref<number | null>(null)
 const form = reactive({
   display_name: '',
   department_name: '',
+  role_ids: [] as number[],
   enabled: true,
   version: 0,
+})
+const roleOptions = ref<RoleRead[]>([])
+onMounted(() => {
+  roleApi.roles().then((roles) => (roleOptions.value = roles))
 })
 const columns = preventTableColumnCompression<MiniProgramUser>([
   { title: '姓名', key: 'display_name', width: 136 },
   { title: '部门单位', key: 'department_name', width: 240, ellipsis: { tooltip: true } },
+  {
+    title: '角色',
+    key: 'roles',
+    width: 200,
+    render: (row) =>
+      h(
+        'div',
+        { style: 'display:flex;flex-wrap:wrap;gap:4px' },
+        (row.roles ?? []).map((role) =>
+          h(
+            NTag,
+            { key: role.id, size: 'small', type: role.is_system ? 'info' : 'default', round: true },
+            { default: () => role.name },
+          ),
+        ),
+      ),
+  },
   {
     title: '状态',
     key: 'enabled',
@@ -123,6 +147,7 @@ function open(row: MiniProgramUser) {
   Object.assign(form, {
     display_name: row.display_name,
     department_name: row.department_name,
+    role_ids: (row.roles ?? []).map((role) => role.id),
     enabled: row.enabled,
     version: row.version,
   })
@@ -169,6 +194,7 @@ async function save() {
     await dictionaryApi.updateMiniProgramUser(editing.value.id, {
       display_name: form.display_name,
       department_name: form.department_name,
+      role_ids: form.role_ids,
       enabled: form.enabled,
       version: form.version,
     })
@@ -248,7 +274,14 @@ function confirmDelete() {
         <n-form-item label="姓名" required>
           <n-input v-model:value="form.display_name" />
         </n-form-item>
-        <n-form-item label="部门单位" required>
+        <n-form-item label="角色（可多选，权限取并集；默认注册为只读）">
+          <n-select
+            v-model:value="form.role_ids"
+            multiple
+            clearable
+            :options="roleOptions.map((role) => ({ value: role.id, label: role.name }))"
+          /> </n-form-item
+        ><n-form-item label="部门单位" required>
           <n-input v-model:value="form.department_name" />
         </n-form-item>
         <n-form-item label="用户状态">

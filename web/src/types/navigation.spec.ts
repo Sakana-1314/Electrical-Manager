@@ -1,64 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { roleLabels, rolePermissions } from './navigation'
+import { hasPermission } from './navigation'
 
-describe('七角色权限', () => {
-  it('超级管理员拥有全部写权限', () => {
-    expect(rolePermissions.SUPER_ADMIN).toEqual(
-      expect.arrayContaining([
-        'warehouse:write',
-        'purchase:write',
-        'settings:write',
-        'hazard:write',
-        'ledger:write',
-        'work:write',
-      ]),
-    )
+describe('权限并集门禁', () => {
+  it('具体权限键要求并集内存在同键权限', () => {
+    expect(hasPermission(['warehouse:read', 'warehouse:write'], 'warehouse:write')).toBe(true)
+    expect(hasPermission(['warehouse:read'], 'warehouse:write')).toBe(false)
   })
-  it('仓库管理员仅能写仓库域', () => {
-    expect(rolePermissions.WAREHOUSE_ADMIN).toContain('warehouse:write')
-    expect(rolePermissions.WAREHOUSE_ADMIN).not.toContain('purchase:write')
-    expect(rolePermissions.WAREHOUSE_ADMIN).not.toContain('hazard:write')
-    expect(rolePermissions.WAREHOUSE_ADMIN).not.toContain('ledger:write')
-    expect(rolePermissions.WAREHOUSE_ADMIN).not.toContain('work:write')
+
+  it('read 命中任一模块读权限即可（查看类菜单对所有有读权限的用户可见）', () => {
+    expect(hasPermission(['purchase:read'], 'read')).toBe(true)
+    expect(hasPermission(['settings:write'], 'read')).toBe(false)
+    expect(hasPermission([], 'read')).toBe(false)
   })
-  it('申购管理员仅能写申购域', () => {
-    expect(rolePermissions.PURCHASE_ADMIN).toContain('purchase:write')
-    expect(rolePermissions.PURCHASE_ADMIN).not.toContain('warehouse:write')
-    expect(rolePermissions.PURCHASE_ADMIN).not.toContain('hazard:write')
-    expect(rolePermissions.PURCHASE_ADMIN).not.toContain('ledger:write')
-    expect(rolePermissions.PURCHASE_ADMIN).not.toContain('work:write')
-  })
-  it('隐患管理员仅能写隐患域', () => {
-    expect(rolePermissions.HAZARD_ADMIN).toContain('hazard:write')
-    expect(rolePermissions.HAZARD_ADMIN).not.toContain('warehouse:write')
-    expect(rolePermissions.HAZARD_ADMIN).not.toContain('purchase:write')
-    expect(rolePermissions.HAZARD_ADMIN).not.toContain('settings:write')
-    expect(rolePermissions.HAZARD_ADMIN).not.toContain('ledger:write')
-    expect(rolePermissions.HAZARD_ADMIN).not.toContain('work:write')
-  })
-  it('台账管理员仅能写台账域', () => {
-    expect(rolePermissions.LEDGER_ADMIN).toContain('ledger:write')
-    expect(rolePermissions.LEDGER_ADMIN).not.toContain('warehouse:write')
-    expect(rolePermissions.LEDGER_ADMIN).not.toContain('purchase:write')
-    expect(rolePermissions.LEDGER_ADMIN).not.toContain('hazard:write')
-    expect(rolePermissions.LEDGER_ADMIN).not.toContain('settings:write')
-    expect(rolePermissions.LEDGER_ADMIN).not.toContain('work:write')
-  })
-  it('工作管理员仅能写工作域', () => {
-    expect(rolePermissions.WORK_ADMIN).toContain('work:write')
-    expect(rolePermissions.WORK_ADMIN).not.toContain('warehouse:write')
-    expect(rolePermissions.WORK_ADMIN).not.toContain('purchase:write')
-    expect(rolePermissions.WORK_ADMIN).not.toContain('hazard:write')
-    expect(rolePermissions.WORK_ADMIN).not.toContain('ledger:write')
-    expect(rolePermissions.WORK_ADMIN).not.toContain('settings:write')
-  })
-  it('只读角色没有写权限', () => {
-    expect(rolePermissions.READ_ONLY).toEqual(['read'])
-  })
-  it('每个角色都有中文名（用户管理页的角色下拉直接用它）', () => {
-    expect(Object.keys(roleLabels).sort()).toEqual(Object.keys(rolePermissions).sort())
-    expect(roleLabels.HAZARD_ADMIN).toBe('隐患管理员')
-    expect(roleLabels.LEDGER_ADMIN).toBe('台账管理员')
-    expect(roleLabels.WORK_ADMIN).toBe('工作管理员')
+
+  it('多角色并集：任一角色带来的权限都算数', () => {
+    expect(hasPermission(['hazard:read', 'hazard:write'], 'hazard:write')).toBe(true)
+    expect(hasPermission(['settings:write'], 'settings:write')).toBe(true)
   })
 })

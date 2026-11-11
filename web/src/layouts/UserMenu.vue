@@ -7,7 +7,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { useThemeStore } from '@/stores/theme'
 import { activeBackendIndex, backendCandidates, selectBackend } from '@/api/backend'
-import { roleLabels } from '@/types/navigation'
 import { buildThemeMenuSubmenu, isThemeModeKey } from '@/layouts/appearanceMenu'
 import {
   backendIndexFromMenuKey,
@@ -39,7 +38,9 @@ const theme = useThemeStore()
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
 const displayName = computed(() => auth.user?.display_name || auth.user?.username || '未登录')
-const roleLabel = computed(() => (auth.user ? roleLabels[auth.user.role] : ''))
+const roleLabel = computed(() =>
+  (auth.user?.roles ?? []).map((role) => role.name).join(' / '),
+)
 
 /* ============ 左下角用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色）+ 线路 ============
  * 入口在侧栏（移动端在抽屉）左下角，下拉向上展开，子菜单向右浮现。

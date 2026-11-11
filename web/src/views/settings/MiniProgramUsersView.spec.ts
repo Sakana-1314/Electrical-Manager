@@ -29,6 +29,9 @@ vi.mock('@/api/dictionaries', () => ({
     deleteMiniProgramUser: vi.fn(),
     mergeMiniProgramUsers: vi.fn(),
   },
+  roleApi: {
+    roles: vi.fn().mockResolvedValue([{ id: 7, name: '只读用户', is_system: true }]),
+  },
 }))
 
 const api = vi.mocked(dictionaryApi)
@@ -46,6 +49,9 @@ const user = (overrides: Partial<MiniProgramUser> = {}): MiniProgramUser => ({
   id: 1,
   display_name: '孙浩宇',
   department_name: '华星检修维护部电气车间',
+  source: 'MINI_PROGRAM' as const,
+  roles: [{ id: 7, name: '只读用户', is_system: true }],
+  permissions: ['warehouse:read', 'purchase:read'],
   enabled: true,
   last_used_at: '2026-09-13T01:12:00Z',
   identities: [

@@ -196,10 +196,10 @@ function hostFor(view: unknown) {
 async function mountList(
   view: unknown,
   path: string,
-  role: 'PURCHASE_ADMIN' | 'READ_ONLY',
+  permissions: string[],
 ): Promise<Router> {
   // auth store 在模块加载时固化了 localStorage 快照，直接写 store 的 user 才生效
-  useAuthStore().user = { id: 7, username: 'tester', role } as never
+  useAuthStore().user = { id: 7, username: 'tester', permissions } as never
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [
@@ -293,10 +293,12 @@ afterEach(() => {
 })
 
 describe('申购计划详情弹窗 →「转入申购记录」（原详情页能力）', () => {
-  async function openPlanDetail(role: 'PURCHASE_ADMIN' | 'READ_ONLY' = 'PURCHASE_ADMIN') {
+  async function openPlanDetail(
+    permissions: string[] = ['purchase:read', 'purchase:write'],
+  ) {
     mockPlanList([plan()])
     return {
-      router: await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', role),
+      router: await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', permissions),
     }
   }
 
@@ -336,7 +338,7 @@ describe('申购计划详情弹窗 →「转入申购记录」（原详情页能
   it('未编码的计划不出现「转入申购记录」（未编码物资不能转入）', async () => {
     const uncoded = plan({ material_code: null })
     mockPlanList([uncoded])
-    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', 'PURCHASE_ADMIN')
+    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', ['purchase:read', 'purchase:write'])
 
     expect(buttonLabels()).toContain('在新页面打开')
     expect(buttonLabels()).not.toContain('转入申购记录')
@@ -345,13 +347,13 @@ describe('申购计划详情弹窗 →「转入申购记录」（原详情页能
   it('已转入记录的计划不再出现「转入申购记录」', async () => {
     const moved = plan({ moved_to_record: true })
     mockPlanList([moved])
-    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', 'PURCHASE_ADMIN')
+    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1', ['purchase:read', 'purchase:write'])
 
     expect(buttonLabels()).not.toContain('转入申购记录')
   })
 
   it('只读角色：字段禁用、页脚不显示保存 / 删除 / 转入申购记录', async () => {
-    await openPlanDetail('READ_ONLY')
+    await openPlanDetail([])
 
     expect(detailModal().findComponent(NForm).props('disabled')).toBe(true)
     const labels = buttonLabels()
@@ -365,9 +367,11 @@ describe('申购计划详情弹窗 →「转入申购记录」（原详情页能
 })
 
 describe('申购记录详情弹窗 →「转为申购计划」（原详情页能力）', () => {
-  async function openRecordDetail(role: 'PURCHASE_ADMIN' | 'READ_ONLY' = 'PURCHASE_ADMIN') {
+  async function openRecordDetail(
+    permissions: string[] = ['purchase:read', 'purchase:write'],
+  ) {
     mockRecordList([record()])
-    return { router: await mountList(PurchaseRequestsView, '/procurement/records?detail=7', role) }
+    return { router: await mountList(PurchaseRequestsView, '/procurement/records?detail=7', permissions) }
   }
 
   it('弹窗里有「转为申购计划」与右上角更新时间，确认后调接口并落到新计划的详情弹窗', async () => {
@@ -409,7 +413,7 @@ describe('申购记录详情弹窗 →「转为申购计划」（原详情页能
   })
 
   it('只读角色：字段禁用、页脚不显示保存 / 转为申购计划 / 再次申购', async () => {
-    await openRecordDetail('READ_ONLY')
+    await openRecordDetail([])
 
     expect(detailModal().findComponent(NForm).props('disabled')).toBe(true)
     const labels = buttonLabels()

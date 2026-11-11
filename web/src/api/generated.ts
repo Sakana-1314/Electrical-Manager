@@ -12,8 +12,8 @@
  */
 import type { components } from './generated.raw'
 
-/* ===== 类型枚举（映射自 openapi，值来自后端 domain/enums.py） ===== */
-export type Role = components['schemas']['Role']
+/* ===== 类型枚举（映射自 openapi，值来自后端 domain/enums.go） ===== */
+export type UserSource = components['schemas']['UserSource']
 export type OperationType = components['schemas']['OperationType']
 export type SourceType = components['schemas']['SourceType']
 export type PurchasePlanStatus = components['schemas']['PurchasePlanStatus']
@@ -27,8 +27,14 @@ export type WebhookEventType = components['schemas']['WebhookEventType']
 /* ===== 接口类型（映射自 openapi schema） ===== */
 export type ApiError = components['schemas']['ApiError']
 export type User = components['schemas']['UserRead']
+export type UserRole = components['schemas']['UserRoleRead']
+export type RoleRead = components['schemas']['RoleRead']
+export type RoleCreate = components['schemas']['RoleCreate']
+export type RoleUpdate = components['schemas']['RoleUpdate']
+export type PermissionDef = components['schemas']['PermissionDef']
 export type MiniProgramIdentity = components['schemas']['MiniProgramIdentityRead']
 export type MiniProgramUser = components['schemas']['MiniProgramUserRead']
+export type MiniProgramUserUpdate = components['schemas']['MiniProgramUserUpdate']
 export type LoginRequest = components['schemas']['LoginRequest']
 export type LoginResponse = components['schemas']['LoginResponse']
 export type TokenPairResponse = components['schemas']['TokenPairResponse']

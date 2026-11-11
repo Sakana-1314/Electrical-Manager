@@ -342,7 +342,11 @@ onMounted(load)
           <n-form-item label="新用户默认状态">
             <div class="switch-control">
               <n-switch v-model:value="form.mini_program_new_user_enabled" />
-              <span>{{ form.mini_program_new_user_enabled ? '启用' : '待审核' }}</span>
+              <span>{{
+                form.mini_program_new_user_enabled
+                  ? '默认只读（挂「只读用户」角色）'
+                  : '默认禁用（待管理员审核启用）'
+              }}</span>
             </div>
           </n-form-item>
         </n-form>

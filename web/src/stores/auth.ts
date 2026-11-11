@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { authApi } from '@/api/auth'
 import type { LoginRequest, User } from '@/api/generated'
 import type { Permission } from '@/types/navigation'
-import { rolePermissions } from '@/types/navigation'
+import { hasPermission } from '@/types/navigation'
 
 const savedUser = localStorage.getItem('auth_user')
 
@@ -12,8 +12,9 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
 
+  /** 权限门禁：用户所挂角色的权限并集（后端算好放在 user.permissions）。 */
   function can(permission: Permission): boolean {
-    return user.value ? rolePermissions[user.value.role].includes(permission) : false
+    return hasPermission(user.value?.permissions ?? [], permission)
   }
 
   async function login(payload: LoginRequest) {
