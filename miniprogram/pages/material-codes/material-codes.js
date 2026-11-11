@@ -6,7 +6,6 @@ const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildSearchQuery,
   countFieldValues,
   readFieldShare,
@@ -23,7 +22,6 @@ const FIELD_DEFS = [
   { key: 'materialCode', labelKey: 'filterSearchMaterialCode', param: 'material_code' },
 ];
 const PAGE_ROUTE = '/pages/material-codes/material-codes';
-
 
 /** 把字段定义转成组件要的 `{ key, label, placeholder }`（label 走 i18n）。 */
 function toFieldDefs() {
@@ -164,21 +162,6 @@ Page({
     } catch (error) {
       // 导入时间非关键，加载失败静默
     }
-  },
-
-  /** 分享路径：把当前搜索词、搜索字段与分字段条件一起带出去。 */
-  sharePath() {
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('shareMaterialCodes'),
-      path: this.sharePath(),
-    };
   },
 
   openDetail(event) {

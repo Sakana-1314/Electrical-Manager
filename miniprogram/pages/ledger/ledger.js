@@ -182,21 +182,6 @@ Page({
     });
   },
 
-  /** 分享路径：把当前搜索词与标签筛选一起带出去。 */
-  sharePath() {
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      tagId: this.data.filters.tagId,
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('shareLedger'),
-      path: this.sharePath(),
-    };
-  },
-
   showError(error) {
     Toast({
       context: this,

@@ -7,7 +7,6 @@ const { canWriteHazards } = require('../../utils/features');
 const { decorateHazard } = require('../../utils/hazard');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
   countFieldValues,
@@ -368,24 +367,4 @@ Page({
     });
   },
 
-  /** 分享路径：关键词、搜索字段与全部筛选值一起带出去。 */
-  sharePath() {
-    const filters = this.data.filters;
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-      status: filters.status,
-      level: filters.level,
-      rectifyPerson: filters.rectifyPerson,
-      overdue: filters.overdue,
-      hazardTypeId: filters.hazardTypeId,
-      hazardUnitId: filters.hazardUnitId,
-      inspectionDateFrom: filters.inspectionDate.from,
-      inspectionDateTo: filters.inspectionDate.to,
-    });
-  },
-
-  onShareAppMessage() {
-    return { title: t('shareHazards'), path: this.sharePath() };
-  },
 });

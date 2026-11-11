@@ -8,7 +8,6 @@ const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
   countFieldValues,
@@ -283,28 +282,6 @@ Page({
     wx.navigateTo({
       url: `/pages/material-detail/material-detail?uuid=${uuid}`,
     });
-  },
-
-  /** 分享路径：关键词、搜索字段、库存状态与数量区间一起带出去（精简模式只带关键字）。 */
-  sharePath() {
-    if (this.data.liteMode) {
-      return buildSharePath(PAGE_ROUTE, { keyword: this.data.keyword.trim() });
-    }
-    const filters = this.data.filters;
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      stockStatus: filters.stockStatus,
-      stockQtyFrom: filters.stockQty.from,
-      stockQtyTo: filters.stockQty.to,
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('shareInventory'),
-      path: this.sharePath(),
-    };
   },
 
   showError(error) {

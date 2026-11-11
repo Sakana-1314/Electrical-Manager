@@ -414,11 +414,6 @@ async function run() {
     !requests.some((item) => item.url === '/mini-program/purchase-plans'),
     'unchanged filters must not refetch',
   );
-  // 分享路径带上全部筛选值
-  page.setData({ keyword: '接触器', filters: { urgency: '紧急', category: '', actualDemandPerson: '', subitemNo: '201' } });
-  const planShare = page.sharePath();
-  assert(planShare.indexOf('urgency=') > 0 && planShare.indexOf('subitemNo=201') > 0, 'share must carry filters');
-  assert(planShare.indexOf('category=') === -1, 'empty filters must be omitted');
 
   // ===== 分字段搜索 = 多字段组合搜索（AND） =====
   // 多个字段同时填 => 各自发到自己的参数上（AND），不收窄成一个 keyword。
@@ -456,13 +451,6 @@ async function run() {
   await new Promise((resolve) => setTimeout(resolve, 400));
   fieldRequest = requests.filter((item) => item.url === '/mini-program/purchase-plans').pop();
   assert(fieldRequest.data.keyword === '接触器', 'combined search box uses keyword');
-
-  // 分享要带上分字段值
-  page.setData({ fieldValues: { name: '接触器', materialCode: 'E011' } });
-  const conditionShare = page.sharePath();
-  assert(conditionShare.indexOf('materialCode=E011') > 0, 'share must carry field values');
-  assert(conditionShare.indexOf('name=')
-    > 0, 'share must carry every filled field');
 
   // 分享值不在选项里：补进分区
   requests.length = 0;
@@ -714,6 +702,36 @@ async function run() {
   assert(!relaunchedTo, 'confirming the same project must not relaunch');
   page.onProjectPickerConfirm({ detail: { value: [8] } });
   assert(relaunchedTo === '/pages/home/home', 'switching project must relaunch home');
+
+  // ===== 绑定页：回跳目标 = 显式参数 > 启动参数；首次注册后一键回到分享目的页 =====
+  const bindPage = loadPage('pages/bind/bind.js');
+  void bindPage.onLoad({});
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert(!storage.get('bindRedirect'), 'no redirect in, no redirect stored');
+  // 启动参数兜底：分享卡片冷启动落在详情页时，启动路径就是接收方要去的页面
+  global.wx.getLaunchOptionsSync = () => ({
+    path: 'pages/material-detail/material-detail',
+    query: { uuid: 'abc' },
+  });
+  void bindPage.onLoad({});
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert(
+    storage.get('bindRedirect') === '/pages/material-detail/material-detail?uuid=abc',
+    'launch options must feed the redirect target',
+  );
+  assert(bindPage.data.buttonLabel === 'continueAfterBind', 'button label must follow the redirect');
+  // 显式 redirect 优先于启动参数；首页 / 绑定页自身不算目的地
+  void bindPage.onLoad({ redirect: encodeURIComponent('/pages/ledger-detail/ledger-detail?id=3') });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert(
+    storage.get('bindRedirect') === '/pages/ledger-detail/ledger-detail?id=3',
+    'explicit redirect must win over launch options',
+  );
+  global.wx.getLaunchOptionsSync = () => ({ path: 'pages/home/home', query: {} });
+  void bindPage.onLoad({});
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert(!storage.get('bindRedirect'), 'launch at home must not store a redirect');
+  delete global.wx.getLaunchOptionsSync;
 
   // ===== 导入时间：绝对时间 + 括号相对时间 =====
   const { importTimeLabel, relativeLabel } = require(path.join(root, 'utils/time.js'));
