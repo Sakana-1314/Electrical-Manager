@@ -1,0 +1,83 @@
+<app-navbar title="{{i18n.personalInfo}}" />
+<view class="page-shell profile-page">
+  <view wx:if="{{loading}}" class="detail-state">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+  <view wx:elif="{{failed}}" class="detail-state failed-state">
+    <t-empty icon="error-circle" description="{{i18n.requestFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="retry">{{i18n.reload}}</t-button>
+  </view>
+
+  <block wx:elif="{{user}}">
+    <!-- 身份卡：头像 + 姓名 + 部门，延续品牌面板上的操作员徽章语言。 -->
+    <view class="profile-hero">
+      <view class="profile-avatar"><t-icon name="user" size="48rpx" /></view>
+      <view class="profile-name"><text user-select="{{true}}">{{user.display_name}}</text></view>
+      <view wx:if="{{user.department_name}}" class="profile-department"><text user-select="{{true}}">{{user.department_name}}</text></view>
+    </view>
+
+    <!-- 账号信息：字段值可长按复制（与详情页同一约定）。 -->
+    <view class="section-card">
+      <view class="section-heading"><view class="section-title">{{i18n.personalInfo}}</view></view>
+      <view class="section-divider"></view>
+      <view class="info-list">
+        <view class="info-row">
+          <view class="info-label">{{i18n.registeredAt}}</view>
+          <view class="info-value"><text user-select="{{true}}">{{user.registered_at}}</text></view>
+        </view>
+        <view class="info-row">
+          <view class="info-label">{{i18n.miniProgramUpdatedAt}}</view>
+          <view class="info-value"><text user-select="{{true}}">{{miniProgramUpdatedAt}}</text></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 当前项目：收起态是「当前项目 + 项目名 + 箭头」，点击后弹出 t-picker 滚轮选择器。 -->
+    <view class="section-card">
+      <view class="section-heading"><view class="section-title">{{i18n.currentProject}}</view></view>
+      <view class="section-divider"></view>
+      <view
+        class="project-trigger"
+        hover-class="project-trigger-active"
+        aria-role="button"
+        aria-expanded="{{projectPickerVisible}}"
+        bind:tap="openProjectPicker"
+      >
+        <view class="project-trigger-text {{currentProjectId ? '' : 'project-trigger-empty'}}">
+          <text user-select="{{true}}">{{currentProjectLabel}}</text>
+        </view>
+        <t-icon class="project-arrow" name="chevron-right" size="28rpx" />
+      </view>
+    </view>
+
+    <view
+      wx:if="{{!liteMode}}"
+      class="records-entry"
+      hover-class="records-entry-active"
+      aria-role="button"
+      bind:tap="openRecords"
+    >
+      <view class="records-entry-main">
+        <t-icon class="records-entry-icon" name="time" size="36rpx" />
+        <view class="records-entry-text">{{i18n.viewRecords}}</view>
+      </view>
+      <t-icon class="records-entry-arrow" name="chevron-right" size="36rpx" />
+    </view>
+  </block>
+
+  <!-- 当前项目切换：滚轮选择器，默认停在当前项目，确认后才切换（取消不改动）。 -->
+  <t-picker
+    visible="{{projectPickerVisible}}"
+    title="{{i18n.switchProject}}"
+    cancel-btn="{{i18n.cancel}}"
+    confirm-btn="{{i18n.confirm}}"
+    value="{{projectPickerValue}}"
+    bind:confirm="onProjectPickerConfirm"
+    bind:cancel="closeProjectPicker"
+    bind:visible-change="onProjectPickerVisibleChange"
+  >
+    <t-picker-item options="{{projectOptions}}" />
+  </t-picker>
+
+  <t-toast id="profile-toast" />
+</view>

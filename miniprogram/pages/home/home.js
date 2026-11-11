@@ -2,27 +2,11 @@ const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
 const { canOutbound, isFeatureDisabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
-const {
-  ensureProject,
-  getCurrentProject,
-  getEnabledProjects,
-  switchProject,
-  takeProjectSwitchNotice,
-} = require('../../utils/project');
-const { uploadTime: buildUploadTime } = require('../../config/build-info');
+const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
 
 // 分享卡片图放在代码包里，不依赖接口域名（接口域名只提供 API，不保证有 /logo.png）。
 const SHARE_IMAGE_URL = '/assets/share-logo.png';
-
-function formatDateTime(value) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return t('unknown');
-  }
-  const pad = (part) => String(part).padStart(2, '0');
-  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 Page({
   data: {
@@ -47,19 +31,6 @@ Page({
     liteMode: false,
     // 扫码出库入口：精简模式或库存只读/禁用时不渲染（原来常驻、点了才提示未开放）。
     canScan: false,
-    userProfileVisible: false,
-    // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
-    // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
-    projectPickerVisible: false,
-    // 选项用组件约定的 `{ label, value }`（t-picker-item 以 value 作 wx:key），value 即项目 id。
-    projectOptions: [],
-    projectPickerValue: [],
-    // 两个选择器都从「个人信息」弹窗里打开：弹窗本身是 z-index 11500 的 t-popup，
-    // 这里把选择器面板与其遮罩都抬到弹窗之上（仍低于 Toast 的 12001），避免面板被弹窗压住。
-    pickerPopupProps: { zIndex: 11700, overlayProps: { zIndex: 11600 } },
-    currentProjectId: 0,
-    currentProjectLabel: t('projectNotSelected'),
-    miniProgramUpdatedAt: buildUploadTime || t('unknown'),
     i18n: getMessages(),
   },
 
@@ -95,10 +66,7 @@ Page({
       }
       const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
       this.setData({
-        user: {
-          ...session.user,
-          registered_at: formatDateTime(session.user.created_at),
-        },
+        user: session.user,
         featureReady: true,
         entryVisible: {
           inventory: !isFeatureDisabled('inventory_mode'),
@@ -125,21 +93,22 @@ Page({
 
   onShow() {
     // 每次回到首页都同步一次项目：项目列表一次会话只拉一次，重复调用不产生额外请求。
-    this.loadCurrentProject();
+    this.syncCurrentProject();
   },
 
   /**
-   * 拉取项目列表并把当前项目同步到「个人信息」弹窗。
+   * 保证当前项目已解析（业务请求要带 X-Project-Id）。
    *
-   * 等静默登录完成再请求，避免冷启动时无 token 触发重复登录；项目接口失败时静默降级：
-   * 弹窗退回本机缓存 / 「未选择」，业务请求仍由后端落到默认项目。
+   * 等静默登录完成再请求，避免冷启动时无 token 触发重复登录；解析失败静默降级：
+   * 请求由后端落到默认项目。项目详情 / 切换在「个人信息」页（pages/profile），
+   * 用户与功能模式经 getApp().globalData 共享，不经页面参数传递。
    */
-  async loadCurrentProject() {
+  async syncCurrentProject() {
     let session = null;
     try {
       session = await getApp().globalData.authPromise;
     } catch (_error) {
-      // 静默登录失败由 onLoad 的既有分支提示，这里继续用本机缓存渲染弹窗。
+      // 静默登录失败由 onLoad 的既有分支提示，这里继续走本机缓存的解析。
     }
     // 账号待审核 / 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
     if (
@@ -149,24 +118,6 @@ Page({
       return;
     }
     await ensureProject();
-    const currentProject = getCurrentProject();
-    // 标签统一取 utils/project.js 里的 label（只显示名称，不外显编码），避免两处拼法不一致；
-    // 选项字段用组件约定的 label / value（value 即项目 id，t-picker-item 以它作 wx:key）。
-    const projectOptions = getEnabledProjects().map((project) => ({
-      label: project.label,
-      value: project.id,
-    }));
-    const currentProjectId = currentProject ? currentProject.id : 0;
-    this.setData({
-      projectOptions,
-      // 选择器的 value 是「每列选中值」数组；当前项目不在启用列表里（被停用等）时留空，
-      // 由组件自己定位到首项，避免传了无效 id 后回显空白。
-      projectPickerValue: projectOptions.some((project) => project.value === currentProjectId)
-        ? [currentProjectId]
-        : [],
-      currentProjectId,
-      currentProjectLabel: currentProject ? currentProject.label : t('projectNotSelected'),
-    });
     // 切换项目是整页重启，提示由重启前的标记带过来；此时页面已渲染，toast 组件可用。
     if (takeProjectSwitchNotice()) {
       Toast({
@@ -230,58 +181,9 @@ Page({
     };
   },
 
-  showUserProfile() {
-    this.setData({ userProfileVisible: true });
-  },
-
-  onUserProfileVisibleChange(event) {
-    const visible = event.detail.visible;
-    // 关闭弹窗时收起项目选择器，下次打开恢复收起状态。
-    this.setData(
-      visible
-        ? { userProfileVisible: true }
-        : { userProfileVisible: false, projectPickerVisible: false },
-    );
-  },
-
-  /** 打开项目选择器：没有可选项目时只提示，不弹空选择器。 */
-  openProjectPicker() {
-    if (!this.data.projectOptions.length) {
-      Toast({
-        context: this,
-        selector: '#home-toast',
-        message: t('noAvailableProject'),
-        theme: 'warning',
-        direction: 'column',
-      });
-      return;
-    }
-    this.setData({ projectPickerVisible: true });
-  },
-
-  closeProjectPicker() {
-    this.setData({ projectPickerVisible: false });
-  },
-
-  /** 点遮罩或自动收起也会走 visible-change，必须同步回 data，否则下次点开不再弹出。 */
-  onProjectPickerVisibleChange(event) {
-    this.setData({ projectPickerVisible: event.detail.visible });
-  },
-
-  /** 确认选择：切换后整页重启（见 utils/project.js 的 switchProject），本页无需刷新数据。 */
-  onProjectPickerConfirm(event) {
-    const [projectId] = event.detail.value || [];
-    this.setData({ projectPickerVisible: false });
-    if (!projectId || projectId === this.data.currentProjectId) return;
-    switchProject(projectId);
-  },
-
-  openRecords() {
-    this.setData({
-      userProfileVisible: false,
-      projectPickerVisible: false,
-    });
-    wx.navigateTo({ url: '/pages/records/records' });
+  /** 操作员徽章：整块跳转「个人信息」页（原弹窗改为独立页面）。 */
+  openProfile() {
+    wx.navigateTo({ url: '/pages/profile/profile' });
   },
 
   async scanMaterial() {
