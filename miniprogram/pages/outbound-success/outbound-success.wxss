@@ -120,17 +120,6 @@
   word-break: break-all;
 }
 
-.success-actions {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 32rpx;
-}
-
-.success-action {
-  flex: 1;
-  min-width: 0;
-}
-
 .finish-action {
   box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color);
 }

@@ -33,7 +33,10 @@
       <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
       <view class="card-meta">
-        <view class="meta-code">{{item.material_code}}</view>
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.materialCodeLabel}}</view>
+          <view class="meta-code">{{item.material_code}}</view>
+        </view>
         <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
       </view>
     </view>

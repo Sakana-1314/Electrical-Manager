@@ -46,14 +46,16 @@
       </view>
       <view wx:else class="no-image">{{i18n.noImages}}</view>
     </view>
-    <t-button
-      class="outbound-entry"
-      theme="primary"
-      size="large"
-      block
-      icon="cart"
-      bind:tap="goOutbound"
-    >{{i18n.goOutbound}}</t-button>
+    <view class="detail-actions">
+      <t-button
+        class="detail-action"
+        theme="primary"
+        size="large"
+        block
+        icon="cart"
+        bind:tap="goOutbound"
+      >{{i18n.goOutbound}}</t-button>
+    </view>
   </block>
 
   <t-toast id="detail-toast" />
