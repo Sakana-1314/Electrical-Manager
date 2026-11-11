@@ -5,7 +5,7 @@
     <view class="caption-code">{{materialCode}}</view>
   </view>
 
-  <view wx:if="{{!loading || items.length}}" class="result-count">{{resultCount}}</view>
+  <view wx:if="{{items.length}}" class="result-count">{{resultCount}}</view>
 
   <view wx:if="{{loading && !items.length}}" class="state-panel">
     <t-loading theme="circular" size="48rpx" text="{{i18n.loadingPurchaseRecords}}" />
