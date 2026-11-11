@@ -473,6 +473,10 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     assert restored.status_code == 200, restored.text
     source_user = restored.json()
 
+    # 合并前的小程序出库是写操作：给来源账号挂「库房管理员」（权限并集下放）。
+    async with project_session() as session:
+        await grant_role(session, source_user["id"], "库房管理员")
+
     material = await client.post(
         "/api/v1/stock-materials",
         headers=warehouse,

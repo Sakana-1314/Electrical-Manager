@@ -277,11 +277,11 @@ func ValidateRoleIDs(s *db.Session, roleIDs []int64) ([]int64, error) {
 	if len(unique) == 0 {
 		return unique, nil
 	}
-	var count int64
-	if err := s.Get(&count, "SELECT COUNT(*) FROM role WHERE id IN (?)", unique); err != nil {
+	var rows []model.Role
+	if err := s.SelectIn(&rows, "SELECT id FROM role WHERE id IN (?)", unique); err != nil {
 		return nil, err
 	}
-	if int(count) != len(unique) {
+	if len(rows) != len(unique) {
 		return nil, apperr.New("INVALID_ROLES", "存在无效的角色").WithStatus(422)
 	}
 	return unique, nil
