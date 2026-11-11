@@ -217,7 +217,7 @@ async def test_sync_requires_purchase_writer(client) -> None:
     readonly = await auth_headers(client, "readonly")
     response = await client.get("/api/v1/purchase-record-sync/targets", headers=readonly)
     assert response.status_code == 403
-    assert response.json()["code"] == "FORBIDDEN"
+    assert response.json()["code"] == "PERMISSION_DENIED"
 
     response = await client.post(
         "/api/v1/purchase-record-sync/trace/ANY", headers=readonly, json={}
@@ -556,7 +556,7 @@ async def test_sync_order_targets_and_apply_require_purchase_writer(client) -> N
         "/api/v1/purchase-record-sync/order-targets", headers=readonly
     )
     assert response.status_code == 403
-    assert response.json()["code"] == "FORBIDDEN"
+    assert response.json()["code"] == "PERMISSION_DENIED"
 
     response = await client.post(
         "/api/v1/purchase-record-sync/orders/ANY-PO/apply",

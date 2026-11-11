@@ -6,7 +6,7 @@
 -- 枚举类型：库内保存枚举「名」（如 PENDING），接口按枚举「值」输出中文字段见各表注释。
 DO $$
 BEGIN
-  CREATE TYPE user_source AS ENUM ('MANAGE', 'MINI_PROGRAM');
+  CREATE TYPE usersource AS ENUM ('MANAGE', 'MINI_PROGRAM');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END
 $$;
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   api_token_enc VARCHAR(512) NOT NULL DEFAULT '',
   display_name VARCHAR(128) NOT NULL,
   department_name VARCHAR(128) NOT NULL DEFAULT '',
-  source user_source NOT NULL DEFAULT 'MANAGE',
+  source usersource NOT NULL DEFAULT 'MANAGE',
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   last_used_at TIMESTAMP WITHOUT TIME ZONE NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),

@@ -389,7 +389,7 @@ async def test_hazard_write_permissions(client: AsyncClient) -> None:
         },
     )
     assert response.status_code == 403, response.text
-    assert response.json()["code"] == "FORBIDDEN"
+    assert response.json()["code"] == "PERMISSION_DENIED"
 
     warehouse = await auth_headers(client, "warehouse")
     response = await client.post(

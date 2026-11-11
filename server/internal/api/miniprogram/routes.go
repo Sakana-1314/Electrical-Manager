@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/deps"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
@@ -55,8 +56,9 @@ func Register(r *web.Router) {
 	g.GET("/ledger-items/tag-options", ledgerTagOptions, user, readPerm(domain.PermLedgerRead))
 	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user, readPerm(domain.PermLedgerRead))
 	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user, readPerm(domain.PermPurchaseRead))
-	g.POST("/outbound", outbound, user, readPerm(domain.PermWarehouseWrite))
-	g.GET("/outbound-reasons", outboundReasons, user, readPerm(domain.PermWarehouseWrite))
+	// 精简模式拦截先于权限依赖：lite 模式下对任何用户都返回 OUTBOUND_DISABLED（与网页端语义一致）。
+	g.POST("/outbound", outbound, user, deps.RequireFullSecondaryWarehouse, readPerm(domain.PermWarehouseWrite))
+	g.GET("/outbound-reasons", outboundReasons, user, deps.RequireFullSecondaryWarehouse, readPerm(domain.PermWarehouseWrite))
 	g.GET("/operations", operations, user, readPerm(domain.PermWarehouseRead))
 	g.GET("/outbound/{operation_no}", outboundByNo, user, readPerm(domain.PermWarehouseRead))
 	// 隐患管理：静态子路径（filter-options / form-options / images）先于 /hazards/{hazard_id}。

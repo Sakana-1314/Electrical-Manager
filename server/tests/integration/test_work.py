@@ -430,7 +430,7 @@ async def test_write_permissions(client: AsyncClient) -> None:
         "/api/v1/work-tasks", headers=warehouse, json={"name": "越权任务"}
     )
     assert denied.status_code == 403, denied.text
-    assert denied.json()["code"] == "FORBIDDEN"
+    assert denied.json()["code"] == "PERMISSION_DENIED"
     denied_delete = await client.delete(
         f"/api/v1/work-tasks/{task['id']}", headers={**warehouse, "If-Match": "1"}
     )
