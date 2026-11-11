@@ -15,7 +15,9 @@ Page({
   },
 
   async onLoad(options = {}) {
-    const redirect = extractRedirect(options);
+    // 回跳目标：显式 redirect 参数优先（各页面在 requires_profile 时带上）；缺席时兜底读
+    // 小程序启动参数——分享卡片等冷启动场景，启动路径就是接收方要去的页面。
+    const redirect = extractRedirect(options) || this.takeLaunchRedirect();
     if (redirect) {
       wx.setStorageSync(REDIRECT_KEY, redirect);
     } else {
@@ -39,6 +41,29 @@ Page({
     } catch (error) {
       this.showError(error);
     }
+  },
+
+  /** 从小程序启动参数恢复目的页面：首页 / 绑定页自身不算目的地，其余 /pages/ 路径带回 query。 */
+  takeLaunchRedirect() {
+    let launch = null;
+    try {
+      launch = wx.getLaunchOptionsSync();
+    } catch (_error) {
+      return '';
+    }
+    const path = launch && launch.path ? `/${launch.path}` : '';
+    if (
+      !path.startsWith('/pages/') ||
+      path.startsWith('/pages/home/') ||
+      path.startsWith('/pages/bind/')
+    ) {
+      return '';
+    }
+    const query = Object.keys(launch.query || {})
+      .filter((key) => launch.query[key] !== undefined && launch.query[key] !== '')
+      .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(String(launch.query[key]))}`)
+      .join('&');
+    return query ? `${path}?${query}` : path;
   },
 
   resolveButtonLabel(redirect) {

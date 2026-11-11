@@ -6,7 +6,6 @@ const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
   countFieldValues,
@@ -43,7 +42,6 @@ const FIELD_DEFS = [
   { key: 'materialCode', labelKey: 'filterSearchMaterialCode', param: 'material_code' },
 ];
 const PAGE_ROUTE = '/pages/huaxing-inventory/huaxing-inventory';
-
 
 /** 分享里的多选值用 | 分隔（与后端「任一」匹配一致），还原成数组。 */
 function splitSharedList(value) {
@@ -300,26 +298,6 @@ Page({
     } catch (error) {
       // 导入时间非关键，加载失败静默
     }
-  },
-
-  /** 分享路径：把当前搜索词、搜索字段、多选筛选项与日期区间一起带出去。 */
-  sharePath() {
-    const filters = this.data.filters;
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      purchaseDepartment: filters.purchaseDepartment.join('|'),
-      purchaser: filters.purchaser.join('|'),
-      inboundFrom: filters.firstInboundDate.from,
-      inboundTo: filters.firstInboundDate.to,
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('shareHuaxingInventory'),
-      path: this.sharePath(),
-    };
   },
 
   openDetail(event) {

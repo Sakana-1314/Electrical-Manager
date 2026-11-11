@@ -6,7 +6,6 @@ const { getMessages, t } = require('../../utils/i18n');
 const { decoratePurchaseRecord } = require('../../utils/purchase');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
   countFieldValues,
@@ -281,28 +280,6 @@ Page({
     } finally {
       if (requestId === this.requestId) this.setData({ loading: false, loadingMore: false });
     }
-  },
-
-  /** 分享路径：关键词、搜索字段、筛选项与分字段条件一起带出去。 */
-  sharePath() {
-    const filters = this.data.filters;
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      status: filters.status,
-      subitemNo: filters.subitemNo,
-      category: filters.category,
-      salesperson: filters.salesperson,
-      actualDemandPerson: filters.actualDemandPerson,
-      purchaseResponsible: filters.purchaseResponsible,
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('sharePurchaseRecords'),
-      path: this.sharePath(),
-    };
   },
 
   goDetail(event) {

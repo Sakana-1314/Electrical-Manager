@@ -5,7 +5,6 @@ const { buildSharePath, readShareParams } = require('../../utils/share');
 const { getMessages, t } = require('../../utils/i18n');
 const {
   buildFieldQuery,
-  buildFieldShare,
   buildFilterQuery,
   buildSearchQuery,
   countFieldValues,
@@ -341,31 +340,6 @@ Page({
     wx.navigateTo({
       url: `/pages/purchase-plan-detail/purchase-plan-detail?id=${event.currentTarget.dataset.id}`,
     });
-  },
-
-  /** 分享路径：关键词、搜索字段、筛选项与分字段条件一起带出去。 */
-  sharePath() {
-    const filters = this.data.filters;
-    const planDate = filters.planDate || {};
-    return buildSharePath(PAGE_ROUTE, {
-      keyword: this.data.keyword.trim(),
-      urgency: filters.urgency,
-      category: filters.category,
-      actualDemandPerson: filters.actualDemandPerson,
-      purchaseResponsible: filters.purchaseResponsible,
-      demandDepartment: filters.demandDepartment,
-      subitemNo: filters.subitemNo,
-      planDateFrom: planDate.from,
-      planDateTo: planDate.to,
-      ...buildFieldShare(this.data.fieldValues, FIELD_DEFS),
-    });
-  },
-
-  onShareAppMessage() {
-    return {
-      title: t('sharePurchasePlans'),
-      path: this.sharePath(),
-    };
   },
 
   showError(error) {

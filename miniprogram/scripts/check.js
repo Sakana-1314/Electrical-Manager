@@ -853,8 +853,9 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     throw new Error('Share params must be filtered by the page whitelist.');
   }
 
-  // 每个带搜索 / 筛选的列表页都必须：导入 share 工具、用 sharePath() 转发、回跳带参。
-  // params 是该页分享参数白名单：筛选面板的每个分区 key 都必须在其中（否则转发后会丢筛选）。
+  // 列表页不再支持分享（分享入口收口到详情页与首页）：不得出现 onShareAppMessage / sharePath。
+  // 旧分享链接的接收方仍按同一份参数解析，未注册用户经 requires_profile 引导绑定后由 redirect
+  // 回跳到同一份列表——参数解析与回跳链路必须保留，params 是该页的白名单 key。
   const shareablePages = [
     { page: 'inventory/inventory', params: ['keyword', 'stockStatus'] },
     { page: 'huaxing-inventory/huaxing-inventory', params: ['keyword', 'purchaseDepartment', 'purchaser'] },
@@ -872,27 +873,53 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
   ];
   for (const { page, params } of shareablePages) {
     const script = read(`pages/${page}.js`);
+    if (script.includes('onShareAppMessage') || script.includes('sharePath()')) {
+      throw new Error(`pages/${page}.js must not support sharing; the share entry lives on detail pages.`);
+    }
     for (const snippet of [
       "require('../../utils/share')",
       'readShareParams(options, SHARE_PARAMS)',
-      'path: this.sharePath()',
+      'buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared))',
     ]) {
       if (!script.includes(snippet)) {
-        throw new Error(`pages/${page}.js must share search/filter state: ${snippet}`);
+        throw new Error(`pages/${page}.js must keep legacy share params and the bind redirect: ${snippet}`);
       }
-    }
-    // 分享与回跳必须用同一份参数，否则未注册用户绑定后会丢掉筛选。
-    if (!script.includes('buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared))')) {
-      throw new Error(`pages/${page}.js must keep share params across the bind redirect.`);
     }
     if (!script.includes('SHARE_PARAMS = [')) {
       throw new Error(`pages/${page}.js must declare its share param whitelist.`);
     }
     for (const param of params) {
       if (!script.includes(`'${param}'`)) {
-        throw new Error(`pages/${page}.js must share the "${param}" filter.`);
+        throw new Error(`pages/${page}.js must keep the "${param}" share param.`);
       }
     }
+  }
+  // 详情页支持分享：分享卡片带实体参数直达详情；未注册用户由 requires_profile 引导绑定后
+  // 一键回到同一详情（bind 页兜底读启动参数，见 pages/bind/bind.js）。
+  const detailSharePages = [
+    { page: 'material-detail/material-detail', param: 'uuid' },
+    { page: 'material-code-detail/material-code-detail', param: 'id' },
+    { page: 'huaxing-inventory-detail/huaxing-inventory-detail', param: 'id' },
+    { page: 'purchase-plan-detail/purchase-plan-detail', param: 'id' },
+    { page: 'purchase-record-detail/purchase-record-detail', param: 'line_id' },
+    { page: 'ledger-detail/ledger-detail', param: 'id' },
+    { page: 'hazard-detail/hazard-detail', param: 'id' },
+  ];
+  for (const { page, param } of detailSharePages) {
+    const script = read(`pages/${page}.js`);
+    if (!script.includes('onShareAppMessage()')) {
+      throw new Error(`pages/${page}.js must support sharing.`);
+    }
+    if (!script.includes(`?${param}=`)) {
+      throw new Error(`pages/${page}.js share path must carry the ${param} param.`);
+    }
+    if (!script.includes('buildRedirectQuery(')) {
+      throw new Error(`pages/${page}.js must send unregistered users to bind with a redirect.`);
+    }
+  }
+  // 绑定页兜底：显式 redirect 缺席时读小程序启动参数恢复目的页面（分享冷启动等场景）。
+  if (!read('pages/bind/bind.js').includes('getLaunchOptionsSync')) {
+    throw new Error('pages/bind/bind.js must fall back to the launch options for the redirect target.');
   }
 
   // 分享值可能已不在候选项里：候选来自库中已有值的分区必须把缺失值补进选项（面板才能回显）；
