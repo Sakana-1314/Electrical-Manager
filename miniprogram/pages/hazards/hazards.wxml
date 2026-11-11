@@ -84,4 +84,12 @@
   />
 
   <t-toast id="hazards-toast" />
+  <button
+    wx:if="{{backTopVisible}}"
+    class="back-top-fab"
+    aria-label="{{i18n.backToTop}}"
+    bind:tap="scrollToTop"
+  >
+    <t-icon name="backtop" size="52rpx" />
+  </button>
 </view>

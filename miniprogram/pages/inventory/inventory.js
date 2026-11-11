@@ -80,6 +80,7 @@ Page({
     hasMore: false,
     loading: true,
     loadingMore: false,
+    backTopVisible: false,
     resultCount: '',
     lastImportAtLabel: '',
     i18n: getMessages(),
@@ -160,6 +161,19 @@ Page({
     if (this.data.hasMore && !this.data.loadingMore) {
       void this.loadInventory(false);
     }
+  },
+
+  onPageScroll(event) {
+    const scrollTop = event.scrollTop || 0;
+    if (scrollTop > 400 && !this.data.backTopVisible) {
+      this.setData({ backTopVisible: true });
+    } else if (scrollTop <= 400 && this.data.backTopVisible) {
+      this.setData({ backTopVisible: false });
+    }
+  },
+
+  scrollToTop() {
+    wx.pageScrollTo({ scrollTop: 0, duration: 300 });
   },
 
   /** 收起态搜索框：只做综合搜索（跨字段），多字段组合在筛选面板里。 */

@@ -7,6 +7,7 @@
     "filter-panel": "/components/filter-panel/filter-panel",
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-fab": "tdesign-miniprogram/fab/fab",
+    "t-icon": "tdesign-miniprogram/icon/icon",
     "t-loading": "tdesign-miniprogram/loading/loading",
     "t-tag": "tdesign-miniprogram/tag/tag",
     "t-toast": "tdesign-miniprogram/toast/toast"
