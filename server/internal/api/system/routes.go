@@ -68,6 +68,9 @@ func login(c *web.Ctx) error {
 	if !ok || !u.Enabled || !security.VerifyPassword(data.Password, u.PasswordHash) {
 		return apperr.New("INVALID_CREDENTIALS", "用户名或密码错误").WithStatus(401)
 	}
+	if err := auth.MarkLastUsed(c.DB, &u); err != nil {
+		return err
+	}
 	read := schema.NewUserRead(&u)
 	return c.OK(schema.LoginResponse{
 		AccessToken:  security.CreateAccessToken(u.ID),

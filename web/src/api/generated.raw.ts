@@ -4201,6 +4201,8 @@ export interface components {
          *         "id": 1,
          *         "username": "admin",
          *         "display_name": "系统管理员",
+         *         "created_at": "2026-08-14T10:20:00+08:00",
+         *         "last_used_at": "2026-09-13T09:12:00+08:00",
          *         "enabled": true,
          *         "version": 1,
          *         "department_name": "华星检修维护部电气车间",
@@ -9634,6 +9636,8 @@ export interface components {
          *           "id": 2,
          *           "username": "warehouse",
          *           "display_name": "仓库管理员",
+         *           "created_at": "2026-08-14T10:20:00+08:00",
+         *           "last_used_at": "2026-09-13T09:12:00+08:00",
          *           "enabled": true,
          *           "version": 1,
          *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
@@ -12261,6 +12265,8 @@ export interface components {
          *       "id": 2,
          *       "username": "warehouse",
          *       "display_name": "仓库管理员",
+         *       "created_at": "2026-08-14T10:20:00+08:00",
+         *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "department_name": "华星检修维护部电气车间",
          *       "permissions": [
          *         "warehouse:read",
@@ -12286,6 +12292,17 @@ export interface components {
              * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
              */
             wechat_openid?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 账号创建时间（小程序用户即首次登录建档时间）
+             */
+            created_at: string;
+            /**
+             * Last Used At
+             * @description 最近登录时间（网页密码登录与小程序登录均刷新）
+             */
+            last_used_at?: string | null;
             /**
              * Permissions
              * @description 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
@@ -12351,6 +12368,8 @@ export interface components {
          *       "id": 1,
          *       "username": "admin",
          *       "display_name": "系统管理员",
+         *       "created_at": "2026-08-14T10:20:00+08:00",
+         *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "department_name": "华星检修维护部电气车间",
          *       "permissions": [
          *         "system:admin",
@@ -12384,6 +12403,17 @@ export interface components {
              * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
              */
             wechat_openid?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description 账号创建时间（小程序用户即首次登录建档时间）
+             */
+            created_at: string;
+            /**
+             * Last Used At
+             * @description 最近登录时间（网页密码登录与小程序登录均刷新）
+             */
+            last_used_at?: string | null;
             /**
              * Permissions
              * @description 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
@@ -12925,6 +12955,8 @@ export interface operations {
                      *         "id": 1,
                      *         "username": "admin",
                      *         "display_name": "系统管理员",
+                     *         "created_at": "2026-08-14T10:20:00+08:00",
+                     *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "enabled": true,
                      *         "version": 1,
                      *         "department_name": "华星检修维护部电气车间",
@@ -13171,6 +13203,8 @@ export interface operations {
                      *       "id": 1,
                      *       "username": "admin",
                      *       "display_name": "系统管理员",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "enabled": true,
                      *       "version": 1,
                      *       "department_name": "华星检修维护部电气车间",
@@ -32145,6 +32179,8 @@ export interface operations {
                      *           "id": 2,
                      *           "username": "warehouse",
                      *           "display_name": "仓库管理员",
+                     *           "created_at": "2026-08-14T10:20:00+08:00",
+                     *           "last_used_at": "2026-09-13T09:12:00+08:00",
                      *           "enabled": true,
                      *           "version": 1,
                      *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
@@ -32275,6 +32311,8 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
@@ -32507,6 +32545,8 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
@@ -32634,6 +32674,8 @@ export interface operations {
                      *       "id": 3,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "department_name": "华星检修维护部电气车间",
                      *       "permissions": [
                      *         "warehouse:read",
@@ -32763,6 +32805,8 @@ export interface operations {
                      *       "id": 2,
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",

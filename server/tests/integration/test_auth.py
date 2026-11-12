@@ -7,6 +7,26 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
+async def test_login_returns_timestamps_and_refreshes_last_used_at(client: AsyncClient) -> None:
+    """登录响应回显创建时间，并把最近登录时间落库；/me 读到同一份数据。"""
+    login = await client.post(
+        "/api/v1/auth/login", json={"username": "admin", "password": "123456"}
+    )
+    assert login.status_code == 200, login.text
+    user = login.json()["user"]
+    assert user["created_at"]
+    assert user["last_used_at"] is not None
+
+    me = await client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {login.json()['access_token']}"},
+    )
+    assert me.status_code == 200, me.text
+    assert me.json()["created_at"] == user["created_at"]
+    assert me.json()["last_used_at"] == user["last_used_at"]
+
+
+@pytest.mark.asyncio
 async def test_refresh_issues_a_new_token_pair(client: AsyncClient) -> None:
     login = await client.post(
         "/api/v1/auth/login", json={"username": "admin", "password": "123456"}

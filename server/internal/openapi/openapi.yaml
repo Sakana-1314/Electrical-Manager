@@ -30,6 +30,8 @@ paths:
                   id: 1
                   username: admin
                   display_name: 系统管理员
+                  created_at: '2026-08-14T10:20:00+08:00'
+                  last_used_at: '2026-09-13T09:12:00+08:00'
                   enabled: true
                   version: 1
                   department_name: 华星检修维护部电气车间
@@ -196,6 +198,8 @@ paths:
                 id: 1
                 username: admin
                 display_name: 系统管理员
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 enabled: true
                 version: 1
                 department_name: 华星检修维护部电气车间
@@ -16337,6 +16341,8 @@ paths:
                 - id: 2
                   username: warehouse
                   display_name: 仓库管理员
+                  created_at: '2026-08-14T10:20:00+08:00'
+                  last_used_at: '2026-09-13T09:12:00+08:00'
                   enabled: true
                   version: 1
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -16428,6 +16434,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -16524,6 +16532,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -16693,6 +16703,8 @@ paths:
                 id: 3
                 username: warehouse
                 display_name: 仓库管理员
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 department_name: 华星检修维护部电气车间
                 permissions:
                 - warehouse:read
@@ -16791,6 +16803,8 @@ paths:
                 id: 2
                 username: warehouse
                 display_name: 仓库管理员
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
                 enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -25627,6 +25641,8 @@ components:
           id: 1
           username: admin
           display_name: 系统管理员
+          created_at: '2026-08-14T10:20:00+08:00'
+          last_used_at: '2026-09-13T09:12:00+08:00'
           enabled: true
           version: 1
           department_name: 华星检修维护部电气车间
@@ -31340,6 +31356,8 @@ components:
         - id: 2
           username: warehouse
           display_name: 仓库管理员
+          created_at: '2026-08-14T10:20:00+08:00'
+          last_used_at: '2026-09-13T09:12:00+08:00'
           enabled: true
           version: 1
           api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -35016,6 +35034,18 @@ components:
           - type: 'null'
           title: Wechat Openid
           description: 微信 OpenID（仅小程序来源用户；管理端用户为 null）
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+          description: 账号创建时间（小程序用户即首次登录建档时间）
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
+          description: 最近登录时间（网页密码登录与小程序登录均刷新）
         permissions:
           items:
             type: string
@@ -35041,6 +35071,7 @@ components:
       - username
       - display_name
       - department_name
+      - created_at
       - permissions
       - enabled
       - version
@@ -35049,6 +35080,8 @@ components:
       - id: 2
         username: warehouse
         display_name: 仓库管理员
+        created_at: '2026-08-14T10:20:00+08:00'
+        last_used_at: '2026-09-13T09:12:00+08:00'
         department_name: 华星检修维护部电气车间
         permissions:
         - warehouse:read
@@ -35136,6 +35169,18 @@ components:
           - type: 'null'
           title: Wechat Openid
           description: 微信 OpenID（仅小程序来源用户；管理端用户为 null）
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+          description: 账号创建时间（小程序用户即首次登录建档时间）
+        last_used_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Used At
+          description: 最近登录时间（网页密码登录与小程序登录均刷新）
         permissions:
           items:
             type: string
@@ -35154,6 +35199,7 @@ components:
       - username
       - display_name
       - department_name
+      - created_at
       - permissions
       - enabled
       - version
@@ -35162,6 +35208,8 @@ components:
       - id: 1
         username: admin
         display_name: 系统管理员
+        created_at: '2026-08-14T10:20:00+08:00'
+        last_used_at: '2026-09-13T09:12:00+08:00'
         department_name: 华星检修维护部电气车间
         permissions:
         - system:admin

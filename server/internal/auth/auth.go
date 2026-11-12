@@ -4,6 +4,7 @@ package auth
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
@@ -35,6 +36,18 @@ func bearerToken(c *web.Ctx) string {
 		return ""
 	}
 	return param
+}
+
+// MarkLastUsed 登录成功后刷新最近使用时间：网页密码登录与小程序登录共用。
+// 刻意不自增 version（登录不改变用户资料，乐观锁只保护管理端编辑）。
+func MarkLastUsed(s *db.Session, u *model.User) error {
+	now := time.Now().UTC()
+	if _, err := s.Exec("UPDATE app_user SET last_used_at = ?, updated_at = ? WHERE id = ?", now, now, u.ID); err != nil {
+		return err
+	}
+	u.LastUsedAt = &now
+	u.UpdatedAt = now
+	return nil
 }
 
 // GetUser 按主键读取管理端用户（不存在返回 nil）。

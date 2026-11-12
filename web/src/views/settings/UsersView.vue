@@ -9,6 +9,7 @@ import { activeBackendUrl } from '@/api/backend'
 import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
+import { formatShanghaiTime } from '@/utils/time'
 
 // 权限位目录（GET /permissions）：系统管理 + 各功能读写，勾选后按位存进用户 permissions。
 const permissionOptions = ref<PermissionRead[]>([])
@@ -131,6 +132,18 @@ const columns = preventTableColumnCompression<ManagedUser>([
     width: 160,
     ellipsis: { tooltip: true },
     render: (r) => r.department_name || '—',
+  },
+  {
+    title: '最近登录',
+    key: 'last_used_at',
+    width: 156,
+    render: (r) => formatShanghaiTime(r.last_used_at ?? undefined),
+  },
+  {
+    title: '首次登录',
+    key: 'created_at',
+    width: 156,
+    render: (r) => formatShanghaiTime(r.created_at),
   },
   {
     title: '小程序绑定',
@@ -398,6 +411,11 @@ function remove(row: ManagedUser) {
               OpenID：{{ editing.wechat_openid }}
             </span>
           </div></n-form-item
+        ><n-form-item v-if="editing" label="登录记录">
+          <div class="login-times">
+            <span>首次：{{ formatShanghaiTime(editing.created_at) }}</span>
+            <span>最近：{{ formatShanghaiTime(editing.last_used_at ?? undefined) }}</span>
+          </div></n-form-item
         ><n-form-item label="权限（按功能勾选，写权限自动包含查看）">
           <div class="permission-grid">
             <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
@@ -543,8 +561,8 @@ function remove(row: ManagedUser) {
 .user-username {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -558,6 +576,13 @@ function remove(row: ManagedUser) {
   color: var(--color-text-muted);
   font-size: 12px;
   word-break: break-all;
+}
+.login-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 .permission-tags {
   display: flex;
