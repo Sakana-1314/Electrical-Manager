@@ -29,6 +29,7 @@ flowchart LR
 | 术语 | 代码标识 | 定义 |
 | --- | --- | --- |
 | 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
+| 默认用户权限 | `runtime_settings.default_permissions` | 新建用户 / 小程序新注册用户的默认权限位（BIGINT）：在高级设置里勾选，写权限自动带同模块读权限；未配置时默认二级库只读 + 申购只读 + 华星总库存只读（42） |
 | 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting` 的 `runtime_settings.secondary_warehouse_mode`，影响路由、菜单与写接口 |
 | 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
 | 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放（`service/inventory` 的 `replayMaterials`）；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
@@ -203,7 +204,7 @@ flowchart TD
 
 | 表名 | Go 结构体（`model.<名称>`） | 中文含义 | 所属域 |
 | --- | --- | --- | --- |
-| `app_user` | `User` | 统一用户（管理端 + 小程序端，微信 openid 直存；权限位图直接落 `permissions`） | 用户 |
+| `app_user` | `User` | 统一用户（网页端 + 小程序端共用，微信 openid 直存；权限位图直接落 `permissions`） | 用户 |
 | `system_setting` | `SystemSetting` | 系统设置键值表 | 系统配置 |
 | `business_event_log` | `BusinessEventLog` | 业务事件日志（状态流转与数据快照） | 系统配置 |
 | `webhook_delivery` | `WebhookDelivery` | Webhook 投递记录与重试状态（渠道来自环境变量） | Webhook |
@@ -254,7 +255,7 @@ erDiagram
     app_user ||--o{ excel_export_job : "创建导出任务"
 ```
 
-`app_user` 是管理端与小程序端的统一账号：权限是 `permissions` 字段里的 `BIGINT` 位图（不再有角色表与用户-角色关联表），接口令牌双列存储（查询用哈希 + 回显用密文）；小程序只有一个小程序（单个 app_id），微信 openid 直接存 `app_user.wechat_openid`（管理端用户为 NULL，小程序用户非空且唯一），小程序来源用户（`source = 'MINI_PROGRAM'`）`username` 由 openid 派生、无密码。
+`app_user` 是网页端与小程序端共用的统一账号：不再有来源字段，任何账号都可以设置密码、接口令牌和微信 openid；权限是 `permissions` 字段里的 `BIGINT` 位图（不再有角色表与用户-角色关联表），接口令牌双列存储（查询用哈希 + 回显用密文）。小程序只有一个小程序（单个 app_id），微信 openid 直接存 `app_user.wechat_openid`（未绑定为 NULL，绑定后唯一）；只通过小程序注册、未设置密码的账号 `username` 由 openid 派生。
 
 ### 二级库库存
 
@@ -361,17 +362,16 @@ erDiagram
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
 | --- | --- | --- | --- | --- | --- |
 | `app_user` | `id` | BIGSERIAL | 否 | 自增 | 主键 |
-| `app_user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`） |
-| `app_user` | `password_hash` | VARCHAR(255) | 否 | `''` | Argon2id 密码哈希（小程序来源用户为空串，不可密码登录） |
-| `app_user` | `api_token_hash` | VARCHAR(64) | 否 | `''` | 接口令牌 SHA-256，非空值唯一（部分唯一索引，小程序用户为空串），用于认证查找 |
+| `app_user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一（仅小程序注册、未设置密码的账号由 openid 派生 `wx_<hash>`） |
+| `app_user` | `password_hash` | VARCHAR(255) | 否 | `''` | Argon2id 密码哈希（未设置密码的账号为空串，可改用微信扫码登录） |
+| `app_user` | `api_token_hash` | VARCHAR(64) | 否 | `''` | 接口令牌 SHA-256，非空值唯一（部分唯一索引，未设置令牌的账号为空串），用于认证查找 |
 | `app_user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
 | `app_user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
 | `app_user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
-| `app_user` | `source` | usersource 枚举（MANAGE / MINI_PROGRAM） | 否 | `'MANAGE'` | 账号来源，接口同名字符串 |
-| `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid） |
+| `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（任意账号都可绑定；非空时唯一，一个小程序一个 openid） |
 | `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
 | `app_user` | `enabled` | BOOLEAN | 否 | TRUE | 账号是否启用 |
-| `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 小程序来源用户的最近登录时间（登录即刷新，不自增 version） |
+| `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 小程序登录的最近使用时间（登录即刷新，不自增 version） |
 | `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
 | `system_setting` | `setting_value` | JSON | 否 | 无 | 设置值（JSON 文档） |
@@ -878,13 +878,13 @@ flowchart LR
 
 | `username` | `display_name` | 权限位（十进制） | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
-| `admin` | 系统管理员 | 8191（系统管理 + 全部功能读写） | 1 | `sha256(gen_random_uuid())` |
+| `admin` | 系统管理员 | 8127（系统管理 + 全部功能读写） | 1 | `sha256(gen_random_uuid())` |
 | `warehouse` | 仓库管理员 | 6（二级库读写） | 1 | `sha256(gen_random_uuid())` |
 | `purchase` | 申购管理员 | 24（申购读写） | 1 | `sha256(gen_random_uuid())` |
 | `hazard` | 隐患管理员 | 1536（隐患读写） | 1 | `sha256(gen_random_uuid())` |
 | `ledger` | 台账管理员 | 384（台账读写） | 1 | `sha256(gen_random_uuid())` |
 | `work` | 工作管理员 | 6144（工单读写） | 1 | `sha256(gen_random_uuid())` |
-| `readonly` | 只读用户 | 2794（各功能只读） | 1 | `sha256(gen_random_uuid())` |
+| `readonly` | 只读用户 | 2730（各功能只读） | 1 | `sha256(gen_random_uuid())` |
 
 七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `app_user` 三表外，其余 37 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 

@@ -8,7 +8,6 @@ const ALL_READ = [
   'warehouse:read',
   'purchase:read',
   'huaxing:read',
-  'codes:read',
   'ledger:read',
   'hazard:read',
   'work:read',

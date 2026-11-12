@@ -86,6 +86,7 @@ async def test_qr_login_flow_uses_memory_session_and_mini_program_code(
     assert me.status_code == 200, me.text
     assert me.json()["id"] == body["user"]["id"]
     assert me.json()["display_name"] == "扫码登录用户"
+    assert "source" not in me.json()
 
     # 登录结果只能取一次；再次轮询得到 expired。
     consumed = await client.get(f"/api/v1/auth/qr-sessions/{session_id}")

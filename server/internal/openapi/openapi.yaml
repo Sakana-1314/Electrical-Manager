@@ -33,7 +33,6 @@ paths:
                   enabled: true
                   version: 1
                   department_name: 华星检修维护部电气车间
-                  source: MANAGE
                   permissions:
                   - system:admin
                   - warehouse:read
@@ -41,7 +40,6 @@ paths:
                   - purchase:read
                   - purchase:write
                   - huaxing:read
-                  - codes:read
                   - ledger:read
                   - ledger:write
                   - hazard:read
@@ -201,7 +199,6 @@ paths:
                 enabled: true
                 version: 1
                 department_name: 华星检修维护部电气车间
-                source: MANAGE
                 permissions:
                 - system:admin
                 - warehouse:read
@@ -209,7 +206,6 @@ paths:
                 - purchase:read
                 - purchase:write
                 - huaxing:read
-                - codes:read
                 - ledger:read
                 - ledger:write
                 - hazard:read
@@ -612,7 +608,7 @@ paths:
     get:
       tags:
       - 系统设置
-      summary: 高级设置（仅开关）
+      summary: 高级设置（开关 + 默认用户权限）
       operationId: get_advanced_settings_api_v1_system_settings_advanced_settings_get
       security:
       - HTTPBearer: []
@@ -630,6 +626,10 @@ paths:
                 secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
+                default_permissions:
+                - warehouse:read
+                - purchase:read
+                - huaxing:read
         '401':
           description: 未认证或凭证无效
           content:
@@ -679,6 +679,10 @@ paths:
                 secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
+                default_permissions:
+                - warehouse:read
+                - purchase:read
+                - huaxing:read
         '400':
           description: 业务校验失败
           content:
@@ -6643,12 +6647,10 @@ paths:
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
-                  source: MINI_PROGRAM
                   permissions:
                   - warehouse:read
                   - purchase:read
                   - huaxing:read
-                  - codes:read
                   - ledger:read
                   - hazard:read
                   - work:read
@@ -6731,12 +6733,10 @@ paths:
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
-                source: MINI_PROGRAM
                 permissions:
                 - warehouse:read
                 - purchase:read
                 - huaxing:read
-                - codes:read
                 - ledger:read
                 - hazard:read
                 - work:read
@@ -6993,12 +6993,10 @@ paths:
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
-                  source: MINI_PROGRAM
                   permissions:
                   - warehouse:read
                   - purchase:read
                   - huaxing:read
-                  - codes:read
                   - ledger:read
                   - hazard:read
                   - work:read
@@ -16343,12 +16341,10 @@ paths:
                   version: 1
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                   department_name: 华星检修维护部电气车间
-                  source: MANAGE
                   permissions:
                   - warehouse:read
                   - warehouse:write
                   - huaxing:read
-                  - codes:read
                 page: 1
                 page_size: 20
                 total: 1
@@ -16436,12 +16432,10 @@ paths:
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
-                source: MANAGE
                 permissions:
                 - warehouse:read
                 - warehouse:write
                 - huaxing:read
-                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -16534,12 +16528,10 @@ paths:
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
-                source: MANAGE
                 permissions:
                 - warehouse:read
                 - warehouse:write
                 - huaxing:read
-                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -16702,7 +16694,6 @@ paths:
                 username: warehouse
                 display_name: 仓库管理员
                 department_name: 华星检修维护部电气车间
-                source: MANAGE
                 permissions:
                 - warehouse:read
                 - warehouse:write
@@ -16804,12 +16795,10 @@ paths:
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
-                source: MANAGE
                 permissions:
                 - warehouse:read
                 - warehouse:write
                 - huaxing:read
-                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -23226,11 +23215,18 @@ components:
         version:
           type: integer
           title: Version
+        default_permissions:
+          items:
+            type: string
+          type: array
+          title: Default Permissions
+          description: 新建用户 / 小程序新注册用户的默认权限键；写权限自动包含同模块读权限
       type: object
       required:
       - mini_program_registration_enabled
       - mini_program_new_user_enabled
       - secondary_warehouse_mode
+      - default_permissions
       - version
       title: AdvancedSettingsRead
       description: 管理端高级设置：小程序注册开关、新用户默认状态、二级库运行模式。模型 / Webhook 走服务端环境变量，图片加速已移除。
@@ -23240,6 +23236,10 @@ components:
         secondary_warehouse_mode: full
         updated_at: '2026-09-13T10:30:00+08:00'
         version: 3
+        default_permissions:
+        - warehouse:read
+        - purchase:read
+        - huaxing:read
     AdvancedSettingsUpdate:
       properties:
         mini_program_registration_enabled:
@@ -23254,6 +23254,14 @@ components:
           type: integer
           minimum: 0.0
           title: Version
+        default_permissions:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Default Permissions
+          description: 默认用户权限键；缺省 / null 表示保持现状，空数组表示不授予任何权限
       additionalProperties: false
       type: object
       required:
@@ -23267,6 +23275,10 @@ components:
         mini_program_new_user_enabled: false
         secondary_warehouse_mode: lite
         version: 3
+        default_permissions:
+        - warehouse:read
+        - purchase:read
+        - huaxing:read
     AiSearchExpandRead:
       properties:
         original:
@@ -25618,7 +25630,6 @@ components:
           enabled: true
           version: 1
           department_name: 华星检修维护部电气车间
-          source: MANAGE
           permissions:
           - system:admin
           - warehouse:read
@@ -25626,7 +25637,6 @@ components:
           - purchase:read
           - purchase:write
           - huaxing:read
-          - codes:read
           - ledger:read
           - ledger:write
           - hazard:read
@@ -26278,12 +26288,10 @@ components:
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
-          source: MINI_PROGRAM
           permissions:
           - warehouse:read
           - purchase:read
           - huaxing:read
-          - codes:read
           - ledger:read
           - hazard:read
           - work:read
@@ -27312,8 +27320,6 @@ components:
         enabled:
           type: boolean
           title: Enabled
-        source:
-          $ref: '#/components/schemas/UserSource'
         permissions:
           items:
             type: string
@@ -27349,7 +27355,6 @@ components:
       - display_name
       - department_name
       - enabled
-      - source
       - permissions
       - wechat_openid
       - created_at
@@ -27361,7 +27366,6 @@ components:
         display_name: 孙浩宇
         department_name: 检修维护部电气自动化车间
         enabled: true
-        source: MINI_PROGRAM
         permissions:
         - warehouse:read
         last_used_at: '2026-09-13T09:12:00+08:00'
@@ -29553,12 +29557,10 @@ components:
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
-          source: MINI_PROGRAM
           permissions:
           - warehouse:read
           - purchase:read
           - huaxing:read
-          - codes:read
           - ledger:read
           - hazard:read
           - work:read
@@ -29571,12 +29573,10 @@ components:
           updated_at: '2026-08-14T10:26:00+08:00'
           last_used_at: '2026-09-06T14:05:00+08:00'
           version: 1
-          source: MINI_PROGRAM
           permissions:
           - warehouse:read
           - purchase:read
           - huaxing:read
-          - codes:read
           - ledger:read
           - hazard:read
           - work:read
@@ -29589,12 +29589,10 @@ components:
           updated_at: '2026-09-04T11:02:00+08:00'
           last_used_at: '2026-08-15T08:12:00+08:00'
           version: 2
-          source: MINI_PROGRAM
           permissions:
           - warehouse:read
           - purchase:read
           - huaxing:read
-          - codes:read
           - ledger:read
           - hazard:read
           - work:read
@@ -31346,12 +31344,10 @@ components:
           version: 1
           api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
           department_name: 华星检修维护部电气车间
-          source: MANAGE
           permissions:
           - warehouse:read
           - warehouse:write
           - huaxing:read
-          - codes:read
         page: 1
         page_size: 20
         total: 1
@@ -34244,12 +34240,6 @@ components:
         lines:
         - stock_material_id: 1
           quantity: '1'
-    UserSource:
-      type: string
-      enum:
-      - MANAGE
-      - MINI_PROGRAM
-      title: UserSource
     SecondaryWarehouseMode:
       type: string
       enum:
@@ -35020,8 +35010,6 @@ components:
         department_name:
           type: string
           title: Department Name
-        source:
-          $ref: '#/components/schemas/UserSource'
         wechat_openid:
           anyOf:
           - type: string
@@ -35053,7 +35041,6 @@ components:
       - username
       - display_name
       - department_name
-      - source
       - permissions
       - enabled
       - version
@@ -35063,12 +35050,10 @@ components:
         username: warehouse
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
-        source: MANAGE
         permissions:
         - warehouse:read
         - warehouse:write
         - huaxing:read
-        - codes:read
         enabled: true
         version: 1
         api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -35145,8 +35130,6 @@ components:
         department_name:
           type: string
           title: Department Name
-        source:
-          $ref: '#/components/schemas/UserSource'
         wechat_openid:
           anyOf:
           - type: string
@@ -35171,7 +35154,6 @@ components:
       - username
       - display_name
       - department_name
-      - source
       - permissions
       - enabled
       - version
@@ -35181,7 +35163,6 @@ components:
         username: admin
         display_name: 系统管理员
         department_name: 华星检修维护部电气车间
-        source: MANAGE
         permissions:
         - system:admin
         - warehouse:read
@@ -35189,7 +35170,6 @@ components:
         - purchase:read
         - purchase:write
         - huaxing:read
-        - codes:read
         - ledger:read
         - ledger:write
         - hazard:read
@@ -35254,13 +35234,11 @@ components:
         department_name: 华星检修维护部电气车间
         enabled: true
         version: 2
-        source: MANAGE
         permissions:
         - warehouse:read
         - warehouse:write
         - purchase:read
         - huaxing:read
-        - codes:read
         - ledger:read
         - hazard:read
         - work:read

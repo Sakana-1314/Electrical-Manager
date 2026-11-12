@@ -10,16 +10,18 @@ type AdvancedSettingsRead struct {
 	MiniProgramRegistrationEnabled bool           `json:"mini_program_registration_enabled"`
 	MiniProgramNewUserEnabled      bool           `json:"mini_program_new_user_enabled"`
 	SecondaryWarehouseMode         string         `json:"secondary_warehouse_mode"`
+	DefaultPermissions             []string       `json:"default_permissions"`
 	UpdatedAt                      *jtype.UTCTime `json:"updated_at"`
 	Version                        int64          `json:"version"`
 }
 
 // AdvancedSettingsUpdate 保存高级设置（全量提交，version 为乐观锁）。
 type AdvancedSettingsUpdate struct {
-	MiniProgramRegistrationEnabled bool   `json:"mini_program_registration_enabled"`
-	MiniProgramNewUserEnabled      bool   `json:"mini_program_new_user_enabled"`
-	SecondaryWarehouseMode         string `json:"secondary_warehouse_mode" v:"oneof=full|lite"`
-	Version                        int64  `json:"version" v:"required,ge=0"`
+	MiniProgramRegistrationEnabled bool      `json:"mini_program_registration_enabled"`
+	MiniProgramNewUserEnabled      bool      `json:"mini_program_new_user_enabled"`
+	SecondaryWarehouseMode         string    `json:"secondary_warehouse_mode" v:"oneof=full|lite"`
+	DefaultPermissions             *[]string `json:"default_permissions"`
+	Version                        int64     `json:"version" v:"required,ge=0"`
 }
 
 // ---------------- AI 搜索（只读状态与扩展） ----------------

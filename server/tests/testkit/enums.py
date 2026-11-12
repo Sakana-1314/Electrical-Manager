@@ -3,11 +3,6 @@
 from enum import StrEnum
 
 
-class UserSource(StrEnum):
-    MANAGE = "MANAGE"
-    MINI_PROGRAM = "MINI_PROGRAM"
-
-
 # 权限位（与 server/internal/domain/permissions.go 的 PermissionCatalog 一致）：
 # 用户权限直接存 app_user.permissions（BIGINT 位图），测试按位组合。
 PERMISSION_BITS: dict[str, int] = {
@@ -17,7 +12,7 @@ PERMISSION_BITS: dict[str, int] = {
     "purchase:read": 1 << 3,
     "purchase:write": 1 << 4,
     "huaxing:read": 1 << 5,
-    "codes:read": 1 << 6,
+    # 位 6 退役（原 codes:read，物料编码库并入申购权限），保留空位不重排。
     "ledger:read": 1 << 7,
     "ledger:write": 1 << 8,
     "hazard:read": 1 << 9,
@@ -37,17 +32,16 @@ def permission_bits(*keys: str) -> int:
     return bits
 
 
-ALL_PERMISSIONS = (1 << len(PERMISSION_BITS)) - 1
+ALL_PERMISSIONS = 0
+for _bit in PERMISSION_BITS.values():
+    ALL_PERMISSIONS |= _bit
+
 
 # 小程序新用户默认权限：各功能只读
 DEFAULT_PERMISSION_KEYS: tuple[str, ...] = (
     "warehouse:read",
     "purchase:read",
     "huaxing:read",
-    "codes:read",
-    "ledger:read",
-    "hazard:read",
-    "work:read",
 )
 DEFAULT_REGISTRATION_PERMISSIONS = permission_bits(*DEFAULT_PERMISSION_KEYS)
 
@@ -59,7 +53,9 @@ SEED_USER_PERMISSIONS: dict[str, int] = {
     "hazard": permission_bits("hazard:read", "hazard:write"),
     "ledger": permission_bits("ledger:read", "ledger:write"),
     "work": permission_bits("work:read", "work:write"),
-    "readonly": DEFAULT_REGISTRATION_PERMISSIONS,
+    "readonly": permission_bits(
+        "warehouse:read", "purchase:read", "huaxing:read", "ledger:read", "hazard:read", "work:read"
+    ),
 }
 
 

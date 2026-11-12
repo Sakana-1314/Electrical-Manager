@@ -16,8 +16,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/webhook"
 )
 
-// User 是小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号；openid 直存本表）。
-// 权限位图在 model.User.Permissions，按位判断。
+// User 是统一用户在小程序端的读取结构（openid 直存 app_user）；权限位图在 model.User.Permissions。
 type User struct {
 	model.User
 }
@@ -34,7 +33,7 @@ func registrationDisabled() error {
 func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
 	return schema.MiniProgramUserRead{
 		ID: u.ID, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Enabled: u.Enabled,
-		Source: u.Source, WechatOpenid: u.WechatOpenid, Permissions: domain.Permission(u.Permissions).Normalize().Keys(),
+		WechatOpenid: u.WechatOpenid, Permissions: domain.Permission(u.Permissions).Normalize().Keys(),
 		LastUsedAt: common.UTCPtr(u.LastUsedAt),
 		CreatedAt:  jtype.NewUTC(u.CreatedAt), UpdatedAt: jtype.NewUTC(u.UpdatedAt), Version: u.Version,
 	}
@@ -42,12 +41,12 @@ func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
 
 // getUser 对应 session.get(User, id)；不存在返回 nil。
 func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
-	q := "SELECT " + model.ColsUser + " FROM app_user WHERE id = ? AND source = ?"
+	q := "SELECT " + model.ColsUser + " FROM app_user WHERE id = ?"
 	if forUpdate {
 		q += " FOR UPDATE"
 	}
 	var m model.User
-	ok, err := s.Find(&m, q, id, domain.UserSourceMiniProgram)
+	ok, err := s.Find(&m, q, id)
 	if err != nil || !ok {
 		return nil, err
 	}
@@ -152,11 +151,15 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 	if err != nil {
 		return nil, err
 	}
+	defaultPermissions, err := appsettings.GetDefaultPermissions(s)
+	if err != nil {
+		return nil, err
+	}
 	now := common.UTCNow()
 	user := &User{User: model.User{
 		Username: miniProgramUsername(openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
-		DisplayName: displayName, DepartmentName: departmentName, Source: domain.UserSourceMiniProgram,
-		WechatOpenid: &openid, Permissions: int64(domain.DefaultRegistrationPermissions),
+		DisplayName: displayName, DepartmentName: departmentName,
+		WechatOpenid: &openid, Permissions: int64(defaultPermissions),
 		Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	conflict := func(err error) error {
@@ -165,9 +168,9 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		}
 		return err
 	}
-	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, wechat_openid, permissions, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, wechat_openid, permissions, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.Username, user.PasswordHash, user.APITokenHash, user.APITokenEnc, user.DisplayName, user.DepartmentName,
-		user.Source, user.WechatOpenid, user.Permissions, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
+		user.WechatOpenid, user.Permissions, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
 	if err != nil {
 		return nil, conflict(err)
 	}

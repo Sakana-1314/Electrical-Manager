@@ -164,7 +164,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 高级设置（仅开关） */
+        /** 高级设置（开关 + 默认用户权限） */
         get: operations["get_advanced_settings_api_v1_system_settings_advanced_settings_get"];
         /** 保存高级设置 */
         put: operations["update_advanced_settings_api_v1_system_settings_advanced_settings_put"];
@@ -2579,7 +2579,12 @@ export interface components {
          *       "mini_program_new_user_enabled": true,
          *       "secondary_warehouse_mode": "full",
          *       "updated_at": "2026-09-13T10:30:00+08:00",
-         *       "version": 3
+         *       "version": 3,
+         *       "default_permissions": [
+         *         "warehouse:read",
+         *         "purchase:read",
+         *         "huaxing:read"
+         *       ]
          *     }
          */
         AdvancedSettingsRead: {
@@ -2592,6 +2597,11 @@ export interface components {
             updated_at?: string | null;
             /** Version */
             version: number;
+            /**
+             * Default Permissions
+             * @description 新建用户 / 小程序新注册用户的默认权限键；写权限自动包含同模块读权限
+             */
+            default_permissions: string[];
         };
         /**
          * AdvancedSettingsUpdate
@@ -2599,7 +2609,12 @@ export interface components {
          *       "mini_program_registration_enabled": true,
          *       "mini_program_new_user_enabled": false,
          *       "secondary_warehouse_mode": "lite",
-         *       "version": 3
+         *       "version": 3,
+         *       "default_permissions": [
+         *         "warehouse:read",
+         *         "purchase:read",
+         *         "huaxing:read"
+         *       ]
          *     }
          */
         AdvancedSettingsUpdate: {
@@ -2610,6 +2625,11 @@ export interface components {
             secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
             /** Version */
             version: number;
+            /**
+             * Default Permissions
+             * @description 默认用户权限键；缺省 / null 表示保持现状，空数组表示不授予任何权限
+             */
+            default_permissions?: string[] | null;
         };
         /**
          * AiSearchExpandRead
@@ -4184,7 +4204,6 @@ export interface components {
          *         "enabled": true,
          *         "version": 1,
          *         "department_name": "华星检修维护部电气车间",
-         *         "source": "MANAGE",
          *         "permissions": [
          *           "system:admin",
          *           "warehouse:read",
@@ -4192,7 +4211,6 @@ export interface components {
          *           "purchase:read",
          *           "purchase:write",
          *           "huaxing:read",
-         *           "codes:read",
          *           "ledger:read",
          *           "ledger:write",
          *           "hazard:read",
@@ -4634,12 +4652,10 @@ export interface components {
          *         "updated_at": "2026-09-02T09:35:00+08:00",
          *         "last_used_at": "2026-09-13T09:12:00+08:00",
          *         "version": 2,
-         *         "source": "MINI_PROGRAM",
          *         "permissions": [
          *           "warehouse:read",
          *           "purchase:read",
          *           "huaxing:read",
-         *           "codes:read",
          *           "ledger:read",
          *           "hazard:read",
          *           "work:read"
@@ -5377,7 +5393,6 @@ export interface components {
          *       "display_name": "孙浩宇",
          *       "department_name": "检修维护部电气自动化车间",
          *       "enabled": true,
-         *       "source": "MINI_PROGRAM",
          *       "permissions": [
          *         "warehouse:read"
          *       ],
@@ -5397,7 +5412,6 @@ export interface components {
             department_name: string;
             /** Enabled */
             enabled: boolean;
-            source: components["schemas"]["UserSource"];
             /**
              * Permissions
              * @description 权限位展开后的权限键，小程序端按它门禁功能入口与写操作
@@ -7659,12 +7673,10 @@ export interface components {
          *           "updated_at": "2026-09-02T09:35:00+08:00",
          *           "last_used_at": "2026-09-13T09:12:00+08:00",
          *           "version": 2,
-         *           "source": "MINI_PROGRAM",
          *           "permissions": [
          *             "warehouse:read",
          *             "purchase:read",
          *             "huaxing:read",
-         *             "codes:read",
          *             "ledger:read",
          *             "hazard:read",
          *             "work:read"
@@ -7680,12 +7692,10 @@ export interface components {
          *           "updated_at": "2026-08-14T10:26:00+08:00",
          *           "last_used_at": "2026-09-06T14:05:00+08:00",
          *           "version": 1,
-         *           "source": "MINI_PROGRAM",
          *           "permissions": [
          *             "warehouse:read",
          *             "purchase:read",
          *             "huaxing:read",
-         *             "codes:read",
          *             "ledger:read",
          *             "hazard:read",
          *             "work:read"
@@ -7701,12 +7711,10 @@ export interface components {
          *           "updated_at": "2026-09-04T11:02:00+08:00",
          *           "last_used_at": "2026-08-15T08:12:00+08:00",
          *           "version": 2,
-         *           "source": "MINI_PROGRAM",
          *           "permissions": [
          *             "warehouse:read",
          *             "purchase:read",
          *             "huaxing:read",
-         *             "codes:read",
          *             "ledger:read",
          *             "hazard:read",
          *             "work:read"
@@ -9630,12 +9638,10 @@ export interface components {
          *           "version": 1,
          *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
          *           "department_name": "华星检修维护部电气车间",
-         *           "source": "MANAGE",
          *           "permissions": [
          *             "warehouse:read",
          *             "warehouse:write",
-         *             "huaxing:read",
-         *             "codes:read"
+         *             "huaxing:read"
          *           ]
          *         }
          *       ],
@@ -11695,11 +11701,6 @@ export interface components {
             lines: components["schemas"]["OperationLineWrite"][];
         };
         /**
-         * UserSource
-         * @enum {string}
-         */
-        UserSource: "MANAGE" | "MINI_PROGRAM";
-        /**
          * SecondaryWarehouseMode
          * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
          * @enum {string}
@@ -12261,12 +12262,10 @@ export interface components {
          *       "username": "warehouse",
          *       "display_name": "仓库管理员",
          *       "department_name": "华星检修维护部电气车间",
-         *       "source": "MANAGE",
          *       "permissions": [
          *         "warehouse:read",
          *         "warehouse:write",
-         *         "huaxing:read",
-         *         "codes:read"
+         *         "huaxing:read"
          *       ],
          *       "enabled": true,
          *       "version": 1,
@@ -12282,7 +12281,6 @@ export interface components {
             display_name: string;
             /** Department Name */
             department_name: string;
-            source: components["schemas"]["UserSource"];
             /**
              * Wechat Openid
              * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
@@ -12354,7 +12352,6 @@ export interface components {
          *       "username": "admin",
          *       "display_name": "系统管理员",
          *       "department_name": "华星检修维护部电气车间",
-         *       "source": "MANAGE",
          *       "permissions": [
          *         "system:admin",
          *         "warehouse:read",
@@ -12362,7 +12359,6 @@ export interface components {
          *         "purchase:read",
          *         "purchase:write",
          *         "huaxing:read",
-         *         "codes:read",
          *         "ledger:read",
          *         "ledger:write",
          *         "hazard:read",
@@ -12383,7 +12379,6 @@ export interface components {
             display_name: string;
             /** Department Name */
             department_name: string;
-            source: components["schemas"]["UserSource"];
             /**
              * Wechat Openid
              * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
@@ -12407,13 +12402,11 @@ export interface components {
          *       "department_name": "华星检修维护部电气车间",
          *       "enabled": true,
          *       "version": 2,
-         *       "source": "MANAGE",
          *       "permissions": [
          *         "warehouse:read",
          *         "warehouse:write",
          *         "purchase:read",
          *         "huaxing:read",
-         *         "codes:read",
          *         "ledger:read",
          *         "hazard:read",
          *         "work:read"
@@ -12935,7 +12928,6 @@ export interface operations {
                      *         "enabled": true,
                      *         "version": 1,
                      *         "department_name": "华星检修维护部电气车间",
-                     *         "source": "MANAGE",
                      *         "permissions": [
                      *           "system:admin",
                      *           "warehouse:read",
@@ -12943,7 +12935,6 @@ export interface operations {
                      *           "purchase:read",
                      *           "purchase:write",
                      *           "huaxing:read",
-                     *           "codes:read",
                      *           "ledger:read",
                      *           "ledger:write",
                      *           "hazard:read",
@@ -13183,7 +13174,6 @@ export interface operations {
                      *       "enabled": true,
                      *       "version": 1,
                      *       "department_name": "华星检修维护部电气车间",
-                     *       "source": "MANAGE",
                      *       "permissions": [
                      *         "system:admin",
                      *         "warehouse:read",
@@ -13191,7 +13181,6 @@ export interface operations {
                      *         "purchase:read",
                      *         "purchase:write",
                      *         "huaxing:read",
-                     *         "codes:read",
                      *         "ledger:read",
                      *         "ledger:write",
                      *         "hazard:read",
@@ -13794,7 +13783,12 @@ export interface operations {
                      *       "mini_program_new_user_enabled": true,
                      *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
-                     *       "version": 3
+                     *       "version": 3,
+                     *       "default_permissions": [
+                     *         "warehouse:read",
+                     *         "purchase:read",
+                     *         "huaxing:read"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["AdvancedSettingsRead"];
@@ -13861,7 +13855,12 @@ export interface operations {
                      *       "mini_program_new_user_enabled": true,
                      *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
-                     *       "version": 3
+                     *       "version": 3,
+                     *       "default_permissions": [
+                     *         "warehouse:read",
+                     *         "purchase:read",
+                     *         "huaxing:read"
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["AdvancedSettingsRead"];
@@ -21078,12 +21077,10 @@ export interface operations {
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2,
-                     *         "source": "MINI_PROGRAM",
                      *         "permissions": [
                      *           "warehouse:read",
                      *           "purchase:read",
                      *           "huaxing:read",
-                     *           "codes:read",
                      *           "ledger:read",
                      *           "hazard:read",
                      *           "work:read"
@@ -21208,12 +21205,10 @@ export interface operations {
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "version": 2,
-                     *       "source": "MINI_PROGRAM",
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "purchase:read",
                      *         "huaxing:read",
-                     *         "codes:read",
                      *         "ledger:read",
                      *         "hazard:read",
                      *         "work:read"
@@ -21577,12 +21572,10 @@ export interface operations {
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2,
-                     *         "source": "MINI_PROGRAM",
                      *         "permissions": [
                      *           "warehouse:read",
                      *           "purchase:read",
                      *           "huaxing:read",
-                     *           "codes:read",
                      *           "ledger:read",
                      *           "hazard:read",
                      *           "work:read"
@@ -32156,12 +32149,10 @@ export interface operations {
                      *           "version": 1,
                      *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *           "department_name": "华星检修维护部电气车间",
-                     *           "source": "MANAGE",
                      *           "permissions": [
                      *             "warehouse:read",
                      *             "warehouse:write",
-                     *             "huaxing:read",
-                     *             "codes:read"
+                     *             "huaxing:read"
                      *           ]
                      *         }
                      *       ],
@@ -32288,12 +32279,10 @@ export interface operations {
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",
-                     *       "source": "MANAGE",
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
-                     *         "huaxing:read",
-                     *         "codes:read"
+                     *         "huaxing:read"
                      *       ]
                      *     }
                      */
@@ -32522,12 +32511,10 @@ export interface operations {
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",
-                     *       "source": "MANAGE",
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
-                     *         "huaxing:read",
-                     *         "codes:read"
+                     *         "huaxing:read"
                      *       ]
                      *     }
                      */
@@ -32648,7 +32635,6 @@ export interface operations {
                      *       "username": "warehouse",
                      *       "display_name": "仓库管理员",
                      *       "department_name": "华星检修维护部电气车间",
-                     *       "source": "MANAGE",
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
@@ -32781,12 +32767,10 @@ export interface operations {
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",
-                     *       "source": "MANAGE",
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
-                     *         "huaxing:read",
-                     *         "codes:read"
+                     *         "huaxing:read"
                      *       ]
                      *     }
                      */

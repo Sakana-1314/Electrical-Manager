@@ -3,6 +3,7 @@ import { computed, h, onMounted, reactive, ref } from 'vue'
 import { NButton, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
 import type { ManagedUser, PermissionRead } from '@/api/generated'
 import { dictionaryApi, permissionApi } from '@/api/dictionaries'
+import { systemSettingsApi } from '@/api/systemSettings'
 import { getTableScrollX, preventTableColumnCompression } from '@/constants/table'
 import { activeBackendUrl } from '@/api/backend'
 import { resolveMcpUrl } from '@/config/env'
@@ -11,6 +12,8 @@ import { useProjectStore } from '@/stores/project'
 
 // 权限位目录（GET /permissions）：系统管理 + 各功能读写，勾选后按位存进用户 permissions。
 const permissionOptions = ref<PermissionRead[]>([])
+// 新建用户时预填高级设置里的默认权限。
+const defaultPermissions = ref<string[]>([])
 const MODULE_LABELS: Record<string, string> = {
   system: '系统管理',
   warehouse: '二级库',
@@ -91,6 +94,10 @@ onMounted(() => {
     .list()
     .then((options) => (permissionOptions.value = options))
     .catch((e) => message.error(e instanceof Error ? e.message : '权限目录加载失败'))
+  systemSettingsApi
+    .advancedSettings()
+    .then((settings) => (defaultPermissions.value = [...settings.default_permissions]))
+    .catch(() => undefined)
 })
 
 /** 勾选权限：写权限自动带上同模块读权限；取消读权限时同时取消写权限。 */
@@ -114,16 +121,6 @@ const columns = preventTableColumnCompression<ManagedUser>([
       h('div', { class: 'user-cell' }, [
         h('div', { class: 'user-name-row' }, [
           h('span', { class: 'user-name' }, r.display_name || r.username),
-          h(
-            NTag,
-            {
-              size: 'small',
-              type: r.source === 'MANAGE' ? 'info' : 'default',
-              bordered: false,
-              round: true,
-            },
-            { default: () => (r.source === 'MANAGE' ? '管理端' : '小程序') },
-          ),
         ]),
         h('div', { class: 'user-username' }, `@${r.username}`),
       ]),
@@ -211,7 +208,7 @@ function open(row?: ManagedUser): void {
           username: '',
           display_name: '',
           department_name: '',
-          permissions: [],
+          permissions: [...defaultPermissions.value],
           enabled: true,
           password: '',
           version: 0,
@@ -489,9 +486,7 @@ function remove(row: ManagedUser) {
                 .filter((item) => item.id !== editing?.id)
                 .map((item) => ({
                   value: item.id,
-                  label: `${item.display_name}（${item.username}｜${
-                    item.source === 'MANAGE' ? '管理端' : '小程序'
-                  }）`,
+                  label: `${item.display_name}（${item.username}）`,
                 }))
             " /></n-form-item
         ><n-alert v-if="mergeSource" type="warning" :show-icon="true"

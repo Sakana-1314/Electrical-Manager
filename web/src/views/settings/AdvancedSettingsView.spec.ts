@@ -1,10 +1,15 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { NButton, NCard, NForm, NFormItem, NMessageProvider, NSwitch } from 'naive-ui'
+import { NButton, NCard, NCheckbox, NForm, NFormItem, NMessageProvider, NSwitch } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
 import type { AdvancedSettings } from '@/api/generated'
 import { systemSettingsApi } from '@/api/systemSettings'
+import { permissionApi } from '@/api/dictionaries'
 import AdvancedSettingsView from './AdvancedSettingsView.vue'
+
+vi.mock('@/api/dictionaries', () => ({
+  permissionApi: { list: vi.fn() },
+}))
 
 vi.mock('@/api/systemSettings', () => ({
   systemSettingsApi: {
@@ -17,6 +22,7 @@ const settings = (overrides: Partial<AdvancedSettings> = {}): AdvancedSettings =
   mini_program_registration_enabled: true,
   mini_program_new_user_enabled: true,
   secondary_warehouse_mode: 'full',
+  default_permissions: ['warehouse:read', 'purchase:read', 'huaxing:read'],
   updated_at: '2026-09-13T10:30:00+08:00',
   version: 1,
   ...overrides,
@@ -29,13 +35,14 @@ const Host = defineComponent({
 let wrapper: VueWrapper | null = null
 
 async function mountView(data: AdvancedSettings = settings()): Promise<VueWrapper> {
+  vi.mocked(permissionApi.list).mockResolvedValue([])
   vi.mocked(systemSettingsApi.advancedSettings).mockResolvedValue(data)
   vi.mocked(systemSettingsApi.updateAdvancedSettings).mockResolvedValue(data)
   wrapper = mount(Host, {
     attachTo: document.body,
     global: {
       // 单测环境未启用 unplugin-vue-components，需显式注册模板里的 n-* 组件。
-      components: { NButton, NCard, NForm, NFormItem, NMessageProvider, NSwitch },
+      components: { NButton, NCard, NCheckbox, NForm, NFormItem, NMessageProvider, NSwitch },
     },
   })
   await flushPromises()
@@ -87,7 +94,7 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('AdvancedSettingsView（仅保留开关）', () => {
+describe('AdvancedSettingsView（开关与默认权限）', () => {
   it('页面只有三个开关，不再有模型 / 图片 / Webhook 配置', async () => {
     const view = await mountView()
 
@@ -113,6 +120,7 @@ describe('AdvancedSettingsView（仅保留开关）', () => {
       mini_program_registration_enabled: false,
       mini_program_new_user_enabled: false,
       secondary_warehouse_mode: 'lite',
+      default_permissions: ['warehouse:read', 'purchase:read', 'huaxing:read'],
       version: 1,
     })
     reloadTimer.mockRestore()

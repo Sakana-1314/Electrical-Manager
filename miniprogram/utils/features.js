@@ -47,7 +47,7 @@ const ENTRY_PERMISSION = {
   purchaseRecords: 'purchase:read',
   ledger: 'ledger:read',
   hazards: 'hazard:read',
-  materialCodes: 'codes:read',
+  materialCodes: 'purchase:read',
 };
 
 function entryEnabled(key) {

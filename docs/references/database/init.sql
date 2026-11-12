@@ -6,13 +6,6 @@
 -- 枚举类型：库内保存枚举「名」（如 PENDING），接口按枚举「值」输出中文字段见各表注释。
 DO $$
 BEGIN
-  CREATE TYPE usersource AS ENUM ('MANAGE', 'MINI_PROGRAM');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END
-$$;
-
-DO $$
-BEGIN
   CREATE TYPE hazardstatus AS ENUM ('PENDING', 'BLOCKED', 'DONE');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END
@@ -119,12 +112,11 @@ CREATE TABLE IF NOT EXISTS project (
   CONSTRAINT uq_project_name UNIQUE (name)
 );
 
--- 统一用户：管理端（source = MANAGE，用户名密码 / 接口令牌登录）与小程序端
--- （source = MINI_PROGRAM，微信 openid 登录，username 由 openid 派生、无密码）共用同一张表与权限位图。
--- 小程序只有一个（一个 app_id），微信 openid 直接落在本表：管理端用户为 NULL，小程序用户非空且唯一。
--- 小程序用户不使用接口令牌：api_token_hash 为空串，唯一性只约束非空值（部分唯一索引）。
+-- 统一用户：不再区分管理端 / 小程序端来源。任何账号都可以用用户名密码 / 接口令牌 / 微信扫码登录网页，
+-- 绑定微信 openid 后也可以用小程序；小程序只有一个（一个 app_id），openid 直接落在本表且非空时唯一。
+-- 未设置密码 / 接口令牌的账号对应列为空串，唯一性只约束非空值（部分唯一索引）。
 -- 权限不再走角色表：permissions 是 BIGINT 位图，每一位对应一个权限点（见 server/internal/domain/permissions.go），
--- 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限。
+-- 两端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限。
 CREATE TABLE IF NOT EXISTS app_user (
   id BIGSERIAL NOT NULL,
   username VARCHAR(64) NOT NULL,
@@ -133,7 +125,6 @@ CREATE TABLE IF NOT EXISTS app_user (
   api_token_enc VARCHAR(512) NOT NULL DEFAULT '',
   display_name VARCHAR(128) NOT NULL,
   department_name VARCHAR(128) NOT NULL DEFAULT '',
-  source usersource NOT NULL DEFAULT 'MANAGE',
   wechat_openid VARCHAR(128) NULL,
   permissions BIGINT NOT NULL DEFAULT 0,
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
@@ -1163,17 +1154,17 @@ ON CONFLICT (project_id, major, minor) DO NOTHING;
 
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码与权限位。
 -- 权限位（BIGINT）：bit0 系统管理、bit1-2 二级库读写、bit3-4 申购读写、bit5 华星只读、bit6 编码库只读、
--- bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写；全开 = 8191。
+-- bit6 退役（原编码库只读，已并入申购）、bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写；全开 = 8127。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
-INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, source, permissions, enabled)
+INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, permissions, enabled)
 VALUES
-  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 'MANAGE', 8191, TRUE),
-  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 'MANAGE', 6, TRUE),
-  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 'MANAGE', 24, TRUE),
-  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 'MANAGE', 1536, TRUE),
-  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 'MANAGE', 384, TRUE),
-  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 'MANAGE', 6144, TRUE),
-  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 'MANAGE', 2794, TRUE)
+  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 8127, TRUE),
+  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 6, TRUE),
+  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 24, TRUE),
+  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 1536, TRUE),
+  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 384, TRUE),
+  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 6144, TRUE),
+  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 2730, TRUE)
 ON CONFLICT (username) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     department_name = EXCLUDED.department_name,
@@ -1193,7 +1184,7 @@ COMMENT ON COLUMN project."remark" IS '备注';
 COMMENT ON COLUMN project."created_at" IS '创建时间';
 COMMENT ON COLUMN project."updated_at" IS '更新时间';
 COMMENT ON COLUMN project."version" IS '乐观锁版本号（每次更新 +1）';
-COMMENT ON TABLE app_user IS '统一用户（管理端 + 小程序端，微信 openid 直存；权限位图直接落 permissions）';
+COMMENT ON TABLE app_user IS '统一用户（网页端 + 小程序端共用，微信 openid 直存；权限位图直接落 permissions）';
 COMMENT ON COLUMN app_user."id" IS '主键';
 COMMENT ON COLUMN app_user."username" IS '登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`）';
 COMMENT ON COLUMN app_user."password_hash" IS 'Argon2id 密码哈希（小程序来源用户为空串，不可密码登录）';
@@ -1201,11 +1192,10 @@ COMMENT ON COLUMN app_user."api_token_hash" IS '接口令牌 SHA-256，非空值
 COMMENT ON COLUMN app_user."api_token_enc" IS '接口令牌 Fernet 密文，供读取接口解密回显';
 COMMENT ON COLUMN app_user."display_name" IS '显示名称';
 COMMENT ON COLUMN app_user."department_name" IS '部门单位';
-COMMENT ON COLUMN app_user."source" IS '账号来源，接口同名字符串';
 COMMENT ON COLUMN app_user."wechat_openid" IS '微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid）';
 COMMENT ON COLUMN app_user."permissions" IS '权限位图（BIGINT，按位判断）；bit0 系统管理、各功能读写位见 domain.PermissionCatalog';
 COMMENT ON COLUMN app_user."enabled" IS '账号是否启用';
-COMMENT ON COLUMN app_user."last_used_at" IS '小程序来源用户的最近登录时间（登录即刷新，不自增 version）';
+COMMENT ON COLUMN app_user."last_used_at" IS '小程序登录的最近使用时间（登录即刷新，不自增 version）';
 COMMENT ON COLUMN app_user."created_at" IS '创建时间';
 COMMENT ON COLUMN app_user."updated_at" IS '更新时间';
 COMMENT ON COLUMN app_user."version" IS '乐观锁版本号（每次更新 +1）';

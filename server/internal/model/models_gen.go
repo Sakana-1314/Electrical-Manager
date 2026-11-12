@@ -589,10 +589,10 @@ type SystemSetting struct {
 const TableSystemSetting = "system_setting"
 const ColsSystemSetting = `"setting_key", "setting_value", "version", "updated_at"`
 
-// User ↔ 表 `app_user`。管理端（MANAGE，用户名密码 / 接口令牌登录）与小程序端（MINI_PROGRAM，
-// 微信 openid 登录、username 由 openid 派生且无密码）统一账号；权限位图直接落 permissions（BIGINT），
+// User ↔ 表 `app_user`。网页端与小程序端共用统一账号（不再区分来源）：有密码可密码登录，
+// 有微信 openid 可扫码 / 小程序登录；权限位图直接落 permissions（BIGINT），
 // 每一位见 domain.PermissionCatalog，写权限会自动带上同模块读权限。
-// 小程序只有一个，wechat_openid 直接落本表（管理端用户为 NULL，小程序用户非空且唯一）。
+// 小程序只有一个，wechat_openid 直接落本表（未绑定为 NULL，绑定后唯一）。
 type User struct {
 	ID             int64      `db:"id" json:"id"`
 	Username       string     `db:"username" json:"username"`
@@ -601,7 +601,6 @@ type User struct {
 	APITokenEnc    string     `db:"api_token_enc" json:"api_token_enc"`
 	DisplayName    string     `db:"display_name" json:"display_name"`
 	DepartmentName string     `db:"department_name" json:"department_name"`
-	Source         string     `db:"source" json:"source"` // enum: MANAGE, MINI_PROGRAM
 	WechatOpenid   *string    `db:"wechat_openid" json:"wechat_openid"`
 	Permissions    int64      `db:"permissions" json:"permissions"`
 	Enabled        bool       `db:"enabled" json:"enabled"`
@@ -612,7 +611,7 @@ type User struct {
 }
 
 const TableUser = "app_user"
-const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "source", "wechat_openid", "permissions", "enabled", "last_used_at", "created_at", "updated_at", "version"`
+const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "wechat_openid", "permissions", "enabled", "last_used_at", "created_at", "updated_at", "version"`
 
 // WebhookDelivery ↔ 表 `webhook_delivery`。渠道地址 / 密钥 / 订阅事件由服务端环境变量提供，
 // 本表只记录投递队列与重试状态。

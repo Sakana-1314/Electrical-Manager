@@ -23,7 +23,7 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| 权限位 | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`codes:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限 |
+| 权限位 | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
