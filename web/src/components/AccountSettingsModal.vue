@@ -36,7 +36,7 @@ const mcpUrl = computed(() => {
 const tokenText = computed(() => {
   if (tokenInfo.value?.api_token) return tokenInfo.value.api_token
   if (loadingToken.value) return '正在加载…'
-  return tokenInfo.value ? '（旧版令牌将在下次接口调用后自动回显）' : '（暂不可用）'
+  return tokenInfo.value ? '（旧版令牌无法回显，请联系管理员重新生成）' : '（暂不可用）'
 })
 
 function resetPasswordForm() {
