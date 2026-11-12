@@ -22,7 +22,7 @@ const rules: FormRules = {
 }
 
 type QrStatus = 'idle' | 'loading' | 'ready' | 'expired' | 'error'
-const activeTab = ref<'password' | 'qr'>('password')
+const activeTab = ref<'password' | 'qr'>('qr')
 const qrStatus = ref<QrStatus>('idle')
 const qrImageUrl = ref('')
 const qrImageFailed = ref(false)
@@ -119,6 +119,9 @@ watch(activeTab, (tab) => {
     qrStatus.value = 'idle'
   }
 })
+
+// 默认页签就是扫码登录，mount 时 watch 不会触发，这里主动创建一次会话。
+void startQrLogin()
 
 onBeforeUnmount(() => {
   disposed = true

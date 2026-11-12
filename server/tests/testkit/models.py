@@ -27,7 +27,6 @@ from tests.testkit.enums import (
     ShareType,
     WebhookDeliveryStatus,
     WebhookEventType,
-    UserSource,
     WebhookPlatform,
 )
 
@@ -80,7 +79,6 @@ class User(AuditColumns, Base):
     api_token_enc: Mapped[str] = mapped_column(String(512), server_default="")
     display_name: Mapped[str] = mapped_column(String(128))
     department_name: Mapped[str] = mapped_column(String(128), server_default="")
-    source: Mapped[UserSource] = mapped_column(_enum(UserSource), server_default="MANAGE")
     wechat_openid: Mapped[str | None] = mapped_column(String(128))
     permissions: Mapped[int] = mapped_column(BigInteger, server_default="0")
     enabled: Mapped[bool] = mapped_column(server_default="true")

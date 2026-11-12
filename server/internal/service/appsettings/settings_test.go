@@ -15,6 +15,9 @@ func TestFromDataDefaults(t *testing.T) {
 	if c.SecondaryWarehouseMode != domain.SecondaryWarehouseFull {
 		t.Fatalf("default mode = %q", c.SecondaryWarehouseMode)
 	}
+	if c.DefaultPermissions != domain.DefaultRegistrationPermissions {
+		t.Fatalf("default permissions = %d", c.DefaultPermissions)
+	}
 }
 
 func TestFromDataParsesStoredValues(t *testing.T) {
@@ -23,12 +26,16 @@ func TestFromDataParsesStoredValues(t *testing.T) {
 		"mini_program_registration_enabled": false,
 		"mini_program_new_user_enabled":     false,
 		"secondary_warehouse_mode":          "lite",
+		"default_permissions":               float64(domain.PermWarehouseRead | domain.PermPurchaseRead),
 	}, 3, &updated)
 	if c.MiniProgramRegistrationEnabled || c.MiniProgramNewUserEnabled {
 		t.Fatalf("bool switches: %+v", c)
 	}
 	if c.SecondaryWarehouseMode != domain.SecondaryWarehouseLite || c.Version != 3 {
 		t.Fatalf("mode/version: %+v", c)
+	}
+	if c.DefaultPermissions != domain.PermWarehouseRead|domain.PermPurchaseRead {
+		t.Fatalf("default permissions = %d", c.DefaultPermissions)
 	}
 }
 

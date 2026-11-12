@@ -17,11 +17,11 @@ import (
 // Register 注册本模块路由。
 func Register(r *web.Router) {
 	g := r.Group("/material-code-library", auth.RequireProject)
-	g.GET("", list, auth.CurrentUser)
-	g.GET("/last-import", lastImport, auth.CurrentUser)
-	g.GET("/exists", exists, auth.CurrentUser)
+	g.GET("", list, auth.PurchaseReader)
+	g.GET("/last-import", lastImport, auth.PurchaseReader)
+	g.GET("/exists", exists, auth.PurchaseReader)
 	g.POST("/import", importCodes, auth.PurchaseWriter)
-	g.GET("/import-jobs/{job_id}", getImportJob, auth.CurrentUser)
+	g.GET("/import-jobs/{job_id}", getImportJob, auth.PurchaseReader)
 }
 
 // 下拉菜单的两个选项：物料表写物料编码库，价格表写物料价格；两者各自全量替换。

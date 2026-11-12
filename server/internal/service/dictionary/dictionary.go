@@ -10,6 +10,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 )
 
@@ -74,19 +75,25 @@ func ListUsers(s *db.Session, keyword *string, page, pageSize int64) ([]UserWith
 }
 
 func CreateUser(s *db.Session, data schema.UserCreate) (*UserWithToken, error) {
-	bits, err := permissionBits(data.Permissions)
-	if err != nil {
+	// 未传 permissions 时使用高级设置里的默认用户权限；显式传空数组表示不授予任何权限。
+	bits := domain.DefaultRegistrationPermissions
+	var err error
+	if data.Permissions != nil {
+		if bits, err = permissionBits(*data.Permissions); err != nil {
+			return nil, err
+		}
+	} else if bits, err = appsettings.GetDefaultPermissions(s); err != nil {
 		return nil, err
 	}
 	now := common.UTCNow()
 	u := &UserWithToken{User: model.User{
 		Username: data.Username, PasswordHash: security.HashPassword(data.Password), DisplayName: data.DisplayName,
-		DepartmentName: data.DepartmentName, Source: domain.UserSourceManage, Permissions: int64(bits),
+		DepartmentName: data.DepartmentName, Permissions: int64(bits),
 		Enabled: data.Enabled, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	issueAPIToken(u)
-	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, permissions, enabled, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		u.Username, u.PasswordHash, u.APITokenHash, u.APITokenEnc, u.DisplayName, u.DepartmentName, u.Source,
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, permissions, enabled, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		u.Username, u.PasswordHash, u.APITokenHash, u.APITokenEnc, u.DisplayName, u.DepartmentName,
 		u.Permissions, u.Enabled, u.CreatedAt, u.UpdatedAt, u.Version)
 	if err != nil {
 		if db.IsIntegrity(err) {

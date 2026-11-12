@@ -95,7 +95,7 @@ web/src/
 
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
-| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：「账号密码」表单 + 「小程序扫码」页签；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
+| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 左下角用户菜单（移动端抽屉，顶部窄导航条） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位与二级库精简模式）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
@@ -126,7 +126,7 @@ web/src/
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | 只保留开关：小程序注册、新用户默认状态、二级库精简模式 |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `system:admin` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
-| `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一含小程序来源用户） |
+| `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一用户，不区分来源） |
 | `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `system:admin` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
 | `/settings/about` | `about` | `views/settings/AboutView.vue` | `system:admin` | 版本信息与构建时间（`versionApi.get()`） |
 | `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `system:admin` | 分享链接列表/改列/改期/撤回 |
@@ -235,9 +235,9 @@ web/src/
 | `purchasePlanTemplates.ts` | `/purchase-plan-templates*` | 周期性计划模板 CRUD 与「生成申购计划」 |
 | `huaXingInventory.ts` | `/huaxing-inventory*` | 华星总库存查询、筛选选项、Excel 导入任务与最近导入 |
 | `secondaryWarehouse.ts` | `/secondary-warehouse*` | 精简二级库列表、Excel 导入任务与最近导入 |
-| `dictionaries.ts` | `/users*`、`/mini-program-users*` | 管理端用户 CRUD 与接口令牌重置、小程序用户查询/更新/删除/合并 |
+| `dictionaries.ts` | `/users*`、`/permissions` | 统一用户 CRUD、权限目录、接口令牌重置与账号合并 |
 | `projects.ts` | `/projects*` | 项目列表、新增、编辑（名称/启停）与删除 |
-| `systemSettings.ts` | `/system-settings/*` | 公开的 mini-program-features（启动时拉取运行模式）与高级设置开关读写 |
+| `systemSettings.ts` | `/system-settings/*` | 公开的 mini-program-features（启动时拉取运行模式）与高级设置（开关 + 默认用户权限）读写 |
 | `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展与可用状态（模型配置在服务端环境变量） |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
@@ -532,7 +532,7 @@ sequenceDiagram
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
 | 权限位 | `app_user.permissions`（BIGINT 位图） | 每一位对应一个权限点；管理端与小程序端共用同一套权限，功能可见性与接口放行都按位判断，不再有角色表 |
-| 权限目录 | `domain.PermissionCatalog` | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`codes:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write`，每项带键、位值与标签 |
+| 权限目录 | `domain.PermissionCatalog` | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write`，每项带键、位值与标签 |
 | 位运算 | `domain.Permission.Has / Normalize / Keys`、`domain.PermissionBits` | `Has` 按位与判断；`Normalize` 丢掉未知位并让写权限自动带上同模块读权限；`Keys` 按目录顺序展开成接口里的权限键数组，`PermissionBits` 反向校验未知键 |
 | `auth.RequirePermission(perm)` | 依赖工厂（参数是 `domain.Permission` 位） | 先确保 `CurrentUser`，登录用户位图不含该位返回 `PERMISSION_DENIED`（403） |
 | `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
@@ -611,16 +611,15 @@ sequenceDiagram
 | `purchase:read` | 8 | 申购计划 / 记录 / 物料编码库查看 |
 | `purchase:write` | 16 | 申购计划与记录编辑、转入 / 恢复、采购跟踪回写、编码库导入 |
 | `huaxing:read` | 32 | 华星总库存查看 |
-| `codes:read` | 64 | 物料编码库查看（小程序） |
 | `ledger:read` | 128 | 台账与标签查看 |
 | `ledger:write` | 256 | 台账记录与标签维护 |
 | `hazard:read` | 512 | 隐患台账查看 |
 | `hazard:write` | 1024 | 隐患登记 / 整改、隐患类型与责任单位维护 |
 | `work:read` | 2048 | 工作管理三个视图查看 |
 | `work:write` | 4096 | 任务 / 工作记录维护与任务图片上传 |
-| 全开 | 8191 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位 |
+| 全开 | 8127 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位（位 6 已退役） |
 
-管理端与小程序端共用同一套判断：网页侧栏主 tab 按读权限位显示（工作台 / 备忘录不设门禁），小程序首页入口按读权限位显示，写操作按写权限位；分享链接与导出任务的属主校验允许 `system:admin` 查看全部。小程序新用户注册默认写各功能只读位（`DefaultRegistrationPermissions`）。
+管理端与小程序端共用同一套判断：网页侧栏主 tab 按读权限位显示（工作台 / 备忘录不设门禁），小程序首页入口按读权限位显示，写操作按写权限位；分享链接与导出任务的属主校验允许 `system:admin` 查看全部。新建用户 / 小程序新注册用户的默认权限取自高级设置的 `runtime_settings.default_permissions`，代码兜底为二级库只读 + 申购只读 + 华星总库存只读（42）。
 
 #### 越权结果
 
@@ -1055,7 +1054,7 @@ sequenceDiagram
     end
 ```
 
-OpenID 与姓名的绑定关系只在用户提交姓名后建立，管理端不能手工新增小程序用户；同一人在多个小程序下的身份可由管理端合并。
+微信 openid 与姓名的绑定关系只在用户提交姓名后建立；同一人的网页账号与微信账号可由管理员合并，合并后权限与 openid 归到同一账号。
 
 ### 扫码出库
 
@@ -1134,7 +1133,7 @@ flowchart TD
 flowchart LR
     U["登录会话：app_user.permissions"] --> R1["warehouse:read → 二级库入口"]
     U --> R2["purchase:read → 申购计划 / 记录"]
-    U --> R3["huaxing:read / codes:read / ledger:read / hazard:read → 对应入口"]
+    U --> R3["huaxing:read / ledger:read / hazard:read → 对应入口"]
     U --> W1["warehouse:write → 扫码出库"]
     U --> W2["hazard:write → 登记隐患、更新整改状态"]
     S["system_setting.secondary_warehouse_mode"] --> L["lite → 整体只读，只查精简库存"]

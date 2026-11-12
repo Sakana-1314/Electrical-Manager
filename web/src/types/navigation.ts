@@ -13,7 +13,6 @@ export type Permission =
   | 'purchase:read'
   | 'purchase:write'
   | 'huaxing:read'
-  | 'codes:read'
   | 'ledger:read'
   | 'ledger:write'
   | 'hazard:read'

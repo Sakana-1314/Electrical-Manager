@@ -44,17 +44,21 @@ func TestPermissionCatalogBitsAreUniqueAndCoverAllPermissions(t *testing.T) {
 		t.Fatalf("AllPermissions = %d，目录并集 = %d", AllPermissions, all)
 	}
 	// 位值已经写进生产库（app_user.permissions），改位序会导致存量用户权限错位。
-	if AllPermissions != 8191 {
+	// 位 6 已退役（原 codes:read），保留空位后全开值为 8127。
+	if AllPermissions != 8127 {
 		t.Fatalf("权限位总数变化会破坏已有库的位图语义：AllPermissions = %d", AllPermissions)
 	}
 }
 
-func TestDefaultRegistrationPermissionsAreReadOnly(t *testing.T) {
-	for _, def := range PermissionCatalog {
-		has := DefaultRegistrationPermissions.Has(def.Bit)
-		want := def.Action == "read" && def.Module != "system"
-		if has != want {
-			t.Fatalf("默认注册权限对 %s 的期望是 %v，实际 %v", def.Key, want, has)
-		}
+func TestRetiredCodesBitIsDropped(t *testing.T) {
+	if got := Permission(1 << 6).Normalize(); got != 0 {
+		t.Fatalf("退役的位 6 应被丢弃，实际 %d", got)
+	}
+}
+
+func TestDefaultRegistrationPermissions(t *testing.T) {
+	want := PermWarehouseRead | PermPurchaseRead | PermHuaxingRead
+	if DefaultRegistrationPermissions != want {
+		t.Fatalf("默认权限 = %d，want %d", DefaultRegistrationPermissions, want)
 	}
 }

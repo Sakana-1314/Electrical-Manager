@@ -16,14 +16,13 @@ type UserMergeRequest struct {
 	TargetVersion int64 `json:"target_version" v:"required"`
 }
 
-// UserRead 是管理端用户。permissions 是权限位展开后的权限键（按目录顺序），
-// 管理端与小程序端共用同一套权限位；source 区分管理端 / 小程序来源。
+// UserRead 是统一用户。permissions 是权限位展开后的权限键（按目录顺序），
+// 网页端与小程序端共用同一套权限位；不再有账号来源字段。
 type UserRead struct {
 	ID             int64          `json:"id"`
 	Username       string         `json:"username"`
 	DisplayName    string         `json:"display_name"`
 	DepartmentName string         `json:"department_name"`
-	Source         string         `json:"source"`
 	Permissions    []string       `json:"permissions"`
 	WechatOpenid   *string        `json:"wechat_openid"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
@@ -37,7 +36,7 @@ func NewUserRead(u *model.User) UserRead {
 		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
 	}
 	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
-		Source: u.Source, Permissions: domain.Permission(u.Permissions).Normalize().Keys(), LastUsedAt: lastUsed,
+		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), LastUsedAt: lastUsed,
 		Enabled: u.Enabled, Version: u.Version}
 }
 
@@ -71,12 +70,12 @@ type TokenPairResponse struct {
 }
 
 type UserCreate struct {
-	Username       string   `json:"username" v:"required,min=3,max=64"`
-	Password       string   `json:"password" v:"required,min=6,max=128"`
-	DisplayName    string   `json:"display_name" v:"required,min=1,max=128"`
-	DepartmentName string   `json:"department_name" v:"max=128"`
-	Permissions    []string `json:"permissions"`
-	Enabled        bool     `json:"enabled"`
+	Username       string    `json:"username" v:"required,min=3,max=64"`
+	Password       string    `json:"password" v:"required,min=6,max=128"`
+	DisplayName    string    `json:"display_name" v:"required,min=1,max=128"`
+	DepartmentName string    `json:"department_name" v:"max=128"`
+	Permissions    *[]string `json:"permissions"`
+	Enabled        bool      `json:"enabled"`
 }
 
 type UserUpdate struct {

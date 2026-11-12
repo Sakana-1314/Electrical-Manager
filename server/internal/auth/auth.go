@@ -208,6 +208,7 @@ var (
 	// 「超级管理员」不再是角色，系统管理与各功能读写位全开即等价于旧超级管理员。
 	SystemAdmin     = RequirePermission(domain.PermSystemAdmin)
 	WarehouseWriter = RequirePermission(domain.PermWarehouseWrite)
+	PurchaseReader  = RequirePermission(domain.PermPurchaseRead)
 	PurchaseWriter  = RequirePermission(domain.PermPurchaseWrite)
 	HazardWriter    = RequirePermission(domain.PermHazardWrite)
 	LedgerWriter    = RequirePermission(domain.PermLedgerWrite)
@@ -341,7 +342,7 @@ func ResolveMiniProgramProject(c *web.Ctx) (*model.Project, error) {
 
 // ---------------- 小程序 ----------------
 
-// MiniProgramUser 依赖：小程序登录用户（统一 user 表里 source = MINI_PROGRAM 的账号），
+// MiniProgramUser 依赖：小程序登录用户（统一 app_user 表，不区分来源），
 // 并落定项目上下文（缺头用默认项目）。JWT 里 token_type = mini_program、sub = user.id。
 func MiniProgramUser(c *web.Ctx) error {
 	if _, ok := c.User.(*model.User); ok {

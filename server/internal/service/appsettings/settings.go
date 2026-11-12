@@ -30,14 +30,17 @@ type Config struct {
 	MiniProgramRegistrationEnabled bool
 	MiniProgramNewUserEnabled      bool
 	SecondaryWarehouseMode         string
-	UpdatedAt                      *jtype.UTCTime
-	Version                        int64
+	// DefaultPermissions 新建用户 / 小程序新注册用户的默认权限位。
+	DefaultPermissions domain.Permission
+	UpdatedAt          *jtype.UTCTime
+	Version            int64
 }
 
 type payload struct {
 	MiniProgramRegistrationEnabled bool   `json:"mini_program_registration_enabled"`
 	MiniProgramNewUserEnabled      bool   `json:"mini_program_new_user_enabled"`
 	SecondaryWarehouseMode         string `json:"secondary_warehouse_mode"`
+	DefaultPermissions             int64  `json:"default_permissions"`
 }
 
 func (c *Config) payload() payload {
@@ -45,6 +48,7 @@ func (c *Config) payload() payload {
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled,
 		MiniProgramNewUserEnabled:      c.MiniProgramNewUserEnabled,
 		SecondaryWarehouseMode:         c.SecondaryWarehouseMode,
+		DefaultPermissions:             int64(c.DefaultPermissions),
 	}
 }
 
@@ -53,6 +57,7 @@ func defaults() *Config {
 		MiniProgramRegistrationEnabled: true,
 		MiniProgramNewUserEnabled:      true,
 		SecondaryWarehouseMode:         domain.SecondaryWarehouseFull,
+		DefaultPermissions:             domain.DefaultRegistrationPermissions,
 	}
 }
 
@@ -66,6 +71,17 @@ func enumOr(v any, def string) string {
 func boolOr(v any, def bool) bool {
 	if b, ok := v.(bool); ok {
 		return b
+	}
+	return def
+}
+
+// permissionOr 解析 JSON 数字形式的权限位图；缺失 / 非法时用默认值。
+func permissionOr(v any, def domain.Permission) domain.Permission {
+	switch x := v.(type) {
+	case float64:
+		return domain.Permission(int64(x)).Normalize()
+	case int64:
+		return domain.Permission(x).Normalize()
 	}
 	return def
 }
@@ -86,6 +102,7 @@ func fromData(data map[string]any, version int64, updatedAt *jtype.UTCTime) *Con
 	c.MiniProgramRegistrationEnabled = boolOr(data["mini_program_registration_enabled"], true)
 	c.MiniProgramNewUserEnabled = boolOr(data["mini_program_new_user_enabled"], true)
 	c.SecondaryWarehouseMode = enumOr(data["secondary_warehouse_mode"], domain.SecondaryWarehouseFull)
+	c.DefaultPermissions = permissionOr(data["default_permissions"], domain.DefaultRegistrationPermissions)
 	c.Version = version
 	c.UpdatedAt = updatedAt
 	return c
@@ -119,6 +136,7 @@ func Read(c *Config) schema.AdvancedSettingsRead {
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled,
 		MiniProgramNewUserEnabled:      c.MiniProgramNewUserEnabled,
 		SecondaryWarehouseMode:         c.SecondaryWarehouseMode,
+		DefaultPermissions:             c.DefaultPermissions.Keys(),
 		UpdatedAt:                      c.UpdatedAt,
 		Version:                        c.Version,
 	}
@@ -133,12 +151,22 @@ func Update(s *db.Session, data schema.AdvancedSettingsUpdate) (*Config, error) 
 	if err := apperr.ValidateVersion(&data.Version, current.Version); err != nil {
 		return nil, err
 	}
+	defaultPermissions := current.DefaultPermissions
+	if data.DefaultPermissions != nil {
+		bits, unknown := domain.PermissionBits(*data.DefaultPermissions)
+		if len(unknown) > 0 {
+			return nil, apperr.New("INVALID_PERMISSIONS", "包含未知的权限键").WithStatus(422).
+				WithDetails(apperr.D{"permissions": unknown})
+		}
+		defaultPermissions = bits
+	}
 	now := common.UTCNow()
 	updated := jtype.NewUTC(now)
 	next := &Config{
 		MiniProgramRegistrationEnabled: data.MiniProgramRegistrationEnabled,
 		MiniProgramNewUserEnabled:      data.MiniProgramNewUserEnabled,
 		SecondaryWarehouseMode:         data.SecondaryWarehouseMode,
+		DefaultPermissions:             defaultPermissions,
 		UpdatedAt:                      &updated,
 		Version:                        current.Version + 1,
 	}
@@ -162,6 +190,15 @@ func Update(s *db.Session, data schema.AdvancedSettingsUpdate) (*Config, error) 
 		return nil, err
 	}
 	return next, nil
+}
+
+// GetDefaultPermissions 新建用户 / 小程序新注册用户的默认权限位。
+func GetDefaultPermissions(s *db.Session) (domain.Permission, error) {
+	setting, err := Get(s)
+	if err != nil {
+		return 0, err
+	}
+	return setting.DefaultPermissions, nil
 }
 
 // IsLiteSecondaryWarehouse 二级库是否处于精简模式（独立表 + 只读 + Excel 导入）。

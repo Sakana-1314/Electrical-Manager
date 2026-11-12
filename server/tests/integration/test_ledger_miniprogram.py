@@ -15,7 +15,9 @@ from tests.testkit.security import create_mini_program_access_token
 async def mini_headers(display_name: str = "台账查看员") -> dict[str, str]:
     """直接造一个已启用的小程序用户（默认「只读用户」角色）并签发令牌。"""
     async with project_session() as session:
-        user_id = await create_mini_program_user(session, display_name)
+        user_id = await create_mini_program_user(
+            session, display_name, permissions=("ledger:read",)
+        )
     return {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
 

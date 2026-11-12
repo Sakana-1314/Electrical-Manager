@@ -13,7 +13,6 @@
 import type { components } from './generated.raw'
 
 /* ===== 类型枚举（映射自 openapi，值来自后端 domain/enums.go） ===== */
-export type UserSource = components['schemas']['UserSource']
 export type OperationType = components['schemas']['OperationType']
 export type SourceType = components['schemas']['SourceType']
 export type PurchasePlanStatus = components['schemas']['PurchasePlanStatus']

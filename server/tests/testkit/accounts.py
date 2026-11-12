@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.testkit.enums import DEFAULT_PERMISSION_KEYS, permission_bits, UserSource
+from tests.testkit.enums import DEFAULT_PERMISSION_KEYS, permission_bits
 from tests.testkit.models import User
 
 
@@ -44,7 +44,6 @@ async def create_mini_program_user(
         api_token_hash="",
         display_name=display_name,
         department_name="华星检修维护部电气车间",
-        source=UserSource.MINI_PROGRAM,
         wechat_openid=f"openid-test-{uuid4().hex[:12]}",
         permissions=permission_bits(*permissions),
         enabled=enabled,
