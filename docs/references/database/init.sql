@@ -1195,7 +1195,7 @@ COMMENT ON COLUMN app_user."department_name" IS '部门单位';
 COMMENT ON COLUMN app_user."wechat_openid" IS '微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid）';
 COMMENT ON COLUMN app_user."permissions" IS '权限位图（BIGINT，按位判断）；bit0 系统管理、各功能读写位见 domain.PermissionCatalog';
 COMMENT ON COLUMN app_user."enabled" IS '账号是否启用';
-COMMENT ON COLUMN app_user."last_used_at" IS '小程序登录的最近使用时间（登录即刷新，不自增 version）';
+COMMENT ON COLUMN app_user."last_used_at" IS '最近登录时间（网页密码登录与小程序登录均刷新，不自增 version）';
 COMMENT ON COLUMN app_user."created_at" IS '创建时间';
 COMMENT ON COLUMN app_user."updated_at" IS '更新时间';
 COMMENT ON COLUMN app_user."version" IS '乐观锁版本号（每次更新 +1）';

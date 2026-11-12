@@ -371,7 +371,7 @@ erDiagram
 | `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（任意账号都可绑定；非空时唯一，一个小程序一个 openid） |
 | `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
 | `app_user` | `enabled` | BOOLEAN | 否 | TRUE | 账号是否启用 |
-| `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 小程序登录的最近使用时间（登录即刷新，不自增 version） |
+| `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 最近登录时间（网页密码登录与小程序登录均刷新，不自增 version） |
 | `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
 | `system_setting` | `setting_value` | JSON | 否 | 无 | 设置值（JSON 文档） |

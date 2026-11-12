@@ -14,7 +14,7 @@ import (
 
 // MiniProgramUserRead 是统一用户在小程序端的读取结构（不再区分账号来源）。
 // 小程序只有一个，微信 openid 直接落用户表（wechat_openid）。
-// last_used_at 为最近一次登录小程序的时间；permissions 是权限位展开后的权限键，供小程序端门禁入口与写操作。
+// last_used_at 为最近登录时间（网页密码登录与小程序登录均刷新）；permissions 是权限位展开后的权限键，供小程序端门禁入口与写操作。
 type MiniProgramUserRead struct {
 	ID             int64          `json:"id"`
 	DisplayName    string         `json:"display_name"`

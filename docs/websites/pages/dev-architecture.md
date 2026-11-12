@@ -482,6 +482,8 @@ server/
 
 路由注册顺序集中在 `internal/api/api.go` 的 `Register`。`/__test__/*` 钩子只在 `APP_TEST_HOOKS=1` 时注册，供契约测试驱动后台任务与上游桩服务，生产环境不存在。
 
+小程序端优先复用管理端接口与 `internal/service` 查询；`/mini-program/*` 只保留鉴权方式、响应裁剪或聚合确有差异的薄适配端点，不为同一业务重复写 SQL。
+
 ## 请求处理链
 
 中间件在 `internal/app` 里按 **由外到内** 注册：真实 IP → 请求上下文（request_id / 耗时头 / 访问日志）→ panic 兜底 → 项目头 → CORS；之后进入 `web.H` 包装的处理函数。

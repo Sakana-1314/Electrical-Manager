@@ -25,6 +25,7 @@ type UserRead struct {
 	DepartmentName string         `json:"department_name"`
 	Permissions    []string       `json:"permissions"`
 	WechatOpenid   *string        `json:"wechat_openid"`
+	CreatedAt      jtype.UTCTime  `json:"created_at"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
 	Enabled        bool           `json:"enabled"`
 	Version        int64          `json:"version"`
@@ -36,8 +37,8 @@ func NewUserRead(u *model.User) UserRead {
 		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
 	}
 	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
-		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), LastUsedAt: lastUsed,
-		Enabled: u.Enabled, Version: u.Version}
+		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), CreatedAt: jtype.NewUTC(u.CreatedAt),
+		LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version}
 }
 
 func ptr[T any](v T) *T { return &v }

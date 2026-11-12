@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
@@ -61,15 +62,6 @@ func LoadUser(s *db.Session, m *model.User) (*User, error) {
 	return &User{User: *m}, nil
 }
 
-// markLastUsed 对应 _mark_last_used：登录即刷新最近使用时间，刻意不自增 version。
-func markLastUsed(s *db.Session, u *User) error {
-	now := common.UTCNow()
-	u.LastUsedAt = &now
-	u.UpdatedAt = now
-	_, err := s.Exec("UPDATE app_user SET last_used_at = ?, updated_at = ? WHERE id = ?", now, now, u.ID)
-	return err
-}
-
 // findUserByOpenid 按微信 openid 查用户（单小程序，openid 直接落在 app_user 表），不存在返回 nil。
 func findUserByOpenid(s *db.Session, openid string) (*User, error) {
 	var m model.User
@@ -115,7 +107,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	}
 	if user != nil {
 		// 待审核 / 已停用账号在上面的分支被拒，不会走到这里。
-		if err := markLastUsed(s, user); err != nil {
+		if err := auth.MarkLastUsed(s, &user.User); err != nil {
 			return nil, "", "", err
 		}
 	}
@@ -135,7 +127,7 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 			return nil, accountDisabled()
 		}
 		// 重复建档（registration_token 重放）同样按一次登录记录，但不覆盖姓名 / 部门。
-		if err := markLastUsed(s, existing); err != nil {
+		if err := auth.MarkLastUsed(s, &existing.User); err != nil {
 			return nil, err
 		}
 		return existing, nil
