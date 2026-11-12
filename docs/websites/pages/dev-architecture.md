@@ -466,18 +466,18 @@ server/
 | `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version`、`/auth/login`、`/auth/refresh`、`/auth/qr-sessions*` 公开 |
 | `api/aisearch` | `/ai-search` | `auth.CurrentUser`（模型服务由 `APP_AI_SEARCH_*` 环境变量配置） |
 | `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features` 公开读取；`advanced-settings` 需系统管理位） |
-| `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse` |
-| `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
-| `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
-| `api/secondary` | `/secondary-warehouse` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
+| `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse`；仪表盘汇总只要求登录 |
+| `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
+| `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.HuaxingReader`、`auth.WarehouseWriter` |
+| `api/secondary` | `/secondary-warehouse` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter` |
 | `api/miniprogram` | `/mini-program-users`（管理端）、`/mini-program/*`（小程序） | `auth.SystemAdmin`；`auth.MiniProgramUser`、`auth.MiniProgramRegistration` |
-| `api/purchase` | `/purchase-materials`、`/purchase-plan-templates`、`/purchase-record-sync/*`、`/purchase-records*` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
+| `api/purchase` | `/purchase-materials`、`/purchase-plan-templates`、`/purchase-record-sync/*`、`/purchase-records*` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
 | `api/share` | `/shares` | `auth.CurrentUser`；`GET /shares/{token}` 匿名 |
 | `api/exportjob` | `/excel-export-jobs` | `auth.CurrentUser`；`GET /excel-export-jobs/files/{file_uuid}` 匿名 |
 | `api/files` | `/files/images` | 分组挂 `auth.SystemScope`；上传 / 查重用各写权限位（`auth.FileWriter`），附件治理用 `auth.SystemAdmin`；读图公开 |
-| `api/hazard` | `/hazards*`、`/hazard-types`、`/hazard-units` | `auth.RequireProject`、`auth.CurrentUser`、`auth.HazardWriter` |
-| `api/ledger` | `/ledger-items`、`/ledger-tags` | `auth.RequireProject`、`auth.CurrentUser`、`auth.LedgerWriter` |
-| `api/work` | `/work-tasks`、`/work-records`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WorkWriter` |
+| `api/hazard` | `/hazards*`、`/hazard-types`、`/hazard-units` | `auth.RequireProject`、`auth.HazardReader`、`auth.HazardWriter` |
+| `api/ledger` | `/ledger-items`、`/ledger-tags` | `auth.RequireProject`、`auth.LedgerReader`、`auth.LedgerWriter` |
+| `api/work` | `/work-tasks`、`/work-records`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | `auth.RequireProject`、`auth.WorkReader`、`auth.WorkWriter` |
 | `api/mcp` | `/mcp/` | 自带令牌认证（见 MCP 小节） |
 
 路由注册顺序集中在 `internal/api/api.go` 的 `Register`。`/__test__/*` 钩子只在 `APP_TEST_HOOKS=1` 时注册，供契约测试驱动后台任务与上游桩服务，生产环境不存在。
@@ -517,7 +517,7 @@ sequenceDiagram
 | 环节 | 实现 |
 | --- | --- |
 | 中间件 | `middleware.RealIP()` → `middleware.RequestContext()` → `middleware.Recovery()` → `middleware.ProjectHeader()` → `middleware.CORS()`（`internal/app/app.go`）；`RequestContext` 在 RealIP 内层以便日志读到改写后的 IP；CORS 在最内层，`NoRoute` 的 400 与各类错误体同样带 CORS 头 |
-| 依赖顺序 | `web.Router.Group(prefix, deps...)` 的分组依赖先于路由依赖；习惯顺序为项目（`auth.RequireProject`）→ 鉴权（`auth.CurrentUser`）→ 权限位（`auth.WarehouseWriter` 等，内部会先确保已鉴权）→ 其它（`deps.RequireFullSecondaryWarehouse`）；任一依赖返回错误立即中止，参数尚未校验 |
+| 依赖顺序 | `web.Router.Group(prefix, deps...)` 的分组依赖先于路由依赖；习惯顺序为项目（`auth.RequireProject`）→ 鉴权（`auth.CurrentUser`）→ 权限位（`auth.WarehouseReader` / `auth.WarehouseWriter` 等，内部会先确保已鉴权）→ 其它（`deps.RequireFullSecondaryWarehouse`）；任一依赖返回错误立即中止，参数尚未校验 |
 | 参数校验与 422 | 依赖全部通过后，处理函数用 `c.Params()` 读取路径（`PathInt`）、查询（`QueryStr` / `QueryInt` / `Page` …）、请求头（`IfMatch`）、JSON 请求体（`Body`），每处的错误都追加进同一个列表，最后 `p.Err()` 一次性返回 `*web.ValidationError` → 422 `VALIDATION_ERROR`，`details.errors` 为 `type` / `loc` / `msg` / `input` 结构（与 Pydantic 兼容） |
 | 先提交再写响应 | 处理函数通过 `c.OK` / `c.Created` / `c.NoContent` / `c.File` 等只是**登记**响应；`web.H` 在函数返回后先 `c.DB.Commit()` 再写出响应，所以客户端拿到 2xx 时写库已可见；提交失败按数据库错误返回错误体。出错则 `Rollback()`。处理函数不手动提交，提交后才做的事登记 `c.DB.AfterCommit`（回滚后的补偿用 `AfterRollback`） |
 | panic | 处理函数里的 panic 由 `web.H` 转成 500 `INTERNAL_SERVER_ERROR`；中间件层的 panic 由 `middleware.Recovery()` 兜底 |
@@ -536,10 +536,16 @@ sequenceDiagram
 | 位运算 | `domain.Permission.Has / Normalize / Keys`、`domain.PermissionBits` | `Has` 按位与判断；`Normalize` 丢掉未知位并让写权限自动带上同模块读权限；`Keys` 按目录顺序展开成接口里的权限键数组，`PermissionBits` 反向校验未知键 |
 | `auth.RequirePermission(perm)` | 依赖工厂（参数是 `domain.Permission` 位） | 先确保 `CurrentUser`，登录用户位图不含该位返回 `PERMISSION_DENIED`（403） |
 | `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
+| `auth.WarehouseReader` | `RequirePermission(PermWarehouseRead)` | 二级库库存 / 操作记录 / 精简二级库读取 |
 | `auth.WarehouseWriter` | `RequirePermission(PermWarehouseWrite)` | 库存写操作 |
+| `auth.PurchaseReader` | `RequirePermission(PermPurchaseRead)` | 申购计划 / 记录 / 物料编码库读取与导出 |
 | `auth.PurchaseWriter` | `RequirePermission(PermPurchaseWrite)` | 申购写操作 |
+| `auth.HuaxingReader` | `RequirePermission(PermHuaxingRead)` | 华星总库存读取 |
+| `auth.HazardReader` | `RequirePermission(PermHazardRead)` | 隐患台账与两张字典表读取 |
 | `auth.HazardWriter` | `RequirePermission(PermHazardWrite)` | 隐患管理写操作（台账与两张字典表） |
+| `auth.LedgerReader` | `RequirePermission(PermLedgerRead)` | 台账记录与标签读取 |
 | `auth.LedgerWriter` | `RequirePermission(PermLedgerWrite)` | 台账管理写操作（台账记录与标签） |
+| `auth.WorkReader` | `RequirePermission(PermWorkRead)` | 工作管理三个视图与任务 / 记录读取 |
 | `auth.WorkWriter` | `RequirePermission(PermWorkWrite)` | 工作管理写操作（任务、工作记录与任务图片） |
 | `auth.SystemAdmin` | `RequirePermission(PermSystemAdmin)` | 系统配置、用户、文件治理；没有独立「超级管理员角色」 |
 | 图片上传 | `auth.FileWriter`（任一业务写权限位） | 图片上传与上传前查重 |
