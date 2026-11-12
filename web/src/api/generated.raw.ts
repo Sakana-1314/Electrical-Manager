@@ -784,95 +784,7 @@ export interface paths {
         /** 角色列表（含各角色挂载的用户数） */
         get: operations["roles_api_v1_roles_get"];
         put?: never;
-        /** 新建角色 */
-        post: operations["create_role_api_v1_roles_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/roles/permissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 权限目录（角色编辑界面的可选项） */
-        get: operations["permission_catalog_api_v1_roles_permissions_get"];
-        put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/roles/{item_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** 删除角色（内置角色不可删除；仍有用户挂载时拒绝） */
-        delete: operations["delete_role_api_v1_roles_item_id_delete"];
-        options?: never;
-        head?: never;
-        /** 编辑角色（内置角色不可编辑） */
-        patch: operations["update_role_api_v1_roles_item_id_patch"];
-        trace?: never;
-    };
-    "/api/v1/mini-program-users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 小程序用户列表 */
-        get: operations["list_mini_program_users_api_v1_mini_program_users_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/mini-program-users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** 删除小程序用户 */
-        delete: operations["delete_mini_program_user_api_v1_mini_program_users__user_id__delete"];
-        options?: never;
-        head?: never;
-        /** 编辑小程序用户 */
-        patch: operations["update_mini_program_user_api_v1_mini_program_users__user_id__patch"];
-        trace?: never;
-    };
-    "/api/v1/mini-program-users/{target_user_id}/merge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 合并小程序用户 */
-        post: operations["merge_mini_program_users_api_v1_mini_program_users__target_user_id__merge_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2008,6 +1920,23 @@ export interface paths {
         head?: never;
         /** 编辑用户 */
         patch: operations["edit_user_api_v1_users__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/users/{item_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 合并账号（目标保留资料；来源微信身份随迁、角色取并集；来源账号删除） */
+        post: operations["merge_user_api_v1_users_item_id_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/users/{item_id}/api-token/regenerate": {
@@ -5602,14 +5531,14 @@ export interface components {
          */
         MiniProgramStockStatus: "normal" | "out_of_stock" | "low_stock";
         /**
-         * MiniProgramUserMergeRequest
+         * UserMergeRequest
          * @example {
          *       "source_user_id": 3,
          *       "source_version": 2,
          *       "target_version": 2
          *     }
          */
-        MiniProgramUserMergeRequest: {
+        UserMergeRequest: {
             /** Source User Id */
             source_user_id: number;
             /** Source Version */
@@ -5681,34 +5610,6 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-            /** Version */
-            version: number;
-        };
-        /**
-         * MiniProgramUserUpdate
-         * @example {
-         *       "display_name": "孙浩宇",
-         *       "department_name": "检修维护部电气自动化车间",
-         *       "enabled": true,
-         *       "role_ids": [
-         *         7,
-         *         4
-         *       ],
-         *       "version": 2
-         *     }
-         */
-        MiniProgramUserUpdate: {
-            /** Display Name */
-            display_name?: string | null;
-            /** Department Name */
-            department_name?: string | null;
-            /** Enabled */
-            enabled?: boolean | null;
-            /**
-             * Role Ids
-             * @description 全量替换用户的角色（缺省表示不修改）
-             */
-            role_ids?: number[] | null;
             /** Version */
             version: number;
         };
@@ -12062,12 +11963,10 @@ export interface components {
         /**
          * RoleRead
          * @example {
-         *       "id": 2,
-         *       "name": "库房管理员",
-         *       "description": "二级库与出入库、华星库存、编码库查询",
+         *       "id": 3,
+         *       "name": "二级库读写",
+         *       "description": "二级库出入库 / 导入 / 库存调整",
          *       "permissions": [
-         *         "codes:read",
-         *         "huaxing:read",
          *         "warehouse:read",
          *         "warehouse:write"
          *       ],
@@ -12103,66 +12002,6 @@ export interface components {
             updated_at: string;
             /** Version */
             version: number;
-        };
-        /**
-         * RoleCreate
-         * @example {
-         *       "name": "采购查询",
-         *       "description": "只看申购模块",
-         *       "permissions": [
-         *         "dashboard:read",
-         *         "purchase:read"
-         *       ]
-         *     }
-         */
-        RoleCreate: {
-            /** Name */
-            name: string;
-            /** Description */
-            description?: string;
-            /** Permissions */
-            permissions?: string[];
-        };
-        /**
-         * RoleUpdate
-         * @example {
-         *       "name": "采购查询",
-         *       "description": "只看申购模块（含仪表盘）",
-         *       "permissions": [
-         *         "dashboard:read",
-         *         "purchase:read"
-         *       ],
-         *       "version": 1
-         *     }
-         */
-        RoleUpdate: {
-            /** Name */
-            name?: string | null;
-            /** Description */
-            description?: string | null;
-            /** Permissions */
-            permissions?: string[] | null;
-            /** Version */
-            version: number;
-        };
-        /**
-         * PermissionDef
-         * @example {
-         *       "key": "warehouse:write",
-         *       "module": "inventory",
-         *       "action": "write",
-         *       "label": "二级库出入库与库存调整"
-         *     }
-         */
-        PermissionDef: {
-            /** Key */
-            key: string;
-            /** Module */
-            module: string;
-            /** Action */
-            action: string;
-            /** Label */
-            label: string;
         };
         /**
          * SecondaryWarehouseMode
@@ -12758,6 +12597,11 @@ export interface components {
             /** Roles */
             roles: components["schemas"]["UserRoleRead"][];
             /**
+             * Identities
+             * @description 微信身份（小程序来源用户；管理端来源用户为空数组）
+             */
+            identities?: components["schemas"]["MiniProgramIdentityRead"][];
+            /**
              * Permissions
              * @description 角色权限并集（通配已展开）
              */
@@ -12872,6 +12716,11 @@ export interface components {
             source: components["schemas"]["UserSource"];
             /** Roles */
             roles: components["schemas"]["UserRoleRead"][];
+            /**
+             * Identities
+             * @description 微信身份（小程序来源用户；管理端来源用户为空数组）
+             */
+            identities?: components["schemas"]["MiniProgramIdentityRead"][];
             /**
              * Permissions
              * @description 角色权限并集（通配已展开）
@@ -22284,958 +22133,6 @@ export interface operations {
                      *       "message": "没有执行此操作的权限",
                      *       "details": {},
                      *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    create_role_api_v1_roles_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoleCreate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 2,
-                     *       "name": "库房管理员",
-                     *       "description": "二级库与出入库、华星库存、编码库查询",
-                     *       "permissions": [
-                     *         "codes:read",
-                     *         "huaxing:read",
-                     *         "warehouse:read",
-                     *         "warehouse:write"
-                     *       ],
-                     *       "is_system": true,
-                     *       "user_count": 1,
-                     *       "created_at": "2026-01-01T00:00:00+00:00",
-                     *       "updated_at": "2026-01-01T00:00:00+00:00",
-                     *       "version": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["RoleRead"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    permission_catalog_api_v1_roles_permissions_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example [
-                     *       {
-                     *         "key": "warehouse:write",
-                     *         "module": "inventory",
-                     *         "action": "write",
-                     *         "label": "二级库出入库与库存调整"
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["PermissionDef"][];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    delete_role_api_v1_roles_item_id_delete: {
-        parameters: {
-            query?: never;
-            header: {
-                "If-Match": number;
-            };
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    update_role_api_v1_roles_item_id_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoleUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 2,
-                     *       "name": "库房管理员",
-                     *       "description": "二级库与出入库、华星库存、编码库查询",
-                     *       "permissions": [
-                     *         "codes:read",
-                     *         "huaxing:read",
-                     *         "warehouse:read",
-                     *         "warehouse:write"
-                     *       ],
-                     *       "is_system": true,
-                     *       "user_count": 1,
-                     *       "created_at": "2026-01-01T00:00:00+00:00",
-                     *       "updated_at": "2026-01-01T00:00:00+00:00",
-                     *       "version": 1
-                     *     }
-                     */
-                    "application/json": components["schemas"]["RoleRead"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    list_mini_program_users_api_v1_mini_program_users_get: {
-        parameters: {
-            query?: {
-                page?: number;
-                page_size?: number;
-                keyword?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "items": [
-                     *         {
-                     *           "id": 1,
-                     *           "display_name": "孙浩宇",
-                     *           "department_name": "检修维护部电气自动化车间",
-                     *           "enabled": true,
-                     *           "identities": [
-                     *             {
-                     *               "id": 11,
-                     *               "app_id": "wx9d2f1c8a5b3e4701",
-                     *               "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *               "created_at": "2026-08-14T10:20:00+08:00"
-                     *             },
-                     *             {
-                     *               "id": 12,
-                     *               "app_id": "wx4b7e0a6d2c918f35",
-                     *               "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *               "created_at": "2026-09-02T09:35:00+08:00"
-                     *             }
-                     *           ],
-                     *           "created_at": "2026-08-14T10:20:00+08:00",
-                     *           "updated_at": "2026-09-02T09:35:00+08:00",
-                     *           "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *           "version": 2,
-                     *           "source": "MINI_PROGRAM",
-                     *           "roles": [
-                     *             {
-                     *               "id": 7,
-                     *               "name": "只读用户",
-                     *               "is_system": true
-                     *             }
-                     *           ],
-                     *           "permissions": [
-                     *             "codes:read",
-                     *             "hazard:read",
-                     *             "huaxing:read",
-                     *             "ledger:read",
-                     *             "purchase:read",
-                     *             "warehouse:read",
-                     *             "work:read"
-                     *           ]
-                     *         },
-                     *         {
-                     *           "id": 2,
-                     *           "display_name": "李建军",
-                     *           "department_name": "检修维护部电气自动化车间",
-                     *           "enabled": true,
-                     *           "identities": [
-                     *             {
-                     *               "id": 21,
-                     *               "app_id": "wx9d2f1c8a5b3e4701",
-                     *               "wechat_openid": "oHXNI-2c4d6e8f0a1b3c5d",
-                     *               "created_at": "2026-08-14T10:26:00+08:00"
-                     *             }
-                     *           ],
-                     *           "created_at": "2026-08-14T10:26:00+08:00",
-                     *           "updated_at": "2026-08-14T10:26:00+08:00",
-                     *           "last_used_at": "2026-09-06T14:05:00+08:00",
-                     *           "version": 1,
-                     *           "source": "MINI_PROGRAM",
-                     *           "roles": [
-                     *             {
-                     *               "id": 7,
-                     *               "name": "只读用户",
-                     *               "is_system": true
-                     *             }
-                     *           ],
-                     *           "permissions": [
-                     *             "codes:read",
-                     *             "hazard:read",
-                     *             "huaxing:read",
-                     *             "ledger:read",
-                     *             "purchase:read",
-                     *             "warehouse:read",
-                     *             "work:read"
-                     *           ]
-                     *         },
-                     *         {
-                     *           "id": 3,
-                     *           "display_name": "王海涛",
-                     *           "department_name": "检修维护部电气自动化车间",
-                     *           "enabled": false,
-                     *           "identities": [
-                     *             {
-                     *               "id": 31,
-                     *               "app_id": "wx9d2f1c8a5b3e4701",
-                     *               "wechat_openid": "oHXNI-3e5f7a9b1c2d4e6f",
-                     *               "created_at": "2026-08-15T08:12:00+08:00"
-                     *             }
-                     *           ],
-                     *           "created_at": "2026-08-15T08:12:00+08:00",
-                     *           "updated_at": "2026-09-04T11:02:00+08:00",
-                     *           "last_used_at": "2026-08-15T08:12:00+08:00",
-                     *           "version": 2,
-                     *           "source": "MINI_PROGRAM",
-                     *           "roles": [
-                     *             {
-                     *               "id": 7,
-                     *               "name": "只读用户",
-                     *               "is_system": true
-                     *             }
-                     *           ],
-                     *           "permissions": [
-                     *             "codes:read",
-                     *             "hazard:read",
-                     *             "huaxing:read",
-                     *             "ledger:read",
-                     *             "purchase:read",
-                     *             "warehouse:read",
-                     *             "work:read"
-                     *           ]
-                     *         }
-                     *       ],
-                     *       "page": 1,
-                     *       "page_size": 20,
-                     *       "total": 3
-                     *     }
-                     */
-                    "application/json": components["schemas"]["Page_MiniProgramUserRead_"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    delete_mini_program_user_api_v1_mini_program_users__user_id__delete: {
-        parameters: {
-            query?: never;
-            header?: {
-                "if-match"?: string | null;
-            };
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    update_mini_program_user_api_v1_mini_program_users__user_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MiniProgramUserUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 1,
-                     *       "display_name": "孙浩宇",
-                     *       "department_name": "检修维护部电气自动化车间",
-                     *       "enabled": true,
-                     *       "identities": [
-                     *         {
-                     *           "id": 11,
-                     *           "app_id": "wx9d2f1c8a5b3e4701",
-                     *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *           "created_at": "2026-08-14T10:20:00+08:00"
-                     *         },
-                     *         {
-                     *           "id": 12,
-                     *           "app_id": "wx4b7e0a6d2c918f35",
-                     *           "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *           "created_at": "2026-09-02T09:35:00+08:00"
-                     *         }
-                     *       ],
-                     *       "created_at": "2026-08-14T10:20:00+08:00",
-                     *       "updated_at": "2026-09-02T09:35:00+08:00",
-                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "version": 2,
-                     *       "source": "MINI_PROGRAM",
-                     *       "roles": [
-                     *         {
-                     *           "id": 7,
-                     *           "name": "只读用户",
-                     *           "is_system": true
-                     *         }
-                     *       ],
-                     *       "permissions": [
-                     *         "codes:read",
-                     *         "hazard:read",
-                     *         "huaxing:read",
-                     *         "ledger:read",
-                     *         "purchase:read",
-                     *         "warehouse:read",
-                     *         "work:read"
-                     *       ]
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MiniProgramUserRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    merge_mini_program_users_api_v1_mini_program_users__target_user_id__merge_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                target_user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MiniProgramUserMergeRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "id": 1,
-                     *       "display_name": "孙浩宇",
-                     *       "department_name": "检修维护部电气自动化车间",
-                     *       "enabled": true,
-                     *       "identities": [
-                     *         {
-                     *           "id": 11,
-                     *           "app_id": "wx9d2f1c8a5b3e4701",
-                     *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *           "created_at": "2026-08-14T10:20:00+08:00"
-                     *         },
-                     *         {
-                     *           "id": 12,
-                     *           "app_id": "wx4b7e0a6d2c918f35",
-                     *           "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *           "created_at": "2026-09-02T09:35:00+08:00"
-                     *         }
-                     *       ],
-                     *       "created_at": "2026-08-14T10:20:00+08:00",
-                     *       "updated_at": "2026-09-02T09:35:00+08:00",
-                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "version": 2,
-                     *       "source": "MINI_PROGRAM",
-                     *       "roles": [
-                     *         {
-                     *           "id": 7,
-                     *           "name": "只读用户",
-                     *           "is_system": true
-                     *         }
-                     *       ],
-                     *       "permissions": [
-                     *         "codes:read",
-                     *         "hazard:read",
-                     *         "huaxing:read",
-                     *         "ledger:read",
-                     *         "purchase:read",
-                     *         "warehouse:read",
-                     *         "work:read"
-                     *       ]
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MiniProgramUserRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];
@@ -34712,6 +33609,155 @@ export interface operations {
                      *       "message": "二级库物资不存在",
                      *       "details": {},
                      *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    merge_user_api_v1_users_item_id_merge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserMergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 3,
+                     *       "username": "warehouse",
+                     *       "display_name": "仓库管理员",
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "source": "MANAGE",
+                     *       "roles": [
+                     *         {
+                     *           "id": 3,
+                     *           "name": "二级库读写",
+                     *           "is_system": true
+                     *         },
+                     *         {
+                     *           "id": 7,
+                     *           "name": "隐患读写",
+                     *           "is_system": true
+                     *         }
+                     *       ],
+                     *       "permissions": [
+                     *         "hazard:read",
+                     *         "hazard:write",
+                     *         "warehouse:read",
+                     *         "warehouse:write"
+                     *       ],
+                     *       "identities": [
+                     *         {
+                     *           "id": 11,
+                     *           "app_id": "wx-test-primary",
+                     *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
+                     *           "created_at": "2026-08-14T10:20:00+08:00"
+                     *         }
+                     *       ],
+                     *       "enabled": true,
+                     *       "version": 5,
+                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserApiTokenRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];

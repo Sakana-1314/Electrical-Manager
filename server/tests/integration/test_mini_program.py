@@ -48,17 +48,10 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert registration_token
 
     users_before_profile = await client.get(
-        "/api/v1/mini-program-users", headers=admin
+        "/api/v1/users", params={"keyword": "扫码出库员"}, headers=admin
     )
     assert users_before_profile.status_code == 200
     assert users_before_profile.json()["total"] == 0
-
-    manual_create = await client.post(
-        "/api/v1/mini-program-users",
-        headers=admin,
-        json={"display_name": "不应创建"},
-    )
-    assert manual_create.status_code == 405
 
     profile = await client.post(
         "/api/v1/mini-program/profile",
@@ -82,9 +75,9 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     ]
     assert created_user["display_name"] == "扫码出库员"
     assert created_user["department_name"] == "华星检修维护部电气车间"
-    # 新注册用户默认只读：出库是写操作，给该用户挂「库房管理员」角色（权限并集生效）。
+    # 新注册用户默认只读：出库是写操作，给该用户挂「二级库读写」角色（权限并集生效）。
     async with project_session() as session:
-        await grant_role(session, created_user["id"], "库房管理员")
+        await grant_role(session, created_user["id"], "二级库读写")
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
 
     replayed_profile = await client.post(
@@ -312,7 +305,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     }
 
     rename = await client.patch(
-        f"/api/v1/mini-program-users/{created_user['id']}",
+        f"/api/v1/users/{created_user['id']}",
         headers=admin,
         json={
             "display_name": "管理员修改",
@@ -358,7 +351,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert repeated_login.json()["user"]["display_name"] == "管理员修改"
 
     disabled = await client.patch(
-        f"/api/v1/mini-program-users/{created_user['id']}",
+        f"/api/v1/users/{created_user['id']}",
         headers=admin,
         json={"enabled": False, "version": rename.json()["version"]},
     )
@@ -377,7 +370,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert disabled_request.json()["code"] == "ACCOUNT_DISABLED"
 
     deleted = await client.delete(
-        f"/api/v1/mini-program-users/{created_user['id']}",
+        f"/api/v1/users/{created_user['id']}",
         headers={**admin, "If-Match": str(disabled.json()["version"])},
     )
     assert deleted.status_code == 204, deleted.text
@@ -448,34 +441,18 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     assert isinstance(target_user, dict)
     assert isinstance(source_user, dict)
 
-    mismatched = await client.patch(
-        f"/api/v1/mini-program-users/{source_user['id']}",
+    # 合并方向可任选：这里把 target 的姓名改掉再并回，验证目标资料以「被选定的目标」为准
+    renamed_target = await client.patch(
+        f"/api/v1/users/{target_user['id']}",
         headers=admin,
-        json={"display_name": "另一人员", "version": source_user["version"]},
+        json={"display_name": "同一人员（保留）", "version": target_user["version"]},
     )
-    assert mismatched.status_code == 200, mismatched.text
-    rejected_merge = await client.post(
-        f"/api/v1/mini-program-users/{target_user['id']}/merge",
-        headers=admin,
-        json={
-            "source_user_id": source_user["id"],
-            "source_version": mismatched.json()["version"],
-            "target_version": target_user["version"],
-        },
-    )
-    assert rejected_merge.status_code == 409
-    assert rejected_merge.json()["code"] == "MINI_PROGRAM_USER_PROFILE_MISMATCH"
-    restored = await client.patch(
-        f"/api/v1/mini-program-users/{source_user['id']}",
-        headers=admin,
-        json={"display_name": "同一人员", "version": mismatched.json()["version"]},
-    )
-    assert restored.status_code == 200, restored.text
-    source_user = restored.json()
+    assert renamed_target.status_code == 200, renamed_target.text
+    target_user = renamed_target.json()
 
-    # 合并前的小程序出库是写操作：给来源账号挂「库房管理员」（权限并集下放）。
+    # 合并前的小程序出库是写操作：给来源账号挂「二级库读写」（权限并集下放）。
     async with project_session() as session:
-        await grant_role(session, source_user["id"], "库房管理员")
+        await grant_role(session, source_user["id"], "二级库读写")
 
     material = await client.post(
         "/api/v1/stock-materials",
@@ -516,7 +493,7 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     assert outbound.status_code == 201, outbound.text
 
     merged = await client.post(
-        f"/api/v1/mini-program-users/{target_user['id']}/merge",
+        f"/api/v1/users/{target_user['id']}/merge",
         headers=admin,
         json={
             "source_user_id": source_user["id"],
@@ -531,11 +508,7 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
         "wx-test-secondary",
     }
 
-    users = await client.get(
-        "/api/v1/mini-program-users",
-        headers=admin,
-        params={"keyword": "wx-test-secondary"},
-    )
+    users = await client.get("/api/v1/users", params={"keyword": "同一人员"}, headers=admin)
     assert users.status_code == 200
     assert users.json()["total"] == 1
     assert users.json()["items"][0]["id"] == target_user["id"]
@@ -1506,7 +1479,9 @@ async def test_advanced_setting_controls_new_mini_program_user_status(
     assert pending_profile.json()["requires_profile"] is False
     assert pending_profile.json()["user"]["enabled"] is False
 
-    users = await client.get("/api/v1/mini-program-users", headers=admin)
+    users = await client.get(
+        "/api/v1/users", params={"keyword": "待审核用户"}, headers=admin
+    )
     assert users.status_code == 200, users.text
     assert users.json()["total"] == 1
     assert users.json()["items"][0]["display_name"] == "待审核用户"
@@ -1554,16 +1529,16 @@ async def test_advanced_setting_controls_new_mini_program_user_status(
 
 
 @pytest.mark.asyncio
-async def test_mini_program_users_require_super_admin(client: AsyncClient) -> None:
+async def test_user_management_requires_super_admin(client: AsyncClient) -> None:
     warehouse = await auth_headers(client, "warehouse")
-    response = await client.get("/api/v1/mini-program-users", headers=warehouse)
+    response = await client.get("/api/v1/users", headers=warehouse)
     assert response.status_code == 403
     deleted = await client.delete(
-        "/api/v1/mini-program-users/1", headers={**warehouse, "If-Match": "1"}
+        "/api/v1/users/1", headers={**warehouse, "If-Match": "1"}
     )
     assert deleted.status_code == 403
     merged = await client.post(
-        "/api/v1/mini-program-users/1/merge",
+        "/api/v1/users/1/merge",
         headers=warehouse,
         json={"source_user_id": 2, "source_version": 1, "target_version": 1},
     )
@@ -1623,7 +1598,9 @@ async def test_last_used_at_tracks_mini_program_sign_in(
     assert datetime.fromisoformat(refreshed["last_used_at"]).year > 2020
     assert refreshed["version"] == created["version"]
 
-    users = await client.get("/api/v1/mini-program-users", headers=admin)
+    users = await client.get(
+        "/api/v1/users", params={"keyword": "活跃度用户"}, headers=admin
+    )
     assert users.status_code == 200, users.text
     assert users.json()["total"] == 1
     listed = users.json()["items"][0]

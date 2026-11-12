@@ -8,24 +8,33 @@ class UserSource(StrEnum):
     MINI_PROGRAM = "MINI_PROGRAM"
 
 
-# 内置角色（与 init.sql 种子同名同权限）：测试按角色名挂 user_role。
+# 内置角色（与 init.sql 种子同名同权限，顺序一致以保证种子 id 稳定）：测试按角色名挂 user_role。
 ROLE_PERMISSIONS: dict[str, list[str]] = {
     "超级管理员": ["*"],
-    "库房管理员": ["warehouse:read", "warehouse:write", "huaxing:read", "codes:read"],
-    "采购管理员": ["purchase:read", "purchase:write", "huaxing:read", "codes:read"],
-    "隐患管理员": ["hazard:read", "hazard:write"],
-    "台账管理员": ["ledger:read", "ledger:write"],
-    "工单管理员": ["work:read", "work:write"],
-    "只读用户": [
-        "warehouse:read",
-        "purchase:read",
-        "huaxing:read",
-        "codes:read",
-        "ledger:read",
-        "hazard:read",
-        "work:read",
-    ],
+    "二级库只读": ["warehouse:read"],
+    "二级库读写": ["warehouse:read", "warehouse:write"],
+    "申购只读": ["purchase:read"],
+    "申购读写": ["purchase:read", "purchase:write"],
+    "隐患只读": ["hazard:read"],
+    "隐患读写": ["hazard:read", "hazard:write"],
+    "台账只读": ["ledger:read"],
+    "台账读写": ["ledger:read", "ledger:write"],
+    "工单只读": ["work:read"],
+    "工单读写": ["work:read", "work:write"],
+    "华星只读": ["huaxing:read"],
+    "编码库只读": ["codes:read"],
 }
+
+# 小程序新用户默认挂载的全部只读角色
+DEFAULT_ROLE_NAMES = (
+    "二级库只读",
+    "申购只读",
+    "隐患只读",
+    "台账只读",
+    "工单只读",
+    "华星只读",
+    "编码库只读",
+)
 
 
 class PurchasePlanStatus(StrEnum):

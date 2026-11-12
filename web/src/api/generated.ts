@@ -29,12 +29,9 @@ export type ApiError = components['schemas']['ApiError']
 export type User = components['schemas']['UserRead']
 export type UserRole = components['schemas']['UserRoleRead']
 export type RoleRead = components['schemas']['RoleRead']
-export type RoleCreate = components['schemas']['RoleCreate']
-export type RoleUpdate = components['schemas']['RoleUpdate']
-export type PermissionDef = components['schemas']['PermissionDef']
 export type MiniProgramIdentity = components['schemas']['MiniProgramIdentityRead']
+export type UserMergeRequest = components['schemas']['UserMergeRequest']
 export type MiniProgramUser = components['schemas']['MiniProgramUserRead']
-export type MiniProgramUserUpdate = components['schemas']['MiniProgramUserUpdate']
 export type LoginRequest = components['schemas']['LoginRequest']
 export type LoginResponse = components['schemas']['LoginResponse']
 export type TokenPairResponse = components['schemas']['TokenPairResponse']
@@ -157,13 +154,6 @@ export interface Page<T> {
 /** 用户 + 接口令牌（后端 UserApiTokenRead；令牌加密入库，读取接口每次解密回显，旧数据可能为 null） */
 export interface ManagedUser extends User {
   api_token: string | null
-}
-
-/** 小程序用户合并请求 */
-export interface MiniProgramUserMergeInput {
-  source_user_id: number
-  source_version: number
-  target_version: number
 }
 
 /** AI 搜索扩展（输入/结果） */

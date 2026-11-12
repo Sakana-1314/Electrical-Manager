@@ -37,22 +37,6 @@ type MiniProgramUserRead struct {
 	Version        int64                     `json:"version"`
 }
 
-// MiniProgramUserUpdate 管理端编辑小程序用户（角色以全量 role_ids 下发）。
-type MiniProgramUserUpdate struct {
-	DisplayName    *string  `json:"display_name" v:"min=1,max=64"`
-	DepartmentName *string  `json:"department_name" v:"min=1,max=128"`
-	Enabled        *bool    `json:"enabled"`
-	RoleIDs        *[]int64 `json:"role_ids"`
-	Version        int64    `json:"version" v:"required"`
-}
-
-// MiniProgramUserMergeRequest 把 source 账号合并进路径里的 target 账号。
-type MiniProgramUserMergeRequest struct {
-	SourceUserID  int64 `json:"source_user_id" v:"required,gt=0"`
-	SourceVersion int64 `json:"source_version" v:"required"`
-	TargetVersion int64 `json:"target_version" v:"required"`
-}
-
 // ---------------- 登录 / 建档 ----------------
 
 // MiniProgramLoginResponse 是微信登录 / 补充个人信息的响应。

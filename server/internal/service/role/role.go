@@ -22,15 +22,6 @@ func decodePermissions(raw jtype.JSON) []string {
 	return keys
 }
 
-// permissionsJSON 权限键数组序列化为 JSONB 存储值（序列化失败不会发生，兜底空数组）。
-func permissionsJSON(keys []string) jtype.JSON {
-	raw, err := json.Marshal(keys)
-	if err != nil {
-		return jtype.JSON("[]")
-	}
-	return jtype.JSON(raw)
-}
-
 // UserPermissionKeys 汇总用户全部角色的权限并集：展开通配（`*` / `模块:*`）、去重、按目录顺序输出。
 func UserPermissionKeys(s *db.Session, userID int64) ([]string, error) {
 	var roles []model.Role
@@ -102,21 +93,6 @@ func UserRoleRead(r model.Role) schema.UserRoleRead {
 	return schema.UserRoleRead{ID: r.ID, Name: r.Name, IsSystem: r.IsSystem}
 }
 
-// validatePermissions 角色保存时的权限键校验：必须都在目录内，且不允许通配键（通配只属于内置超级管理员）。
-func validatePermissions(keys []string) error {
-	seen := map[string]bool{}
-	for _, key := range keys {
-		if seen[key] {
-			return apperr.New("INVALID_PERMISSIONS", "权限键重复："+key).WithStatus(422)
-		}
-		seen[key] = true
-		if !domain.IsKnownPermission(key) {
-			return apperr.New("INVALID_PERMISSIONS", "未知权限键："+key).WithStatus(422)
-		}
-	}
-	return nil
-}
-
 // readCounts 统计每个角色的用户数（删除保护与列表展示用）。
 func readCounts(s *db.Session) (map[int64]int64, error) {
 	var rows []struct {
@@ -162,104 +138,6 @@ func NewRoleRead(r model.Role, userCount int64) schema.RoleRead {
 	}
 }
 
-// Create 新建角色：名称唯一，权限键必须在目录内。
-func Create(s *db.Session, data schema.RoleCreate) (*model.Role, error) {
-	if err := validatePermissions(data.Permissions); err != nil {
-		return nil, err
-	}
-	now := common.UTCNow()
-	r := &model.Role{
-		Name: data.Name, Description: data.Description,
-		Permissions: permissionsJSON(data.Permissions), IsSystem: false,
-		CreatedAt: now, UpdatedAt: now, Version: 1,
-	}
-	id, err := s.Insert("INSERT INTO role (name, description, permissions, is_system, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		r.Name, r.Description, r.Permissions, r.IsSystem, r.CreatedAt, r.UpdatedAt, r.Version)
-	if err != nil {
-		if db.IsIntegrity(err) {
-			return nil, apperr.New("ROLE_NAME_CONFLICT", "角色名称已存在").WithStatus(409)
-		}
-		return nil, err
-	}
-	r.ID = id
-	return r, nil
-}
-
-// getRole 按 id 读取角色，不存在返回 nil。
-func getRole(s *db.Session, id int64) (*model.Role, error) {
-	var r model.Role
-	ok, err := s.Find(&r, "SELECT "+model.ColsRole+" FROM role WHERE id = ?", id)
-	if err != nil || !ok {
-		return nil, err
-	}
-	return &r, nil
-}
-
-// Update 编辑角色：内置角色不可改；权限键必须在目录内。
-func Update(s *db.Session, id int64, data schema.RoleUpdate) (*model.Role, error) {
-	r, err := getRole(s, id)
-	if err != nil {
-		return nil, err
-	}
-	if r == nil {
-		return nil, apperr.NotFound("角色")
-	}
-	if r.IsSystem {
-		return nil, apperr.New("ROLE_SYSTEM_LOCKED", "内置角色不可编辑").WithStatus(409)
-	}
-	if err := apperr.ValidateVersion(&data.Version, r.Version); err != nil {
-		return nil, err
-	}
-	if data.Name != nil {
-		r.Name = *data.Name
-	}
-	if data.Description != nil {
-		r.Description = *data.Description
-	}
-	if data.Permissions != nil {
-		if err := validatePermissions(*data.Permissions); err != nil {
-			return nil, err
-		}
-		r.Permissions = permissionsJSON(*data.Permissions)
-	}
-	r.Version++
-	r.UpdatedAt = common.UTCNow()
-	if _, err := s.Exec("UPDATE role SET name = ?, description = ?, permissions = ?, version = ?, updated_at = ? WHERE id = ?",
-		r.Name, r.Description, r.Permissions, r.Version, r.UpdatedAt, r.ID); err != nil {
-		if db.IsIntegrity(err) {
-			return nil, apperr.New("ROLE_NAME_CONFLICT", "角色名称已存在").WithStatus(409)
-		}
-		return nil, err
-	}
-	return r, nil
-}
-
-// Delete 删除角色：内置角色不可删；仍有用户挂载时拒绝。
-func Delete(s *db.Session, id int64, version *int64) error {
-	r, err := getRole(s, id)
-	if err != nil {
-		return err
-	}
-	if r == nil {
-		return apperr.NotFound("角色")
-	}
-	if r.IsSystem {
-		return apperr.New("ROLE_SYSTEM_LOCKED", "内置角色不可删除").WithStatus(409)
-	}
-	if err := apperr.ValidateVersion(version, r.Version); err != nil {
-		return err
-	}
-	counts, err := readCounts(s)
-	if err != nil {
-		return err
-	}
-	if counts[id] > 0 {
-		return apperr.New("ROLE_IN_USE", "仍有用户挂载此角色，请先解除关联").WithStatus(409)
-	}
-	_, err = s.Exec("DELETE FROM role WHERE id = ?", id)
-	return err
-}
-
 // ValidateRoleIDs 校验角色 id 列表都存在且去重（用户保存时用），返回去重后的 id。
 func ValidateRoleIDs(s *db.Session, roleIDs []int64) ([]int64, error) {
 	seen := map[int64]bool{}
@@ -302,17 +180,40 @@ func ReplaceUserRoles(s *db.Session, userID int64, roleIDs []int64) error {
 	return nil
 }
 
-// ReadOnlyRoleID 内置「只读用户」角色 id（小程序新用户默认角色）；缺失返回错误（种子被删视为环境异常）。
-func ReadOnlyRoleID(s *db.Session) (int64, error) {
-	var r model.Role
-	ok, err := s.Find(&r, "SELECT "+model.ColsRole+" FROM role WHERE name = ? AND is_system = TRUE", domain.SystemRoleReadOnly)
-	if err != nil {
-		return 0, err
+// DefaultRegistrationRoleIDs 小程序新用户默认挂载的角色 id（各功能只读角色，按 domain 里的名单查找）。
+// 任一内置角色缺失都返回错误（种子被删视为环境异常）。
+func DefaultRegistrationRoleIDs(s *db.Session) ([]int64, error) {
+	ids := make([]int64, 0, len(domain.DefaultRegistrationRoleNames))
+	for _, name := range domain.DefaultRegistrationRoleNames {
+		var r model.Role
+		ok, err := s.Find(&r, "SELECT "+model.ColsRole+" FROM role WHERE name = ? AND is_system = TRUE", name)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, apperr.New("ROLE_NOT_FOUND", "内置角色「"+name+"」缺失，请检查角色数据").WithStatus(500)
+		}
+		ids = append(ids, r.ID)
 	}
-	if !ok {
-		return 0, apperr.New("ROLE_NOT_FOUND", "内置「只读用户」角色缺失，请检查角色数据").WithStatus(500)
+	return ids, nil
+}
+
+// MergeRoles 把 source 用户的角色并入 target（权限取并集）：合并账号时用。
+func MergeRoles(s *db.Session, targetID, sourceID int64) error {
+	var links []model.UserRole
+	if err := s.SelectIn(&links, "SELECT "+model.ColsUserRole+" FROM user_role WHERE user_id IN (?)",
+		[]int64{targetID, sourceID}); err != nil {
+		return err
 	}
-	return r.ID, nil
+	seen := map[int64]bool{}
+	ids := make([]int64, 0, len(links))
+	for _, l := range links {
+		if !seen[l.RoleID] {
+			seen[l.RoleID] = true
+			ids = append(ids, l.RoleID)
+		}
+	}
+	return ReplaceUserRoles(s, targetID, ids)
 }
 
 // UserRoleNames 用户挂载的角色名（MCP whoami 等展示用；加载失败按空处理）。

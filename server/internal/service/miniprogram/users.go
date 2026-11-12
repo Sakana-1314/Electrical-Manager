@@ -3,7 +3,6 @@ package miniprogram
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"sort"
 	"time"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
@@ -130,185 +129,6 @@ func LoadUser(s *db.Session, m *model.User) (*User, error) {
 	return u, nil
 }
 
-// ListUsers 对应 list_users：只列小程序来源用户；关键字匹配姓名 / 部门 / 任一身份的 AppID 或 openid。
-func ListUsers(s *db.Session, keyword *string, page, pageSize int64) ([]*User, int64, error) {
-	where := " WHERE u.source = ?"
-	var args []any
-	args = append(args, domain.UserSourceMiniProgram)
-	if keyword != nil && *keyword != "" {
-		pattern := "%" + common.LikeEscape(*keyword) + "%"
-		where += " AND (u.display_name LIKE ? ESCAPE '/' OR u.department_name LIKE ? ESCAPE '/' OR EXISTS (" +
-			"SELECT 1 FROM mini_program_identity i WHERE i.user_id = u.id AND " +
-			"(i.app_id LIKE ? ESCAPE '/' OR i.wechat_openid LIKE ? ESCAPE '/')))"
-		args = append(args, pattern, pattern, pattern, pattern)
-	}
-	var total int64
-	if err := s.Get(&total, "SELECT COUNT(*) FROM `user` u"+where, args...); err != nil {
-		return nil, 0, err
-	}
-	var rows []model.User
-	if err := s.Select(&rows, "SELECT "+model.Prefixed("u", model.ColsUser)+" FROM `user` u"+where+
-		" ORDER BY u.id LIMIT ? OFFSET ?", append(args, pageSize, common.Offset(page, pageSize))...); err != nil {
-		return nil, 0, err
-	}
-	users := make([]*User, len(rows))
-	for i := range rows {
-		users[i] = &User{User: rows[i]}
-	}
-	if err := loadIdentities(s, users); err != nil {
-		return nil, 0, err
-	}
-	if err := loadRoles(s, users); err != nil {
-		return nil, 0, err
-	}
-	return users, total, nil
-}
-
-// UpdateUser 对应 update_user：改姓名 / 部门 / 启用状态 / 角色（全量 role_ids），version + 1。
-func UpdateUser(s *db.Session, id int64, data schema.MiniProgramUserUpdate) (*User, error) {
-	u, err := getUser(s, id, false)
-	if err != nil {
-		return nil, err
-	}
-	if u == nil {
-		return nil, apperr.NotFound("小程序用户")
-	}
-	if err := apperr.ValidateVersion(&data.Version, u.Version); err != nil {
-		return nil, err
-	}
-	if data.DisplayName != nil {
-		u.DisplayName = *data.DisplayName
-	}
-	if data.DepartmentName != nil {
-		u.DepartmentName = *data.DepartmentName
-	}
-	if data.Enabled != nil {
-		u.Enabled = *data.Enabled
-	}
-	if data.RoleIDs != nil {
-		roleIDs, err := role.ValidateRoleIDs(s, *data.RoleIDs)
-		if err != nil {
-			return nil, err
-		}
-		if err := role.ReplaceUserRoles(s, u.ID, roleIDs); err != nil {
-			return nil, err
-		}
-	}
-	u.Version++
-	u.UpdatedAt = common.UTCNow()
-	if _, err := s.Exec("UPDATE `user` SET display_name = ?, department_name = ?, enabled = ?, version = ?, updated_at = ? WHERE id = ?",
-		u.DisplayName, u.DepartmentName, u.Enabled, u.Version, u.UpdatedAt, u.ID); err != nil {
-		return nil, err
-	}
-	if err := loadRoles(s, []*User{u}); err != nil {
-		return nil, err
-	}
-	return u, nil
-}
-
-// DeleteUser 对应 delete_user：校验 If-Match 版本后删除（微信身份与角色关联随之级联删除）。
-func DeleteUser(s *db.Session, id int64, version *int64) error {
-	var m model.User
-	ok, err := s.Find(&m, "SELECT "+model.ColsUser+" FROM `user` WHERE id = ? AND source = ?", id, domain.UserSourceMiniProgram)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return apperr.NotFound("小程序用户")
-	}
-	if err := apperr.ValidateVersion(version, m.Version); err != nil {
-		return err
-	}
-	_, err = s.Exec("DELETE FROM `user` WHERE id = ?", id)
-	return err
-}
-
-// MergeUsers 对应 merge_users：姓名与部门一致、且不含同一小程序的身份时，把 source 的身份并入 target 并删除 source。
-func MergeUsers(s *db.Session, targetID int64, data schema.MiniProgramUserMergeRequest) (*User, error) {
-	if targetID == data.SourceUserID {
-		return nil, apperr.New("MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT", "不能将小程序账号合并到自身").WithStatus(400)
-	}
-	var rows []model.User
-	if err := s.SelectIn(&rows, "SELECT "+model.ColsUser+" FROM `user` WHERE id IN (?) AND source = ? FOR UPDATE",
-		[]int64{targetID, data.SourceUserID}, domain.UserSourceMiniProgram); err != nil {
-		return nil, err
-	}
-	users := make([]*User, len(rows))
-	byID := map[int64]*User{}
-	for i := range rows {
-		users[i] = &User{User: rows[i]}
-		byID[rows[i].ID] = users[i]
-	}
-	if err := loadIdentities(s, users); err != nil {
-		return nil, err
-	}
-	target, source := byID[targetID], byID[data.SourceUserID]
-	if target == nil || source == nil {
-		return nil, apperr.NotFound("小程序用户")
-	}
-	if err := apperr.ValidateVersion(&data.TargetVersion, target.Version); err != nil {
-		return nil, err
-	}
-	if err := apperr.ValidateVersion(&data.SourceVersion, source.Version); err != nil {
-		return nil, err
-	}
-	if target.DisplayName != source.DisplayName || target.DepartmentName != source.DepartmentName {
-		return nil, apperr.New("MINI_PROGRAM_USER_PROFILE_MISMATCH", "姓名和部门单位必须一致才能合并账号").WithStatus(409)
-	}
-	targetAppIDs := map[string]bool{}
-	for _, it := range target.Identities {
-		targetAppIDs[it.AppID] = true
-	}
-	duplicateSet := map[string]bool{}
-	for _, it := range source.Identities {
-		if targetAppIDs[it.AppID] {
-			duplicateSet[it.AppID] = true
-		}
-	}
-	if len(duplicateSet) > 0 {
-		duplicates := make([]string, 0, len(duplicateSet))
-		for id := range duplicateSet {
-			duplicates = append(duplicates, id)
-		}
-		sort.Strings(duplicates)
-		return nil, apperr.New("MINI_PROGRAM_IDENTITY_CONFLICT", "两个账号包含相同小程序的身份，无法直接合并").
-			WithStatus(409).
-			WithDetails(apperr.D{"app_ids": duplicates})
-	}
-
-	now := common.UTCNow()
-	if len(source.Identities) > 0 {
-		if _, err := s.Exec("UPDATE mini_program_identity SET user_id = ?, updated_at = ? WHERE user_id = ?",
-			target.ID, now, source.ID); err != nil {
-			return nil, err
-		}
-	}
-	// 内存中的关系列表：保留账号原有身份在前，迁入的身份追加在后（与 ORM 列表 append 一致）。
-	for _, it := range source.Identities {
-		it.UserID = target.ID
-		it.UpdatedAt = now
-		target.Identities = append(target.Identities, it)
-	}
-	// 源账号随后被删除，把更近的一次使用时间留给保留的账号，避免活跃度信息丢失。
-	if source.LastUsedAt != nil && (target.LastUsedAt == nil || source.LastUsedAt.After(*target.LastUsedAt)) {
-		t := *source.LastUsedAt
-		target.LastUsedAt = &t
-	}
-	target.Version++
-	target.UpdatedAt = now
-	if _, err := s.Exec("UPDATE `user` SET last_used_at = ?, version = ?, updated_at = ? WHERE id = ?",
-		target.LastUsedAt, target.Version, target.UpdatedAt, target.ID); err != nil {
-		return nil, err
-	}
-	if _, err := s.Exec("DELETE FROM `user` WHERE id = ?", source.ID); err != nil {
-		return nil, err
-	}
-	if err := loadRoles(s, []*User{target}); err != nil {
-		return nil, err
-	}
-	return target, nil
-}
-
 // markLastUsed 对应 _mark_last_used：登录即刷新最近使用时间，刻意不自增 version。
 func markLastUsed(s *db.Session, u *User) error {
 	now := common.UTCNow()
@@ -379,7 +199,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	return user, effectiveAppID, openid, nil
 }
 
-// RegisterUser 对应 register_user：按注册凭证里的 (app_id, openid) 建统一用户档案并挂「只读用户」角色。
+// RegisterUser 对应 register_user：按注册凭证里的 (app_id, openid) 建统一用户档案并挂各功能只读角色。
 // 新用户是否默认启用由系统设置决定（默认启用 = 只读权限；默认禁用 = 待管理员审核启用）。
 // 已存在时按一次登录处理且不覆盖姓名 / 部门。
 func RegisterUser(s *db.Session, appID, openid, displayName, departmentName string) (*User, error) {
@@ -427,13 +247,13 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		return nil, conflict(err)
 	}
 	user.ID = id
-	// 默认启用的用户挂「只读用户」角色（各业务模块只读）；禁用的用户等管理员启用后再分配角色。
+	// 默认启用的用户挂全部「只读」角色（各功能只读，权限并集）；禁用的用户等管理员启用后再分配角色。
 	if user.Enabled {
-		readOnlyRoleID, err := role.ReadOnlyRoleID(s)
+		defaultRoleIDs, err := role.DefaultRegistrationRoleIDs(s)
 		if err != nil {
 			return nil, err
 		}
-		if err := role.ReplaceUserRoles(s, user.ID, []int64{readOnlyRoleID}); err != nil {
+		if err := role.ReplaceUserRoles(s, user.ID, defaultRoleIDs); err != nil {
 			return nil, err
 		}
 	}

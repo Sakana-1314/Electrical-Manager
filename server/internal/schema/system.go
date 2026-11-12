@@ -27,38 +27,39 @@ type RoleRead struct {
 	Version     int64         `json:"version"`
 }
 
-// RoleCreate 新建角色。
-type RoleCreate struct {
-	Name        string   `json:"name" v:"required,min=1,max=64"`
-	Description string   `json:"description" v:"max=255"`
-	Permissions []string `json:"permissions"`
-}
-
-// RoleUpdate 编辑角色（内置角色不可编辑）。
-type RoleUpdate struct {
-	Name        *string   `json:"name" v:"min=1,max=64"`
-	Description *string   `json:"description" v:"max=255"`
-	Permissions *[]string `json:"permissions"`
-	Version     int64     `json:"version" v:"required"`
+// UserMergeRequest 把 source 账号并入路径里的 target 账号：目标保留姓名 / 部门，
+// 来源账号的微信身份随迁、角色与目标取并集，来源账号随后删除。
+type UserMergeRequest struct {
+	SourceUserID  int64 `json:"source_user_id" v:"required,gt=0"`
+	SourceVersion int64 `json:"source_version" v:"required"`
+	TargetVersion int64 `json:"target_version" v:"required"`
 }
 
 // UserRead 是管理端用户。roles 为挂载的角色（多角色，权限取并集）；permissions 为并集展开后的
 // 权限键（登录 / me 路径填充，用户列表为空——前端编辑角色用 roles）；source 区分管理端 / 小程序来源。
 type UserRead struct {
-	ID             int64          `json:"id"`
-	Username       string         `json:"username"`
-	DisplayName    string         `json:"display_name"`
-	DepartmentName string         `json:"department_name"`
-	Source         string         `json:"source"`
-	Roles          []UserRoleRead `json:"roles"`
-	Permissions    []string       `json:"permissions"`
-	Enabled        bool           `json:"enabled"`
-	Version        int64          `json:"version"`
+	ID             int64                     `json:"id"`
+	Username       string                    `json:"username"`
+	DisplayName    string                    `json:"display_name"`
+	DepartmentName string                    `json:"department_name"`
+	Source         string                    `json:"source"`
+	Roles          []UserRoleRead            `json:"roles"`
+	Permissions    []string                  `json:"permissions"`
+	Identities     []MiniProgramIdentityRead `json:"identities"`
+	LastUsedAt     *jtype.UTCTime            `json:"last_used_at"`
+	Enabled        bool                      `json:"enabled"`
+	Version        int64                     `json:"version"`
 }
 
 func NewUserRead(u *model.User) UserRead {
-	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Source: u.Source, Enabled: u.Enabled, Version: u.Version, Permissions: []string{}}
+	var lastUsed *jtype.UTCTime
+	if u.LastUsedAt != nil {
+		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
+	}
+	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Source: u.Source, LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version, Permissions: []string{}}
 }
+
+func ptr[T any](v T) *T { return &v }
 
 type UserApiTokenRead struct {
 	UserRead
