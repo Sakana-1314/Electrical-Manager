@@ -5,13 +5,21 @@ from uuid import UUID
 import pytest
 from httpx import AsyncClient
 
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
+from tests.testkit.accounts import create_mini_program_user
+from tests.testkit.security import create_access_token
 
 
 @pytest.mark.asyncio
 async def test_my_api_token_is_created_once_and_authenticates(client: AsyncClient) -> None:
     """用户设置里读取自己的 MCP 令牌：没有时自动生成，之后保持同一令牌（不轮换）。"""
-    headers = await auth_headers(client, "warehouse")
+    # 小程序注册的来源用户没有密码和接口令牌，与线上普通用户一致。
+    async with project_session() as session:
+        user_id = await create_mini_program_user(
+            session, "自助令牌用户", permissions=("warehouse:read",)
+        )
+    headers = {"Authorization": f"Bearer {create_access_token(user_id)}"}
+
     first = await client.get("/api/v1/auth/me/api-token", headers=headers)
     assert first.status_code == 200, first.text
     token = first.json()["api_token"]
@@ -24,7 +32,7 @@ async def test_my_api_token_is_created_once_and_authenticates(client: AsyncClien
 
     me = await client.get("/api/v1/auth/me", headers={"X-API-Token": token})
     assert me.status_code == 200, me.text
-    assert me.json()["username"] == "warehouse"
+    assert me.json()["id"] == user_id
 
 
 @pytest.mark.asyncio

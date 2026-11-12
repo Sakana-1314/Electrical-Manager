@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import jwt
 from argon2 import PasswordHasher
@@ -40,6 +41,13 @@ def _token(subject: int | str, token_type: str, expires_minutes: int, **claims: 
         **claims,
     }
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+def create_access_token(user_id: int) -> str:
+    """管理端访问令牌（测试直接造无密码 / 无接口令牌的用户时用）。"""
+    return _token(
+        user_id, "management_access", settings.ACCESS_TOKEN_MINUTES, jti=str(uuid4())
+    )
 
 
 def create_mini_program_access_token(user_id: int) -> str:
