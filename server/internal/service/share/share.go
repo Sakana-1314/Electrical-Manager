@@ -393,7 +393,7 @@ func ListShares(s *db.Session, user *model.User, page, pageSize int64) ([]schema
 	}
 	var rows []row
 	args := append(append([]any{}, w.Args...), pageSize, common.Offset(page, pageSize))
-	if err := s.Select(&rows, "SELECT "+model.Prefixed("s", model.ColsShareLink)+", u.display_name AS creator_display_name FROM share_link s LEFT JOIN \"user\" u ON u.id = s.created_by"+
+	if err := s.Select(&rows, "SELECT "+model.Prefixed("s", model.ColsShareLink)+", u.display_name AS creator_display_name FROM share_link s LEFT JOIN app_user u ON u.id = s.created_by"+
 		w.SQL()+" ORDER BY s.created_at DESC, s.id DESC LIMIT ? OFFSET ?", args...); err != nil {
 		return nil, 0, err
 	}
