@@ -77,7 +77,7 @@ web/src/
 ├── layouts/UserMenu.vue    左下角用户菜单（外观 / 线路 / 项目切换 / 退出登录），桌面侧栏与移动端抽屉共用
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
-├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限、二级库模式与「后台可见功能」开关过滤（纯逻辑，有单测）
+├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限位与二级库模式过滤（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
@@ -89,7 +89,7 @@ web/src/
 
 
 ### 路由表
-来源 `web/src/router/index.ts`；`meta.permission` 是唯一权限点，**`meta.roles` 当前未实现**。除标注「公开」外都要求已登录。
+来源 `web/src/router/index.ts`；`meta.permission` 是唯一的页面权限门禁键（对应后端权限位），**没有 `meta.roles`**。除标注「公开」外都要求已登录。
 `meta.title` 是页面短名（详情页也用短名），`meta.parent` 是浏览器标题里的上级标题
 （二级条目用菜单分组名，详情页/操作页用所属列表页或入口标题，顶级条目不设该字段）。
 
@@ -97,7 +97,7 @@ web/src/
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：账号密码表单，调 `auth.login`，支持 `?redirect=` 回跳 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 左下角用户菜单（移动端抽屉，顶部窄导航条） |
-| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，跟随「后台可见功能」与二级库精简模式）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
+| `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位与二级库精简模式）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
 | `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表；行点击/编辑/新建都打开 `StockMaterialFormModal`（详情、档案与补库策略、出库小程序码、删除） |
 | `/warehouse/materials/:id` | — | 无组件，`redirect` 到 `stock-materials` + `?detail=<id>` | — | 旧详情链接兼容：回列表并自动打开该物资的详情弹窗 |
@@ -123,13 +123,13 @@ web/src/
 | `/work/overview` | `work-overview` | `views/work/WorkOverviewView.vue`（`keepAlive`） | 需登录 | 工作总览：一行 = 日期 + 任务 + 时段（全天 / 上午 / 下午）并列出当天参与人员；日期区间（必填、≤92 天，`WorkRangePicker` 快捷档）/ 任务 / 参与人员 / 关键字筛选、分页与列显隐、URL 同步；点行打开记录弹窗（无写权限为只读详情） |
 | `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 任务视图：半日格时间线（一行一个任务，色块 = 该任务的一段工作并显示参与人员），点色块编辑记录、行尾编辑任务 / 排活、点任务名看该任务的时间段明细；任务 CRUD 按 `work:write` 隐藏 |
 | `/work/workers` | `work-workers` | `views/work/WorkWorkersView.vue`（`keepAlive`） | 需登录 | 人员视图：半日格时间线（一行一个人，色块 = 该人干的任务，按任务固定配色），姓名由工作记录的参与人员派生并按拼音排序；点色块编辑记录、行尾给该人排活 |
-| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `settings:write` | AI 搜索、小程序功能开关、后台可见功能、图片加速、Webhook |
+| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | AI 搜索、小程序注册开关、二级库运行模式、图片加速、Webhook |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
-| `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `settings:write` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
-| `/settings/users` | `users` | `views/settings/UsersView.vue` | `settings:write` | 用户管理：多角色分配、启停、部门、令牌回显/重置、MCP 链接（统一含小程序来源用户） |
-| `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `settings:write` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
-| `/settings/about` | `about` | `views/settings/AboutView.vue` | `settings:write` | 版本信息与构建时间（`versionApi.get()`） |
-| `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `settings:write` | 分享链接列表/改列/改期/撤回 |
+| `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `system:admin` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
+| `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一含小程序来源用户） |
+| `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `system:admin` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
+| `/settings/about` | `about` | `views/settings/AboutView.vue` | `system:admin` | 版本信息与构建时间（`versionApi.get()`） |
+| `/settings/share-links` | `share-links` | `views/settings/ShareLinksView.vue` | `system:admin` | 分享链接列表/改列/改期/撤回 |
 | `/share/:token` | `share` | `views/public/ShareView.vue` | 无（公开 `meta.public`） | 匿名分享预览（按配置列渲染） |
 | `/:pathMatch(.*)*` | — | `views/NotFoundView.vue` | 无（公开 `meta.public`） | 404 页面，「返回首页」按落地页推导（当前可见的第一个主 tab） |
 
@@ -144,26 +144,26 @@ web/src/
 | 5 | `to.meta.permission` 存在且 `auth.can(permission)` 为 false → 落地页（见下） |
 | 6 | `settings.isLiteMode` 为 true 且目标 name 属于 `FULL_WAREHOUSE_ROUTES`（`stock-materials`、`inbound`、`outbound`、`stock`、`operations`）→ `{ name: 'warehouse-lite' }`；旧详情路径的 `redirect` 先解析成列表路由，因此同样会被这条守卫接管 |
 
-**落地页**：`/`、登录成功（`LoginView`，无 `?redirect=` 时）与上面第 4、5 条都落到「当前可见的第一个主 tab」——
-由 `utils/navigation.ts` 的 `resolveLandingRouteName(settings.webFeatures, { isLiteMode })` 推导（二级库在精简模式下落到 `warehouse-lite`），
-默认 `dashboard`；全部主 tab 都不可见时回落 `dashboard`。工作台被后台可见功能关掉后不会再把用户扔进一个侧栏里没有入口的页面。
+**落地页**：`/`、登录成功（`LoginView`，无 `?redirect=` 时）与上面第 4、5 条都落到「当前权限下可见的第一个主 tab」——
+由 `utils/navigation.ts` 的 `resolveLandingRouteName(auth.can, { isLiteMode })` 推导（二级库在精简模式下落到 `warehouse-lite`），
+默认 `dashboard`（工作台与备忘录不设权限门禁，始终可见）。
 
 
 | 项 | 实现 | 位置 |
 | --- | --- | --- |
 | 是否已登录 | `isAuthenticated` = `token && user` 同时存在 | `stores/auth.ts` |
-| 权限点 | `can(permission)` 查 `rolePermissions`：`SUPER_ADMIN` 全部 7 项；`WAREHOUSE_ADMIN` `warehouse:write`+`read`；`PURCHASE_ADMIN` `purchase:write`+`read`；`HAZARD_ADMIN` `hazard:write`+`read`；`LEDGER_ADMIN` `ledger:write`+`read`；`WORK_ADMIN` `work:write`+`read`；`READ_ONLY` 仅 `read` | `types/navigation.ts` |
-| 无权限时 | 静默重定向到落地页（当前可见的第一个主 tab，默认工作台）；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
-| 后台可见功能 | 高级设置「功能状态 → 后台」里按**主 tab** 用下拉框选「显示 / 隐藏」（与小程序端档位同一套 `n-select` 写法），隐藏的项由 `isFeatureVisible()` 挡在侧栏外：只影响侧栏与落地页推导，**不拦路由、不拦接口**，被隐藏的页面仍可用链接直达；系统管理不参与该配置（始终显示），分组内部子项不单独配置 | `utils/navigation.ts`、`layouts/mainMenu.ts`、`stores/settings.ts` |
+| 权限点 | `can(permission)` 查登录用户 `permissions`（后端按位展开的权限键）：`system:admin`、各模块 `:read` / `:write`；`read` 通配命中任一读权限 | `types/navigation.ts`、`stores/auth.ts` |
+| 无权限时 | 静默重定向到落地页（当前权限下可见的第一个主 tab，默认工作台）；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
+| 功能可见性 | 管理端与小程序端统一按权限位：有 `warehouse:read` 才显示二级库、`huaxing:read` 显示华星总库存等；系统管理按 `system:admin` 显示。**不再有「后台可见功能」配置**；可见性只影响侧栏与落地页推导，不拦路由，接口按同一权限位返回 403 | `utils/navigation.ts`、`layouts/mainMenu.ts` |
 | keep-alive | `meta.keepAlive` 只在 8 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`、`work-overview`、`work-tasks`、`work-workers`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
 `web/src/stores/` 下只有 4 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
 
 | store | state | getters | actions | 持久化 | 职责 |
 | --- | --- | --- | --- | --- | --- |
-| `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与角色权限判断 |
+| `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与权限位门禁 |
 | `stores/project.ts`（`useProjectStore`） | `projects: Project[]`、`currentProjectId: number \| null`（初值读本地 `current_project_id`）、`loaded: boolean` | `enabledProjects`、`currentProject` | `ensureLoaded()`（首次导航前拉 `projectApi.list()`，失败不抛出）、`select(id)`（写本地并 `location.reload()`）、`clear()`、`fetchProjects()` | `localStorage` key `current_project_id`；已存项目被停用/删除时回退默认项目 | 当前项目：由 `web/src/api/client.ts` 注入 `X-Project-Id`，左下角用户菜单与 MCP 链接共用 |
-| `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`webFeatures: WebFeatureVisibility`（初值全部可见）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'` + 全部可见）、`isFeatureVisible(key)`（主 tab 是否可见，缺字段/全关按可见处理） | 无持久化（每次启动重新拉公开配置） | 全局二级库模式与后台可见功能，供路由守卫、落地页与侧边菜单在首次导航前同步读取 |
+| `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'`） | 无持久化（每次启动重新拉公开配置） | 全局二级库运行模式，供路由守卫、落地页与侧边菜单在首次导航前同步读取 |
 | `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
 `main.ts` 在 `app.mount('#app')` 之前先 `await ensureBackendSelected()`（多后端时探测选路，见下文），再 `await useSettingsStore(pinia).load()`，因此守卫里能同步读到 `isLiteMode`；同一处 `useThemeStore(pinia).apply()` 先把外观落到 `<html>`，与 `index.html` 首屏预置脚本结果一致，避免闪主题。
 
@@ -328,12 +328,12 @@ web/src/
 | `constants/branding.ts` / `constants/purchase.ts` | `LOGO_URL = publicUrl('logo.png')`（512px，登录页大图；按构建 base 拼前缀，子路径部署也正确）、`LOGO_MARK_URL = publicUrl('logo-96.png')`（侧栏 / 抽屉品牌行用的小图）；申购默认值/选项：`defaultPurchasePlanStatus`、`purchasePlanStatusOptions`、`defaultDemandDepartment`、`defaultPurchaseUrgency`、`purchaseUrgencyOptions`、`purchaseCategoryOptions` |
 | `constants/shareColumns.ts` | 分享页可展示列定义（键名与后端 Literal 严格一致）：`SHARE_PLAN_COLUMNS`、`SHARE_RECORD_COLUMNS`、`shareColumnOptions()`、`SHARE_DEFAULT_HIDDEN_KEYS = ['status']`、`defaultShareColumnKeys()`，供 `ShareView` 渲染与 `ShareLinksView` 勾选共用 |
 | `constants/table.ts` | `tableColumnWidths`（unit/quantity/date/datetime/status/person/code/identifier/name/material/model/text/action）、`preventTableColumnCompression`、`getTableScrollX` |
-| `types/navigation.ts` | `Permission` 字面量联合（`warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`read`）、`rolePermissions: Record<Role, Permission[]>`、`roleLabels: Record<Role, string>` |
+| `types/navigation.ts` | `Permission` 字面量联合（`system:admin` + 各模块 `read/write` + 通配 `read`）、`hasPermission(perms, permission)` |
 | `types/export.ts` / `config/env.ts` | `ExportOption = DropdownOption & { label: string; key: string }`；VITE_* 解析（见 API 客户端一节的 baseURL 说明） |
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局（**桌面端无顶栏**）：左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()`、`settings.isLiteMode` 与「后台可见功能」开关 `settings.isFeatureVisible()` 过滤：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；被关闭的主 tab 整个分组不渲染，系统管理始终显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，只保留一条 `56px` 窄导航条（菜单按钮 + 当前页标题，不放用户信息）作为抽屉入口，账号入口在抽屉左下角。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局（**桌面端无顶栏**）：左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位与 `settings.isLiteMode` 过滤：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，只保留一条 `56px` 窄导航条（菜单按钮 + 当前页标题，不放用户信息）作为抽屉入口，账号入口在抽屉左下角。
 
 
 
@@ -424,7 +424,7 @@ Go + Gin 单进程服务（PostgreSQL 16+ / pgx），源码在 `server/`，Go �
 | --- | --- | --- |
 | 路由层 | `server/internal/api/<模块>`、`server/internal/api/deps` | 用 `web.Router` 注册路由并列出依赖；经 `c.Params()` 解析与校验路径 / 查询 / 请求头 / 请求体（`ge=1`、`le=200`、`max=128`、`oneof=asc\|desc` 等规则写在参数调用或结构体 `v` 标签上）；把 service 结果组装成 `schema.Page[T]` 等响应；参数类业务错误用 `apperr.New` 返回 |
 | 服务层 | `server/internal/service/<模块>` | 业务规则与状态流转校验、乐观锁校验（`apperr.ValidateVersion`）、SQL（`?` 占位符，显式带 `project_id` 过滤）、行锁（`FOR UPDATE` / `FOR UPDATE SKIP LOCKED`）、审计事件（`common.LogEvent`）、read 模型组装、后台任务编排 |
-| 契约层 | `server/internal/schema`、`server/internal/domain` | 请求 / 响应结构体（与 `docs/openapi.yaml` 字段与格式逐一对应，`v` 标签声明校验规则）、`Page[T]`；领域枚举（`Role`、`OperationType`、`SourceType`、`PurchasePlanStatus` 等）及名称 ↔ 值转换（`domain.<Enum>.ToDB` / `FromDB`） |
+| 契约层 | `server/internal/schema`、`server/internal/domain` | 请求 / 响应结构体（与 `docs/openapi.yaml` 字段与格式逐一对应，`v` 标签声明校验规则）、`Page[T]`；领域枚举（`OperationType`、`SourceType`、`PurchasePlanStatus` 等）及名称 ↔ 值转换（`domain.<Enum>.ToDB` / `FromDB`） |
 | 模型层 | `server/internal/model` | 表结构体与列清单常量（`models_gen.go`，与 `docs/references/database/init.sql` 一致），项目域表清单 `ProjectScopedTables` |
 | 基础层 | `server/internal/{web,db,auth,middleware,config,logx,lifecycle,openapi,apperr,jtype,security}`、`server/internal/app` | 请求处理框架、事务会话与项目上下文、鉴权依赖、中间件、配置、日志、启动清理与后台任务登记、内嵌契约、错误体、JSON 类型（`jtype.UTCTime` / `jtype.Date` / `jtype.Decimal`）、密码哈希 / JWT / Fernet / UUIDv7；`app.New()` 组装 Gin 引擎 |
 
@@ -443,7 +443,7 @@ server/
 │                       #   replenishment、share、webhook、work
 ├── internal/web/       # Router（依赖链）、Ctx、Params（参数校验 → 422）、先提交再写响应、统一错误体
 ├── internal/db/        # 连接池、请求级事务会话、项目 / 系统上下文、`?` → `$n` 方言转换、语句耗时统计、SQLSTATE 错误分类
-├── internal/auth/      # 管理端 / 小程序鉴权、角色依赖、RequireProject / SystemScope、默认项目解析
+├── internal/auth/      # 管理端 / 小程序鉴权、权限位依赖、RequireProject / SystemScope、默认项目解析
 ├── internal/middleware/ # RealIP、RequestContext（request_id / 耗时头 / 访问日志）、Recovery、ProjectHeader、CORS
 ├── internal/config/    # Settings（APP_ 前缀环境变量 + server/.env）
 ├── internal/logx/      # 控制台 + 按天轮转、按月归档的文件日志（log/slog）
@@ -464,18 +464,18 @@ server/
 
 | 路由包 | 接口前缀 | 依赖（按需列出） |
 | --- | --- | --- |
-| `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SuperAdmin`；`/version` 公开 |
-| `api/aisearch` | `/ai-search` | `auth.SuperAdmin`、`auth.CurrentUser` |
-| `api/settings` | `/system-settings` | `auth.SuperAdmin`（`/system-settings/mini-program-features`、`/system-settings/image-acceleration` 公开读取） |
+| `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version` 公开 |
+| `api/aisearch` | `/ai-search` | `auth.SystemAdmin`、`auth.CurrentUser` |
+| `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features`、`/system-settings/image-acceleration` 公开读取） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse` |
 | `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
 | `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
 | `api/secondary` | `/secondary-warehouse` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
-| `api/miniprogram` | `/mini-program-users`（管理端）、`/mini-program/*`（小程序） | `auth.SuperAdmin`；`auth.MiniProgramUser`、`auth.MiniProgramRegistration` |
+| `api/miniprogram` | `/mini-program-users`（管理端）、`/mini-program/*`（小程序） | `auth.SystemAdmin`；`auth.MiniProgramUser`、`auth.MiniProgramRegistration` |
 | `api/purchase` | `/purchase-materials`、`/purchase-plan-templates`、`/purchase-record-sync/*`、`/purchase-records*` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
 | `api/share` | `/shares` | `auth.CurrentUser`；`GET /shares/{token}` 匿名 |
 | `api/exportjob` | `/excel-export-jobs` | `auth.CurrentUser`；`GET /excel-export-jobs/files/{file_uuid}` 匿名 |
-| `api/files` | `/files/images` | 分组挂 `auth.SystemScope`；上传 / 查重用各写角色（`auth.Roles`），附件治理用 `auth.SuperAdmin`；读图公开 |
+| `api/files` | `/files/images` | 分组挂 `auth.SystemScope`；上传 / 查重用各写权限位（`auth.FileWriter`），附件治理用 `auth.SystemAdmin`；读图公开 |
 | `api/hazard` | `/hazards*`、`/hazard-types`、`/hazard-units` | `auth.RequireProject`、`auth.CurrentUser`、`auth.HazardWriter` |
 | `api/ledger` | `/ledger-items`、`/ledger-tags` | `auth.RequireProject`、`auth.CurrentUser`、`auth.LedgerWriter` |
 | `api/work` | `/work-tasks`、`/work-records`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WorkWriter` |
@@ -518,7 +518,7 @@ sequenceDiagram
 | 环节 | 实现 |
 | --- | --- |
 | 中间件 | `middleware.RealIP()` → `middleware.RequestContext()` → `middleware.Recovery()` → `middleware.ProjectHeader()` → `middleware.CORS()`（`internal/app/app.go`）；`RequestContext` 在 RealIP 内层以便日志读到改写后的 IP；CORS 在最内层，`NoRoute` 的 400 与各类错误体同样带 CORS 头 |
-| 依赖顺序 | `web.Router.Group(prefix, deps...)` 的分组依赖先于路由依赖；习惯顺序为项目（`auth.RequireProject`）→ 鉴权（`auth.CurrentUser`）→ 角色（`auth.WarehouseWriter` 等，内部会先确保已鉴权）→ 其它（`deps.RequireFullSecondaryWarehouse`）；任一依赖返回错误立即中止，参数尚未校验 |
+| 依赖顺序 | `web.Router.Group(prefix, deps...)` 的分组依赖先于路由依赖；习惯顺序为项目（`auth.RequireProject`）→ 鉴权（`auth.CurrentUser`）→ 权限位（`auth.WarehouseWriter` 等，内部会先确保已鉴权）→ 其它（`deps.RequireFullSecondaryWarehouse`）；任一依赖返回错误立即中止，参数尚未校验 |
 | 参数校验与 422 | 依赖全部通过后，处理函数用 `c.Params()` 读取路径（`PathInt`）、查询（`QueryStr` / `QueryInt` / `Page` …）、请求头（`IfMatch`）、JSON 请求体（`Body`），每处的错误都追加进同一个列表，最后 `p.Err()` 一次性返回 `*web.ValidationError` → 422 `VALIDATION_ERROR`，`details.errors` 为 `type` / `loc` / `msg` / `input` 结构（与 Pydantic 兼容） |
 | 先提交再写响应 | 处理函数通过 `c.OK` / `c.Created` / `c.NoContent` / `c.File` 等只是**登记**响应；`web.H` 在函数返回后先 `c.DB.Commit()` 再写出响应，所以客户端拿到 2xx 时写库已可见；提交失败按数据库错误返回错误体。出错则 `Rollback()`。处理函数不手动提交，提交后才做的事登记 `c.DB.AfterCommit`（回滚后的补偿用 `AfterRollback`） |
 | panic | 处理函数里的 panic 由 `web.H` 转成 500 `INTERNAL_SERVER_ERROR`；中间件层的 panic 由 `middleware.Recovery()` 兜底 |
@@ -529,20 +529,21 @@ sequenceDiagram
 <TabsContent id="be-auth">
 
 ### 认证与权限
-#### 角色与依赖（`server/internal/auth`、`server/internal/domain`）
+#### 权限位与依赖（`server/internal/auth`、`server/internal/domain`）
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
-| 角色（RBAC） | `role` / `user_role` 表（固定种子，无 CRUD） | 超级管理员、全局只读、各功能读写（二级库 / 申购 / 隐患 / 台账 / 工单）；用户可挂多个角色，权限取并集 |
-| 权限键 | `domain.PermissionCatalog` | `settings:write`、`warehouse:read|write`、`purchase:read|write`、`hazard:read|write`、`ledger:read|write`、`work:read|write`、`huaxing:read`、`codes:read` |
-| `auth.RequirePermission(perm)` | 依赖工厂 | 先确保 `CurrentUser`，汇总角色权限并集不含该键返回 `PERMISSION_DENIED`（403） |
+| 权限位 | `app_user.permissions`（BIGINT 位图） | 每一位对应一个权限点；管理端与小程序端共用同一套权限，功能可见性与接口放行都按位判断，不再有角色表 |
+| 权限目录 | `domain.PermissionCatalog` | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`codes:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write`，每项带键、位值与标签 |
+| 位运算 | `domain.Permission.Has / Normalize / Keys`、`domain.PermissionBits` | `Has` 按位与判断；`Normalize` 丢掉未知位并让写权限自动带上同模块读权限；`Keys` 按目录顺序展开成接口里的权限键数组，`PermissionBits` 反向校验未知键 |
+| `auth.RequirePermission(perm)` | 依赖工厂（参数是 `domain.Permission` 位） | 先确保 `CurrentUser`，登录用户位图不含该位返回 `PERMISSION_DENIED`（403） |
 | `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
-| `auth.WarehouseWriter` | `RequirePermission(warehouse:write)` | 库存写操作 |
-| `auth.PurchaseWriter` | `RequirePermission(purchase:write)` | 申购写操作 |
-| `auth.HazardWriter` | `RequirePermission(hazard:write)` | 隐患管理写操作（台账与两张字典表） |
-| `auth.LedgerWriter` | `RequirePermission(ledger:write)` | 台账管理写操作（台账记录与标签） |
-| `auth.WorkWriter` | `RequirePermission(work:write)` | 工作管理写操作（任务、工作记录与任务图片） |
-| `auth.SuperAdmin` | `RequirePermission(settings:write)` | 系统配置、用户、文件治理 |
-| 图片上传 | `auth.FileWriter`（任一业务写权限） | 图片上传与上传前查重 |
+| `auth.WarehouseWriter` | `RequirePermission(PermWarehouseWrite)` | 库存写操作 |
+| `auth.PurchaseWriter` | `RequirePermission(PermPurchaseWrite)` | 申购写操作 |
+| `auth.HazardWriter` | `RequirePermission(PermHazardWrite)` | 隐患管理写操作（台账与两张字典表） |
+| `auth.LedgerWriter` | `RequirePermission(PermLedgerWrite)` | 台账管理写操作（台账记录与标签） |
+| `auth.WorkWriter` | `RequirePermission(PermWorkWrite)` | 工作管理写操作（任务、工作记录与任务图片） |
+| `auth.SystemAdmin` | `RequirePermission(PermSystemAdmin)` | 系统配置、用户、文件治理；没有独立「超级管理员角色」 |
+| 图片上传 | `auth.FileWriter`（任一业务写权限位） | 图片上传与上传前查重 |
 | `auth.MiniProgramUser` | 依赖 | 小程序用户；未审核（`enabled=false`）返回 `ACCOUNT_DISABLED`（403）；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
 | `auth.MiniProgramRegistration` | 依赖 | 校验注册凭证，`auth.Registration(c)` 返回 `(app_id, openid)`，供注册 / 绑定用 |
 | `auth.RequireProject` | 依赖 | 校验 `X-Project-Id` 并设为本请求会话的项目上下文（见「项目隔离与数据库」） |
@@ -573,25 +574,34 @@ sequenceDiagram
 #### 乐观锁版本（`If-Match`）
 所有带乐观锁的写操作（PATCH/PUT/DELETE/restore）版本号放 `If-Match` 头而非 query 参数，**避免版本号进入访问日志**（`web.Params.IfMatch`，允许带引号）；缺失或非整数时返回 `nil`，由 service 决定是否强制（`apperr.ValidateVersion` → `VERSION_CONFLICT`，`details` 带 `expected`/`actual`）。
 
-#### 角色、权限点与能力
+#### 权限位、能力与前端门禁
 
-`domain` 里的角色只有一个字段一个角色，无多角色组合；权限点为 `web/src/types/navigation.ts` 的 `rolePermissions`。
+权限是 `app_user.permissions` 的 BIGINT 位图，没有角色表与用户-角色关联表；管理端「用户管理」直接勾选权限（勾写权限自动带同模块读权限），接口读取时把位图按目录顺序展开成 `permissions` 键数组。
 
-| 角色 | 权限点 | 能力 |
+| 权限键 | 位 | 能力 |
 | --- | --- | --- |
-| `SUPER_ADMIN` 超级管理员 | `warehouse:write`、`purchase:write`、`settings:write`、`hazard:write`、`ledger:write`、`work:write`、`read` | 全部能力：二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、查询已归档计划（`status=ARCHIVED`）、管理端用户/接口令牌/小程序用户合并、高级设置（AI 搜索、精简模式、小程序功能模式、Webhook）、图片孤儿文件排查清理、隐患台账与隐患类型/责任单位维护、台账记录与标签维护、任务与工作记录维护（含任务图片）、创建/撤回分享链接、创建导出任务 |
-| `WAREHOUSE_ADMIN` 仓库管理员 | `warehouse:write`、`read` | 二级库物资增删改与安全库存、入库/出库/修改流水/冲销、精简二级库 Excel 导入、创建/撤回分享链接、创建导出任务；其余只读 |
-| `PURCHASE_ADMIN` 申购管理员 | `purchase:write`、`read` | 申购计划增删改与补录编码、关联二级库物资、转入/恢复申购记录与批量修改、采购跟踪同步回写、物料编码库导入与查询、创建/撤回分享链接、创建导出任务；其余只读 |
-| `HAZARD_ADMIN` 隐患管理员 | `hazard:write`、`read` | 隐患台账增删改、隐患类型与责任单位维护、隐患图片上传；其余只读 |
-| `LEDGER_ADMIN` 台账管理员 | `ledger:write`、`read` | 台账记录增删改、标签树维护（至多 3 层）与标签图片上传；其余只读 |
-| `WORK_ADMIN` 工作管理员 | `work:write`、`read` | 任务与工作记录增删改、任务图片上传；其余只读 |
-| `READ_ONLY` 只读角色 | `read` | 工作台、备忘录、华星总库存、库存/流水查询、隐患台账查询、台账总览查询、工作管理三个视图查询、创建/撤回自己的分享链接、创建导出任务 |
+| `system:admin` | 1 | 用户 / 项目管理、高级设置、附件池、分享链接治理 |
+| `warehouse:read` | 2 | 二级库库存、操作记录、小程序库存查看 |
+| `warehouse:write` | 4 | 物资档案、入库 / 出库 / 冲销、精简二级库导入、小程序出库 |
+| `purchase:read` | 8 | 申购计划 / 记录 / 物料编码库查看 |
+| `purchase:write` | 16 | 申购计划与记录编辑、转入 / 恢复、采购跟踪回写、编码库导入 |
+| `huaxing:read` | 32 | 华星总库存查看 |
+| `codes:read` | 64 | 物料编码库查看（小程序） |
+| `ledger:read` | 128 | 台账与标签查看 |
+| `ledger:write` | 256 | 台账记录与标签维护 |
+| `hazard:read` | 512 | 隐患台账查看 |
+| `hazard:write` | 1024 | 隐患登记 / 整改、隐患类型与责任单位维护 |
+| `work:read` | 2048 | 工作管理三个视图查看 |
+| `work:write` | 4096 | 任务 / 工作记录维护与任务图片上传 |
+| 全开 | 8191 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位 |
+
+管理端与小程序端共用同一套判断：网页侧栏主 tab 按读权限位显示（工作台 / 备忘录不设门禁），小程序首页入口按读权限位显示，写操作按写权限位；分享链接与导出任务的属主校验允许 `system:admin` 查看全部。小程序新用户注册默认写各功能只读位（`DefaultRegistrationPermissions`）。
 
 #### 越权结果
 
 | 越权场景 | 结果 | 实现 |
 | --- | --- | --- |
-| 写接口权限不足 | `403 FORBIDDEN` | `auth.Roles` |
+| 写接口权限不足 | `403 PERMISSION_DENIED` | `auth.RequirePermission` |
 | 查询已归档申购计划 | `403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | `api/purchase` |
 | 精简模式下调用完整模式写接口 | `403 SECONDARY_WAREHOUSE_LITE_MODE` | `deps.RequireFullSecondaryWarehouse` |
 
@@ -868,11 +878,11 @@ flowchart LR
 | 项 | 内容 |
 | --- | --- |
 | 挂载 | `mcp.Register` 在 `/api/v1/mcp/` 上接收全部方法；传输为 Streamable HTTP 的**无状态 JSON** 模式：只接受 `POST`（`GET` / `DELETE` 返回 405，不提供 SSE 流与会话），`Content-Type` 必须是 `application/json`，响应为 JSON（支持 JSON-RPC 批量请求，纯通知返回 202）；请求体上限 16 MB；协议版本支持 `2024-11-05` / `2025-03-26` / `2025-06-18` / `2025-11-25`；`serverInfo.name` 为 `spare-parts-management` |
-| 工具 | `system_whoami`（返回令牌对应用户、角色、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
+| 工具 | `system_whoami`（返回令牌对应用户、权限键、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
 | 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
 | 参数映射 | `operation_describe` 的 `call_arguments` 由契约派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号（String(version)）；不传则不校验版本」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。`headers` 只接受契约里该操作声明的请求头；令牌头与项目头（`ManagedHeaders`）由 MCP 层统一设置，不接受调用方传入 |
 | 上限 | 请求体上限 16 MB（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
-| 调用方式 | `operation_call` 用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、角色权限、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
+| 调用方式 | `operation_call` 用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、权限位、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
 | 认证 | 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，经 `auth.FindUserByAPIToken` 命中启用用户后解析项目（`X-Project-Id` → `?project_id=` → 默认项目），失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |
 | 一致性测试 | `internal/api/mcp` 的 Go 测试校验：目录不含排除项、排除项仍能命中存活路由、目录 + 排除项覆盖契约里的全部操作；改排除清单时同步本小节 |
 #### 健康检查与接口文档
@@ -924,7 +934,7 @@ flowchart LR
 | 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
 | 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
 
-公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（功能模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（权限位与二级库运行模式）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 列表页筛选面板（`components/filter-panel`）
 
@@ -1019,7 +1029,7 @@ OpenID 与姓名的绑定关系只在用户提交姓名后建立，管理端不�
 ```mermaid
 flowchart TD
     A["扫物资小程序码<br/>scene = 物资 uuid（32 位无连字符）"] --> B["解析 uuid（兼容带连字符与旧参数）"]
-    B --> C{"功能模式允许出库？<br/>非精简模式且 inventory_mode = read_write"}
+    B --> C{"允许出库？<br/>非精简模式且持有 warehouse:write"}
     C -- "否" --> D["不展示出库入口，仅可查看"]
     C -- "是" --> E["进入出库页：数量、用途、子项号"]
     E --> F["生成一次幂等键 client_request_id<br/>（提交重试复用，成功后作废）"]
@@ -1036,12 +1046,12 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["首页「隐患管理」入口"] --> B{"hazards_mode"}
-    B -- "disabled" --> B1["不展示入口"]
-    B -- "query_only / read_write" --> C["隐患列表<br/>搜索检查区域或隐患描述"]
+    A["首页「隐患管理」入口"] --> B{"hazard:read"}
+    B -- "无" --> B1["不展示入口"]
+    B -- "有" --> C["隐患列表<br/>搜索检查区域或隐患描述"]
     C --> D["筛选面板：整改状态、隐患等级、整改员工、仅逾期"]
     C --> E["点开详情：登记信息 + 整改前/后图片"]
-    B -- "read_write" --> F["登记隐患：区域、日期、描述、责任单位、类型、整改前图片"]
+    B -- "同时有 hazard:write" --> F["登记隐患：区域、日期、描述、责任单位、类型、整改前图片"]
     F --> G["生成一次幂等键 client_request_id<br/>（弱网重试复用，重复提交不新增）"]
     G --> H["提交登记"]
     E --> I["跟进整改：整改状态、整改员工、备注、整改后图片"]
@@ -1085,27 +1095,19 @@ flowchart TD
 
 登录（`auth: false`）、绑定注册（显式 `token`）与写请求不参与自动重放：前者的一次性 `code` / `registration_token` 不能复用，后者的副作用由服务端幂等键决定。重试额度用尽后仍按原样抛错，页面提示与改造前一致。
 
-### 功能模式与运行模式（`utils/features.js`）
+### 权限位与运行模式（`utils/features.js`）
 
 ```mermaid
 flowchart LR
-    S["系统设置：小程序功能模式"] --> I["库存与出库<br/>read_write"]
-    S --> H["华星总库存<br/>query_only"]
-    S --> P["申购计划<br/>query_only"]
-    S --> R["申购记录<br/>query_only"]
-    S --> C["物料编码库<br/>query_only"]
-    S --> G["台账查看<br/>query_only"]
-    S --> Z["隐患管理<br/>read_write"]
-    S --> L["二级库运行模式<br/>full"]
-    I -- "disabled" --> I1["隐藏该功能页"]
-    I -- "read_write" --> I2["可扫码出库"]
-    Z -- "read_write" --> Z2["可登记隐患、更新整改状态"]
-    L -- "lite" --> L1["整体只读，只查精简库存"]
+    U["登录会话：app_user.permissions"] --> R1["warehouse:read → 二级库入口"]
+    U --> R2["purchase:read → 申购计划 / 记录"]
+    U --> R3["huaxing:read / codes:read / ledger:read / hazard:read → 对应入口"]
+    U --> W1["warehouse:write → 扫码出库"]
+    U --> W2["hazard:write → 登记隐患、更新整改状态"]
+    S["system_setting.secondary_warehouse_mode"] --> L["lite → 整体只读，只查精简库存"]
 ```
 
-每个功能页三档：`disabled`（隐藏）、`query_only`（只读）、`read_write`（可写：库存可出库、隐患可登记与跟进）。模式由服务端设置下发，小程序启动时拉取；拉取失败时回落到「库存可写、隐患可写、其余只读、完整二级库模式」的默认值，避免因一次网络失败把出库与隐患登记关掉。开关只用于小程序前端的入口拦截与展示，后端数据接口不按它鉴权。
-
-台账查看只有浏览能力（列表、搜索、详情都是只读），所以网页端设置里只开放 `disabled` / `query_only` 两档，与物料编码库、华星总库存一致；`read_write` 档在台账上没有任何可写入口，因此不提供。
+功能是否展示与可写**只看权限位**：入口按对应模块的 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；管理端与小程序端共用同一套权限，不再有 `*_mode` 功能开关。小程序启动时只拉取二级库运行模式（`full` / `lite`），拉取失败回落到完整模式；权限来自登录会话返回的 `permissions`（后端按位展开），后端数据接口按同一权限位鉴权。
 
 ### 构建与上传
 

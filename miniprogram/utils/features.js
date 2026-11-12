@@ -1,27 +1,18 @@
-const MODE_DISABLED = 'disabled';
-const MODE_QUERY_ONLY = 'query_only';
-const MODE_READ_WRITE = 'read_write';
 const SECONDARY_WAREHOUSE_FULL = 'full';
 const SECONDARY_WAREHOUSE_LITE = 'lite';
 
-// 拉取失败或尚未加载时的兜底：等价于现状全开放（库存可出库、其余只读可进）。
+// 公开运行模式：只剩二级库完整 / 精简模式（管理端与小程序端共用）。
+// 功能是否展示与可写不再有配置：统一按用户权限位判断（登录会话返回的 permissions）。
 const DEFAULT_MODES = {
-  inventory_mode: MODE_READ_WRITE,
-  huaxing_inventory_mode: MODE_QUERY_ONLY,
-  purchase_plans_mode: MODE_QUERY_ONLY,
-  purchase_records_mode: MODE_QUERY_ONLY,
-  material_codes_mode: MODE_QUERY_ONLY,
-  ledger_mode: MODE_QUERY_ONLY,
-  hazards_mode: MODE_READ_WRITE,
   secondary_warehouse_mode: SECONDARY_WAREHOUSE_FULL,
 };
 
 function getModes() {
   const app = getApp();
-  return (app && app.globalData && app.globalData.featureModes) || DEFAULT_MODES;
+  return (app && app.globalData && app.globalData.runtimeModes) || DEFAULT_MODES;
 }
 
-/** 当前用户的权限并集（登录会话返回，见后端 MiniProgramUserRead.permissions）。 */
+/** 当前用户的权限位展开的权限键（登录会话返回，见后端 MiniProgramUserRead.permissions）。 */
 function getPermissions() {
   const app = getApp();
   const user = app && app.globalData && app.globalData.user;
@@ -33,26 +24,22 @@ function hasPermission(key) {
   return getPermissions().indexOf(key) !== -1;
 }
 
-function isFeatureDisabled(key) {
-  return getModes()[key] === MODE_DISABLED;
-}
-
 // 二级库精简模式：独立表 + 只读，不支持出入库。
 function isLiteMode() {
   return getModes().secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
 }
 
-// 出库（写操作）：全局开关允许 + 用户持有二级库写权限。
+// 出库（写操作）：非精简模式且用户持有二级库写权限位。
 function canOutbound() {
-  return !isLiteMode() && getModes().inventory_mode === MODE_READ_WRITE && hasPermission('warehouse:write');
+  return !isLiteMode() && hasPermission('warehouse:write');
 }
 
-// 隐患登记 / 整改（写操作）：全局开关允许 + 用户持有隐患写权限。
+// 隐患登记 / 整改（写操作）：用户持有隐患写权限位。
 function canWriteHazards() {
-  return getModes().hazards_mode === MODE_READ_WRITE && hasPermission('hazard:write');
+  return hasPermission('hazard:write');
 }
 
-/** 各功能入口对应的读权限键：全局开关之外，再按用户权限过滤入口。 */
+/** 各功能入口对应的读权限键：入口是否展示只看权限位。 */
 const ENTRY_PERMISSION = {
   inventory: 'warehouse:read',
   huaxing: 'huaxing:read',
@@ -64,20 +51,16 @@ const ENTRY_PERMISSION = {
 };
 
 function entryEnabled(key) {
-  return !isFeatureDisabled(key) && hasPermission(ENTRY_PERMISSION[key]);
+  return hasPermission(ENTRY_PERMISSION[key]);
 }
 
 module.exports = {
-  MODE_DISABLED,
-  MODE_QUERY_ONLY,
-  MODE_READ_WRITE,
   SECONDARY_WAREHOUSE_FULL,
   SECONDARY_WAREHOUSE_LITE,
   DEFAULT_MODES,
   getModes,
   getPermissions,
   hasPermission,
-  isFeatureDisabled,
   isLiteMode,
   entryEnabled,
   canOutbound,

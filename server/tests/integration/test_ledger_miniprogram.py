@@ -8,7 +8,7 @@ from __future__ import annotations
 from httpx import AsyncClient
 
 from tests.conftest import SECOND_PROJECT_ID, auth_headers, project_session
-from tests.testkit.accounts import create_mini_program_user
+from tests.testkit.accounts import create_mini_program_user, grant_permissions
 from tests.testkit.security import create_mini_program_access_token
 
 
@@ -176,39 +176,26 @@ async def test_ledger_endpoints_require_mini_program_token(client: AsyncClient) 
     assert anonymous.status_code == 401, anonymous.text
 
 
-async def test_ledger_feature_mode_defaults_to_query_only_and_round_trips(
+async def test_ledger_endpoints_require_ledger_read_permission(
     client: AsyncClient,
 ) -> None:
-    """台账开关默认仅查询；超级管理员改档位后能落库并回读。"""
+    """台账读取由权限位决定：没有 ledger:read 返回 403，补上权限位后立即可读。
+
+    功能是否展示不再由「台账档位」配置决定——公开运行模式端点只剩二级库完整 / 精简模式。
+    """
     features = await client.get("/api/v1/system-settings/mini-program-features")
     assert features.status_code == 200, features.text
-    assert features.json()["ledger_mode"] == "query_only"
+    assert features.json() == {"secondary_warehouse_mode": "full"}
 
-    admin = await auth_headers(client, "admin")
-    # 只提交写入字段：读取结果里的 api_key / mini_program_app_ids 等是只读回显，不能原样回传
-    updated = await client.put(
-        "/api/v1/ai-search/settings",
-        headers=admin,
-        json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            # 本用例只验证台账档位：模型服务停用时后端不再要求端点 / 模型 / API Key
-            "enabled": False,
-            "image_acceleration_server_url": "",
-            "inventory_mode": "read_write",
-            "huaxing_inventory_mode": "query_only",
-            "purchase_plans_mode": "query_only",
-            "purchase_records_mode": "query_only",
-            "material_codes_mode": "query_only",
-            "hazards_mode": "read_write",
-            "ledger_mode": "disabled",
-            "secondary_warehouse_mode": "full",
-            "version": 0,
-        },
-    )
-    assert updated.status_code == 200, updated.text
-    assert updated.json()["ledger_mode"] == "disabled"
+    async with project_session() as session:
+        user_id = await create_mini_program_user(session, "无台账权限", permissions=())
+    headers = {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
-    re_read = await client.get("/api/v1/system-settings/mini-program-features")
-    assert re_read.json()["ledger_mode"] == "disabled"
+    denied = await client.get("/api/v1/mini-program/ledger-items", headers=headers)
+    assert denied.status_code == 403, denied.text
+    assert denied.json()["code"] == "PERMISSION_DENIED"
+
+    async with project_session() as session:
+        await grant_permissions(session, user_id, ("ledger:read",))
+    allowed = await client.get("/api/v1/mini-program/ledger-items", headers=headers)
+    assert allowed.status_code == 200, allowed.text

@@ -26,7 +26,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/purchaserequest"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 )
 
 func init() {
@@ -358,10 +357,11 @@ func findShare(s *db.Session, token string) (*Link, error) {
 }
 
 func canManage(s *db.Session, l *Link, user *model.User) bool {
-	return (l.CreatedBy != nil && *l.CreatedBy == user.ID) || role.UserIsSuperAdmin(s, user.ID)
+	return (l.CreatedBy != nil && *l.CreatedBy == user.ID) ||
+		domain.Permission(user.Permissions).Has(domain.PermSystemAdmin)
 }
 
-// RevokeShare 对应 revoke_share：仅创建者本人或超级管理员可执行。
+// RevokeShare 对应 revoke_share：仅创建者本人或系统管理员可执行。
 func RevokeShare(s *db.Session, token string, user *model.User) error {
 	l, err := findShare(s, token)
 	if err != nil {
@@ -374,13 +374,13 @@ func RevokeShare(s *db.Session, token string, user *model.User) error {
 	return err
 }
 
-// ListShares 对应 list_shares：普通用户只看自己创建的，超管看全部；按创建时间倒序。
+// ListShares 对应 list_shares：普通用户只看自己创建的，系统管理员看全部；按创建时间倒序。
 func ListShares(s *db.Session, user *model.User, page, pageSize int64) ([]schema.ShareListRead, int64, error) {
 	w := common.Where{}
 	if err := w.Scope(s, "s."); err != nil {
 		return nil, 0, err
 	}
-	if !role.UserIsSuperAdmin(s, user.ID) {
+	if !domain.Permission(user.Permissions).Has(domain.PermSystemAdmin) {
 		w.Add("s.created_by = ?", user.ID)
 	}
 	var total int64

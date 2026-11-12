@@ -219,7 +219,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'onProjectPickerConfirm',
     'onProjectPickerVisibleChange',
     'getApp().globalData.authPromise',
-    'getApp().globalData.featureModes',
+    'getApp().globalData.runtimeModes',
   ]) {
     if (!profileScript.includes(snippet)) {
       throw new Error(`pages/profile/profile.js must wire the current project picker: ${snippet}`);
@@ -575,14 +575,14 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
 {
   const homeScript = read('pages/home/home.js');
   const homeMarkup = read('pages/home/home.wxml');
-  if (!homeScript.includes("ensureFeatureEnabled('ledger_mode')")) {
-    throw new Error('The home page must gate the ledger entry behind ledger_mode.');
+  if (!homeScript.includes("entryEnabled('ledger')")) {
+    throw new Error('The home page must gate the ledger entry behind the ledger:read permission.');
   }
-  if (!homeMarkup.includes('i18n.ledgerTitle') || !homeMarkup.includes('bind:tap="openLedger"')) {
-    throw new Error('The home page must render the ledger entry.');
+  if (!read('utils/features.js').includes("ledger: 'ledger:read'")) {
+    throw new Error('utils/features.js must map the ledger entry to the ledger:read permission.');
   }
-  if (!read('utils/features.js').includes('ledger_mode:')) {
-    throw new Error('utils/features.js must define the ledger_mode fallback.');
+  if (homeScript.includes('isFeatureDisabled') || read('utils/features.js').includes('isFeatureDisabled')) {
+    throw new Error('Feature-mode gating is gone: entries must be gated by permissions only.');
   }
 
   const listScript = read('pages/ledger/ledger.js');

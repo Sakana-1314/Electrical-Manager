@@ -1,49 +1,29 @@
 package schema
 
 import (
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 )
 
 // ---------------- 用户 / 认证 ----------------
 
-// UserRoleRead 是用户读取里内嵌的角色摘要。
-type UserRoleRead struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
-}
-
-// RoleRead 是角色（RBAC）。permissions 为权限键数组（已排序），user_count 为挂载的用户数。
-type RoleRead struct {
-	ID          int64         `json:"id"`
-	Name        string        `json:"name"`
-	Description string        `json:"description"`
-	Permissions []string      `json:"permissions"`
-	IsSystem    bool          `json:"is_system"`
-	UserCount   int64         `json:"user_count"`
-	CreatedAt   jtype.UTCTime `json:"created_at"`
-	UpdatedAt   jtype.UTCTime `json:"updated_at"`
-	Version     int64         `json:"version"`
-}
-
 // UserMergeRequest 把 source 账号并入路径里的 target 账号：目标保留姓名 / 部门，
-// 来源账号的微信身份随迁、角色与目标取并集，来源账号随后删除。
+// 来源账号的微信身份随迁、权限位按位或取并集，来源账号随后删除。
 type UserMergeRequest struct {
 	SourceUserID  int64 `json:"source_user_id" v:"required,gt=0"`
 	SourceVersion int64 `json:"source_version" v:"required"`
 	TargetVersion int64 `json:"target_version" v:"required"`
 }
 
-// UserRead 是管理端用户。roles 为挂载的角色（多角色，权限取并集）；permissions 为并集展开后的
-// 权限键（登录 / me 路径填充，用户列表为空——前端编辑角色用 roles）；source 区分管理端 / 小程序来源。
+// UserRead 是管理端用户。permissions 是权限位展开后的权限键（按目录顺序），
+// 管理端与小程序端共用同一套权限位；source 区分管理端 / 小程序来源。
 type UserRead struct {
 	ID             int64          `json:"id"`
 	Username       string         `json:"username"`
 	DisplayName    string         `json:"display_name"`
 	DepartmentName string         `json:"department_name"`
 	Source         string         `json:"source"`
-	Roles          []UserRoleRead `json:"roles"`
 	Permissions    []string       `json:"permissions"`
 	WechatOpenid   *string        `json:"wechat_openid"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
@@ -56,7 +36,9 @@ func NewUserRead(u *model.User) UserRead {
 	if u.LastUsedAt != nil {
 		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
 	}
-	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Source: u.Source, LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version, Permissions: []string{}}
+	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
+		Source: u.Source, Permissions: domain.Permission(u.Permissions).Normalize().Keys(), LastUsedAt: lastUsed,
+		Enabled: u.Enabled, Version: u.Version}
 }
 
 func ptr[T any](v T) *T { return &v }
@@ -89,26 +71,44 @@ type TokenPairResponse struct {
 }
 
 type UserCreate struct {
-	Username       string  `json:"username" v:"required,min=3,max=64"`
-	Password       string  `json:"password" v:"required,min=6,max=128"`
-	DisplayName    string  `json:"display_name" v:"required,min=1,max=128"`
-	DepartmentName string  `json:"department_name" v:"max=128"`
-	RoleIDs        []int64 `json:"role_ids"`
-	Enabled        bool    `json:"enabled"`
+	Username       string   `json:"username" v:"required,min=3,max=64"`
+	Password       string   `json:"password" v:"required,min=6,max=128"`
+	DisplayName    string   `json:"display_name" v:"required,min=1,max=128"`
+	DepartmentName string   `json:"department_name" v:"max=128"`
+	Permissions    []string `json:"permissions"`
+	Enabled        bool     `json:"enabled"`
 }
 
 type UserUpdate struct {
-	Username       *string  `json:"username" v:"min=3,max=64"`
-	DisplayName    *string  `json:"display_name" v:"min=1,max=128"`
-	DepartmentName *string  `json:"department_name" v:"max=128"`
-	Password       *string  `json:"password" v:"min=6,max=128"`
-	RoleIDs        *[]int64 `json:"role_ids"`
-	Enabled        *bool    `json:"enabled"`
-	Version        int64    `json:"version" v:"required"`
+	Username       *string   `json:"username" v:"min=3,max=64"`
+	DisplayName    *string   `json:"display_name" v:"min=1,max=128"`
+	DepartmentName *string   `json:"department_name" v:"max=128"`
+	Password       *string   `json:"password" v:"min=6,max=128"`
+	Permissions    *[]string `json:"permissions"`
+	Enabled        *bool     `json:"enabled"`
+	Version        int64     `json:"version" v:"required"`
 }
 
 type UserApiTokenRegenerate struct {
 	Version int64 `json:"version" v:"required"`
+}
+
+// PermissionRead 权限目录项：key 是接口里的权限键，bit 是位图里的数值（int 按位判断）。
+type PermissionRead struct {
+	Key    string `json:"key"`
+	Module string `json:"module"`
+	Action string `json:"action"`
+	Label  string `json:"label"`
+	Bit    int64  `json:"bit"`
+}
+
+// PermissionCatalogRead 全部权限位（顺序即用户管理界面的展示顺序）。
+func PermissionCatalogRead() []PermissionRead {
+	out := make([]PermissionRead, len(domain.PermissionCatalog))
+	for i, def := range domain.PermissionCatalog {
+		out[i] = PermissionRead{Key: def.Key, Module: def.Module, Action: def.Action, Label: def.Label, Bit: int64(def.Bit)}
+	}
+	return out
 }
 
 // ---------------- 项目 ----------------

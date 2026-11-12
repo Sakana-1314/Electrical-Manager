@@ -10,7 +10,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -146,43 +145,40 @@ func User(c *web.Ctx) *model.User {
 	return u
 }
 
-// ---------------- RBAC 权限 ----------------
+// ---------------- 权限位 ----------------
 
-// permissionsOf 汇总当前登录用户的角色权限并集（通配键展开为具体权限键），整个请求内只算一次。
-func permissionsOf(c *web.Ctx) map[string]bool {
+// permissionsOf 当前登录用户的权限位图（整个请求内只算一次）。
+// 权限直接存在 app_user.permissions（BIGINT 位图），按位判断；未登录 / 解析失败按无权限处理（fail-closed）。
+func permissionsOf(c *web.Ctx) domain.Permission {
 	if v, ok := c.Get(keyPermissions); ok {
-		return v.(map[string]bool)
+		return v.(domain.Permission)
 	}
-	perms := map[string]bool{}
-	keys, err := role.UserPermissionKeys(c.DB, User(c).ID)
-	if err == nil {
-		for _, key := range domain.ExpandPermissions(keys) {
-			perms[key] = true
-		}
+	var bits domain.Permission
+	if u := User(c); u != nil {
+		bits = domain.Permission(u.Permissions).Normalize()
 	}
-	// 汇总失败按无权限处理（fail-closed），错误在 RequirePermission 里返回。
-	c.Set(keyPermissions, perms)
-	return perms
+	c.Set(keyPermissions, bits)
+	return bits
 }
 
-// HasPermission 当前登录用户是否拥有某权限（需先执行 CurrentUser 依赖）。
-func HasPermission(c *web.Ctx, perm string) bool {
-	return permissionsOf(c)[perm]
+// HasPermission 当前登录用户是否拥有某权限位（需先执行 CurrentUser 依赖）。
+func HasPermission(c *web.Ctx, perm domain.Permission) bool {
+	return permissionsOf(c).Has(perm)
 }
 
-// HasPermissionIn 当前登录用户是否拥有列表中的任一权限。
-func HasPermissionIn(c *web.Ctx, perms ...string) bool {
-	set := permissionsOf(c)
+// HasPermissionIn 当前登录用户是否拥有列表中的任一权限位。
+func HasPermissionIn(c *web.Ctx, perms ...domain.Permission) bool {
+	bits := permissionsOf(c)
 	for _, perm := range perms {
-		if set[perm] {
+		if bits.Has(perm) {
 			return true
 		}
 	}
 	return false
 }
 
-// RequirePermission 依赖：登录用户且角色权限并集包含 perm，否则 403 PERMISSION_DENIED。
-func RequirePermission(perm string) web.Dep {
+// RequirePermission 依赖：登录用户且权限位图包含 perm，否则 403 PERMISSION_DENIED。
+func RequirePermission(perm domain.Permission) web.Dep {
 	return func(c *web.Ctx) error {
 		if err := CurrentUser(c); err != nil {
 			return err
@@ -194,8 +190,8 @@ func RequirePermission(perm string) web.Dep {
 	}
 }
 
-// RequireAnyPermission 依赖：登录用户且权限并集命中任一 perm（跨模块写操作用）。
-func RequireAnyPermission(perms ...string) web.Dep {
+// RequireAnyPermission 依赖：登录用户且权限位图命中任一 perm（跨模块写操作用）。
+func RequireAnyPermission(perms ...domain.Permission) web.Dep {
 	return func(c *web.Ctx) error {
 		if err := CurrentUser(c); err != nil {
 			return err
@@ -208,7 +204,9 @@ func RequireAnyPermission(perms ...string) web.Dep {
 }
 
 var (
-	SuperAdmin      = RequirePermission(domain.PermSettingsWrite)
+	// SystemAdmin 系统管理：用户 / 项目 / 高级设置 / 附件池 / 分享链接。
+	// 「超级管理员」不再是角色，系统管理与各功能读写位全开即等价于旧超级管理员。
+	SystemAdmin     = RequirePermission(domain.PermSystemAdmin)
 	WarehouseWriter = RequirePermission(domain.PermWarehouseWrite)
 	PurchaseWriter  = RequirePermission(domain.PermPurchaseWrite)
 	HazardWriter    = RequirePermission(domain.PermHazardWrite)
@@ -216,7 +214,7 @@ var (
 	WorkWriter      = RequirePermission(domain.PermWorkWrite)
 	// LinkAnyWriter 跨模块写操作（如申购物资关联二级库物资）：命中任一模块写权限即可。
 	LinkAnyWriter = RequireAnyPermission(domain.PermPurchaseWrite, domain.PermWarehouseWrite)
-	// FileWriter 各业务模块的写角色都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
+	// FileWriter 各业务模块的写权限都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
 	FileWriter = RequireAnyPermission(
 		domain.PermWarehouseWrite, domain.PermPurchaseWrite, domain.PermHazardWrite,
 		domain.PermLedgerWrite, domain.PermWorkWrite,
@@ -390,9 +388,9 @@ func MiniUser(c *web.Ctx) *model.User {
 	return u
 }
 
-// MiniUserHasPermission 小程序用户是否拥有某权限（需先执行 MiniProgramUser 依赖）。
-func MiniUserHasPermission(c *web.Ctx, perm string) bool {
-	return permissionsOf(c)[perm]
+// MiniUserHasPermission 小程序用户是否拥有某权限位（需先执行 MiniProgramUser 依赖）。
+func MiniUserHasPermission(c *web.Ctx, perm domain.Permission) bool {
+	return permissionsOf(c).Has(perm)
 }
 
 // MiniProgramRegistration 依赖：注册凭证（微信登录后、完善资料前），写入 app_id / openid。

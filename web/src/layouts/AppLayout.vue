@@ -23,13 +23,12 @@ const closeDrawer = () => {
 
 /**
  * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
- * 一级项按权限、二级库模式与「后台可见功能」开关过滤，系统管理始终显示。
+ * 一级项按权限位与二级库模式过滤，系统管理按 system:admin 权限显示。
  */
 const menuOptions = computed<MenuOption[]>(() =>
   buildMainMenu({
     isLiteMode: settings.isLiteMode,
     can: (permission) => auth.can(permission),
-    isFeatureVisible: (key) => settings.isFeatureVisible(key),
     onNavigate: closeDrawer,
   }),
 )

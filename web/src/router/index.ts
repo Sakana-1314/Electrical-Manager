@@ -31,14 +31,16 @@ const FULL_WAREHOUSE_ROUTES = new Set([
 ])
 
 /**
- * 落地页：当前可见的第一个主 tab（高级设置的「后台可见功能」可关闭主 tab）。
- * 工作台被关掉后不能还往 `/dashboard` 跳，否则用户一进来就落在侧栏里没有入口的页面；
- * 可见性只影响渲染，不做路由拦截，被关闭的页面仍可直达。
+ * 落地页：当前权限下可见的第一个主 tab。
+ * 没有模块读权限的用户落到工作台（工作台不设门禁）；权限只影响渲染，不做路由拦截。
  */
 function landingRoute() {
   const settings = useSettingsStore()
+  const auth = useAuthStore()
   return {
-    name: resolveLandingRouteName(settings.webFeatures, { isLiteMode: settings.isLiteMode }),
+    name: resolveLandingRouteName((permission) => auth.can(permission), {
+      isLiteMode: settings.isLiteMode,
+    }),
   }
 }
 
@@ -228,7 +230,7 @@ const router = createRouter({
           path: 'settings/advanced',
           name: 'advanced-settings',
           component: () => import('@/views/settings/AdvancedSettingsView.vue'),
-          meta: { title: '高级设置', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '高级设置', parent: '系统管理', permission: 'system:admin' },
         },
         {
           path: 'settings/ai-search',
@@ -238,31 +240,31 @@ const router = createRouter({
           path: 'settings/projects',
           name: 'projects',
           component: () => import('@/views/settings/ProjectsView.vue'),
-          meta: { title: '项目管理', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '项目管理', parent: '系统管理', permission: 'system:admin' },
         },
         {
           path: 'settings/users',
           name: 'users',
           component: () => import('@/views/settings/UsersView.vue'),
-          meta: { title: '用户管理', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '用户管理', parent: '系统管理', permission: 'system:admin' },
         },
         {
           path: 'settings/attachments',
           name: 'attachments',
           component: () => import('@/views/settings/AttachmentsView.vue'),
-          meta: { title: '附件管理', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '附件管理', parent: '系统管理', permission: 'system:admin' },
         },
         {
           path: 'settings/about',
           name: 'about',
           component: () => import('@/views/settings/AboutView.vue'),
-          meta: { title: '关于', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '关于', parent: '系统管理', permission: 'system:admin' },
         },
         {
           path: 'settings/share-links',
           name: 'share-links',
           component: () => import('@/views/settings/ShareLinksView.vue'),
-          meta: { title: '分享链接', parent: '系统管理', permission: 'settings:write' },
+          meta: { title: '分享链接', parent: '系统管理', permission: 'system:admin' },
         },
       ],
     },

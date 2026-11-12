@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 import { resolveLandingRouteName } from '@/utils/navigation'
 
 const router = useRouter()
+const auth = useAuthStore()
 const settings = useSettingsStore()
 
-/** 回首页 = 当前可见的第一个主 tab（工作台可能已被后台可见功能关闭）。 */
+/** 回首页 = 当前权限下可见的第一个主 tab。 */
 function goHome() {
   void router.push({
-    name: resolveLandingRouteName(settings.webFeatures, { isLiteMode: settings.isLiteMode }),
+    name: resolveLandingRouteName((permission) => auth.can(permission), {
+      isLiteMode: settings.isLiteMode,
+    }),
   })
 }
 </script>

@@ -88,7 +88,6 @@ global.getApp = () => ({
       user: {
         display_name: '张三',
         created_at: '2026-01-01T00:00:00Z',
-        roles: [{ id: 7, name: '只读用户', is_system: true }],
         permissions: [
           'warehouse:read',
           'warehouse:write',
@@ -104,15 +103,12 @@ global.getApp = () => ({
       registration_disabled: false,
       requires_profile: false,
     }),
-    featureSettingsPromise: Promise.resolve({
+    runtimeSettingsPromise: Promise.resolve({
       secondary_warehouse_mode: 'full',
-      inventory_mode: 'read_write',
-      hazards_mode: 'read_write',
     }),
     user: {
       display_name: '张三',
       created_at: '2026-01-01T00:00:00Z',
-      roles: [{ id: 7, name: '只读用户', is_system: true }],
       permissions: [
         'warehouse:read',
         'warehouse:write',
@@ -703,7 +699,7 @@ async function run() {
   const home = loadPage('pages/home/home.js');
   void home.onLoad();
   await waitFor(() => home.data.featureReady || home.data.loadFailed, 'home session');
-  assert(home.data.canScan === true, 'no-lite read_write mode allows scanning');
+  assert(home.data.canScan === true, 'warehouse:write permission allows scanning');
   assert(home.data.featureReady === true, 'home entries must be ready');
 
   // ===== 个人信息页：用户 / 功能模式走 getApp().globalData，项目选择器在此页 =====

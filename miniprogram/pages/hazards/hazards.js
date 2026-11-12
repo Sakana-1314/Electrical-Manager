@@ -125,7 +125,7 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      await app.globalData.featureSettingsPromise;
+      await app.globalData.runtimeSettingsPromise;
       this.setData({ canWrite: canWriteHazards() });
       await this.loadFilterOptions(shared);
       this.applyShared(shared);

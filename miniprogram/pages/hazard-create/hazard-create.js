@@ -67,7 +67,7 @@ Page({
         return;
       }
       await Promise.all([
-        app.globalData.featureSettingsPromise,
+        app.globalData.runtimeSettingsPromise,
         app.globalData.imageSettingsPromise,
       ]);
       const options = await requestCached({ url: '/mini-program/hazards/form-options' });

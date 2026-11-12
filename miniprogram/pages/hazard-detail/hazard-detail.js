@@ -46,7 +46,7 @@ Page({
         return;
       }
       await Promise.all([
-        app.globalData.featureSettingsPromise,
+        app.globalData.runtimeSettingsPromise,
         app.globalData.imageSettingsPromise,
       ]);
       this.setData({ canWrite: canWriteHazards() });

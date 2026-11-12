@@ -22,8 +22,8 @@
       <view class="section-divider"></view>
       <view class="info-list">
         <view class="info-row">
-          <view class="info-label">{{i18n.roles}}</view>
-          <view class="info-value"><text user-select="{{true}}">{{roleNamesLabel}}</text></view>
+          <view class="info-label">{{i18n.permissions}}</view>
+          <view class="info-value"><text user-select="{{true}}">{{permissionCountLabel}}</text></view>
         </view>
         <view class="info-row">
           <view class="info-label">{{i18n.registeredAt}}</view>

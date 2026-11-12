@@ -129,7 +129,7 @@ MCP 工具目录由内嵌的接口契约自动生成（`server/internal/api/mcp`
 ## 后端（Go）编码约定
 
 - 分层：`internal/api/<模块>`（路由、依赖、参数）→ `internal/service/<模块>`（业务与 SQL）→ `internal/schema`（请求/响应结构体）/ `internal/model`（表结构体）。service 之间单向依赖，不得循环导入。
-- 处理函数用 `web.Router` 注册，依赖（`auth.RequireProject`、`auth.CurrentUser`、`auth.SuperAdmin` 等）按需列出、先于参数校验执行；路径 / 查询 / 请求头 / 请求体统一经 `c.Params()` 校验，所有错误合并为一次 422 `VALIDATION_ERROR`。
+- 处理函数用 `web.Router` 注册，依赖（`auth.RequireProject`、`auth.CurrentUser`、`auth.SystemAdmin` 等）按需列出、先于参数校验执行；路径 / 查询 / 请求头 / 请求体统一经 `c.Params()` 校验，所有错误合并为一次 422 `VALIDATION_ERROR`。
 - 处理函数返回后框架先提交事务再写响应（返回 2xx 时写库已可见），出错回滚；不要在处理函数里手动提交，提交后才做的事用 `c.DB.AfterCommit`。
 - 业务 SQL 写 `?` 占位符（会话层自动转换为 PostgreSQL 的 `$n`），布尔列绑定 Go bool，不写数据库方言特有函数；列表接口避免 N+1（主表一次查询 + 每个关系一次 `IN` 查询）。
 - 业务错误用 `apperr.New(code, msg)`（状态码按错误码表推断，可 `WithStatus` / `WithDetails`）；新增错误码必须同步 `api-error-codes.md`。

@@ -12,7 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('access_token'))
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
 
-  /** 权限门禁：用户所挂角色的权限并集（后端算好放在 user.permissions）。 */
+  /** 权限门禁：用户权限位展开的权限键（后端按位算出放在 user.permissions）。 */
   function can(permission: Permission): boolean {
     return hasPermission(user.value?.permissions ?? [], permission)
   }

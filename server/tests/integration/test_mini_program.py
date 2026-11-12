@@ -13,7 +13,7 @@ from sqlalchemy import select
 from tests.conftest import DEFAULT_PROJECT_ID, api_client, auth_headers, project_session
 from tests.go_upstream import StartWechat
 from tests.go_upstream import go_wechat as _go_wechat_fixture
-from tests.testkit.accounts import grant_role
+from tests.testkit.accounts import grant_permissions
 from tests.testkit.database import system_session
 from tests.testkit.enums import MiniProgramCodeEnv, WebhookEventType
 from tests.testkit.models import HuaXingInventory, User, WebhookDelivery
@@ -68,9 +68,9 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert created_user["wechat_openid"] == "openid-for-scan-user"
     assert created_user["display_name"] == "扫码出库员"
     assert created_user["department_name"] == "华星检修维护部电气车间"
-    # 新注册用户默认只读：出库是写操作，给该用户挂「二级库读写」角色（权限并集生效）。
+    # 新注册用户默认只读：出库是写操作，给该用户追加二级库读写权限位。
     async with project_session() as session:
-        await grant_role(session, created_user["id"], "二级库读写")
+        await grant_permissions(session, created_user["id"], ("warehouse:read", "warehouse:write"))
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
 
     replayed_profile = await client.post(
@@ -441,9 +441,9 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     assert renamed_target.status_code == 200, renamed_target.text
     target_user = renamed_target.json()
 
-    # 合并前的小程序出库是写操作：给来源账号挂「二级库读写」（权限并集下放）。
+    # 合并前的小程序出库是写操作：给来源账号追加二级库读写权限位（合并后按位或并集）。
     async with project_session() as session:
-        await grant_role(session, source_user["id"], "二级库读写")
+        await grant_permissions(session, source_user["id"], ("warehouse:read", "warehouse:write"))
 
     material = await client.post(
         "/api/v1/stock-materials",

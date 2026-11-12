@@ -62,9 +62,9 @@ const lowStock = ref<InventoryBalance[]>([])
 const lowStockTotal = ref(0)
 const recentOperations = ref<StockOperation[]>([])
 
-const showWarehouse = computed(() => settings.isFeatureVisible('warehouse'))
-const showProcurement = computed(() => settings.isFeatureVisible('procurement'))
-const showHazards = computed(() => settings.isFeatureVisible('hazards'))
+const showWarehouse = computed(() => auth.can('warehouse:read'))
+const showProcurement = computed(() => auth.can('purchase:read'))
+const showHazards = computed(() => auth.can('hazard:read'))
 /** 精简模式没有出入库流水与补库策略，库存区只保留物资数 */
 const fullWarehouse = computed(() => showWarehouse.value && !settings.isLiteMode)
 
@@ -205,7 +205,7 @@ interface QuickAction {
   icon: Component
   to: RouteLocationRaw
 }
-/** 快捷操作：只给有写权限、且对应主 tab 可见的入口 */
+/** 快捷操作：只给有对应写权限的入口（模块可见性同样来自读权限位） */
 const quickActions = computed<QuickAction[]>(() => {
   const actions: QuickAction[] = []
   if (fullWarehouse.value && auth.can('warehouse:write')) {

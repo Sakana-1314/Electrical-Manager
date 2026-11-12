@@ -120,9 +120,11 @@ CREATE TABLE IF NOT EXISTS project (
 );
 
 -- 统一用户：管理端（source = MANAGE，用户名密码 / 接口令牌登录）与小程序端
--- （source = MINI_PROGRAM，微信 openid 登录，username 由 openid 派生、无密码）共用同一张表与角色体系。
+-- （source = MINI_PROGRAM，微信 openid 登录，username 由 openid 派生、无密码）共用同一张表与权限位图。
 -- 小程序只有一个（一个 app_id），微信 openid 直接落在本表：管理端用户为 NULL，小程序用户非空且唯一。
 -- 小程序用户不使用接口令牌：api_token_hash 为空串，唯一性只约束非空值（部分唯一索引）。
+-- 权限不再走角色表：permissions 是 BIGINT 位图，每一位对应一个权限点（见 server/internal/domain/permissions.go），
+-- 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限。
 CREATE TABLE IF NOT EXISTS app_user (
   id BIGSERIAL NOT NULL,
   username VARCHAR(64) NOT NULL,
@@ -133,6 +135,7 @@ CREATE TABLE IF NOT EXISTS app_user (
   department_name VARCHAR(128) NOT NULL DEFAULT '',
   source usersource NOT NULL DEFAULT 'MANAGE',
   wechat_openid VARCHAR(128) NULL,
+  permissions BIGINT NOT NULL DEFAULT 0,
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   last_used_at TIMESTAMP WITHOUT TIME ZONE NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
@@ -145,34 +148,6 @@ CREATE TABLE IF NOT EXISTS app_user (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_api_token_hash ON app_user (api_token_hash) WHERE api_token_hash <> '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_wechat_openid ON app_user (wechat_openid) WHERE wechat_openid IS NOT NULL;
-
--- 角色（RBAC）：permissions 为权限键数组（JSONB），`*` 通配全部权限、`模块:*` 通配模块内权限；
--- 用户可挂多个角色，实际权限取并集。is_system 的内置角色不可改名 / 删除。
-CREATE TABLE IF NOT EXISTS role (
-  id BIGSERIAL NOT NULL,
-  name VARCHAR(64) NOT NULL,
-  description VARCHAR(255) NOT NULL DEFAULT '',
-  permissions JSONB NOT NULL DEFAULT '[]',
-  is_system BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_role PRIMARY KEY (id),
-  CONSTRAINT uq_role_name UNIQUE (name)
-);
-
-CREATE TABLE IF NOT EXISTS user_role (
-  id BIGSERIAL NOT NULL,
-  user_id BIGINT NOT NULL,
-  role_id BIGINT NOT NULL,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_user_role PRIMARY KEY (id),
-  CONSTRAINT uq_user_role_user_id_role_id UNIQUE (user_id, role_id),
-  CONSTRAINT fk_user_role_user_id_app_user FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE,
-  CONSTRAINT fk_user_role_role_id_role FOREIGN KEY (role_id) REFERENCES role (id) ON DELETE CASCADE
-);
 
 CREATE TABLE IF NOT EXISTS business_event_log (
   id BIGSERIAL NOT NULL,
@@ -1202,52 +1177,23 @@ CROSS JOIN (VALUES
 WHERE p.is_default = TRUE
 ON CONFLICT (project_id, major, minor) DO NOTHING;
 
--- 内置角色（固定种子、无 CRUD）：超级管理员（全部权限）+「全局只读」（各功能查看）+ 各功能读写。
--- 管理端与小程序共用同一套角色体系；用户可挂多个角色、权限取并集。重复导入按角色名更新。
-INSERT INTO role (name, description, permissions, is_system)
-VALUES
-  ('超级管理员', '系统管理 + 全部业务模块读写', '["*"]', TRUE),
-  ('全局只读', '各功能只读：二级库 / 申购 / 隐患 / 台账 / 工单 / 华星 / 编码库查看', '["warehouse:read","purchase:read","hazard:read","ledger:read","work:read","huaxing:read","codes:read"]', TRUE),
-  ('二级库读写', '二级库出入库 / 导入 / 库存调整', '["warehouse:read","warehouse:write"]', TRUE),
-  ('申购读写', '申购计划与申购记录编辑', '["purchase:read","purchase:write"]', TRUE),
-  ('隐患读写', '隐患上报与整改', '["hazard:read","hazard:write"]', TRUE),
-  ('台账读写', '台账编辑', '["ledger:read","ledger:write"]', TRUE),
-  ('工单读写', '工单编辑', '["work:read","work:write"]', TRUE)
-ON CONFLICT (name) DO UPDATE
-SET description = EXCLUDED.description,
-    permissions = EXCLUDED.permissions,
-    is_system = EXCLUDED.is_system;
-
--- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码。
+-- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码与权限位。
+-- 权限位（BIGINT）：bit0 系统管理、bit1-2 二级库读写、bit3-4 申购读写、bit5 华星只读、bit6 编码库只读、
+-- bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写；全开 = 8191。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
-INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, source, enabled)
+INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, source, permissions, enabled)
 VALUES
-  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
-  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 'MANAGE', TRUE)
+  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 'MANAGE', 8191, TRUE),
+  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 'MANAGE', 6, TRUE),
+  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 'MANAGE', 24, TRUE),
+  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 'MANAGE', 1536, TRUE),
+  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 'MANAGE', 384, TRUE),
+  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 'MANAGE', 6144, TRUE),
+  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 'MANAGE', 2794, TRUE)
 ON CONFLICT (username) DO UPDATE
 SET display_name = EXCLUDED.display_name,
     department_name = EXCLUDED.department_name,
     enabled = EXCLUDED.enabled;
-
--- 种子用户按用户名挂到内置角色（幂等）：warehouse/purchase/hazard/ledger/work 各挂本模块读写，readonly 挂全局只读。
-INSERT INTO user_role (user_id, role_id)
-SELECT u.id, r.id
-FROM app_user u
-JOIN role r ON (
-  (u.username = 'admin' AND r.name = '超级管理员') OR
-  (u.username = 'warehouse' AND r.name = '二级库读写') OR
-  (u.username = 'purchase' AND r.name = '申购读写') OR
-  (u.username = 'hazard' AND r.name = '隐患读写') OR
-  (u.username = 'ledger' AND r.name = '台账读写') OR
-  (u.username = 'work' AND r.name = '工单读写') OR
-  (u.username = 'readonly' AND r.name = '全局只读')
-)
-ON CONFLICT (user_id, role_id) DO NOTHING;
 
 -- ============================================================================
 -- 表注释与字段注释：结构变更后同步维护（COMMENT ON 幂等，可重复执行）。
@@ -1263,7 +1209,7 @@ COMMENT ON COLUMN project."remark" IS '备注';
 COMMENT ON COLUMN project."created_at" IS '创建时间';
 COMMENT ON COLUMN project."updated_at" IS '更新时间';
 COMMENT ON COLUMN project."version" IS '乐观锁版本号（每次更新 +1）';
-COMMENT ON TABLE app_user IS '统一用户（管理端 + 小程序端，微信 openid 直存；角色在 `user_role`，权限取并集）';
+COMMENT ON TABLE app_user IS '统一用户（管理端 + 小程序端，微信 openid 直存；权限位图直接落 permissions）';
 COMMENT ON COLUMN app_user."id" IS '主键';
 COMMENT ON COLUMN app_user."username" IS '登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`）';
 COMMENT ON COLUMN app_user."password_hash" IS 'Argon2id 密码哈希（小程序来源用户为空串，不可密码登录）';
@@ -1273,27 +1219,12 @@ COMMENT ON COLUMN app_user."display_name" IS '显示名称';
 COMMENT ON COLUMN app_user."department_name" IS '部门单位';
 COMMENT ON COLUMN app_user."source" IS '账号来源，接口同名字符串';
 COMMENT ON COLUMN app_user."wechat_openid" IS '微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid）';
+COMMENT ON COLUMN app_user."permissions" IS '权限位图（BIGINT，按位判断）；bit0 系统管理、各功能读写位见 domain.PermissionCatalog';
 COMMENT ON COLUMN app_user."enabled" IS '账号是否启用';
 COMMENT ON COLUMN app_user."last_used_at" IS '小程序来源用户的最近登录时间（登录即刷新，不自增 version）';
 COMMENT ON COLUMN app_user."created_at" IS '创建时间';
 COMMENT ON COLUMN app_user."updated_at" IS '更新时间';
 COMMENT ON COLUMN app_user."version" IS '乐观锁版本号（每次更新 +1）';
-COMMENT ON TABLE role IS '角色（RBAC）：权限键数组，`*` 通配全部权限';
-COMMENT ON COLUMN role."id" IS '主键';
-COMMENT ON COLUMN role."name" IS '角色名，唯一（内置角色为系统种子）';
-COMMENT ON COLUMN role."description" IS '角色说明';
-COMMENT ON COLUMN role."permissions" IS '权限键数组（JSON），`*` 通配全部、`模块:*` 通配模块';
-COMMENT ON COLUMN role."is_system" IS '是否内置角色（内置角色不可改名 / 删除）';
-COMMENT ON COLUMN role."created_at" IS '创建时间';
-COMMENT ON COLUMN role."updated_at" IS '更新时间';
-COMMENT ON COLUMN role."version" IS '乐观锁版本号（每次更新 +1）';
-COMMENT ON TABLE user_role IS '用户 ↔ 角色多对多（一个用户可挂多个角色）';
-COMMENT ON COLUMN user_role."id" IS '主键，自增';
-COMMENT ON COLUMN user_role."user_id" IS '关联用户';
-COMMENT ON COLUMN user_role."role_id" IS '关联角色';
-COMMENT ON COLUMN user_role."created_at" IS '创建时间';
-COMMENT ON COLUMN user_role."updated_at" IS '更新时间';
-COMMENT ON COLUMN user_role."version" IS '乐观锁版本号（每次更新 +1）';
 COMMENT ON TABLE business_event_log IS '业务事件日志（状态流转与数据快照）';
 COMMENT ON COLUMN business_event_log."id" IS '主键';
 COMMENT ON COLUMN business_event_log."business_type" IS '业务类型标识';

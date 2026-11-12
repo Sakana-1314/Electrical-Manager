@@ -12,13 +12,13 @@
 | `UNAUTHORIZED` | 401 | 请先登录 | `auth` |
 | `USER_DISABLED` | 401 | 用户不存在或已停用 | `auth` |
 | `ACCOUNT_DISABLED` | 403 | 账号待审核或已停用，请联系管理员 | `auth`、`service/miniprogram` |
-| `FORBIDDEN` | 403 | 没有执行此操作的权限 | `auth`（旧 `Roles` 依赖，逐步被 `PERMISSION_DENIED` 取代）、`service/share` |
-| `PERMISSION_DENIED` | 403 | 没有执行此操作的权限（角色权限并集不包含所需权限） | `auth`（`RequirePermission`） |
+| `FORBIDDEN` | 403 | 没有执行此操作的权限（非权限位门禁的属主校验，如撤回分享链接） | `service/share` |
+| `PERMISSION_DENIED` | 403 | 没有执行此操作的权限（权限位图不包含所需权限） | `auth`（`RequirePermission`） |
 | `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `service/miniprogram` |
 | `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `service/miniprogram` |
 | `SECONDARY_WAREHOUSE_LITE_MODE` | 403 | 精简模式下二级库仅支持导入与查询 | `api/deps` |
 | `OUTBOUND_DISABLED` | 403 | 精简模式下不支持出入库 | `service/miniprogram` |
-| `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅超级管理员可查询已归档申购计划 | `api/purchase` |
+| `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅系统管理员可查询已归档申购计划 | `api/purchase` |
 
 ## 项目（多项目数据隔离）
 
@@ -44,8 +44,7 @@
 | `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `service/miniprogram` |
 | `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `service/material` |
 | `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `service/dictionary` |
-| `ROLE_NOT_FOUND` | 500 | 内置角色缺失（种子数据被破坏，如「全局只读」） | `service/role` |
-| `INVALID_ROLES` | 422 | 存在无效的角色 id（用户保存时的角色列表校验） | `service/role` |
+| `INVALID_PERMISSIONS` | 422 | 用户保存时包含未知的权限键（details 带 `permissions`） | `service/dictionary` |
 | `CANNOT_MERGE_SELF` | 400 | 不能将账号合并到自身 | `service/dictionary` |
 | `USER_HAS_REFERENCES` | 409 | 该账号存在业务数据引用（导出任务 / 分享链接 / 备忘录等），无法合并或删除 | `service/dictionary` |
 | `PLAN_NO_CONFLICT` | 409 | 计划号生成冲突，请稍后重试 | `service/material` |

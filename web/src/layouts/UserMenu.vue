@@ -20,7 +20,7 @@ import {
 } from '@/layouts/projectMenu'
 
 defineProps<{
-  /** 侧栏折叠时只保留用户图标；移动端抽屉与展开态显示用户名与角色。 */
+  /** 侧栏折叠时只保留用户图标；移动端抽屉与展开态显示用户名与权限摘要。 */
   collapsed?: boolean
   /**
    * 下拉浮层的 z-index。移动端抽屉内的菜单会 teleport 到 body，默认 z-index auto
@@ -38,9 +38,25 @@ const theme = useThemeStore()
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
 
 const displayName = computed(() => auth.user?.display_name || auth.user?.username || '未登录')
-const roleLabel = computed(() =>
-  (auth.user?.roles ?? []).map((role) => role.name).join(' / '),
-)
+/** 权限摘要：系统管理 / 各模块读写 / 只读，替代原来的角色名（权限位是唯一事实源）。 */
+const permissionLabel = computed(() => {
+  const perms = auth.user?.permissions ?? []
+  if (perms.length === 0) return '未分配权限'
+  if (perms.includes('system:admin')) return '系统管理'
+  const modules: Array<[string, string]> = [
+    ['warehouse', '二级库'],
+    ['purchase', '申购'],
+    ['huaxing', '华星'],
+    ['codes', '编码库'],
+    ['ledger', '台账'],
+    ['hazard', '隐患'],
+    ['work', '工单'],
+  ]
+  const writable = modules.filter(([key]) => perms.includes(`${key}:write`))
+  if (writable.length > 0) return writable.map(([, label]) => `${label}读写`).join(' / ')
+  const readable = modules.filter(([key]) => perms.includes(`${key}:read`))
+  return readable.length > 0 ? '只读' : '未分配权限'
+})
 
 /* ============ 左下角用户下拉：项目（切换）+ 外观（自动 / 浅色 / 深色）+ 线路 ============
  * 入口在侧栏（移动端在抽屉）左下角，下拉向上展开，子菜单向右浮现。
@@ -112,7 +128,7 @@ function logout() {
       </span>
       <span v-if="!collapsed" class="user-summary">
         <span class="user-name">{{ displayName }}</span>
-        <span class="user-role">{{ roleLabel }}</span>
+        <span class="user-role">{{ permissionLabel }}</span>
       </span>
       <span v-if="!collapsed" class="user-menu-caret" aria-hidden="true" />
     </button>

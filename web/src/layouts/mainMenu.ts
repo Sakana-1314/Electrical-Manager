@@ -13,7 +13,7 @@ import {
   WarningOutline,
 } from '@vicons/ionicons5'
 import type { Permission } from '@/types/navigation'
-import type { NavFeatureKey } from '@/utils/navigation'
+import { visibleNavFeatureKeys, type NavFeatureKey } from '@/utils/navigation'
 
 /**
  * 后台侧栏一级菜单（主 tab）拼装。
@@ -21,16 +21,14 @@ import type { NavFeatureKey } from '@/utils/navigation'
  * 从 `AppLayout.vue` 抽出来便于单测（沿用 `appearanceMenu.ts` / `projectMenu.ts` 的做法）：
  * 结构、图标与“哪些项该出现”都是纯逻辑，不需要挂载布局组件。
  *
- * 一级项的可见性来自高级设置的「后台可见功能」开关（`isFeatureVisible`，由 `utils/navigation.ts`
- * 的 `NAV_FEATURES` 定义顺序与兜底规则）：被隐藏的项**整个分组**不渲染。
- * 系统管理不参与可见性开关，始终显示（仍按 `settings:write` 权限判断），
- * 保证高级设置本身永远能从侧栏进入。
+ * 一级项的可见性来自用户权限位（`utils/navigation.ts` 的 `NAV_FEATURES` 定义顺序与读权限）：
+ * 没有对应模块读权限的项**整个分组**不渲染。工作台 / 备忘录不设门禁，始终显示。
+ * 系统管理按 `system:admin` 权限判断，保证高级设置本身能从侧栏进入。
  */
 export interface MainMenuContext {
   /** 精简模式下二级库是单一一级项（Excel 导入 + 只读查询），与华星总库存同层级 */
   isLiteMode: boolean
   can: (permission: Permission) => boolean
-  isFeatureVisible: (key: NavFeatureKey) => boolean
   /** 点击菜单项后收起移动端抽屉 */
   onNavigate?: () => void
 }
@@ -50,7 +48,8 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
     ...(icon ? { icon: renderIcon(icon) } : {}),
   })
 
-  /** 一级项定义：key 决定是否渲染（可见性开关），build 产出该项（单个链接或分组）。 */
+  /** 一级项定义：key 决定是否渲染（权限位），build 产出该项（单个链接或分组）。 */
+  const visibleSections = new Set<NavFeatureKey>(visibleNavFeatureKeys(context.can))
   const sections: Array<{ key: NavFeatureKey; build: () => MenuOption }> = [
     { key: 'dashboard', build: () => link('工作台', 'dashboard', GridOutline) },
     { key: 'memos', build: () => link('备忘录', 'memos', DocumentTextOutline) },
@@ -133,11 +132,11 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
   ]
 
   const items = sections
-    .filter((section) => context.isFeatureVisible(section.key))
+    .filter((section) => visibleSections.has(section.key))
     .map((section) => section.build())
 
-  // 系统管理：不参与「后台可见功能」开关（始终显示），只按权限判断。
-  if (context.can('settings:write'))
+  // 系统管理：按 system:admin 权限位显示（与各功能读权限平级，不再是独立「超级管理员角色」）。
+  if (context.can('system:admin'))
     items.push({
       label: '系统管理',
       key: 'settings-group',

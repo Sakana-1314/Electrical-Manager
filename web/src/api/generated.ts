@@ -19,7 +19,6 @@ export type SourceType = components['schemas']['SourceType']
 export type PurchasePlanStatus = components['schemas']['PurchasePlanStatus']
 export type MiniProgramCodeEnv = components['schemas']['MiniProgramCodeEnv']
 export type MiniProgramStockStatus = components['schemas']['MiniProgramStockStatus']
-export type MiniProgramFeatureMode = components['schemas']['MiniProgramFeatureMode']
 export type SecondaryWarehouseMode = components['schemas']['SecondaryWarehouseMode']
 export type WebhookPlatform = components['schemas']['WebhookPlatform']
 export type WebhookEventType = components['schemas']['WebhookEventType']
@@ -27,8 +26,10 @@ export type WebhookEventType = components['schemas']['WebhookEventType']
 /* ===== 接口类型（映射自 openapi schema） ===== */
 export type ApiError = components['schemas']['ApiError']
 export type User = components['schemas']['UserRead']
-export type UserRole = components['schemas']['UserRoleRead']
-export type RoleRead = components['schemas']['RoleRead']
+export type UserCreate = components['schemas']['UserCreate']
+export type UserUpdate = components['schemas']['UserUpdate']
+/* 权限目录项：bit 是权限位图里的数值（用户权限按位判断） */
+export type PermissionRead = components['schemas']['PermissionRead']
 export type UserMergeRequest = components['schemas']['UserMergeRequest']
 export type MiniProgramUser = components['schemas']['MiniProgramUserRead']
 export type LoginRequest = components['schemas']['LoginRequest']
@@ -39,8 +40,6 @@ export type AiSearchSettings = components['schemas']['AiSearchSettingsRead']
 export type AiSearchStatus = components['schemas']['AiSearchStatusRead']
 export type AiSearchTestRequest = components['schemas']['AiSearchTestRequest']
 export type MiniProgramFeatures = components['schemas']['MiniProgramFeaturesRead']
-/* 后台侧栏主 tab 可见性（高级设置里的开关）：字段与 utils/navigation.ts 的 NAV_FEATURES 一一对应 */
-export type WebFeatureVisibility = components['schemas']['WebFeatureVisibility']
 export type ImageAccelerationSettings = components['schemas']['ImageAccelerationSettingsRead']
 /* 项目（多项目数据隔离）：业务数据都挂在项目下，右上角切换当前项目。 */
 export type Project = components['schemas']['ProjectRead']
@@ -179,16 +178,7 @@ export interface AiSearchSettingsWrite {
   mini_program_registration_enabled: boolean
   mini_program_new_user_enabled: boolean
   image_acceleration_server_url: string
-  inventory_mode: MiniProgramFeatureMode
-  huaxing_inventory_mode: MiniProgramFeatureMode
-  purchase_plans_mode: MiniProgramFeatureMode
-  purchase_records_mode: MiniProgramFeatureMode
-  material_codes_mode: MiniProgramFeatureMode
-  ledger_mode: MiniProgramFeatureMode
-  hazards_mode: MiniProgramFeatureMode
   secondary_warehouse_mode: SecondaryWarehouseMode
-  /** 后台主 tab 可见性：高级设置按主 tab 开关侧栏入口（系统管理固定显示，不在字段里） */
-  web_features: WebFeatureVisibility
   version: number
 }
 
