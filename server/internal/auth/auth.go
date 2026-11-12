@@ -41,7 +41,7 @@ func bearerToken(c *web.Ctx) string {
 // GetUser 按主键读取管理端用户（不存在返回 nil）。
 func GetUser(s *db.Session, id int64) (*model.User, error) {
 	var u model.User
-	ok, err := s.Find(&u, "SELECT "+model.ColsUser+" FROM `user` WHERE id = ?", id)
+	ok, err := s.Find(&u, "SELECT "+model.ColsUser+" FROM app_user WHERE id = ?", id)
 	if err != nil || !ok {
 		return nil, err
 	}
@@ -54,13 +54,13 @@ func FindUserByAPIToken(s *db.Session, token string) (*model.User, error) {
 		return nil, nil
 	}
 	var u model.User
-	ok, err := s.Find(&u, "SELECT "+model.ColsUser+" FROM `user` WHERE api_token_hash = ?", security.SHA256Hex(token))
+	ok, err := s.Find(&u, "SELECT "+model.ColsUser+" FROM app_user WHERE api_token_hash = ?", security.SHA256Hex(token))
 	if err != nil || !ok {
 		return nil, err
 	}
 	if u.APITokenEnc == "" {
 		u.APITokenEnc = security.EncryptSecret(token)
-		if _, err := s.Exec("UPDATE `user` SET api_token_enc = ? WHERE id = ?", u.APITokenEnc, u.ID); err != nil {
+		if _, err := s.Exec("UPDATE app_user SET api_token_enc = ? WHERE id = ?", u.APITokenEnc, u.ID); err != nil {
 			return nil, err
 		}
 	}

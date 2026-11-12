@@ -69,7 +69,7 @@ class Project(AuditColumns, Base):
 
 
 class User(AuditColumns, Base):
-    __tablename__ = "user"
+    __tablename__ = "app_user"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     username: Mapped[str] = mapped_column(String(64))
@@ -81,6 +81,7 @@ class User(AuditColumns, Base):
     display_name: Mapped[str] = mapped_column(String(128))
     department_name: Mapped[str] = mapped_column(String(128), server_default="")
     source: Mapped[UserSource] = mapped_column(_enum(UserSource), server_default="MANAGE")
+    wechat_openid: Mapped[str | None] = mapped_column(String(128))
     enabled: Mapped[bool] = mapped_column(server_default="true")
     last_used_at: Mapped[datetime | None]
 

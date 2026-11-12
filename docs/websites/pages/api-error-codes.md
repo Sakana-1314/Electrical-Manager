@@ -62,7 +62,6 @@
 | `CANNOT_DELETE_CURRENT_USER` | 409 | 不能删除当前登录用户 | `service/dictionary` |
 | `IMPORT_IN_PROGRESS` | 409 | 同类导入任务正在进行中 | `service/importjob` |
 | `FILE_IN_USE` | 409 | 图片已被业务引用，不能删除 | `service/file` |
-| `MINI_PROGRAM_IDENTITY_CONFLICT` | 409 | 两个账号包含相同小程序身份，无法直接合并 | `service/miniprogram` |
 | `WECHAT_USER_CREATE_CONFLICT` | 409 | 微信用户创建冲突，请重新登录 | `service/miniprogram` |
 | `DUPLICATE_HAZARD_UNIT` | 409 | 责任单位名称已存在 | `service/hazard` |
 | `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `service/hazard` |

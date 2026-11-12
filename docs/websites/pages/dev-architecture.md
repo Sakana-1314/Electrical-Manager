@@ -532,16 +532,17 @@ sequenceDiagram
 #### 角色与依赖（`server/internal/auth`、`server/internal/domain`）
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
-| 角色 | `domain.RoleSuperAdmin` / `RoleWarehouseAdmin` / `RolePurchaseAdmin` / `RoleHazardAdmin` / `RoleLedgerAdmin` / `RoleWorkAdmin` / `RoleReadOnly` | 七个字符串常量（`SUPER_ADMIN` … `READ_ONLY`），存 `user.role`（PostgreSQL 枚举类型 `role`） |
-| `auth.Roles(roles...)` | 依赖工厂 | 先确保 `CurrentUser`，角色不在集合内返回 `FORBIDDEN`（403） |
+| 角色（RBAC） | `role` / `user_role` 表（固定种子，无 CRUD） | 超级管理员、全局只读、各功能读写（二级库 / 申购 / 隐患 / 台账 / 工单）；用户可挂多个角色，权限取并集 |
+| 权限键 | `domain.PermissionCatalog` | `settings:write`、`warehouse:read|write`、`purchase:read|write`、`hazard:read|write`、`ledger:read|write`、`work:read|write`、`huaxing:read`、`codes:read` |
+| `auth.RequirePermission(perm)` | 依赖工厂 | 先确保 `CurrentUser`，汇总角色权限并集不含该键返回 `PERMISSION_DENIED`（403） |
 | `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
-| `auth.WarehouseWriter` | `auth.Roles(SUPER_ADMIN, WAREHOUSE_ADMIN)` | 库存写操作 |
-| `auth.PurchaseWriter` | `auth.Roles(SUPER_ADMIN, PURCHASE_ADMIN)` | 申购写操作 |
-| `auth.HazardWriter` | `auth.Roles(SUPER_ADMIN, HAZARD_ADMIN)` | 隐患管理写操作（台账与两张字典表） |
-| `auth.LedgerWriter` | `auth.Roles(SUPER_ADMIN, LEDGER_ADMIN)` | 台账管理写操作（台账记录与标签） |
-| `auth.WorkWriter` | `auth.Roles(SUPER_ADMIN, WORK_ADMIN)` | 工作管理写操作（任务、工作记录与任务图片） |
-| `auth.SuperAdmin` | `auth.Roles(SUPER_ADMIN)` | 系统配置、用户、文件治理 |
-| 图片上传角色 | `api/files` 的 `auth.Roles(...)`（除 `READ_ONLY` 外的六个角色） | 图片上传与上传前查重 |
+| `auth.WarehouseWriter` | `RequirePermission(warehouse:write)` | 库存写操作 |
+| `auth.PurchaseWriter` | `RequirePermission(purchase:write)` | 申购写操作 |
+| `auth.HazardWriter` | `RequirePermission(hazard:write)` | 隐患管理写操作（台账与两张字典表） |
+| `auth.LedgerWriter` | `RequirePermission(ledger:write)` | 台账管理写操作（台账记录与标签） |
+| `auth.WorkWriter` | `RequirePermission(work:write)` | 工作管理写操作（任务、工作记录与任务图片） |
+| `auth.SuperAdmin` | `RequirePermission(settings:write)` | 系统配置、用户、文件治理 |
+| 图片上传 | `auth.FileWriter`（任一业务写权限） | 图片上传与上传前查重 |
 | `auth.MiniProgramUser` | 依赖 | 小程序用户；未审核（`enabled=false`）返回 `ACCOUNT_DISABLED`（403）；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
 | `auth.MiniProgramRegistration` | 依赖 | 校验注册凭证，`auth.Registration(c)` 返回 `(app_id, openid)`，供注册 / 绑定用 |
 | `auth.RequireProject` | 依赖 | 校验 `X-Project-Id` 并设为本请求会话的项目上下文（见「项目隔离与数据库」） |
@@ -554,8 +555,8 @@ sequenceDiagram
 | 项 | 规则 |
 | --- | --- |
 | 取用顺序 | `auth.AuthenticateManagementUser` 依次尝试 `X-API-Token` → Bearer 值（长度 ≤ 36 时先按接口令牌试，命中停用用户直接报 `USER_DISABLED`）→ 按 JWT 解析 |
-| 查找 | 令牌为 36 位；`auth.FindUserByAPIToken` 先用长度 ≠ 36 快速排除，再按 SHA-256 命中 `user.api_token_hash` |
-| 懒迁移回写 | 命中且 `user.api_token_enc` 为空时，用该明文令牌 `security.EncryptSecret()` 回写密文（随请求事务提交），使管理界面之后可解密回显（`api_token_hash` 认证 + `api_token_enc` 可逆回显双列） |
+| 查找 | 令牌为 36 位；`auth.FindUserByAPIToken` 先用长度 ≠ 36 快速排除，再按 SHA-256 命中 `app_user.api_token_hash` |
+| 懒迁移回写 | 命中且 `app_user.api_token_enc` 为空时，用该明文令牌 `security.EncryptSecret()` 回写密文（随请求事务提交），使管理界面之后可解密回显（`api_token_hash` 认证 + `api_token_enc` 可逆回显双列） |
 | MCP 入口 | MCP 认证同样走 `auth.FindUserByAPIToken`，取令牌顺序 `?token=` → `X-API-Token` → `Authorization: Bearer`，并立即提交懒迁移结果 |
 
 #### JWT `token_type` 取值（`server/internal/security` 生成，`server/internal/auth` / `api/system` 校验）
@@ -747,7 +748,7 @@ flowchart LR
 | 归档 | 轮转出的文件放进 `YYYY-MM/spare-parts-api.YYYY-MM-DD.log`，跨目录按日期排序，只保留最近 `APP_LOG_BACKUP_COUNT`（默认 90）份 |
 | 控制台与级别 | 输出到 stdout，未设置 `NO_COLOR` 时 ANSI 彩色；消息含 `/health` 的行不输出到控制台（文件照写）；最低级别 INFO |
 | logger 名 | 默认 `spare_parts.api`（`logx.Named(name)` 可取指定名称的日志器） |
-| 访问日志字段 | `method`、`path`、`status`、`elapsed ms`、`db=<ms>/<query 数>`、`compute=<ms>`、`client_ip`、`user`（管理端为用户名，未认证为 `anonymous`，小程序为 `mini:<id>`）、`request_id`；`/health` 不写访问日志 |
+| 访问日志字段 | `method`、`path`、`status`、`elapsed ms`、`db=<ms>/<query 数>`、`compute=<ms>`、`client_ip`、`user`（管理端为用户名，未认证为 `anonymous`，小程序为 `wx_<hash>`（用户名由 openid 派生））、`request_id`；`/health` 不写访问日志 |
 | 敏感信息 | 访问日志不打印请求体、查询参数与请求头（`Authorization`/`X-API-Token` 均不出现）；乐观锁版本号刻意放 `If-Match` 头而非 query；代码中没有统一的字段级脱敏黑名单 |
 
 ### 配置项清单

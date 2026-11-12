@@ -66,23 +66,11 @@ const columns = preventTableColumnCompression<ManagedUser>([
       ),
   },
   {
-    title: '微信身份',
-    key: 'identities',
+    title: '微信 OpenID',
+    key: 'wechat_openid',
     width: 220,
-    render: (r) =>
-      (r.identities ?? []).length
-        ? h(
-            'div',
-            { style: 'display:flex;flex-direction:column;gap:2px' },
-            (r.identities ?? []).map((identity) =>
-              h(
-                NTag,
-                { key: identity.id, size: 'small', bordered: false },
-                { default: () => `${identity.app_id} / ${identity.wechat_openid}` },
-              ),
-            ),
-          )
-        : '—',
+    ellipsis: { tooltip: true },
+    render: (r) => r.wechat_openid || '—',
   },
   {
     title: '角色',

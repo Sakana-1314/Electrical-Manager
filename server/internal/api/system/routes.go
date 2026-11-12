@@ -58,7 +58,7 @@ func login(c *web.Ctx) error {
 		return err
 	}
 	var u model.User
-	ok, err := c.DB.Find(&u, "SELECT "+model.ColsUser+" FROM `user` WHERE username = ?", data.Username)
+	ok, err := c.DB.Find(&u, "SELECT "+model.ColsUser+" FROM app_user WHERE username = ?", data.Username)
 	if err != nil {
 		return err
 	}

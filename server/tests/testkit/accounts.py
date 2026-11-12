@@ -51,6 +51,7 @@ async def create_mini_program_user(
         display_name=display_name,
         department_name="华星检修维护部电气车间",
         source=UserSource.MINI_PROGRAM,
+        wechat_openid=f"openid-test-{uuid4().hex[:12]}",
         enabled=enabled,
     )
     session.add(user)

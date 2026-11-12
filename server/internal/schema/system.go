@@ -38,17 +38,17 @@ type UserMergeRequest struct {
 // UserRead 是管理端用户。roles 为挂载的角色（多角色，权限取并集）；permissions 为并集展开后的
 // 权限键（登录 / me 路径填充，用户列表为空——前端编辑角色用 roles）；source 区分管理端 / 小程序来源。
 type UserRead struct {
-	ID             int64                     `json:"id"`
-	Username       string                    `json:"username"`
-	DisplayName    string                    `json:"display_name"`
-	DepartmentName string                    `json:"department_name"`
-	Source         string                    `json:"source"`
-	Roles          []UserRoleRead            `json:"roles"`
-	Permissions    []string                  `json:"permissions"`
-	Identities     []MiniProgramIdentityRead `json:"identities"`
-	LastUsedAt     *jtype.UTCTime            `json:"last_used_at"`
-	Enabled        bool                      `json:"enabled"`
-	Version        int64                     `json:"version"`
+	ID             int64          `json:"id"`
+	Username       string         `json:"username"`
+	DisplayName    string         `json:"display_name"`
+	DepartmentName string         `json:"department_name"`
+	Source         string         `json:"source"`
+	Roles          []UserRoleRead `json:"roles"`
+	Permissions    []string       `json:"permissions"`
+	WechatOpenid   *string        `json:"wechat_openid"`
+	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
+	Enabled        bool           `json:"enabled"`
+	Version        int64          `json:"version"`
 }
 
 func NewUserRead(u *model.User) UserRead {
