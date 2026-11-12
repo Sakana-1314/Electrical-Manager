@@ -120,9 +120,10 @@ CREATE TABLE IF NOT EXISTS project (
 );
 
 -- 统一用户：管理端（source = MANAGE，用户名密码 / 接口令牌登录）与小程序端
--- （source = MINI_PROGRAM，微信 openid 身份登录，username 由 openid 派生、无密码）共用同一张表与角色体系。
+-- （source = MINI_PROGRAM，微信 openid 登录，username 由 openid 派生、无密码）共用同一张表与角色体系。
+-- 小程序只有一个（一个 app_id），微信 openid 直接落在本表：管理端用户为 NULL，小程序用户非空且唯一。
 -- 小程序用户不使用接口令牌：api_token_hash 为空串，唯一性只约束非空值（部分唯一索引）。
-CREATE TABLE IF NOT EXISTS "user" (
+CREATE TABLE IF NOT EXISTS app_user (
   id BIGSERIAL NOT NULL,
   username VARCHAR(64) NOT NULL,
   password_hash VARCHAR(255) NOT NULL DEFAULT '',
@@ -131,16 +132,19 @@ CREATE TABLE IF NOT EXISTS "user" (
   display_name VARCHAR(128) NOT NULL,
   department_name VARCHAR(128) NOT NULL DEFAULT '',
   source usersource NOT NULL DEFAULT 'MANAGE',
+  wechat_openid VARCHAR(128) NULL,
   enabled BOOLEAN NOT NULL DEFAULT TRUE,
   last_used_at TIMESTAMP WITHOUT TIME ZONE NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_user PRIMARY KEY (id),
-  CONSTRAINT uq_user_username UNIQUE (username)
+  CONSTRAINT pk_app_user PRIMARY KEY (id),
+  CONSTRAINT uq_app_user_username UNIQUE (username)
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_user_api_token_hash ON "user" (api_token_hash) WHERE api_token_hash <> '';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_api_token_hash ON app_user (api_token_hash) WHERE api_token_hash <> '';
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_app_user_wechat_openid ON app_user (wechat_openid) WHERE wechat_openid IS NOT NULL;
 
 -- 角色（RBAC）：permissions 为权限键数组（JSONB），`*` 通配全部权限、`模块:*` 通配模块内权限；
 -- 用户可挂多个角色，实际权限取并集。is_system 的内置角色不可改名 / 删除。
@@ -166,24 +170,8 @@ CREATE TABLE IF NOT EXISTS user_role (
   version INTEGER NOT NULL DEFAULT 1,
   CONSTRAINT pk_user_role PRIMARY KEY (id),
   CONSTRAINT uq_user_role_user_id_role_id UNIQUE (user_id, role_id),
-  CONSTRAINT fk_user_role_user_id_user FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE,
+  CONSTRAINT fk_user_role_user_id_app_user FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE,
   CONSTRAINT fk_user_role_role_id_role FOREIGN KEY (role_id) REFERENCES role (id) ON DELETE CASCADE
-);
-
--- 微信身份：openid ↔ 统一用户（source = MINI_PROGRAM）。
-CREATE TABLE IF NOT EXISTS mini_program_identity (
-  id BIGSERIAL NOT NULL,
-  user_id BIGINT NOT NULL,
-  app_id VARCHAR(64) NOT NULL,
-  wechat_openid VARCHAR(128) NOT NULL,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_mini_program_identity PRIMARY KEY (id),
-  CONSTRAINT uq_mini_program_identity_app_id UNIQUE (app_id, wechat_openid),
-  CONSTRAINT uq_mini_program_identity_user_id UNIQUE (user_id, app_id),
-  CONSTRAINT fk_mini_program_identity_user_id_user
-    FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS business_event_log (
@@ -318,7 +306,7 @@ CREATE TABLE IF NOT EXISTS excel_import_job (
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   CONSTRAINT pk_excel_import_job PRIMARY KEY (id),
   CONSTRAINT fk_excel_import_job_created_by_user
-    FOREIGN KEY (created_by) REFERENCES "user" (id),
+    FOREIGN KEY (created_by) REFERENCES app_user (id),
   CONSTRAINT fk_excel_import_job_project_id_project
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
@@ -345,7 +333,7 @@ CREATE TABLE IF NOT EXISTS excel_export_job (
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   CONSTRAINT pk_excel_export_job PRIMARY KEY (id),
   CONSTRAINT fk_excel_export_job_created_by_user
-    FOREIGN KEY (created_by) REFERENCES "user" (id),
+    FOREIGN KEY (created_by) REFERENCES app_user (id),
   CONSTRAINT fk_excel_export_job_project_id_project
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
@@ -368,7 +356,7 @@ CREATE TABLE IF NOT EXISTS share_link (
   CONSTRAINT pk_share_link PRIMARY KEY (id),
   CONSTRAINT uq_share_link_token UNIQUE (token),
   CONSTRAINT fk_share_link_created_by_user
-    FOREIGN KEY (created_by) REFERENCES "user" (id),
+    FOREIGN KEY (created_by) REFERENCES app_user (id),
   CONSTRAINT fk_share_link_project_id_project
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
@@ -770,7 +758,7 @@ CREATE TABLE IF NOT EXISTS memo (
   version INTEGER NOT NULL DEFAULT 1,
   CONSTRAINT pk_memo PRIMARY KEY (id),
   CONSTRAINT fk_memo_created_by_user
-    FOREIGN KEY (created_by) REFERENCES "user" (id) ON DELETE CASCADE
+    FOREIGN KEY (created_by) REFERENCES app_user (id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS ix_memo_created_by ON memo (created_by);
@@ -1232,7 +1220,7 @@ SET description = EXCLUDED.description,
 
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
-INSERT INTO "user" (username, password_hash, api_token_hash, display_name, department_name, source, enabled)
+INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, source, enabled)
 VALUES
   ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
   ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 'MANAGE', TRUE),
@@ -1249,7 +1237,7 @@ SET display_name = EXCLUDED.display_name,
 -- 种子用户按用户名挂到内置角色（幂等）：warehouse/purchase/hazard/ledger/work 各挂本模块读写，readonly 挂全局只读。
 INSERT INTO user_role (user_id, role_id)
 SELECT u.id, r.id
-FROM "user" u
+FROM app_user u
 JOIN role r ON (
   (u.username = 'admin' AND r.name = '超级管理员') OR
   (u.username = 'warehouse' AND r.name = '二级库读写') OR
@@ -1260,3 +1248,469 @@ JOIN role r ON (
   (u.username = 'readonly' AND r.name = '全局只读')
 )
 ON CONFLICT (user_id, role_id) DO NOTHING;
+
+-- ============================================================================
+-- 表注释与字段注释：结构变更后同步维护（COMMENT ON 幂等，可重复执行）。
+-- 命名约定：表名 / 列名统一 snake_case 小写；主键 id（BIGSERIAL）+ created_at / updated_at /
+-- version（乐观锁）为通用审计列；项目域表带 project_id。保留字表名统一加前缀（如 app_user）。
+-- ============================================================================
+COMMENT ON TABLE project IS '项目（业务数据隔离维度，全局表）';
+COMMENT ON COLUMN project."id" IS '主键，自增';
+COMMENT ON COLUMN project."name" IS '项目名称，唯一';
+COMMENT ON COLUMN project."enabled" IS '是否启用（停用后不可选 / 不可写入）';
+COMMENT ON COLUMN project."is_default" IS '是否默认项目（唯一，小程序 / MCP 未指定项目时兜底）';
+COMMENT ON COLUMN project."remark" IS '备注';
+COMMENT ON COLUMN project."created_at" IS '创建时间';
+COMMENT ON COLUMN project."updated_at" IS '更新时间';
+COMMENT ON COLUMN project."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE app_user IS '统一用户（管理端 + 小程序端，微信 openid 直存；角色在 `user_role`，权限取并集）';
+COMMENT ON COLUMN app_user."id" IS '主键';
+COMMENT ON COLUMN app_user."username" IS '登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`）';
+COMMENT ON COLUMN app_user."password_hash" IS 'Argon2id 密码哈希（小程序来源用户为空串，不可密码登录）';
+COMMENT ON COLUMN app_user."api_token_hash" IS '接口令牌 SHA-256，非空值唯一（部分唯一索引，小程序用户为空串），用于认证查找';
+COMMENT ON COLUMN app_user."api_token_enc" IS '接口令牌 Fernet 密文，供读取接口解密回显';
+COMMENT ON COLUMN app_user."display_name" IS '显示名称';
+COMMENT ON COLUMN app_user."department_name" IS '部门单位';
+COMMENT ON COLUMN app_user."source" IS '账号来源，接口同名字符串';
+COMMENT ON COLUMN app_user."wechat_openid" IS '微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid）';
+COMMENT ON COLUMN app_user."enabled" IS '账号是否启用';
+COMMENT ON COLUMN app_user."last_used_at" IS '小程序来源用户的最近登录时间（登录即刷新，不自增 version）';
+COMMENT ON COLUMN app_user."created_at" IS '创建时间';
+COMMENT ON COLUMN app_user."updated_at" IS '更新时间';
+COMMENT ON COLUMN app_user."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE role IS '角色（RBAC）：权限键数组，`*` 通配全部权限';
+COMMENT ON COLUMN role."id" IS '主键';
+COMMENT ON COLUMN role."name" IS '角色名，唯一（内置角色为系统种子）';
+COMMENT ON COLUMN role."description" IS '角色说明';
+COMMENT ON COLUMN role."permissions" IS '权限键数组（JSON），`*` 通配全部、`模块:*` 通配模块';
+COMMENT ON COLUMN role."is_system" IS '是否内置角色（内置角色不可改名 / 删除）';
+COMMENT ON COLUMN role."created_at" IS '创建时间';
+COMMENT ON COLUMN role."updated_at" IS '更新时间';
+COMMENT ON COLUMN role."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE user_role IS '用户 ↔ 角色多对多（一个用户可挂多个角色）';
+COMMENT ON COLUMN user_role."id" IS '主键，自增';
+COMMENT ON COLUMN user_role."user_id" IS '关联用户';
+COMMENT ON COLUMN user_role."role_id" IS '关联角色';
+COMMENT ON COLUMN user_role."created_at" IS '创建时间';
+COMMENT ON COLUMN user_role."updated_at" IS '更新时间';
+COMMENT ON COLUMN user_role."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE business_event_log IS '业务事件日志（状态流转与数据快照）';
+COMMENT ON COLUMN business_event_log."id" IS '主键';
+COMMENT ON COLUMN business_event_log."business_type" IS '业务类型标识';
+COMMENT ON COLUMN business_event_log."business_id" IS '业务主键（弱关联，无外键）';
+COMMENT ON COLUMN business_event_log."action" IS '动作标识';
+COMMENT ON COLUMN business_event_log."old_status" IS '变更前状态';
+COMMENT ON COLUMN business_event_log."new_status" IS '变更后状态';
+COMMENT ON COLUMN business_event_log."occurred_at" IS '事件发生时间';
+COMMENT ON COLUMN business_event_log."remark" IS '备注';
+COMMENT ON COLUMN business_event_log."before_data" IS '变更前数据快照';
+COMMENT ON COLUMN business_event_log."after_data" IS '变更后数据快照';
+COMMENT ON TABLE system_setting IS '系统设置键值表';
+COMMENT ON COLUMN system_setting."setting_key" IS '设置键，主键';
+COMMENT ON COLUMN system_setting."setting_value" IS '设置值（JSON 文档）';
+COMMENT ON COLUMN system_setting."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON COLUMN system_setting."updated_at" IS '更新时间';
+COMMENT ON TABLE webhook_channel IS 'Webhook 渠道配置（飞书 / 钉钉）';
+COMMENT ON COLUMN webhook_channel."id" IS '主键';
+COMMENT ON COLUMN webhook_channel."platform" IS '渠道平台，唯一';
+COMMENT ON COLUMN webhook_channel."enabled" IS '是否启用该渠道';
+COMMENT ON COLUMN webhook_channel."webhook_url_encrypted" IS '加密后的 Webhook 地址';
+COMMENT ON COLUMN webhook_channel."secret_encrypted" IS '加密后的签名密钥';
+COMMENT ON COLUMN webhook_channel."subscribed_events" IS '订阅事件名数组';
+COMMENT ON COLUMN webhook_channel."created_at" IS '创建时间';
+COMMENT ON COLUMN webhook_channel."updated_at" IS '更新时间';
+COMMENT ON COLUMN webhook_channel."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE webhook_delivery IS 'Webhook 投递记录与重试状态';
+COMMENT ON COLUMN webhook_delivery."id" IS '主键';
+COMMENT ON COLUMN webhook_delivery."event_id" IS '事件 id（与 `channel_id` 组合唯一，幂等）';
+COMMENT ON COLUMN webhook_delivery."event_type" IS '事件类型，接口值为 `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound`';
+COMMENT ON COLUMN webhook_delivery."channel_id" IS '目标渠道';
+COMMENT ON COLUMN webhook_delivery."payload" IS '投递报文';
+COMMENT ON COLUMN webhook_delivery."status" IS '投递状态';
+COMMENT ON COLUMN webhook_delivery."attempts" IS '已尝试次数';
+COMMENT ON COLUMN webhook_delivery."next_retry_at" IS '下次重试时间';
+COMMENT ON COLUMN webhook_delivery."response_status" IS '响应 HTTP 状态码';
+COMMENT ON COLUMN webhook_delivery."response_excerpt" IS '响应摘录';
+COMMENT ON COLUMN webhook_delivery."last_error" IS '最近错误信息';
+COMMENT ON COLUMN webhook_delivery."created_at" IS '创建时间';
+COMMENT ON COLUMN webhook_delivery."updated_at" IS '更新时间';
+COMMENT ON COLUMN webhook_delivery."delivered_at" IS '投递成功时间';
+COMMENT ON TABLE file_object IS '文件对象元数据（图片等）';
+COMMENT ON COLUMN file_object."id" IS '主键，UUID 字符串（`uuid7_string`）';
+COMMENT ON COLUMN file_object."original_name" IS '原始文件名';
+COMMENT ON COLUMN file_object."mime_type" IS 'MIME 类型';
+COMMENT ON COLUMN file_object."size_bytes" IS '文件字节数';
+COMMENT ON COLUMN file_object."width" IS '图片宽度';
+COMMENT ON COLUMN file_object."height" IS '图片高度';
+COMMENT ON COLUMN file_object."sha256" IS '内容哈希（非唯一索引）';
+COMMENT ON COLUMN file_object."source_sha256" IS '原始上传字节（重编码成 PNG 之前）的 SHA-256，供网页端「先提交摘要比对、命中免上传」查找；老数据与不超过 1MB 的图片为空，空值表示不参与前端查重';
+COMMENT ON COLUMN file_object."source_probes" IS '中间片段挑战材料 `{"size": 原始字节数, "windows": [{"offset", "length", "sha256"}, …]}`：查重命中时服务端随机取一个窗口返回，客户端对本地同位置字节算出同样的摘要即证明持有相同文件；只留摘要不留原文';
+COMMENT ON COLUMN file_object."created_at" IS '创建时间';
+COMMENT ON COLUMN file_object."updated_at" IS '更新时间';
+COMMENT ON COLUMN file_object."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON COLUMN file_object."deleted_at" IS '软删除时间；非空表示待删除：保留 7 个完整自然日，到期后的第一个凌晨 2 点复查引用仍无引用才物理清除（保留期内可撤销）';
+COMMENT ON TABLE material_code_library IS '物资编码库（编码 / 名称 / 型号对照）';
+COMMENT ON COLUMN material_code_library."id" IS '主键';
+COMMENT ON COLUMN material_code_library."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN material_code_library."material_code" IS '物资编码，项目内唯一';
+COMMENT ON COLUMN material_code_library."name" IS '名称';
+COMMENT ON COLUMN material_code_library."model_spec" IS '型号规格';
+COMMENT ON COLUMN material_code_library."unit_name" IS '单位';
+COMMENT ON COLUMN material_code_library."created_at" IS '创建时间';
+COMMENT ON TABLE material_price IS '物料价格（货品编码 → 物料编码 + 全成本单价-人民币）';
+COMMENT ON COLUMN material_price."id" IS '主键';
+COMMENT ON COLUMN material_price."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN material_price."material_code" IS '物料编码（价格表的「货品编码」），项目内唯一';
+COMMENT ON COLUMN material_price."unit_price" IS '全成本单价-人民币；没有价格的行导入时跳过，因此不会存 NULL';
+COMMENT ON COLUMN material_price."created_at" IS '创建时间';
+COMMENT ON TABLE excel_import_job IS 'Excel 导入任务';
+COMMENT ON COLUMN excel_import_job."id" IS '主键';
+COMMENT ON COLUMN excel_import_job."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN excel_import_job."import_type" IS '导入类型标识';
+COMMENT ON COLUMN excel_import_job."status" IS '任务状态';
+COMMENT ON COLUMN excel_import_job."original_filename" IS '上传文件名';
+COMMENT ON COLUMN excel_import_job."file_path" IS '上传文件落盘路径';
+COMMENT ON COLUMN excel_import_job."result" IS '导入结果统计';
+COMMENT ON COLUMN excel_import_job."error_code" IS '错误码';
+COMMENT ON COLUMN excel_import_job."error_message" IS '错误信息';
+COMMENT ON COLUMN excel_import_job."created_by" IS '创建人';
+COMMENT ON COLUMN excel_import_job."created_at" IS '创建时间';
+COMMENT ON COLUMN excel_import_job."started_at" IS '开始执行时间';
+COMMENT ON COLUMN excel_import_job."finished_at" IS '结束时间';
+COMMENT ON COLUMN excel_import_job."updated_at" IS '更新时间';
+COMMENT ON TABLE excel_export_job IS 'Excel 导出任务（`file_uuid` 为派生属性，无独立列）';
+COMMENT ON COLUMN excel_export_job."id" IS '主键';
+COMMENT ON COLUMN excel_export_job."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN excel_export_job."export_type" IS '导出类型标识';
+COMMENT ON COLUMN excel_export_job."status" IS '任务状态';
+COMMENT ON COLUMN excel_export_job."download_filename" IS '下载文件名';
+COMMENT ON COLUMN excel_export_job."file_path" IS '生成文件路径（成功保留至保留期）';
+COMMENT ON COLUMN excel_export_job."params" IS '导出参数快照';
+COMMENT ON COLUMN excel_export_job."result" IS '导出结果统计';
+COMMENT ON COLUMN excel_export_job."error_code" IS '错误码';
+COMMENT ON COLUMN excel_export_job."error_message" IS '错误信息';
+COMMENT ON COLUMN excel_export_job."created_by" IS '创建人';
+COMMENT ON COLUMN excel_export_job."created_at" IS '创建时间';
+COMMENT ON COLUMN excel_export_job."started_at" IS '开始执行时间';
+COMMENT ON COLUMN excel_export_job."finished_at" IS '结束时间';
+COMMENT ON COLUMN excel_export_job."updated_at" IS '更新时间';
+COMMENT ON TABLE share_link IS '匿名分享链接';
+COMMENT ON COLUMN share_link."id" IS '主键';
+COMMENT ON COLUMN share_link."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN share_link."token" IS '分享令牌（UUID，唯一，不可猜解）';
+COMMENT ON COLUMN share_link."share_type" IS '分享数据类型，接口值为 `purchase_plan` / `purchase_record`';
+COMMENT ON COLUMN share_link."item_ids" IS '被分享数据行 id 数组（弱关联）';
+COMMENT ON COLUMN share_link."columns" IS '展示列键名数组；NULL 表示全部默认列';
+COMMENT ON COLUMN share_link."expires_at" IS '失效时间；NULL 表示永久有效';
+COMMENT ON COLUMN share_link."created_by" IS '创建人';
+COMMENT ON COLUMN share_link."created_at" IS '创建时间';
+COMMENT ON COLUMN share_link."updated_at" IS '更新时间';
+COMMENT ON TABLE huaxing_inventory IS '华兴库存（外部库存导入数据）';
+COMMENT ON COLUMN huaxing_inventory."id" IS '主键';
+COMMENT ON COLUMN huaxing_inventory."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN huaxing_inventory."first_inbound_date" IS '首次入库日期';
+COMMENT ON COLUMN huaxing_inventory."warehouse" IS '仓库';
+COMMENT ON COLUMN huaxing_inventory."material_code" IS '物资编码';
+COMMENT ON COLUMN huaxing_inventory."name" IS '名称';
+COMMENT ON COLUMN huaxing_inventory."model_spec" IS '型号规格';
+COMMENT ON COLUMN huaxing_inventory."quantity" IS '数量（外部导入原始精度）';
+COMMENT ON COLUMN huaxing_inventory."unit_name" IS '单位';
+COMMENT ON COLUMN huaxing_inventory."purchaser" IS '申购人';
+COMMENT ON COLUMN huaxing_inventory."purchase_department" IS '申购部门';
+COMMENT ON COLUMN huaxing_inventory."subitem_no_name" IS '子项号名称';
+COMMENT ON COLUMN huaxing_inventory."created_at" IS '创建时间';
+COMMENT ON TABLE lite_inventory IS '精简二级库库存';
+COMMENT ON COLUMN lite_inventory."id" IS '主键';
+COMMENT ON COLUMN lite_inventory."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN lite_inventory."name" IS '名称';
+COMMENT ON COLUMN lite_inventory."model_spec" IS '型号规格';
+COMMENT ON COLUMN lite_inventory."unit_name" IS '单位';
+COMMENT ON COLUMN lite_inventory."quantity" IS '数量（导入原始精度）';
+COMMENT ON COLUMN lite_inventory."remark" IS '备注';
+COMMENT ON COLUMN lite_inventory."created_at" IS '创建时间';
+COMMENT ON TABLE purchase_request IS '申购记录头（订单 / 合同 / 船期等）';
+COMMENT ON COLUMN purchase_request."id" IS '主键';
+COMMENT ON COLUMN purchase_request."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_request."purchase_order_no" IS '采购订单号';
+COMMENT ON COLUMN purchase_request."contract_no" IS '合同号';
+COMMENT ON COLUMN purchase_request."vessel_no" IS '船号';
+COMMENT ON COLUMN purchase_request."consolidation_date" IS '集港日期';
+COMMENT ON COLUMN purchase_request."consolidation_port" IS '集港港口';
+COMMENT ON COLUMN purchase_request."sailing_date" IS '开船日期';
+COMMENT ON COLUMN purchase_request."remark" IS '备注';
+COMMENT ON COLUMN purchase_request."purchase_date" IS '采购日期';
+COMMENT ON COLUMN purchase_request."created_at" IS '创建时间';
+COMMENT ON COLUMN purchase_request."updated_at" IS '更新时间';
+COMMENT ON COLUMN purchase_request."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE stock_material IS '二级库物资';
+COMMENT ON COLUMN stock_material."id" IS '主键';
+COMMENT ON COLUMN stock_material."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_material."uuid" IS '对外 UUID，唯一';
+COMMENT ON COLUMN stock_material."name" IS '名称';
+COMMENT ON COLUMN stock_material."name_id" IS '名称编号（别名索引）';
+COMMENT ON COLUMN stock_material."alias" IS '别名';
+COMMENT ON COLUMN stock_material."model_spec" IS '型号规格';
+COMMENT ON COLUMN stock_material."unit_name" IS '单位';
+COMMENT ON COLUMN stock_material."remark" IS '备注';
+COMMENT ON COLUMN stock_material."identity_hash" IS '名称+型号+单位归一化哈希，唯一，用于去重';
+COMMENT ON COLUMN stock_material."created_at" IS '创建时间';
+COMMENT ON COLUMN stock_material."updated_at" IS '更新时间';
+COMMENT ON COLUMN stock_material."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE stock_operation IS '出入库单据头';
+COMMENT ON COLUMN stock_operation."id" IS '主键';
+COMMENT ON COLUMN stock_operation."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_operation."operation_no" IS '单据编号，项目内唯一';
+COMMENT ON COLUMN stock_operation."operation_type" IS '出入库方向';
+COMMENT ON COLUMN stock_operation."occurred_at" IS '业务发生时间（必填，无默认值）';
+COMMENT ON COLUMN stock_operation."business_reason" IS '业务原因';
+COMMENT ON COLUMN stock_operation."receiver_unit" IS '领用单位';
+COMMENT ON COLUMN stock_operation."receiver_name" IS '领用人';
+COMMENT ON COLUMN stock_operation."subitem_no" IS '子项号';
+COMMENT ON COLUMN stock_operation."source_type" IS '来源：管理端/小程序/冲销/初始化';
+COMMENT ON COLUMN stock_operation."reversal_of_id" IS '被冲销单据（自引用）';
+COMMENT ON COLUMN stock_operation."client_request_id" IS '客户端请求 id，唯一，幂等键';
+COMMENT ON COLUMN stock_operation."mini_program_user_name_snapshot" IS '小程序提交人姓名快照';
+COMMENT ON COLUMN stock_operation."created_at" IS '创建时间';
+COMMENT ON COLUMN stock_operation."updated_at" IS '更新时间';
+COMMENT ON COLUMN stock_operation."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE purchase_material IS '申购计划物资行';
+COMMENT ON COLUMN purchase_material."id" IS '主键';
+COMMENT ON COLUMN purchase_material."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_material."plan_no" IS '计划编号，项目内唯一';
+COMMENT ON COLUMN purchase_material."plan_date" IS '计划日期';
+COMMENT ON COLUMN purchase_material."material_code" IS '物资编码；NULL 即未编码';
+COMMENT ON COLUMN purchase_material."category" IS '分类';
+COMMENT ON COLUMN purchase_material."urgency" IS '紧急程度';
+COMMENT ON COLUMN purchase_material."demand_department" IS '需求部门';
+COMMENT ON COLUMN purchase_material."name" IS '名称';
+COMMENT ON COLUMN purchase_material."model_spec" IS '型号规格';
+COMMENT ON COLUMN purchase_material."unit_name" IS '单位';
+COMMENT ON COLUMN purchase_material."actual_demand_person" IS '实际需求人';
+COMMENT ON COLUMN purchase_material."purchase_responsible" IS '采购负责人';
+COMMENT ON COLUMN purchase_material."planned_qty" IS '计划数量';
+COMMENT ON COLUMN purchase_material."usage" IS '用途';
+COMMENT ON COLUMN purchase_material."subitem_no" IS '子项号';
+COMMENT ON COLUMN purchase_material."remark" IS '备注';
+COMMENT ON COLUMN purchase_material."stock_material_id" IS '关联二级库物资';
+COMMENT ON COLUMN purchase_material."status" IS '计划状态，接口序列化为 正常 / 暂不申购 / 已归档';
+COMMENT ON COLUMN purchase_material."created_at" IS '创建时间';
+COMMENT ON COLUMN purchase_material."updated_at" IS '更新时间';
+COMMENT ON COLUMN purchase_material."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE stock_balance IS '物资库存余额';
+COMMENT ON COLUMN stock_balance."stock_material_id" IS '主键，1:1 关联物资';
+COMMENT ON COLUMN stock_balance."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_balance."quantity" IS '当前余额';
+COMMENT ON COLUMN stock_balance."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON COLUMN stock_balance."updated_at" IS '更新时间';
+COMMENT ON TABLE stock_material_image IS '二级库物资图片关联';
+COMMENT ON COLUMN stock_material_image."material_id" IS '主键之一，关联物资';
+COMMENT ON COLUMN stock_material_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_material_image."file_id" IS '主键之一，关联文件';
+COMMENT ON COLUMN stock_material_image."sort_order" IS '展示排序';
+COMMENT ON TABLE stock_replenishment_policy IS '补库策略（最低库存阈值）';
+COMMENT ON COLUMN stock_replenishment_policy."stock_material_id" IS '主键，1:1 关联物资';
+COMMENT ON COLUMN stock_replenishment_policy."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_replenishment_policy."minimum_qty" IS '最低库存阈值，`CHECK (minimum_qty >= 0)`';
+COMMENT ON COLUMN stock_replenishment_policy."enabled" IS '是否启用补库策略';
+COMMENT ON COLUMN stock_replenishment_policy."created_at" IS '创建时间';
+COMMENT ON COLUMN stock_replenishment_policy."updated_at" IS '更新时间';
+COMMENT ON COLUMN stock_replenishment_policy."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE purchase_material_image IS '申购计划图片关联';
+COMMENT ON COLUMN purchase_material_image."material_id" IS '主键之一，关联申购计划';
+COMMENT ON COLUMN purchase_material_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_material_image."file_id" IS '主键之一，关联文件';
+COMMENT ON COLUMN purchase_material_image."sort_order" IS '展示排序';
+COMMENT ON TABLE purchase_plan_template IS '周期性申购计划模板';
+COMMENT ON COLUMN purchase_plan_template."id" IS '主键';
+COMMENT ON COLUMN purchase_plan_template."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_plan_template."material_code" IS '物资编码；NULL 即未编码';
+COMMENT ON COLUMN purchase_plan_template."category" IS '分类';
+COMMENT ON COLUMN purchase_plan_template."urgency" IS '紧急程度';
+COMMENT ON COLUMN purchase_plan_template."demand_department" IS '需求部门';
+COMMENT ON COLUMN purchase_plan_template."name" IS '名称';
+COMMENT ON COLUMN purchase_plan_template."model_spec" IS '型号规格';
+COMMENT ON COLUMN purchase_plan_template."unit_name" IS '单位';
+COMMENT ON COLUMN purchase_plan_template."actual_demand_person" IS '实际需求人';
+COMMENT ON COLUMN purchase_plan_template."purchase_responsible" IS '采购负责人';
+COMMENT ON COLUMN purchase_plan_template."planned_qty" IS '计划数量';
+COMMENT ON COLUMN purchase_plan_template."usage" IS '用途';
+COMMENT ON COLUMN purchase_plan_template."subitem_no" IS '子项号';
+COMMENT ON COLUMN purchase_plan_template."remark" IS '备注';
+COMMENT ON COLUMN purchase_plan_template."stock_material_id" IS '关联二级库物资';
+COMMENT ON COLUMN purchase_plan_template."created_at" IS '创建时间';
+COMMENT ON COLUMN purchase_plan_template."updated_at" IS '更新时间';
+COMMENT ON COLUMN purchase_plan_template."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE purchase_plan_template_image IS '计划模板图片关联';
+COMMENT ON COLUMN purchase_plan_template_image."plan_id" IS '主键之一，关联计划模板';
+COMMENT ON COLUMN purchase_plan_template_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_plan_template_image."file_id" IS '主键之一，关联文件';
+COMMENT ON COLUMN purchase_plan_template_image."sort_order" IS '展示排序';
+COMMENT ON TABLE purchase_request_line IS '申购记录物资行（含计划快照）';
+COMMENT ON COLUMN purchase_request_line."id" IS '主键';
+COMMENT ON COLUMN purchase_request_line."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_request_line."purchase_request_id" IS '所属申购记录头';
+COMMENT ON COLUMN purchase_request_line."purchase_material_id" IS '来源申购计划（计划删除后置空）';
+COMMENT ON COLUMN purchase_request_line."plan_no_snapshot" IS '计划编号快照';
+COMMENT ON COLUMN purchase_request_line."plan_date_snapshot" IS '计划日期快照';
+COMMENT ON COLUMN purchase_request_line."material_code_snapshot" IS '物资编码快照；NULL 即未编码';
+COMMENT ON COLUMN purchase_request_line."category_snapshot" IS '分类快照';
+COMMENT ON COLUMN purchase_request_line."demand_department_snapshot" IS '需求部门快照';
+COMMENT ON COLUMN purchase_request_line."material_name_snapshot" IS '名称快照';
+COMMENT ON COLUMN purchase_request_line."model_spec_snapshot" IS '型号规格快照';
+COMMENT ON COLUMN purchase_request_line."unit_name_snapshot" IS '单位快照';
+COMMENT ON COLUMN purchase_request_line."actual_demand_person_snapshot" IS '实际需求人快照';
+COMMENT ON COLUMN purchase_request_line."purchase_responsible_snapshot" IS '采购负责人快照';
+COMMENT ON COLUMN purchase_request_line."plan_remark_snapshot" IS '计划备注快照';
+COMMENT ON COLUMN purchase_request_line."stock_material_id_snapshot" IS '关联二级库物资 id 快照（无外键）';
+COMMENT ON COLUMN purchase_request_line."purchase_qty" IS '申购数量，`CHECK (purchase_qty > 0)`';
+COMMENT ON COLUMN purchase_request_line."status" IS '申购状态文本（普通字符串列，非 ENUM）';
+COMMENT ON COLUMN purchase_request_line."usage" IS '用途';
+COMMENT ON COLUMN purchase_request_line."usage_hash" IS '`usage` 的 SHA-256 前 32 位，参与唯一键';
+COMMENT ON COLUMN purchase_request_line."subitem_no" IS '子项号';
+COMMENT ON COLUMN purchase_request_line."trace_no" IS '追溯号';
+COMMENT ON COLUMN purchase_request_line."salesperson" IS '业务员';
+COMMENT ON COLUMN purchase_request_line."contract_sign_date" IS '合同签订日期（物资级）';
+COMMENT ON COLUMN purchase_request_line."unit_price" IS '单价（人民币，物资级；平台同步只补空值，也可人工填写）';
+COMMENT ON COLUMN purchase_request_line."created_at" IS '创建时间';
+COMMENT ON COLUMN purchase_request_line."updated_at" IS '更新时间';
+COMMENT ON COLUMN purchase_request_line."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE purchase_request_line_image IS '申购记录行图片关联';
+COMMENT ON COLUMN purchase_request_line_image."line_id" IS '主键之一，关联申购记录行';
+COMMENT ON COLUMN purchase_request_line_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN purchase_request_line_image."file_id" IS '主键之一，关联文件';
+COMMENT ON COLUMN purchase_request_line_image."sort_order" IS '展示排序';
+COMMENT ON TABLE stock_operation_line IS '出入库单据明细行';
+COMMENT ON COLUMN stock_operation_line."id" IS '主键';
+COMMENT ON COLUMN stock_operation_line."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN stock_operation_line."operation_id" IS '所属单据头';
+COMMENT ON COLUMN stock_operation_line."stock_material_id" IS '物资（与 `operation_id` 组合唯一）';
+COMMENT ON COLUMN stock_operation_line."quantity" IS '本次数量，`CHECK (quantity > 0)`';
+COMMENT ON COLUMN stock_operation_line."remaining_qty" IS '剩余可冲销数量';
+COMMENT ON COLUMN stock_operation_line."before_qty" IS '操作前余额';
+COMMENT ON COLUMN stock_operation_line."after_qty" IS '操作后余额';
+COMMENT ON COLUMN stock_operation_line."material_name_snapshot" IS '名称快照';
+COMMENT ON COLUMN stock_operation_line."model_spec_snapshot" IS '型号规格快照';
+COMMENT ON COLUMN stock_operation_line."unit_name_snapshot" IS '单位快照';
+COMMENT ON COLUMN stock_operation_line."created_at" IS '创建时间';
+COMMENT ON COLUMN stock_operation_line."updated_at" IS '更新时间';
+COMMENT ON COLUMN stock_operation_line."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE memo IS '个人备忘录';
+COMMENT ON COLUMN memo."id" IS '主键';
+COMMENT ON COLUMN memo."title" IS '标题';
+COMMENT ON COLUMN memo."content" IS '正文纯文本';
+COMMENT ON COLUMN memo."created_by" IS '归属用户（不可为空）';
+COMMENT ON COLUMN memo."created_at" IS '创建时间';
+COMMENT ON COLUMN memo."updated_at" IS '更新时间';
+COMMENT ON COLUMN memo."version" IS '乐观锁版本号（每次更新 +1）';
+COMMENT ON TABLE hazard_unit IS '隐患责任单位（单位与责任人一一对应）';
+COMMENT ON COLUMN hazard_unit."id" IS '主键';
+COMMENT ON COLUMN hazard_unit."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN hazard_unit."name" IS '单位名称（唯一）';
+COMMENT ON COLUMN hazard_unit."person" IS '责任人（与单位一一对应，登记隐患时快照到隐患）';
+COMMENT ON COLUMN hazard_unit."remark" IS '备注';
+COMMENT ON COLUMN hazard_unit."enabled" IS '0=停用（登记下拉不可选）1=启用';
+COMMENT ON COLUMN hazard_unit."created_at" IS '创建时间';
+COMMENT ON COLUMN hazard_unit."updated_at" IS '更新时间';
+COMMENT ON COLUMN hazard_unit."version" IS '乐观锁版本';
+COMMENT ON TABLE hazard_type IS '隐患类型（一行一个「大类 + 小类」组合）';
+COMMENT ON COLUMN hazard_type."id" IS '主键';
+COMMENT ON COLUMN hazard_type."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN hazard_type."major" IS '大类';
+COMMENT ON COLUMN hazard_type."minor" IS '小类';
+COMMENT ON COLUMN hazard_type."created_at" IS '创建时间';
+COMMENT ON COLUMN hazard_type."updated_at" IS '更新时间';
+COMMENT ON COLUMN hazard_type."version" IS '乐观锁版本';
+COMMENT ON TABLE hazard IS '隐患台账主表（检查信息 + 责任人快照 + 整改状态）';
+COMMENT ON COLUMN hazard."id" IS '主键';
+COMMENT ON COLUMN hazard."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN hazard."inspection_area" IS '检查区域';
+COMMENT ON COLUMN hazard."inspection_date" IS '检查日期';
+COMMENT ON COLUMN hazard."inspector" IS '检查人员：网页端登记缺省为「电气自查」，小程序登记缺省为当前小程序用户姓名';
+COMMENT ON COLUMN hazard."description" IS '隐患描述';
+COMMENT ON COLUMN hazard."suggestion" IS '建议整改方案';
+COMMENT ON COLUMN hazard."hazard_unit_id" IS '责任单位';
+COMMENT ON COLUMN hazard."person" IS '责任人快照（登记时取自单位，之后单位换人不回写）';
+COMMENT ON COLUMN hazard."due_date" IS '要求完成整改时间（缺省 = 检查日期 + 7 天）';
+COMMENT ON COLUMN hazard."recheck_person" IS '复查人员（缺省同检查人员）';
+COMMENT ON COLUMN hazard."rectify_person" IS '整改员工（可选）';
+COMMENT ON COLUMN hazard."status" IS '整改状态：待整改 / 整改受阻 / 已整改';
+COMMENT ON COLUMN hazard."hazard_type_id" IS '隐患类型（「大类+小类」组合行）';
+COMMENT ON COLUMN hazard."level" IS '隐患等级：一般隐患 / 重大隐患';
+COMMENT ON COLUMN hazard."remark" IS '备注';
+COMMENT ON COLUMN hazard."client_request_id" IS '小程序登记的幂等键（形如 `mp-<时间戳>-<随机串>`）；网页端登记为空，非空即表示小程序登记';
+COMMENT ON COLUMN hazard."created_at" IS '创建时间';
+COMMENT ON COLUMN hazard."updated_at" IS '更新时间';
+COMMENT ON COLUMN hazard."version" IS '乐观锁版本';
+COMMENT ON TABLE hazard_before_image IS '隐患「整改前」图片关联';
+COMMENT ON COLUMN hazard_before_image."hazard_id" IS '隐患（与 `file_id` 组合主键）';
+COMMENT ON COLUMN hazard_before_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN hazard_before_image."file_id" IS '图片对象';
+COMMENT ON COLUMN hazard_before_image."sort_order" IS '展示顺序（按上传顺序）';
+COMMENT ON TABLE hazard_after_image IS '隐患「整改后」图片关联';
+COMMENT ON COLUMN hazard_after_image."hazard_id" IS '隐患（与 `file_id` 组合主键）';
+COMMENT ON COLUMN hazard_after_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN hazard_after_image."file_id" IS '图片对象';
+COMMENT ON COLUMN hazard_after_image."sort_order" IS '展示顺序';
+COMMENT ON TABLE ledger_tag IS '台账标签节点（自引用邻接表，至多 3 层）';
+COMMENT ON COLUMN ledger_tag."id" IS '主键';
+COMMENT ON COLUMN ledger_tag."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN ledger_tag."parent_id" IS '上级标签；NULL 表示根节点（该节点层级 1，全树至多 3 层）';
+COMMENT ON COLUMN ledger_tag."name" IS '标签名称（同一层级下唯一，由服务端校验）';
+COMMENT ON COLUMN ledger_tag."remark" IS '备注（节点悬停浮层展示）';
+COMMENT ON COLUMN ledger_tag."created_at" IS '创建时间';
+COMMENT ON COLUMN ledger_tag."updated_at" IS '更新时间';
+COMMENT ON COLUMN ledger_tag."version" IS '乐观锁版本';
+COMMENT ON TABLE ledger_tag_image IS '台账标签图片关联';
+COMMENT ON COLUMN ledger_tag_image."tag_id" IS '标签（与 `file_id` 组合主键）';
+COMMENT ON COLUMN ledger_tag_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN ledger_tag_image."file_id" IS '图片对象';
+COMMENT ON COLUMN ledger_tag_image."sort_order" IS '展示顺序（按上传顺序，每个标签最多 9 张）';
+COMMENT ON TABLE ledger IS '台账记录（名称 / 型号 / 子项号 / 数量 / 单位 / 用途 / 备注 / 标签）';
+COMMENT ON COLUMN ledger."id" IS '主键';
+COMMENT ON COLUMN ledger."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN ledger."name" IS '名称';
+COMMENT ON COLUMN ledger."model_spec" IS '型号';
+COMMENT ON COLUMN ledger."subitem_no" IS '子项号（技改项目下的子项编号，可留空；PATCH 传空串即清空）';
+COMMENT ON COLUMN ledger."quantity" IS '数量（整数件数，按台 / 套 / 件统计）';
+COMMENT ON COLUMN ledger."unit_name" IS '单位；列表与数量合并展示（如「12 台」），因此必填';
+COMMENT ON COLUMN ledger."usage" IS '用途';
+COMMENT ON COLUMN ledger."remark" IS '备注';
+COMMENT ON COLUMN ledger."tag_ids" IS '标签 id，英文逗号分隔（如 `''3,12,15''`），空串 = 未挂标签；写入时由服务端校验 id 存在并去重、升序规范化，单条记录最多 20 个标签';
+COMMENT ON COLUMN ledger."created_at" IS '创建时间';
+COMMENT ON COLUMN ledger."updated_at" IS '更新时间';
+COMMENT ON COLUMN ledger."version" IS '乐观锁版本';
+COMMENT ON TABLE ledger_image IS '台账记录图片关联';
+COMMENT ON COLUMN ledger_image."ledger_id" IS '台账记录（与 `file_id` 组合主键）';
+COMMENT ON COLUMN ledger_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN ledger_image."file_id" IS '图片对象';
+COMMENT ON COLUMN ledger_image."sort_order" IS '展示顺序（按上传顺序，每条记录最多 9 张）';
+COMMENT ON TABLE work_task IS '工作任务（活）：名称 / 状态 / 计划起止 / 工作内容 / 备注';
+COMMENT ON COLUMN work_task."id" IS '主键';
+COMMENT ON COLUMN work_task."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN work_task."name" IS '任务名称（同一项目内唯一，重名由服务端返回 409 `DUPLICATE_WORK_TASK`）';
+COMMENT ON COLUMN work_task."description" IS '工作内容（PATCH 传空串即清空）';
+COMMENT ON COLUMN work_task."status" IS '任务状态（接口按中文取值「未开始 / 进行中 / 已完成 / 已暂停」输出，人工维护、不做流转校验）';
+COMMENT ON COLUMN work_task."plan_start_date" IS '计划开始日期';
+COMMENT ON COLUMN work_task."plan_end_date" IS '计划结束日期';
+COMMENT ON COLUMN work_task."remark" IS '备注（备件、工作票、停机窗口等）';
+COMMENT ON COLUMN work_task."created_at" IS '创建时间';
+COMMENT ON COLUMN work_task."updated_at" IS '更新时间';
+COMMENT ON COLUMN work_task."version" IS '乐观锁版本';
+COMMENT ON TABLE work_task_image IS '任务图片关联';
+COMMENT ON COLUMN work_task_image."task_id" IS '任务（与 `file_id` 组合主键）';
+COMMENT ON COLUMN work_task_image."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN work_task_image."file_id" IS '图片对象';
+COMMENT ON COLUMN work_task_image."sort_order" IS '展示顺序（按上传顺序，每个任务最多 9 张）';
+COMMENT ON TABLE work_record IS '工作记录：任务 + 起止（上午 / 下午）+ 参与人员 + 备注';
+COMMENT ON COLUMN work_record."id" IS '主键';
+COMMENT ON COLUMN work_record."project_id" IS '所属项目（业务数据按项目隔离）';
+COMMENT ON COLUMN work_record."task_id" IS '所属任务（外键 RESTRICT：删任务前必须先删记录）';
+COMMENT ON COLUMN work_record."start_date" IS '工作记录开始日期';
+COMMENT ON COLUMN work_record."start_half" IS '开始半日（AM / PM）';
+COMMENT ON COLUMN work_record."end_date" IS '工作记录结束日期';
+COMMENT ON COLUMN work_record."end_half" IS '结束半日（AM / PM）';
+COMMENT ON COLUMN work_record."participants" IS '参与人员姓名，以「、」连接（最多 20 人 × 24 字含分隔符 = 500 字符）；写入时服务端按顿号 / 逗号 / 分号 / 空格等分隔符拆分、去空、去重保序后规范化落库，读接口还原成姓名列表';
+COMMENT ON COLUMN work_record."remark" IS '这一步的具体内容、交接说明等';
+COMMENT ON COLUMN work_record."created_at" IS '创建时间';
+COMMENT ON COLUMN work_record."updated_at" IS '更新时间';
+COMMENT ON COLUMN work_record."version" IS '乐观锁版本';

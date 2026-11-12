@@ -1,6 +1,6 @@
 # 数据模型
 
-PostgreSQL 16+，共 **43 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+PostgreSQL 16+，共 **42 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -51,7 +51,7 @@ flowchart LR
 | 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
-| 接口令牌 | `user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
+| 接口令牌 | `app_user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
 | 小程序功能模式 | `MiniProgramFeatureMode` | 每个小程序功能页三档：`disabled`（隐藏入口）/ `query_only`（只读）/ `read_write`（可写：库存可出库、隐患可登记与跟进）；只作用于小程序前端，后端数据接口不按它鉴权 |
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.LogEvent`） |
 | MCP | `server/internal/api/mcp` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应的用户角色鉴权 |
@@ -105,7 +105,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     R["数据生命周期"]
-    R --> C["created_by 指向 user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
+    R --> C["created_by 指向 app_user.id<br/>导入任务、导出任务、分享链接（可空）、备忘录（必填，随用户删除级联）"]
     R --> U["没有 updated_by 列"]
     R --> S["业务表没有软删除列：删除一律物理删除（唯一例外是 file_object.deleted_at，附件的软删标记：保留 7 天后第一个凌晨 2 点复查清除）"]
     R --> D["ON DELETE CASCADE：库存余额、补库策略、九张图片关联表随主表一并删除"]
@@ -148,14 +148,14 @@ erDiagram
 
 每张表都有 `project_id BIGINT NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。Go 侧清单登记在 `server/internal/model` 的 `ProjectScopedTables`（新增业务表必须同时改 `init.sql`、Go 表结构体并登记），业务 SQL 显式按 `project_id` 过滤。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
-### 全局表（11 张，不隔离）
+### 全局表（10 张，不隔离）
 
-`project`、`user`、`role`、`user_role`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
+`project`、`app_user`、`role`、`user_role`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
 
 | 表 | 不隔离的原因 |
 | --- | --- |
 | `project` | 项目自身就是隔离维度 |
-| `user`、`role`、`user_role`、`mini_program_identity` | 用户与身份绑定属用户管理 |
+| `app_user`、`role`、`user_role` | 用户与角色绑定属用户管理 |
 | `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、后台主 tab 可见性、AI 搜索配置、Webhook 渠道与订阅） |
 | `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
@@ -203,10 +203,9 @@ flowchart TD
 
 | 表名 | Go 结构体（`model.<名称>`） | 中文含义 | 所属域 |
 | --- | --- | --- | --- |
-| `user` | `User` | 统一用户（管理端 + 小程序端，角色在 `user_role`，权限取并集） | 用户 |
+| `app_user` | `User` | 统一用户（管理端 + 小程序端，微信 openid 直存；角色在 `user_role`，权限取并集） | 用户 |
 | `role` | `Role` | 角色（RBAC）：权限键数组，`*` 通配全部权限 | 用户 |
 | `user_role` | `UserRole` | 用户 ↔ 角色多对多（一个用户可挂多个角色） | 用户 |
-| `mini_program_identity` | `MiniProgramIdentity` | 用户与微信 OpenID 的绑定关系（`user_id` → 统一用户） | 用户 |
 | `system_setting` | `SystemSetting` | 系统设置键值表 | 系统配置 |
 | `business_event_log` | `BusinessEventLog` | 业务事件日志（状态流转与数据快照） | 系统配置 |
 | `webhook_channel` | `WebhookChannel` | Webhook 渠道配置（飞书 / 钉钉） | Webhook |
@@ -252,16 +251,15 @@ flowchart TD
 
 ```mermaid
 erDiagram
-    user ||--o{ memo : "拥有备忘录"
-    user ||--o{ share_link : "创建分享链接"
-    user ||--o{ excel_import_job : "创建导入任务"
-    user ||--o{ excel_export_job : "创建导出任务"
-    user ||--o{ user_role : "挂载角色（多角色，权限取并集）"
+    app_user ||--o{ memo : "拥有备忘录"
+    app_user ||--o{ share_link : "创建分享链接"
+    app_user ||--o{ excel_import_job : "创建导入任务"
+    app_user ||--o{ excel_export_job : "创建导出任务"
+    app_user ||--o{ user_role : "挂载角色（多角色，权限取并集）"
     role ||--o{ user_role : "被用户挂载"
-    user ||--o{ mini_program_identity : "绑定微信身份（一个用户多个 AppID 身份）"
 ```
 
-`user` 是管理端与小程序端的统一账号：角色挂在 `user_role`（可多个，权限取并集），接口令牌双列存储（查询用哈希 + 回显用密文）；小程序来源用户（`source = 'MINI_PROGRAM'`）`username` 由 openid 派生、无密码。
+`app_user` 是管理端与小程序端的统一账号：角色挂在 `user_role`（可多个，权限取并集），接口令牌双列存储（查询用哈希 + 回显用密文）；小程序只有一个小程序（单个 app_id），微信 openid 直接存 `app_user.wechat_openid`（管理端用户为 NULL，小程序用户非空且唯一），小程序来源用户（`source = 'MINI_PROGRAM'`）`username` 由 openid 派生、无密码。
 
 ### 二级库库存
 
@@ -300,9 +298,9 @@ erDiagram
 
 ```mermaid
 erDiagram
-    user ||--o{ excel_import_job : "创建导入任务"
-    user ||--o{ excel_export_job : "创建导出任务"
-    user ||--o{ share_link : "创建分享链接"
+    app_user ||--o{ excel_import_job : "创建导入任务"
+    app_user ||--o{ excel_export_job : "创建导出任务"
+    app_user ||--o{ share_link : "创建分享链接"
     file_object ||--o{ excel_export_job : "导出结果文件"
 ```
 
@@ -368,17 +366,18 @@ erDiagram
 
 | 表 | 字段 | 类型 | NULL | 默认值 | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| `user` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`） |
-| `user` | `password_hash` | VARCHAR(255) | 否 | `''` | Argon2id 密码哈希（小程序来源用户为空串，不可密码登录） |
-| `user` | `api_token_hash` | VARCHAR(64) | 否 | `''` | 接口令牌 SHA-256，非空值唯一（部分唯一索引，小程序用户为空串），用于认证查找 |
-| `user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
-| `user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
-| `user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
-| `user` | `source` | ENUM('MANAGE', 'MINI_PROGRAM') | 否 | `'MANAGE'` | 账号来源，接口同名字符串 |
-| `user` | `enabled` | TINYINT(1) | 否 | 1 | 账号是否启用 |
-| `user` | `last_used_at` | DATETIME(6) | 是 | NULL | 小程序来源用户的最近登录时间（登录即刷新，不自增 version） |
-| `user` | *索引 / 外键* | — | — | — | 索引 `pk_user(id)`；唯一 `uq_user_username(username)`；部分唯一索引 `uq_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`；外键：无 |
+| `app_user` | `id` | BIGSERIAL | 否 | 自增 | 主键 |
+| `app_user` | `username` | VARCHAR(64) | 否 | 无 | 登录名，唯一（小程序来源用户由 openid 派生 `wx_<hash>`） |
+| `app_user` | `password_hash` | VARCHAR(255) | 否 | `''` | Argon2id 密码哈希（小程序来源用户为空串，不可密码登录） |
+| `app_user` | `api_token_hash` | VARCHAR(64) | 否 | `''` | 接口令牌 SHA-256，非空值唯一（部分唯一索引，小程序用户为空串），用于认证查找 |
+| `app_user` | `api_token_enc` | VARCHAR(512) | 否 | `''` | 接口令牌 Fernet 密文，供读取接口解密回显 |
+| `app_user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
+| `app_user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
+| `app_user` | `source` | usersource 枚举（MANAGE / MINI_PROGRAM） | 否 | `'MANAGE'` | 账号来源，接口同名字符串 |
+| `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid） |
+| `app_user` | `enabled` | BOOLEAN | 否 | TRUE | 账号是否启用 |
+| `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 小程序来源用户的最近登录时间（登录即刷新，不自增 version） |
+| `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
 | `role` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `role` | `name` | VARCHAR(64) | 否 | 无 | 角色名，唯一（内置角色为系统种子） |
 | `role` | `description` | VARCHAR(255) | 否 | `''` | 角色说明 |
@@ -387,12 +386,7 @@ erDiagram
 | `role` | *索引 / 外键* | — | — | — | 索引 `pk_role(id)`；唯一 `uq_role_name(name)`；外键：无 |
 | `user_role` | `user_id` | BIGINT UNSIGNED | 否 | 无 | 关联用户 |
 | `user_role` | `role_id` | BIGINT UNSIGNED | 否 | 无 | 关联角色 |
-| `user_role` | *索引 / 外键* | — | — | — | 索引 `pk_user_role(id)`；唯一 `uq_user_role_user_id_role_id(user_id, role_id)`；外键 `user_id → user.id`、`role_id → role.id`，均 `ON DELETE CASCADE` |
-| `mini_program_identity` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `mini_program_identity` | `user_id` | BIGINT UNSIGNED | 否 | 无 | 关联统一用户（source = MINI_PROGRAM） |
-| `mini_program_identity` | `app_id` | VARCHAR(64) | 否 | 无 | 小程序 AppID |
-| `mini_program_identity` | `wechat_openid` | VARCHAR(128) | 否 | 无 | 微信 OpenID |
-| `mini_program_identity` | *索引 / 外键* | — | — | — | 索引 `pk_mini_program_identity(id)`；唯一 `uq_mini_program_identity_app_id(app_id, wechat_openid)`、`uq_mini_program_identity_user_id(user_id, app_id)`；外键 `user_id → user.id`，`ON DELETE CASCADE` |
+| `user_role` | *索引 / 外键* | — | — | — | 索引 `pk_user_role(id)`；唯一 `uq_user_role_user_id_role_id(user_id, role_id)`；外键 `user_id → app_user.id`、`role_id → role.id`，均 `ON DELETE CASCADE` |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
 | `system_setting` | `setting_value` | JSON | 否 | 无 | 设置值（JSON 文档） |
 | `system_setting` | *索引 / 外键* | — | — | — | 索引 `pk_system_setting(setting_key)`；外键：无 |
@@ -458,7 +452,7 @@ erDiagram
 | `excel_import_job` | `created_by` | BIGINT UNSIGNED | 是 | NULL | 创建人 |
 | `excel_import_job` | `started_at` | DATETIME(6) | 是 | NULL | 开始执行时间 |
 | `excel_import_job` | `finished_at` | DATETIME(6) | 是 | NULL | 结束时间 |
-| `excel_import_job` | *索引 / 外键* | — | — | — | 索引 `pk_excel_import_job(id)`、`ix_excel_import_job_type_status(import_type, status, id)`；外键 `created_by → user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `excel_import_job` | *索引 / 外键* | — | — | — | 索引 `pk_excel_import_job(id)`、`ix_excel_import_job_type_status(import_type, status, id)`；外键 `created_by → app_user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `excel_export_job` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `excel_export_job` | `export_type` | VARCHAR(32) | 否 | 无 | 导出类型标识 |
 | `excel_export_job` | `status` | ENUM('PENDING','RUNNING','SUCCEEDED','FAILED') | 否 | `'PENDING'` | 任务状态 |
@@ -471,7 +465,7 @@ erDiagram
 | `excel_export_job` | `created_by` | BIGINT UNSIGNED | 是 | NULL | 创建人 |
 | `excel_export_job` | `started_at` | DATETIME(6) | 是 | NULL | 开始执行时间 |
 | `excel_export_job` | `finished_at` | DATETIME(6) | 是 | NULL | 结束时间 |
-| `excel_export_job` | *索引 / 外键* | — | — | — | 索引 `pk_excel_export_job(id)`、`ix_excel_export_job_type_status(export_type, status, id)`；外键 `created_by → user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `excel_export_job` | *索引 / 外键* | — | — | — | 索引 `pk_excel_export_job(id)`、`ix_excel_export_job_type_status(export_type, status, id)`；外键 `created_by → app_user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `material_code_library` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `material_code_library` | `material_code` | VARCHAR(64) | 否 | 无 | 物资编码，项目内唯一 |
 | `material_code_library` | `name` | VARCHAR(128) | 是 | NULL | 名称 |
@@ -489,7 +483,7 @@ erDiagram
 | `share_link` | `columns` | JSON | 是 | NULL | 展示列键名数组；NULL 表示全部默认列 |
 | `share_link` | `expires_at` | DATETIME(6) | 是 | NULL | 失效时间；NULL 表示永久有效 |
 | `share_link` | `created_by` | BIGINT UNSIGNED | 是 | NULL | 创建人 |
-| `share_link` | *索引 / 外键* | — | — | — | 索引 `pk_share_link(id)`；唯一 `uq_share_link_token(token)`；`ix_share_link_expires_at(expires_at)`、`ix_share_link_share_type(share_type)`；外键 `created_by → user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `share_link` | *索引 / 外键* | — | — | — | 索引 `pk_share_link(id)`；唯一 `uq_share_link_token(token)`；`ix_share_link_expires_at(expires_at)`、`ix_share_link_share_type(share_type)`；外键 `created_by → app_user.id`（无 `ON DELETE` 子句，即 RESTRICT） |
 | `huaxing_inventory` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
 | `huaxing_inventory` | `first_inbound_date` | DATE | 是 | NULL | 首次入库日期 |
 | `huaxing_inventory` | `warehouse` | VARCHAR(128) | 是 | NULL | 仓库 |
@@ -779,7 +773,7 @@ erDiagram
 | `memo` | `title` | VARCHAR(64) | 否 | `'未命名备忘录'` | 标题 |
 | `memo` | `content` | TEXT | 否 | 无 | 正文纯文本 |
 | `memo` | `created_by` | BIGINT UNSIGNED | 否 | 无 | 归属用户（不可为空） |
-| `memo` | *索引 / 外键* | — | — | — | 索引 `pk_memo(id)`、`ix_memo_created_by(created_by)`；外键 `created_by → user.id`，`ON DELETE CASCADE` |
+| `memo` | *索引 / 外键* | — | — | — | 索引 `pk_memo(id)`、`ix_memo_created_by(created_by)`；外键 `created_by → app_user.id`，`ON DELETE CASCADE` |
 
 </TabsContent>
 
@@ -881,7 +875,7 @@ flowchart LR
 
 
 ### 种子数据
-`init.sql` 有三段 `INSERT`：先插入项目表里的默认项目，再插入 `hazard_type` 隐患类型字典（带上 `project_id`），最后插入 `user` 表 6 个初始账号。
+`init.sql` 有三段 `INSERT`：先插入项目表里的默认项目，再插入 `hazard_type` 隐患类型字典（带上 `project_id`），最后插入 `app_user` 表 7 个初始账号。
 
 #### 隐患类型字典
 
@@ -900,7 +894,7 @@ flowchart LR
 
 #### 初始账号
 
-`user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON CONFLICT (username) DO UPDATE display_name/role/enabled`）：
+`app_user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON CONFLICT (username) DO UPDATE display_name/role/enabled`）：
 
 | `username` | `display_name` | 挂载角色（`user_role`） | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
@@ -912,7 +906,7 @@ flowchart LR
 | `work` | 工作管理员 | 工单读写 | 1 | `sha256(gen_random_uuid())` |
 | `readonly` | 只读用户 | 全局只读 | 1 | `sha256(gen_random_uuid())` |
 
-七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
+七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `app_user` 三表外，其余 39 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 
 约束名直接写在 `init.sql` 里，按统一前缀命名，Go 代码不生成 DDL：
 

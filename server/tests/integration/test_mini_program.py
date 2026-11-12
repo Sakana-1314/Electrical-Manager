@@ -65,14 +65,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert profile.json()["requires_profile"] is False
     assert profile.json()["registration_token"] is None
     created_user = profile.json()["user"]
-    assert created_user["identities"] == [
-        {
-            "id": created_user["identities"][0]["id"],
-            "app_id": "wx-test-primary",
-            "wechat_openid": "openid-for-scan-user",
-            "created_at": created_user["identities"][0]["created_at"],
-        }
-    ]
+    assert created_user["wechat_openid"] == "openid-for-scan-user"
     assert created_user["display_name"] == "扫码出库员"
     assert created_user["department_name"] == "华星检修维护部电气车间"
     # 新注册用户默认只读：出库是写操作，给该用户挂「二级库读写」角色（权限并集生效）。
@@ -399,9 +392,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     )
     assert rebound.status_code == 200, rebound.text
     assert rebound.json()["user"]["display_name"] == "重新绑定姓名"
-    assert rebound.json()["user"]["identities"][0]["wechat_openid"] == (
-        "openid-for-scan-user"
-    )
+    assert rebound.json()["user"]["wechat_openid"] == "openid-for-scan-user"
 
 
 @pytest.mark.asyncio
@@ -503,10 +494,8 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     )
     assert merged.status_code == 200, merged.text
     assert merged.json()["id"] == target_user["id"]
-    assert {item["app_id"] for item in merged.json()["identities"]} == {
-        "wx-test-primary",
-        "wx-test-secondary",
-    }
+    # 一个小程序只有一个 openid：合并保留目标账号的 openid（来源微信号随后解绑）
+    assert merged.json()["wechat_openid"] == target_user["wechat_openid"]
 
     users = await client.get("/api/v1/users", params={"keyword": "同一人员"}, headers=admin)
     assert users.status_code == 200
@@ -519,12 +508,14 @@ async def test_admin_can_merge_accounts_from_different_mini_programs(
     assert operation.status_code == 200
     assert operation.json()["mini_program_user_name"] == "同一人员"
 
+    # 单 openid 语义：合并保留目标账号的微信绑定，来源微信号解绑——再次登录按新用户走建档流程。
     secondary_login = await client.post(
         "/api/v1/mini-program/auth/wx-login",
         json={"code": "same-person-2", "app_id": "wx-test-secondary"},
     )
     assert secondary_login.status_code == 200
-    assert secondary_login.json()["user"]["id"] == target_user["id"]
+    assert secondary_login.json()["user"] is None
+    assert secondary_login.json()["requires_profile"] is True
 
 
 @pytest.mark.asyncio

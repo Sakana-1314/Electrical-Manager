@@ -4692,28 +4692,6 @@ export interface components {
             subitem_no_name?: string | null;
         };
         /**
-         * MiniProgramIdentityRead
-         * @example {
-         *       "id": 11,
-         *       "app_id": "wx9d2f1c8a5b3e4701",
-         *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-         *       "created_at": "2026-08-14T10:20:00+08:00"
-         *     }
-         */
-        MiniProgramIdentityRead: {
-            /** Id */
-            id: number;
-            /** App Id */
-            app_id: string;
-            /** Wechat Openid */
-            wechat_openid: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-        };
-        /**
          * MiniProgramInventoryItemRead
          * @example {
          *       "uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
@@ -4875,20 +4853,7 @@ export interface components {
          *         "display_name": "孙浩宇",
          *         "department_name": "检修维护部电气自动化车间",
          *         "enabled": true,
-         *         "identities": [
-         *           {
-         *             "id": 11,
-         *             "app_id": "wx9d2f1c8a5b3e4701",
-         *             "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-         *             "created_at": "2026-08-14T10:20:00+08:00"
-         *           },
-         *           {
-         *             "id": 12,
-         *             "app_id": "wx4b7e0a6d2c918f35",
-         *             "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-         *             "created_at": "2026-09-02T09:35:00+08:00"
-         *           }
-         *         ],
+         *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *         "created_at": "2026-08-14T10:20:00+08:00",
          *         "updated_at": "2026-09-02T09:35:00+08:00",
          *         "last_used_at": "2026-09-13T09:12:00+08:00",
@@ -5566,14 +5531,7 @@ export interface components {
          *         "warehouse:read"
          *       ],
          *       "last_used_at": "2026-09-13T09:12:00+08:00",
-         *       "identities": [
-         *         {
-         *           "id": 11,
-         *           "app_id": "wx9d2f1c8a5b3e4701",
-         *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-         *           "created_at": "2026-08-14T10:20:00+08:00"
-         *         }
-         *       ],
+         *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *       "created_at": "2026-08-14T10:20:00+08:00",
          *       "updated_at": "2026-09-02T09:35:00+08:00",
          *       "version": 2
@@ -5598,8 +5556,11 @@ export interface components {
             permissions: string[];
             /** Last Used At */
             last_used_at?: string | null;
-            /** Identities */
-            identities: components["schemas"]["MiniProgramIdentityRead"][];
+            /**
+             * Wechat Openid
+             * @description 微信 OpenID（仅小程序来源用户；一个小程序一个 openid）
+             */
+            wechat_openid: string | null;
             /**
              * Created At
              * Format: date-time
@@ -7844,20 +7805,7 @@ export interface components {
          *           "display_name": "孙浩宇",
          *           "department_name": "检修维护部电气自动化车间",
          *           "enabled": true,
-         *           "identities": [
-         *             {
-         *               "id": 11,
-         *               "app_id": "wx9d2f1c8a5b3e4701",
-         *               "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-         *               "created_at": "2026-08-14T10:20:00+08:00"
-         *             },
-         *             {
-         *               "id": 12,
-         *               "app_id": "wx4b7e0a6d2c918f35",
-         *               "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-         *               "created_at": "2026-09-02T09:35:00+08:00"
-         *             }
-         *           ],
+         *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *           "created_at": "2026-08-14T10:20:00+08:00",
          *           "updated_at": "2026-09-02T09:35:00+08:00",
          *           "last_used_at": "2026-09-13T09:12:00+08:00",
@@ -7885,14 +7833,7 @@ export interface components {
          *           "display_name": "李建军",
          *           "department_name": "检修维护部电气自动化车间",
          *           "enabled": true,
-         *           "identities": [
-         *             {
-         *               "id": 21,
-         *               "app_id": "wx9d2f1c8a5b3e4701",
-         *               "wechat_openid": "oHXNI-2c4d6e8f0a1b3c5d",
-         *               "created_at": "2026-08-14T10:26:00+08:00"
-         *             }
-         *           ],
+         *           "wechat_openid": "oHXNI-2c4d6e8f0a1b3c5d",
          *           "created_at": "2026-08-14T10:26:00+08:00",
          *           "updated_at": "2026-08-14T10:26:00+08:00",
          *           "last_used_at": "2026-09-06T14:05:00+08:00",
@@ -7920,14 +7861,7 @@ export interface components {
          *           "display_name": "王海涛",
          *           "department_name": "检修维护部电气自动化车间",
          *           "enabled": false,
-         *           "identities": [
-         *             {
-         *               "id": 31,
-         *               "app_id": "wx9d2f1c8a5b3e4701",
-         *               "wechat_openid": "oHXNI-3e5f7a9b1c2d4e6f",
-         *               "created_at": "2026-08-15T08:12:00+08:00"
-         *             }
-         *           ],
+         *           "wechat_openid": "oHXNI-3e5f7a9b1c2d4e6f",
          *           "created_at": "2026-08-15T08:12:00+08:00",
          *           "updated_at": "2026-09-04T11:02:00+08:00",
          *           "last_used_at": "2026-08-15T08:12:00+08:00",
@@ -12602,10 +12536,10 @@ export interface components {
             /** Roles */
             roles: components["schemas"]["UserRoleRead"][];
             /**
-             * Identities
-             * @description 微信身份（小程序来源用户；管理端来源用户为空数组）
+             * Wechat Openid
+             * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
              */
-            identities?: components["schemas"]["MiniProgramIdentityRead"][];
+            wechat_openid?: string | null;
             /**
              * Permissions
              * @description 角色权限并集（通配已展开）
@@ -12722,10 +12656,10 @@ export interface components {
             /** Roles */
             roles: components["schemas"]["UserRoleRead"][];
             /**
-             * Identities
-             * @description 微信身份（小程序来源用户；管理端来源用户为空数组）
+             * Wechat Openid
+             * @description 微信 OpenID（仅小程序来源用户；管理端用户为 null）
              */
-            identities?: components["schemas"]["MiniProgramIdentityRead"][];
+            wechat_openid?: string | null;
             /**
              * Permissions
              * @description 角色权限并集（通配已展开）
@@ -22174,20 +22108,7 @@ export interface operations {
                      *         "display_name": "孙浩宇",
                      *         "department_name": "检修维护部电气自动化车间",
                      *         "enabled": true,
-                     *         "identities": [
-                     *           {
-                     *             "id": 11,
-                     *             "app_id": "wx9d2f1c8a5b3e4701",
-                     *             "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *             "created_at": "2026-08-14T10:20:00+08:00"
-                     *           },
-                     *           {
-                     *             "id": 12,
-                     *             "app_id": "wx4b7e0a6d2c918f35",
-                     *             "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *             "created_at": "2026-09-02T09:35:00+08:00"
-                     *           }
-                     *         ],
+                     *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
@@ -22324,20 +22245,7 @@ export interface operations {
                      *       "display_name": "孙浩宇",
                      *       "department_name": "检修维护部电气自动化车间",
                      *       "enabled": true,
-                     *       "identities": [
-                     *         {
-                     *           "id": 11,
-                     *           "app_id": "wx9d2f1c8a5b3e4701",
-                     *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *           "created_at": "2026-08-14T10:20:00+08:00"
-                     *         },
-                     *         {
-                     *           "id": 12,
-                     *           "app_id": "wx4b7e0a6d2c918f35",
-                     *           "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *           "created_at": "2026-09-02T09:35:00+08:00"
-                     *         }
-                     *       ],
+                     *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
@@ -22599,20 +22507,7 @@ export interface operations {
                      *         "display_name": "孙浩宇",
                      *         "department_name": "检修维护部电气自动化车间",
                      *         "enabled": true,
-                     *         "identities": [
-                     *           {
-                     *             "id": 11,
-                     *             "app_id": "wx9d2f1c8a5b3e4701",
-                     *             "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *             "created_at": "2026-08-14T10:20:00+08:00"
-                     *           },
-                     *           {
-                     *             "id": 12,
-                     *             "app_id": "wx4b7e0a6d2c918f35",
-                     *             "wechat_openid": "oHXNI-1a2b3c4d5e6f7a8b",
-                     *             "created_at": "2026-09-02T09:35:00+08:00"
-                     *           }
-                     *         ],
+                     *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
@@ -33735,14 +33630,7 @@ export interface operations {
                      *         "warehouse:read",
                      *         "warehouse:write"
                      *       ],
-                     *       "identities": [
-                     *         {
-                     *           "id": 11,
-                     *           "app_id": "wx-test-primary",
-                     *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *           "created_at": "2026-08-14T10:20:00+08:00"
-                     *         }
-                     *       ],
+                     *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *       "enabled": true,
                      *       "version": 5,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"

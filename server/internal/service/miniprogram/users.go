@@ -17,11 +17,10 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/webhook"
 )
 
-// User 是带微信身份与角色的小程序用户（统一 user 表里 source = MINI_PROGRAM 的账号）。
+// User 是带角色的小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号；openid 直存本表）。
 type User struct {
 	model.User
-	Identities []model.MiniProgramIdentity
-	Roles      []schema.UserRoleRead
+	Roles []schema.UserRoleRead
 }
 
 func accountDisabled() error {
@@ -34,10 +33,6 @@ func registrationDisabled() error {
 
 // UserRead 对应 MiniProgramUserRead.model_validate(user)：roles / permissions 供小程序端按权限门禁。
 func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
-	identities := make([]schema.MiniProgramIdentityRead, len(u.Identities))
-	for i, it := range u.Identities {
-		identities[i] = schema.MiniProgramIdentityRead{ID: it.ID, AppID: it.AppID, WechatOpenid: it.WechatOpenid, CreatedAt: jtype.NewUTC(it.CreatedAt)}
-	}
 	permissions, err := role.UserPermissionKeys(s, u.ID)
 	// 权限汇总失败按空权限处理（fail-closed）；正常路径不会走到这里。
 	if err != nil {
@@ -45,36 +40,10 @@ func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
 	}
 	return schema.MiniProgramUserRead{
 		ID: u.ID, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Enabled: u.Enabled,
-		Source: u.Source, Roles: u.Roles, Permissions: permissions,
-		LastUsedAt: common.UTCPtr(u.LastUsedAt), Identities: identities,
-		CreatedAt: jtype.NewUTC(u.CreatedAt), UpdatedAt: jtype.NewUTC(u.UpdatedAt), Version: u.Version,
+		Source: u.Source, WechatOpenid: u.WechatOpenid, Roles: u.Roles, Permissions: permissions,
+		LastUsedAt: common.UTCPtr(u.LastUsedAt),
+		CreatedAt:  jtype.NewUTC(u.CreatedAt), UpdatedAt: jtype.NewUTC(u.UpdatedAt), Version: u.Version,
 	}
-}
-
-// loadIdentities 批量加载微信身份（一次 IN 查询，按 app_id 排序）。
-func loadIdentities(s *db.Session, users []*User) error {
-	if len(users) == 0 {
-		return nil
-	}
-	ids := make([]int64, len(users))
-	for i, u := range users {
-		ids[i] = u.ID
-	}
-	var rows []model.MiniProgramIdentity
-	if err := s.SelectIn(&rows, "SELECT "+model.ColsMiniProgramIdentity+" FROM mini_program_identity WHERE user_id IN (?) ORDER BY app_id, id", ids); err != nil {
-		return err
-	}
-	by := map[int64][]model.MiniProgramIdentity{}
-	for _, r := range rows {
-		by[r.UserID] = append(by[r.UserID], r)
-	}
-	for _, u := range users {
-		u.Identities = by[u.ID]
-		if u.Identities == nil {
-			u.Identities = []model.MiniProgramIdentity{}
-		}
-	}
-	return nil
 }
 
 // loadRoles 批量加载用户角色。
@@ -93,9 +62,9 @@ func loadRoles(s *db.Session, users []*User) error {
 	return nil
 }
 
-// getUser 对应 session.get(User, id)（含身份与角色）；不存在返回 nil。
+// getUser 对应 session.get(User, id)（含角色）；不存在返回 nil。
 func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
-	q := "SELECT " + model.ColsUser + " FROM `user` WHERE id = ? AND source = ?"
+	q := "SELECT " + model.ColsUser + " FROM app_user WHERE id = ? AND source = ?"
 	if forUpdate {
 		q += " FOR UPDATE"
 	}
@@ -105,9 +74,6 @@ func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
 		return nil, err
 	}
 	u := &User{User: m}
-	if err := loadIdentities(s, []*User{u}); err != nil {
-		return nil, err
-	}
 	if err := loadRoles(s, []*User{u}); err != nil {
 		return nil, err
 	}
@@ -117,12 +83,9 @@ func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
 // GetUser 按 id 读取小程序用户（含身份与角色），不存在返回 nil。
 func GetUser(s *db.Session, id int64) (*User, error) { return getUser(s, id, false) }
 
-// LoadUser 为已鉴权的小程序用户补齐身份与角色（/me 等接口用）。
+// LoadUser 为已鉴权的小程序用户补齐角色（/me 等接口用）。
 func LoadUser(s *db.Session, m *model.User) (*User, error) {
 	u := &User{User: *m}
-	if err := loadIdentities(s, []*User{u}); err != nil {
-		return nil, err
-	}
 	if err := loadRoles(s, []*User{u}); err != nil {
 		return nil, err
 	}
@@ -134,32 +97,27 @@ func markLastUsed(s *db.Session, u *User) error {
 	now := common.UTCNow()
 	u.LastUsedAt = &now
 	u.UpdatedAt = now
-	_, err := s.Exec("UPDATE `user` SET last_used_at = ?, updated_at = ? WHERE id = ?", now, now, u.ID)
+	_, err := s.Exec("UPDATE app_user SET last_used_at = ?, updated_at = ? WHERE id = ?", now, now, u.ID)
 	return err
 }
 
-// findUserByIdentity 按 (app_id, openid) 查找用户（含身份与角色），不存在返回 nil。
-func findUserByIdentity(s *db.Session, appID, openid string) (*User, error) {
+// findUserByOpenid 按微信 openid 查用户（单小程序，openid 直接落在 app_user 表），不存在返回 nil。
+func findUserByOpenid(s *db.Session, openid string) (*User, error) {
 	var m model.User
-	ok, err := s.Find(&m, "SELECT "+model.Prefixed("u", model.ColsUser)+" FROM `user` u "+
-		"JOIN mini_program_identity i ON i.user_id = u.id WHERE i.app_id = ? AND i.wechat_openid = ? LIMIT 1",
-		appID, openid)
+	ok, err := s.Find(&m, "SELECT "+model.ColsUser+" FROM app_user WHERE wechat_openid = ? LIMIT 1", openid)
 	if err != nil || !ok {
 		return nil, err
 	}
 	u := &User{User: m}
-	if err := loadIdentities(s, []*User{u}); err != nil {
-		return nil, err
-	}
 	if err := loadRoles(s, []*User{u}); err != nil {
 		return nil, err
 	}
 	return u, nil
 }
 
-// miniProgramUsername 由 (app_id, openid) 派生唯一用户名（openid 本身可含特殊字符，这里哈希定长化）。
-func miniProgramUsername(appID, openid string) string {
-	sum := md5.Sum([]byte(appID + ":" + openid))
+// miniProgramUsername 由 openid 派生唯一用户名（openid 本身可含特殊字符，这里哈希定长化）。
+func miniProgramUsername(openid string) string {
+	sum := md5.Sum([]byte(openid))
 	return "wx_" + hex.EncodeToString(sum[:8])
 }
 
@@ -174,7 +132,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	if err != nil {
 		return nil, "", "", err
 	}
-	user, err := findUserByIdentity(s, effectiveAppID, openid)
+	user, err := findUserByOpenid(s, openid)
 	if err != nil {
 		return nil, "", "", err
 	}
@@ -203,7 +161,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 // 新用户是否默认启用由系统设置决定（默认启用 = 只读权限；默认禁用 = 待管理员审核启用）。
 // 已存在时按一次登录处理且不覆盖姓名 / 部门。
 func RegisterUser(s *db.Session, appID, openid, displayName, departmentName string) (*User, error) {
-	existing, err := findUserByIdentity(s, appID, openid)
+	existing, err := findUserByOpenid(s, openid)
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +188,9 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 	}
 	now := common.UTCNow()
 	user := &User{User: model.User{
-		Username: miniProgramUsername(appID, openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
+		Username: miniProgramUsername(openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
 		DisplayName: displayName, DepartmentName: departmentName, Source: domain.UserSourceMiniProgram,
-		Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
+		WechatOpenid: &openid, Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	conflict := func(err error) error {
 		if db.IsIntegrity(err) {
@@ -240,9 +198,9 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		}
 		return err
 	}
-	id, err := s.Insert("INSERT INTO `user` (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, wechat_openid, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.Username, user.PasswordHash, user.APITokenHash, user.APITokenEnc, user.DisplayName, user.DepartmentName,
-		user.Source, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
+		user.Source, user.WechatOpenid, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
 	if err != nil {
 		return nil, conflict(err)
 	}
@@ -257,14 +215,6 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 			return nil, err
 		}
 	}
-	identity := model.MiniProgramIdentity{UserID: id, AppID: appID, WechatOpenid: openid, CreatedAt: now, UpdatedAt: now, Version: 1}
-	identityID, err := s.Insert("INSERT INTO mini_program_identity (user_id, app_id, wechat_openid, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?)",
-		identity.UserID, identity.AppID, identity.WechatOpenid, identity.CreatedAt, identity.UpdatedAt, identity.Version)
-	if err != nil {
-		return nil, conflict(err)
-	}
-	identity.ID = identityID
-	user.Identities = []model.MiniProgramIdentity{identity}
 	if err := loadRoles(s, []*User{user}); err != nil {
 		return nil, err
 	}

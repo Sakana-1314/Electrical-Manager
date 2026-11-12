@@ -302,20 +302,6 @@ type Memo struct {
 const TableMemo = "memo"
 const ColsMemo = `"id", "title", "content", "created_by", "created_at", "updated_at", "version"`
 
-// MiniProgramIdentity ↔ 表 `mini_program_identity`。user_id 指向统一用户（source = MINI_PROGRAM）。
-type MiniProgramIdentity struct {
-	ID           int64     `db:"id" json:"id"`
-	UserID       int64     `db:"user_id" json:"user_id"`
-	AppID        string    `db:"app_id" json:"app_id"`
-	WechatOpenid string    `db:"wechat_openid" json:"wechat_openid"`
-	CreatedAt    time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
-	Version      int64     `db:"version" json:"version"`
-}
-
-const TableMiniProgramIdentity = "mini_program_identity"
-const ColsMiniProgramIdentity = `"id", "user_id", "app_id", "wechat_openid", "created_at", "updated_at", "version"`
-
 // Role ↔ 表 `role`。permissions 为权限键数组（JSONB），`*` 通配全部权限、`模块:*` 通配模块内权限；
 // 用户可挂多个角色（user_role），实际权限取并集。is_system 的内置角色不可改名 / 删除。
 type Role struct {
@@ -632,9 +618,9 @@ type SystemSetting struct {
 const TableSystemSetting = "system_setting"
 const ColsSystemSetting = `"setting_key", "setting_value", "version", "updated_at"`
 
-// User ↔ 表 `user`。
-// User ↔ 表 `user`。管理端（MANAGE，用户名密码 / 接口令牌登录）与小程序端（MINI_PROGRAM，
-// 微信 openid 身份、username 由 openid 派生且无密码）统一账号；角色在 user_role，权限取并集。
+// User ↔ 表 `app_user`。管理端（MANAGE，用户名密码 / 接口令牌登录）与小程序端（MINI_PROGRAM，
+// 微信 openid 登录、username 由 openid 派生且无密码）统一账号；角色在 user_role，权限取并集。
+// 小程序只有一个，wechat_openid 直接落本表（管理端用户为 NULL，小程序用户非空且唯一）。
 type User struct {
 	ID             int64      `db:"id" json:"id"`
 	Username       string     `db:"username" json:"username"`
@@ -644,6 +630,7 @@ type User struct {
 	DisplayName    string     `db:"display_name" json:"display_name"`
 	DepartmentName string     `db:"department_name" json:"department_name"`
 	Source         string     `db:"source" json:"source"` // enum: MANAGE, MINI_PROGRAM
+	WechatOpenid   *string    `db:"wechat_openid" json:"wechat_openid"`
 	Enabled        bool       `db:"enabled" json:"enabled"`
 	LastUsedAt     *time.Time `db:"last_used_at" json:"last_used_at"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
@@ -651,8 +638,8 @@ type User struct {
 	Version        int64      `db:"version" json:"version"`
 }
 
-const TableUser = "user"
-const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "source", "enabled", "last_used_at", "created_at", "updated_at", "version"`
+const TableUser = "app_user"
+const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "source", "wechat_openid", "enabled", "last_used_at", "created_at", "updated_at", "version"`
 
 // WebhookChannel ↔ 表 `webhook_channel`。
 type WebhookChannel struct {

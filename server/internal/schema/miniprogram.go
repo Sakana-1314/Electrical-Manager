@@ -12,29 +12,22 @@ import (
 
 // ---------------- 小程序用户（管理端） ----------------
 
-// MiniProgramIdentityRead 是小程序用户在某个小程序下的微信身份。
-type MiniProgramIdentityRead struct {
-	ID           int64         `json:"id"`
-	AppID        string        `json:"app_id"`
-	WechatOpenid string        `json:"wechat_openid"`
-	CreatedAt    jtype.UTCTime `json:"created_at"`
-}
-
-// MiniProgramUserRead 是小程序用户（统一 user 表里 source = MINI_PROGRAM 的账号）。
-// last_used_at 为最近一次登录小程序的时间（历史数据为 null）；roles / permissions 供小程序端按权限门禁。
+// MiniProgramUserRead 是小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号）。
+// 小程序只有一个，微信 openid 直接落用户表（wechat_openid）。
+// last_used_at 为最近一次登录小程序的时间；roles / permissions 供小程序端按权限门禁。
 type MiniProgramUserRead struct {
-	ID             int64                     `json:"id"`
-	DisplayName    string                    `json:"display_name"`
-	DepartmentName string                    `json:"department_name"`
-	Enabled        bool                      `json:"enabled"`
-	Source         string                    `json:"source"`
-	Roles          []UserRoleRead            `json:"roles"`
-	Permissions    []string                  `json:"permissions"`
-	LastUsedAt     *jtype.UTCTime            `json:"last_used_at"`
-	Identities     []MiniProgramIdentityRead `json:"identities"`
-	CreatedAt      jtype.UTCTime             `json:"created_at"`
-	UpdatedAt      jtype.UTCTime             `json:"updated_at"`
-	Version        int64                     `json:"version"`
+	ID             int64          `json:"id"`
+	DisplayName    string         `json:"display_name"`
+	DepartmentName string         `json:"department_name"`
+	Enabled        bool           `json:"enabled"`
+	Source         string         `json:"source"`
+	WechatOpenid   *string        `json:"wechat_openid"`
+	Roles          []UserRoleRead `json:"roles"`
+	Permissions    []string       `json:"permissions"`
+	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
+	CreatedAt      jtype.UTCTime  `json:"created_at"`
+	UpdatedAt      jtype.UTCTime  `json:"updated_at"`
+	Version        int64          `json:"version"`
 }
 
 // ---------------- 登录 / 建档 ----------------

@@ -7053,15 +7053,7 @@ paths:
                   display_name: 孙浩宇
                   department_name: 检修维护部电气自动化车间
                   enabled: true
-                  identities:
-                  - id: 11
-                    app_id: wx9d2f1c8a5b3e4701
-                    wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                    created_at: '2026-08-14T10:20:00+08:00'
-                  - id: 12
-                    app_id: wx4b7e0a6d2c918f35
-                    wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                    created_at: '2026-09-02T09:35:00+08:00'
+                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
@@ -7153,15 +7145,7 @@ paths:
                 display_name: 孙浩宇
                 department_name: 检修维护部电气自动化车间
                 enabled: true
-                identities:
-                - id: 11
-                  app_id: wx9d2f1c8a5b3e4701
-                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                  created_at: '2026-08-14T10:20:00+08:00'
-                - id: 12
-                  app_id: wx4b7e0a6d2c918f35
-                  wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                  created_at: '2026-09-02T09:35:00+08:00'
+                wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                 created_at: '2026-08-14T10:20:00+08:00'
                 updated_at: '2026-09-02T09:35:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
@@ -7351,15 +7335,7 @@ paths:
                   display_name: 孙浩宇
                   department_name: 检修维护部电气自动化车间
                   enabled: true
-                  identities:
-                  - id: 11
-                    app_id: wx9d2f1c8a5b3e4701
-                    wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                    created_at: '2026-08-14T10:20:00+08:00'
-                  - id: 12
-                    app_id: wx4b7e0a6d2c918f35
-                    wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                    created_at: '2026-09-02T09:35:00+08:00'
+                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
@@ -17102,11 +17078,7 @@ paths:
                 - hazard:write
                 - warehouse:read
                 - warehouse:write
-                identities:
-                - id: 11
-                  app_id: wx-test-primary
-                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                  created_at: '2026-08-14T10:20:00+08:00'
+                wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                 enabled: true
                 version: 5
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -26703,33 +26675,6 @@ components:
         purchaser: 李振国
         purchase_department: 设备管理部
         subitem_no_name: 305-硫酸厂
-    MiniProgramIdentityRead:
-      properties:
-        id:
-          type: integer
-          title: Id
-        app_id:
-          type: string
-          title: App Id
-        wechat_openid:
-          type: string
-          title: Wechat Openid
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-      type: object
-      required:
-      - id
-      - app_id
-      - wechat_openid
-      - created_at
-      title: MiniProgramIdentityRead
-      examples:
-      - id: 11
-        app_id: wx9d2f1c8a5b3e4701
-        wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-        created_at: '2026-08-14T10:20:00+08:00'
     MiniProgramInventoryItemRead:
       properties:
         uuid:
@@ -26972,15 +26917,7 @@ components:
           display_name: 孙浩宇
           department_name: 检修维护部电气自动化车间
           enabled: true
-          identities:
-          - id: 11
-            app_id: wx9d2f1c8a5b3e4701
-            wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-            created_at: '2026-08-14T10:20:00+08:00'
-          - id: 12
-            app_id: wx4b7e0a6d2c918f35
-            wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-            created_at: '2026-09-02T09:35:00+08:00'
+          wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
@@ -27926,11 +27863,12 @@ components:
             format: date-time
           - type: 'null'
           title: Last Used At
-        identities:
-          items:
-            $ref: '#/components/schemas/MiniProgramIdentityRead'
-          type: array
-          title: Identities
+        wechat_openid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Wechat Openid
+          description: 微信 OpenID（仅小程序来源用户；一个小程序一个 openid）
         created_at:
           type: string
           format: date-time
@@ -27951,7 +27889,7 @@ components:
       - source
       - roles
       - permissions
-      - identities
+      - wechat_openid
       - created_at
       - updated_at
       - version
@@ -27970,11 +27908,7 @@ components:
         - dashboard:read
         - warehouse:read
         last_used_at: '2026-09-13T09:12:00+08:00'
-        identities:
-        - id: 11
-          app_id: wx9d2f1c8a5b3e4701
-          wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-          created_at: '2026-08-14T10:20:00+08:00'
+        wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
         created_at: '2026-08-14T10:20:00+08:00'
         updated_at: '2026-09-02T09:35:00+08:00'
         version: 2
@@ -30157,15 +30091,7 @@ components:
           display_name: 孙浩宇
           department_name: 检修维护部电气自动化车间
           enabled: true
-          identities:
-          - id: 11
-            app_id: wx9d2f1c8a5b3e4701
-            wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-            created_at: '2026-08-14T10:20:00+08:00'
-          - id: 12
-            app_id: wx4b7e0a6d2c918f35
-            wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-            created_at: '2026-09-02T09:35:00+08:00'
+          wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
@@ -30187,11 +30113,7 @@ components:
           display_name: 李建军
           department_name: 检修维护部电气自动化车间
           enabled: true
-          identities:
-          - id: 21
-            app_id: wx9d2f1c8a5b3e4701
-            wechat_openid: oHXNI-2c4d6e8f0a1b3c5d
-            created_at: '2026-08-14T10:26:00+08:00'
+          wechat_openid: oHXNI-2c4d6e8f0a1b3c5d
           created_at: '2026-08-14T10:26:00+08:00'
           updated_at: '2026-08-14T10:26:00+08:00'
           last_used_at: '2026-09-06T14:05:00+08:00'
@@ -30213,11 +30135,7 @@ components:
           display_name: 王海涛
           department_name: 检修维护部电气自动化车间
           enabled: false
-          identities:
-          - id: 31
-            app_id: wx9d2f1c8a5b3e4701
-            wechat_openid: oHXNI-3e5f7a9b1c2d4e6f
-            created_at: '2026-08-15T08:12:00+08:00'
+          wechat_openid: oHXNI-3e5f7a9b1c2d4e6f
           created_at: '2026-08-15T08:12:00+08:00'
           updated_at: '2026-09-04T11:02:00+08:00'
           last_used_at: '2026-08-15T08:12:00+08:00'
@@ -35751,12 +35669,12 @@ components:
             $ref: '#/components/schemas/UserRoleRead'
           type: array
           title: Roles
-        identities:
-          description: 微信身份（小程序来源用户；管理端来源用户为空数组）
-          items:
-            $ref: '#/components/schemas/MiniProgramIdentityRead'
-          type: array
-          title: Identities
+        wechat_openid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Wechat Openid
+          description: 微信 OpenID（仅小程序来源用户；管理端用户为 null）
         permissions:
           items:
             type: string
@@ -35893,12 +35811,12 @@ components:
             $ref: '#/components/schemas/UserRoleRead'
           type: array
           title: Roles
-        identities:
-          description: 微信身份（小程序来源用户；管理端来源用户为空数组）
-          items:
-            $ref: '#/components/schemas/MiniProgramIdentityRead'
-          type: array
-          title: Identities
+        wechat_openid:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Wechat Openid
+          description: 微信 OpenID（仅小程序来源用户；管理端用户为 null）
         permissions:
           items:
             type: string
