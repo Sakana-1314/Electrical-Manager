@@ -44,7 +44,7 @@
 | `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `service/miniprogram` |
 | `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `service/material` |
 | `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `service/dictionary` |
-| `ROLE_NOT_FOUND` | 500 | 内置「只读用户」角色缺失（种子数据被破坏） | `service/role` |
+| `ROLE_NOT_FOUND` | 500 | 内置角色缺失（种子数据被破坏，如「全局只读」） | `service/role` |
 | `INVALID_ROLES` | 422 | 存在无效的角色 id（用户保存时的角色列表校验） | `service/role` |
 | `CANNOT_MERGE_SELF` | 400 | 不能将账号合并到自身 | `service/dictionary` |
 | `USER_HAS_REFERENCES` | 409 | 该账号存在业务数据引用（导出任务 / 分享链接 / 备忘录等），无法合并或删除 | `service/dictionary` |

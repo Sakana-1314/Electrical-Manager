@@ -67,16 +67,8 @@ const (
 	SystemRoleSuperAdmin = "超级管理员"
 )
 
-// DefaultRegistrationRoleNames 小程序新用户默认挂载的角色：全部功能的只读角色。
-var DefaultRegistrationRoleNames = []string{
-	"二级库只读",
-	"申购只读",
-	"隐患只读",
-	"台账只读",
-	"工单只读",
-	"华星只读",
-	"编码库只读",
-}
+// DefaultRegistrationRoleNames 小程序新用户默认挂载的角色：全局只读（各功能查看）。
+var DefaultRegistrationRoleNames = []string{"全局只读"}
 
 // ExpandPermissions 把角色权限键展开成具体权限集合：
 // `*` → 全部目录权限；`模块:*` → 该模块全部权限；其余键原样保留。输出去重并按目录顺序排列。
