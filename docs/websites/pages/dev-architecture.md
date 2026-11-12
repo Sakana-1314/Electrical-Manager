@@ -74,7 +74,7 @@ web/src/
 ├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
 ├── api/client.ts           axios 实例、拦截器、AppError
 ├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 左下角用户菜单（桌面无顶栏；移动端仅窄导航条）
-├── layouts/UserMenu.vue    左下角用户菜单（外观 / 线路 / 项目切换 / 退出登录），桌面侧栏与移动端抽屉共用
+├── layouts/UserMenu.vue    左下角用户菜单（外观 / 线路 / 项目切换 / 用户设置 / 退出登录），桌面侧栏与移动端抽屉共用
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
 ├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限位与二级库模式过滤（纯逻辑，有单测）
@@ -186,7 +186,7 @@ web/src/
   `inventory.deleteMaterial`、`dictionaries.deleteMiniProgramUser`、`projects.deleteProject`、
   `hazards.deleteHazard`、`hazards.deleteUnit`、`hazards.deleteType`、`ledger.deleteItem`、`ledger.deleteTag`、
   `work.deleteTask`、`work.deleteRecord`。
-- `X-API-Token`：**前端当前未实现**（代码中无该请求头，接口令牌仅在「管理端用户」页展示/复制与 MCP 链接里使用）。
+- `X-API-Token`：**前端业务请求不发该头**；接口令牌在「用户管理」与左下角「用户设置」里展示/复制，并用于拼 MCP 链接。用户设置读取自己的令牌时，后端在从未生成过的情况下自动补齐一次（不轮换已有令牌）。
 - 401 处理：仅当 `status === 401 && data.code === 'INVALID_TOKEN' && 未重试过 && localStorage 有 refresh_token`
   时，调用 `renewAccessToken()`（`POST /auth/refresh`，`timeout: 30_000`）并重放原请求；并发请求共用模块级
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
@@ -229,7 +229,7 @@ web/src/
 #### `web/src/api/` 模块职责
 | 模块 | 接口域 | 职责 |
 | --- | --- | --- |
-| `auth.ts` | `/auth/login`、`/auth/refresh`、`/auth/me`、`/auth/qr-sessions*` | 登录、刷新令牌、取当前用户、创建/轮询扫码会话与小程序码地址 |
+| `auth.ts` | `/auth/login`、`/auth/refresh`、`/auth/me`、`/auth/me/api-token`、`/auth/me/password`、`/auth/qr-sessions*` | 登录、刷新令牌、取当前用户、读取自己的 MCP 令牌、修改自己的密码、创建/轮询扫码会话与小程序码地址 |
 | `inventory.ts` | `/dashboard/summary`、`/stock-materials*`、`/inventory/*` | 工作台汇总、物资档案 CRUD + 小程序码、补库策略、库存查询、低库存、出入库、流水查询/修改/冲减、补库草稿 |
 | `procurement.ts` | `/material-code-library*`、`/purchase-materials*`、`/purchase-records*`、`/excel-export-jobs/:id` | 申购计划/记录 CRUD 与批量操作、筛选选项、计划转记录、未编码物资、物料编码库导入（`table=material` 物料表 / `table=price` 价格表）与编码检查、各类导出与导出任务轮询 |
 | `purchasePlanTemplates.ts` | `/purchase-plan-templates*` | 周期性计划模板 CRUD 与「生成申购计划」 |
@@ -252,10 +252,11 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 28 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 29 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
+| `AccountSettingsModal.vue` | 用户设置弹窗：个人资料只读，展示自己的 MCP 地址 / 令牌并支持复制，只能修改密码（未设置密码的扫码账号可设置第一个密码） | props：`show: boolean`；emit：`update:show` |
 | `ColumnVisibilityPicker.vue` | 表格列显隐勾选，可选按 `storageKey` 从 `localStorage` 恢复/持久化（最后一列不允许取消） | props：`value: string[]`、`options: ColumnOption[]`、`storageKey?: string`；emit：`update:value` |
 | `ExportButton.vue` | 导出下拉按钮（Naive UI `NDropdown`），无选项或无数据时禁用 | props：`options: ExportOption[]`、`loading?`、`disabled?`（默认 false）；emit：`select: [key: string]` |
 | `ExportLoadingOverlay.vue` | 全屏「正在生成 Excel，请稍候…」遮罩 | props：`show: boolean` |
@@ -333,7 +334,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局（**桌面端无顶栏**）：左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位与 `settings.isLiteMode` 过滤：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，只保留一条 `56px` 窄导航条（菜单按钮 + 当前页标题，不放用户信息）作为抽屉入口，账号入口在抽屉左下角。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局（**桌面端无顶栏**）：左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位与 `settings.isLiteMode` 过滤：工作台、备忘录、二级库分组或精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「用户设置」（打开 `components/AccountSettingsModal.vue`，个人资料只读，可复制自己的 MCP 地址 / 令牌并修改密码）与「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，只保留一条 `56px` 窄导航条（菜单按钮 + 当前页标题，不放用户信息）作为抽屉入口，账号入口在抽屉左下角。
 
 
 

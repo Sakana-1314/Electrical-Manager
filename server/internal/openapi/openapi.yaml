@@ -274,6 +274,120 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+  /api/v1/auth/me/api-token:
+    get:
+      tags:
+      - 认证
+      summary: 我的接口令牌
+      description: 当前用户读取自己的接口令牌（用于复制 MCP 地址）；从未生成过时自动创建一次，已有令牌不轮换。
+      operationId: my_api_token_api_v1_auth_me_api_token_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiTokenRead'
+              example:
+                id: 1
+                username: admin
+                display_name: 系统管理员
+                department_name: 华星检修维护部电气车间
+                created_at: '2026-08-14T10:20:00+08:00'
+                last_used_at: '2026-09-13T09:12:00+08:00'
+                permissions:
+                - system:admin
+                - warehouse:read
+                - warehouse:write
+                - purchase:read
+                - purchase:write
+                - huaxing:read
+                - ledger:read
+                - ledger:write
+                - hazard:read
+                - hazard:write
+                - work:read
+                - work:write
+                enabled: true
+                version: 1
+                api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+  /api/v1/auth/me/password:
+    patch:
+      tags:
+      - 认证
+      summary: 修改我的密码
+      description: 当前用户修改密码；只能改密码，不能改姓名 / 部门等资料。已设置密码的账号必须提供当前密码，仅扫码登录的账号可直接设置第一个密码。
+      operationId: change_my_password_api_v1_auth_me_password_patch
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 当前密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
   /api/v1/auth/qr-sessions:
     post:
       tags:
@@ -35226,6 +35340,28 @@ components:
         - work:write
         enabled: true
         version: 1
+    PasswordChangeRequest:
+      properties:
+        current_password:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Current Password
+          description: 当前密码；尚未设置密码的账号（仅扫码登录）可省略
+        new_password:
+          type: string
+          maxLength: 128
+          minLength: 6
+          title: New Password
+      additionalProperties: false
+      type: object
+      required:
+      - new_password
+      title: PasswordChangeRequest
+      examples:
+      - current_password: '123456'
+        new_password: new-pass-123
     UserUpdate:
       properties:
         username:

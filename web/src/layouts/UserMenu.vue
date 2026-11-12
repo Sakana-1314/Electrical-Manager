@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, h, type Component as VueComponent } from 'vue'
+import { computed, h, ref, type Component as VueComponent } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
-import { LogOutOutline, PersonCircleOutline } from '@vicons/ionicons5'
+import { LogOutOutline, PersonCircleOutline, SettingsOutline } from '@vicons/ionicons5'
+import AccountSettingsModal from '@/components/AccountSettingsModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { useThemeStore } from '@/stores/theme'
@@ -33,6 +34,8 @@ const router = useRouter()
 const auth = useAuthStore()
 const project = useProjectStore()
 const theme = useThemeStore()
+/** 「用户设置」弹窗：个人资料只读，只能改密码与复制自己的 MCP 令牌。 */
+const showAccountSettings = ref(false)
 
 /** 统一用组件库图标（Naive UI 的 NIcon + @vicons/ionicons5），尺寸与居中由 n-menu 控制。 */
 const renderIcon = (icon: VueComponent) => () => h(NIcon, null, { default: () => h(icon) })
@@ -75,12 +78,17 @@ const userMenuOptions = computed<MenuOption[]>(() => [
     renderIcon,
   ),
   ...buildBackendMenuSubmenu(backendCandidates(), activeBackendIndex(), renderIcon),
-  { type: 'divider', key: 'logout-divider' },
+  { type: 'divider', key: 'account-divider' },
+  { label: '用户设置', key: 'account-settings', icon: renderIcon(SettingsOutline) },
   { label: '退出登录', key: 'logout', icon: renderIcon(LogOutOutline) },
 ])
 
 /** 用户菜单选择：退出登录 + 外观三档 + 项目切换 + 线路切换。 */
 function onUserMenuSelect(key: string) {
+  if (key === 'account-settings') {
+    showAccountSettings.value = true
+    return
+  }
   if (key === 'logout') {
     logout()
     return
@@ -133,6 +141,7 @@ function logout() {
       <span v-if="!collapsed" class="user-menu-caret" aria-hidden="true" />
     </button>
   </n-dropdown>
+  <AccountSettingsModal v-model:show="showAccountSettings" />
 </template>
 
 <style scoped>

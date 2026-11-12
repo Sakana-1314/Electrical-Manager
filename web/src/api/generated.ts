@@ -23,6 +23,8 @@ export type SecondaryWarehouseMode = components['schemas']['SecondaryWarehouseMo
 /* ===== 接口类型（映射自 openapi schema） ===== */
 export type ApiError = components['schemas']['ApiError']
 export type User = components['schemas']['UserRead']
+export type UserApiTokenRead = components['schemas']['UserApiTokenRead']
+export type PasswordChangeRequest = components['schemas']['PasswordChangeRequest']
 export type UserCreate = components['schemas']['UserCreate']
 export type UserUpdate = components['schemas']['UserUpdate']
 /* 权限目录项：bit 是权限位图里的数值（用户权限按位判断） */
@@ -148,9 +150,7 @@ export interface Page<T> {
 }
 
 /** 用户 + 接口令牌（后端 UserApiTokenRead；令牌加密入库，读取接口每次解密回显，旧数据可能为 null） */
-export interface ManagedUser extends User {
-  api_token: string | null
-}
+export type ManagedUser = UserApiTokenRead
 
 /** AI 搜索扩展（输入/结果） */
 export interface AiSearchExpandInput {
