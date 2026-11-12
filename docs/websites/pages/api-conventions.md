@@ -69,7 +69,7 @@
 | 200 / 201 / 204 | 成功 | 创建 201、无内容 204 |
 | 400 | 请求无法满足 | 业务校验失败、`NOT_FOUND`、`ROUTE_NOT_FOUND`、多数上游封装错误 |
 | 401 | 未认证或凭证无效 | `INVALID_TOKEN`、`UNAUTHORIZED`、`INVALID_CREDENTIALS` |
-| 403 | 权限不足 / 账号禁用 | `FORBIDDEN`、`ACCOUNT_DISABLED` |
+| 403 | 权限不足 / 账号禁用 | `PERMISSION_DENIED`、`FORBIDDEN`、`ACCOUNT_DISABLED` |
 | 409 | 版本冲突 / 数据约束冲突 / 状态机不允许 | `VERSION_CONFLICT`、`DATA_CONFLICT`、`INVALID_STATUS_TRANSITION` |
 | 413 | 请求体过大 | `IMAGE_TOO_LARGE` |
 | 422 | 请求参数校验失败 | `VALIDATION_ERROR` |

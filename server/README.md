@@ -2,9 +2,9 @@
 
 ## AI Agent / MCP 服务
 
-每个管理端用户都有一个永不过期的 UUID v4 接口令牌。超级管理员可在“管理端用户”页面一键
+每个管理端用户都有一个永不过期的 UUID v4 接口令牌。系统管理员可在“管理端用户”页面一键
 复制令牌或带令牌的 MCP 地址，也可重新生成令牌；重新生成后旧令牌立即失效。普通业务接口支持
-以下两种等价写法，接口权限与令牌所属用户的角色一致：
+以下两种等价写法，接口权限与令牌所属用户的权限位一致：
 
 ```text
 X-API-Token: <接口令牌>
@@ -22,14 +22,14 @@ https://<服务域名>/api/v1/mcp/?token=<接口令牌>
 
 服务提供五个工具：
 
-- `system_whoami`：确认令牌对应的用户、角色与当前项目。
+- `system_whoami`：确认令牌对应的用户、权限键与当前项目。
 - `projects_list`：列出全部项目。
 - `operations_list`：按标签或关键字查询可用业务操作。
 - `operation_describe`：读取某个操作的参数和响应契约。
 - `operation_call`：调用已登记的业务接口；文件上传和下载使用 Base64。
 
 MCP 不接受 SQL、数据库表名或任意 URL，只能按 OpenAPI 中登记的 `operationId` 调用管理端业务
-接口。每次调用仍经过原有的参数校验、角色权限、乐观锁、事务和审计逻辑；只读用户不能借助 MCP
+接口。每次调用仍经过原有的参数校验、权限位、乐观锁、事务和审计逻辑；只读用户不能借助 MCP
 执行写操作。登录、令牌续期以及需要微信身份的小程序专用接口不会暴露给 MCP。MCP 地址本身包含
 永久令牌，应视为密码保存并仅通过 HTTPS 使用。
 
@@ -37,7 +37,7 @@ MCP 不接受 SQL、数据库表名或任意 URL，只能按 OpenAPI 中登记�
 
 上传接口会在 `file_object` 记录提交成功后才返回 201；提交失败时同步回收已写入的磁盘文件。业务关联表只保存 `file_id`，文件名固定为 `<file_id>.png`，前端按 ID 拼接 `/api/v1/files/images/{file_id}`。
 
-- `GET /api/v1/files/images/orphans?older_than_hours=24`：超级管理员查看未引用记录、无记录磁盘文件及磁盘缺失记录。
+- `GET /api/v1/files/images/orphans?older_than_hours=24`：系统管理员查看未引用记录、无记录磁盘文件及磁盘缺失记录。
 - `DELETE /api/v1/files/images/orphans?older_than_hours=24`：删除未引用记录和无记录磁盘文件；默认 24 小时保护期，避免误删刚上传但尚未绑定的图片。
 
 数据库结构以 `../docs/references/database/init.sql` 为准，业务服务不会在运行时修改数据库结构。
@@ -57,7 +57,7 @@ Go 1.26 + Gin + pgx（database/sql + sqlx）+ PostgreSQL 16+，实现细节见 [
 | `internal/model` | 表结构体（与 init.sql 一致） |
 | `internal/web` | Gin 之上的薄封装：依赖链、参数校验（422 错误体）、提交事务后再写响应、统一错误体 |
 | `internal/db` | 请求级事务会话、项目隔离上下文、SQL 方言转换、语句耗时统计、错误分类 |
-| `internal/auth` | 管理端 / 小程序鉴权、角色与项目依赖 |
+| `internal/auth` | 管理端 / 小程序鉴权、权限位与项目依赖 |
 | `internal/openapi` | 内嵌的接口契约副本（`docs/openapi.yaml`），供 `/api/v1/openapi.json`、`/api/docs` 与 MCP 使用 |
 | `templates` | Excel 导出模板（运行时目录由 `APP_TEMPLATE_DIR` 指定） |
 | `tests` | 黑盒契约测试（pytest 通过 HTTP 调用运行中的服务，直连同一 PostgreSQL 校验落库结果） |

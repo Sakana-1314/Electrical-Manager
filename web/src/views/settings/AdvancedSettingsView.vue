@@ -1,18 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import { aiSearchApi } from '@/api/aiSearch'
 import { systemSettingsApi } from '@/api/systemSettings'
 import LoadingMask from '@/components/LoadingMask.vue'
-import { inventoryModeOptionsFor } from '@/utils/settings'
-import { ALL_NAV_FEATURES_VISIBLE, NAV_FEATURES } from '@/utils/navigation'
-import type {
-  MiniProgramFeatureMode,
-  SecondaryWarehouseMode,
-  WebFeatureVisibility,
-  WebhookEventType,
-  WebhookPlatform,
-} from '@/api/generated'
+import type { SecondaryWarehouseMode, WebhookEventType, WebhookPlatform } from '@/api/generated'
 
 const message = useMessage()
 const loading = ref(false)
@@ -29,37 +21,10 @@ const codeEnvOptions = [
   { label: '体验版', value: 'trial' },
   { label: '正式版', value: 'release' },
 ]
-const inventoryModeLabels: Record<MiniProgramFeatureMode, string> = {
-  disabled: '禁用',
-  query_only: '仅查询',
-  read_write: '可读写',
-}
-const readOnlyModeOptions: Array<{ label: string; value: MiniProgramFeatureMode }> = [
-  { label: '禁用', value: 'disabled' },
-  { label: '仅查询', value: 'query_only' },
-]
-// 隐患管理三档都开放：可读写 = 小程序里能登记隐患、更新整改状态并上传整改图片。
-const hazardsModeOptions: Array<{ label: string; value: MiniProgramFeatureMode }> = [
-  { label: '禁用', value: 'disabled' },
-  { label: '仅查询', value: 'query_only' },
-  { label: '可读写', value: 'read_write' },
-]
 const secondaryWarehouseModeOptions: Array<{ label: string; value: SecondaryWarehouseMode }> = [
   { label: '完整模式', value: 'full' },
   { label: '精简模式', value: 'lite' },
 ]
-// 后台主 tab 的可见性：与小程序档位同一套下拉框写法（显示 / 隐藏），不用开关。
-const webFeatureVisibilityOptions: Array<{ label: string; value: boolean }> = [
-  { label: '显示', value: true },
-  { label: '隐藏', value: false },
-]
-// 精简模式下小程序端「二级库库存」仅提供 禁用/仅查询（不支持出入库）。
-const inventoryModeOptions = computed<Array<{ label: string; value: MiniProgramFeatureMode }>>(() =>
-  inventoryModeOptionsFor(form.secondary_warehouse_mode).map((value) => ({
-    label: inventoryModeLabels[value],
-    value,
-  })),
-)
 const form = reactive({
   endpoint: '',
   api_key: '',
@@ -71,29 +36,9 @@ const form = reactive({
   mini_program_registration_enabled: true,
   mini_program_new_user_enabled: true,
   image_acceleration_server_url: '',
-  inventory_mode: 'read_write' as MiniProgramFeatureMode,
-  huaxing_inventory_mode: 'query_only' as MiniProgramFeatureMode,
-  purchase_plans_mode: 'query_only' as MiniProgramFeatureMode,
-  purchase_records_mode: 'query_only' as MiniProgramFeatureMode,
-  material_codes_mode: 'query_only' as MiniProgramFeatureMode,
-  ledger_mode: 'query_only' as MiniProgramFeatureMode,
-  hazards_mode: 'read_write' as MiniProgramFeatureMode,
   secondary_warehouse_mode: 'full' as SecondaryWarehouseMode,
-  // 后台可见功能：主 tab 逐个选「显示 / 隐藏」（系统管理不在列表里，始终显示）
-  web_features: { ...ALL_NAV_FEATURES_VISIBLE } as WebFeatureVisibility,
   version: 0,
 })
-// 全部主 tab 都隐藏等于把侧栏关空：本地先拦一次（服务端读/写也会归一到全部显示）。
-const allWebFeaturesHidden = computed(() =>
-  NAV_FEATURES.every((feature) => !form.web_features[feature.key]),
-)
-// 精简模式下二级库不支持「可读写」：归一化 inventory_mode，避免下拉选中值不在选项内。
-function normalizeInventoryMode() {
-  if (form.secondary_warehouse_mode === 'lite' && form.inventory_mode === 'read_write') {
-    form.inventory_mode = 'query_only'
-  }
-}
-watch(() => form.secondary_warehouse_mode, normalizeInventoryMode)
 const miniProgramAppOptions = computed(() =>
   form.mini_program_app_ids.map((appId) => ({ label: appId, value: appId })),
 )
@@ -142,7 +87,6 @@ async function load() {
       systemSettingsApi.webhooks(),
     ])
     Object.assign(form, data)
-    normalizeInventoryMode()
     for (const channel of webhookChannels) {
       Object.assign(webhookForms[channel.platform], channel)
     }
@@ -156,10 +100,6 @@ async function load() {
 async function save() {
   if (form.enabled && (!form.endpoint.trim() || !form.model.trim() || !form.api_key.trim())) {
     message.error('请填写端点、模型和 API Key')
-    return
-  }
-  if (allWebFeaturesHidden.value) {
-    message.error('至少保留一个可见的主 tab')
     return
   }
   for (const platform of webhookPlatforms) {
@@ -185,15 +125,7 @@ async function save() {
       mini_program_registration_enabled: form.mini_program_registration_enabled,
       mini_program_new_user_enabled: form.mini_program_new_user_enabled,
       image_acceleration_server_url: form.image_acceleration_server_url.trim(),
-      inventory_mode: form.inventory_mode,
-      huaxing_inventory_mode: form.huaxing_inventory_mode,
-      purchase_plans_mode: form.purchase_plans_mode,
-      purchase_records_mode: form.purchase_records_mode,
-      material_codes_mode: form.material_codes_mode,
-      ledger_mode: form.ledger_mode,
-      hazards_mode: form.hazards_mode,
       secondary_warehouse_mode: form.secondary_warehouse_mode,
-      web_features: { ...form.web_features },
       version: form.version,
     })
     Object.assign(form, data)
@@ -344,7 +276,7 @@ onMounted(load)
               <n-switch v-model:value="form.mini_program_new_user_enabled" />
               <span>{{
                 form.mini_program_new_user_enabled
-                  ? '默认只读（挂「只读用户」角色）'
+                  ? '默认只读（各功能查看权限）'
                   : '默认禁用（待管理员审核启用）'
               }}</span>
             </div>
@@ -364,63 +296,20 @@ onMounted(load)
         </n-form>
       </n-card>
 
-      <n-card class="settings-card feature-status-card" title="功能状态" :bordered="false">
-        <div class="feature-groups">
-          <div class="feature-group">
-            <div class="feature-group-title">后台</div>
-            <n-form label-placement="left" label-width="132">
-              <n-form-item label="二级库运行模式">
-                <n-select
-                  v-model:value="form.secondary_warehouse_mode"
-                  :options="secondaryWarehouseModeOptions"
-                />
-              </n-form-item>
-              <n-form-item
-                v-for="feature in NAV_FEATURES"
-                :key="feature.key"
-                :label="feature.label"
-              >
-                <n-select
-                  v-model:value="form.web_features[feature.key]"
-                  :options="webFeatureVisibilityOptions"
-                />
-              </n-form-item>
-            </n-form>
-          </div>
-
-          <div class="feature-group">
-            <div class="feature-group-title">小程序端</div>
-            <n-form label-placement="left" label-width="132">
-              <n-form-item label="二级库库存">
-                <n-select v-model:value="form.inventory_mode" :options="inventoryModeOptions" />
-              </n-form-item>
-              <n-form-item label="华星总库存">
-                <n-select
-                  v-model:value="form.huaxing_inventory_mode"
-                  :options="readOnlyModeOptions"
-                />
-              </n-form-item>
-              <n-form-item label="申购计划">
-                <n-select v-model:value="form.purchase_plans_mode" :options="readOnlyModeOptions" />
-              </n-form-item>
-              <n-form-item label="申购记录">
-                <n-select
-                  v-model:value="form.purchase_records_mode"
-                  :options="readOnlyModeOptions"
-                />
-              </n-form-item>
-              <n-form-item label="物料编码">
-                <n-select v-model:value="form.material_codes_mode" :options="readOnlyModeOptions" />
-              </n-form-item>
-              <n-form-item label="台账查看">
-                <n-select v-model:value="form.ledger_mode" :options="readOnlyModeOptions" />
-              </n-form-item>
-              <n-form-item label="隐患管理">
-                <n-select v-model:value="form.hazards_mode" :options="hazardsModeOptions" />
-              </n-form-item>
-            </n-form>
-          </div>
-        </div>
+      <n-card class="settings-card feature-status-card" title="二级库运行模式" :bordered="false">
+        <n-form label-placement="left" label-width="132">
+          <n-form-item label="运行模式">
+            <n-select
+              v-model:value="form.secondary_warehouse_mode"
+              :options="secondaryWarehouseModeOptions"
+            />
+          </n-form-item>
+          <p class="feature-hint">
+            完整模式提供物资 / 出入库 / 流水；精简模式只提供 Excel
+            导入与只读查询，小程序同步禁用出库。
+            功能是否展示与可写由「用户管理」里的权限位决定，不再有功能开关配置。
+          </p>
+        </n-form>
       </n-card>
 
       <n-card class="settings-card webhook-card" title="Webhook 事件推送" :bordered="false">
@@ -517,24 +406,21 @@ onMounted(load)
   max-width: 520px;
 }
 
-/* 功能状态：后台 + 小程序端两组并排，卡片横跨整行——否则一列长条能到十几行高 */
+/* 二级库运行模式：单卡片横跨整行，说明文字跟在表单下面 */
 .feature-status-card {
   grid-column: 1 / -1;
 }
 
+.feature-hint {
+  max-width: 720px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .webhook-card {
   grid-column: 1 / -1;
-}
-
-.feature-groups {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0;
-}
-
-.feature-group + .feature-group {
-  padding-left: 22px;
-  border-left: 1px solid var(--color-border-subtle);
 }
 
 .webhook-platforms {
@@ -600,17 +486,6 @@ onMounted(load)
   font-size: 13px;
 }
 
-.feature-group {
-  padding-bottom: 4px;
-}
-
-.feature-group-title {
-  margin-bottom: 8px;
-  color: var(--color-text-strong);
-  font-size: 14px;
-  font-weight: 600;
-}
-
 :deep(.n-card-header) {
   padding: 20px 22px 14px;
 }
@@ -626,19 +501,6 @@ onMounted(load)
 @media (max-width: 900px) {
   .settings-grid {
     grid-template-columns: 1fr;
-  }
-
-  /* 窄屏：功能状态的两组改回上下排，分隔线由左侧改到顶部 */
-  .feature-groups {
-    grid-template-columns: 1fr;
-  }
-
-  .feature-group + .feature-group {
-    margin-top: 18px;
-    padding-top: 16px;
-    padding-left: 0;
-    border-top: 1px solid var(--color-border-subtle);
-    border-left: 0;
   }
 
   .webhook-platforms {

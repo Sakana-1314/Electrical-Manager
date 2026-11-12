@@ -13,7 +13,6 @@ import (
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 )
 
@@ -183,25 +182,17 @@ func TestConfigFromData(t *testing.T) {
 	config.S.WechatMiniProgramAppID = "wx-a, wx-b,wx-a"
 	defer func() { config.S.WechatMiniProgramAppID = "" }()
 	c := configFromData(map[string]any{
-		"endpoint": 5, "enabled": "yes", "inventory_mode": "bogus", "secondary_warehouse_mode": "lite",
+		"endpoint": 5, "enabled": "yes", "secondary_warehouse_mode": "lite",
 		"mini_program_code_app_id": "wx-b",
-		"web_features":             map[string]any{"work": false, "memos": "no", "unknown": false},
 	}, 7, nil, false)
-	if c.Endpoint != "" || c.Enabled || c.InventoryMode != "read_write" || c.SecondaryWarehouseMode != "lite" || c.MiniProgramCodeAppID != "wx-b" {
+	if c.Endpoint != "" || c.Enabled || c.SecondaryWarehouseMode != "lite" || c.MiniProgramCodeAppID != "wx-b" {
 		t.Fatalf("config: %+v", c)
-	}
-	if c.WebFeatures.Work || !c.WebFeatures.Memos {
-		t.Fatalf("web features: %+v", c.WebFeatures)
 	}
 	if got := configFromData(map[string]any{"mini_program_code_app_id": "wx-x"}, 1, nil, false).MiniProgramCodeAppID; got != "wx-a" {
 		t.Fatalf("unknown app id falls back to first: %s", got)
 	}
-	allFalse := map[string]any{}
-	for _, k := range schema.WebFeatureKeys {
-		allFalse[k] = false
-	}
-	if wf := parseWebFeatures(allFalse); wf != schema.AllVisibleWebFeatures() {
-		t.Fatalf("all hidden must normalize to all visible: %+v", wf)
+	if got := configFromData(map[string]any{"secondary_warehouse_mode": "bogus"}, 1, nil, false).SecondaryWarehouseMode; got != "full" {
+		t.Fatalf("unknown mode falls back to full: %s", got)
 	}
 	if ids := configuredWechatAppIDs(); fmt.Sprint(ids) != "[wx-a wx-b]" {
 		t.Fatalf("app ids: %v", ids)

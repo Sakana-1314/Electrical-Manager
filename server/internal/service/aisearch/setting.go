@@ -32,15 +32,7 @@ type Config struct {
 	MiniProgramRegistrationEnabled bool
 	MiniProgramNewUserEnabled      bool
 	ImageAccelerationServerURL     string
-	InventoryMode                  string
-	HuaxingInventoryMode           string
-	PurchasePlansMode              string
-	PurchaseRecordsMode            string
-	MaterialCodesMode              string
-	HazardsMode                    string
-	LedgerMode                     string
 	SecondaryWarehouseMode         string
-	WebFeatures                    schema.WebFeatureVisibility
 	// UpdatedAt：system_setting 行为 aware（输出带 +00:00），旧事件日志回退为 naive（UpdatedNaive=true）。
 	UpdatedAt    *time.Time
 	UpdatedNaive bool
@@ -49,24 +41,16 @@ type Config struct {
 
 // configPayload 是写入 system_setting / 事件日志的 JSON（键顺序照抄 _payload）。
 type configPayload struct {
-	Endpoint                       string                      `json:"endpoint"`
-	APIKeyEncrypted                string                      `json:"api_key_encrypted"`
-	Model                          string                      `json:"model"`
-	Enabled                        bool                        `json:"enabled"`
-	MiniProgramCodeEnv             string                      `json:"mini_program_code_env"`
-	MiniProgramCodeAppID           string                      `json:"mini_program_code_app_id"`
-	MiniProgramRegistrationEnabled bool                        `json:"mini_program_registration_enabled"`
-	MiniProgramNewUserEnabled      bool                        `json:"mini_program_new_user_enabled"`
-	ImageAccelerationServerURL     string                      `json:"image_acceleration_server_url"`
-	InventoryMode                  string                      `json:"inventory_mode"`
-	HuaxingInventoryMode           string                      `json:"huaxing_inventory_mode"`
-	PurchasePlansMode              string                      `json:"purchase_plans_mode"`
-	PurchaseRecordsMode            string                      `json:"purchase_records_mode"`
-	MaterialCodesMode              string                      `json:"material_codes_mode"`
-	HazardsMode                    string                      `json:"hazards_mode"`
-	LedgerMode                     string                      `json:"ledger_mode"`
-	SecondaryWarehouseMode         string                      `json:"secondary_warehouse_mode"`
-	WebFeatures                    schema.WebFeatureVisibility `json:"web_features"`
+	Endpoint                       string `json:"endpoint"`
+	APIKeyEncrypted                string `json:"api_key_encrypted"`
+	Model                          string `json:"model"`
+	Enabled                        bool   `json:"enabled"`
+	MiniProgramCodeEnv             string `json:"mini_program_code_env"`
+	MiniProgramCodeAppID           string `json:"mini_program_code_app_id"`
+	MiniProgramRegistrationEnabled bool   `json:"mini_program_registration_enabled"`
+	MiniProgramNewUserEnabled      bool   `json:"mini_program_new_user_enabled"`
+	ImageAccelerationServerURL     string `json:"image_acceleration_server_url"`
+	SecondaryWarehouseMode         string `json:"secondary_warehouse_mode"`
 }
 
 func (c *Config) payload() configPayload {
@@ -75,10 +59,7 @@ func (c *Config) payload() configPayload {
 		MiniProgramCodeEnv: c.MiniProgramCodeEnv, MiniProgramCodeAppID: c.MiniProgramCodeAppID,
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled, MiniProgramNewUserEnabled: c.MiniProgramNewUserEnabled,
 		ImageAccelerationServerURL: c.ImageAccelerationServerURL,
-		InventoryMode:              c.InventoryMode, HuaxingInventoryMode: c.HuaxingInventoryMode,
-		PurchasePlansMode: c.PurchasePlansMode, PurchaseRecordsMode: c.PurchaseRecordsMode,
-		MaterialCodesMode: c.MaterialCodesMode, HazardsMode: c.HazardsMode, LedgerMode: c.LedgerMode,
-		SecondaryWarehouseMode: c.SecondaryWarehouseMode, WebFeatures: c.WebFeatures,
+		SecondaryWarehouseMode:     c.SecondaryWarehouseMode,
 	}
 }
 
@@ -88,15 +69,7 @@ func defaultConfig() *Config {
 		MiniProgramCodeEnv:             domain.MiniProgramCodeEnvRelease,
 		MiniProgramRegistrationEnabled: true,
 		MiniProgramNewUserEnabled:      true,
-		InventoryMode:                  domain.FeatureReadWrite,
-		HuaxingInventoryMode:           domain.FeatureQueryOnly,
-		PurchasePlansMode:              domain.FeatureQueryOnly,
-		PurchaseRecordsMode:            domain.FeatureQueryOnly,
-		MaterialCodesMode:              domain.FeatureQueryOnly,
-		HazardsMode:                    domain.FeatureReadWrite,
-		LedgerMode:                     domain.FeatureQueryOnly,
 		SecondaryWarehouseMode:         domain.SecondaryWarehouseFull,
-		WebFeatures:                    schema.AllVisibleWebFeatures(),
 	}
 }
 
@@ -129,24 +102,6 @@ func enumOr(v any, e domain.Enum, def string) string {
 	return def
 }
 
-// parseWebFeatures 对应 _web_features：只认已声明的键、非布尔按显示、全 False 归一到全显示。
-func parseWebFeatures(v any) schema.WebFeatureVisibility {
-	flags := schema.AllVisibleWebFeatures()
-	if m, ok := v.(map[string]any); ok {
-		for key, raw := range m {
-			if b, ok := raw.(bool); ok {
-				if f := flags.Field(key); f != nil {
-					*f = b
-				}
-			}
-		}
-	}
-	if !flags.Any() {
-		return schema.AllVisibleWebFeatures()
-	}
-	return flags
-}
-
 // miniProgramCodeAppID 对应 _mini_program_code_app_id：未配置的值回落到第一个已配置 AppID。
 func miniProgramCodeAppID(v any) string {
 	appIDs := configuredWechatAppIDs()
@@ -174,15 +129,7 @@ func configFromData(data map[string]any, version int64, updatedAt *time.Time, na
 		MiniProgramRegistrationEnabled: boolOr(data["mini_program_registration_enabled"], true),
 		MiniProgramNewUserEnabled:      boolOr(data["mini_program_new_user_enabled"], true),
 		ImageAccelerationServerURL:     strOr(data["image_acceleration_server_url"], ""),
-		InventoryMode:                  enumOr(data["inventory_mode"], domain.MiniProgramFeatureMode, domain.FeatureReadWrite),
-		HuaxingInventoryMode:           enumOr(data["huaxing_inventory_mode"], domain.MiniProgramFeatureMode, domain.FeatureQueryOnly),
-		PurchasePlansMode:              enumOr(data["purchase_plans_mode"], domain.MiniProgramFeatureMode, domain.FeatureQueryOnly),
-		PurchaseRecordsMode:            enumOr(data["purchase_records_mode"], domain.MiniProgramFeatureMode, domain.FeatureQueryOnly),
-		MaterialCodesMode:              enumOr(data["material_codes_mode"], domain.MiniProgramFeatureMode, domain.FeatureQueryOnly),
-		HazardsMode:                    enumOr(data["hazards_mode"], domain.MiniProgramFeatureMode, domain.FeatureReadWrite),
-		LedgerMode:                     enumOr(data["ledger_mode"], domain.MiniProgramFeatureMode, domain.FeatureQueryOnly),
 		SecondaryWarehouseMode:         enumOr(data["secondary_warehouse_mode"], domain.SecondaryWarehouseMode, domain.SecondaryWarehouseFull),
-		WebFeatures:                    parseWebFeatures(data["web_features"]),
 		UpdatedAt:                      updatedAt,
 		UpdatedNaive:                   naive,
 		Version:                        version,
@@ -266,15 +213,7 @@ func readFrom(c *Config, apiKey string) schema.AiSearchSettingsRead {
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled,
 		MiniProgramNewUserEnabled:      c.MiniProgramNewUserEnabled,
 		ImageAccelerationServerURL:     c.ImageAccelerationServerURL,
-		InventoryMode:                  c.InventoryMode,
-		HuaxingInventoryMode:           c.HuaxingInventoryMode,
-		PurchasePlansMode:              c.PurchasePlansMode,
-		PurchaseRecordsMode:            c.PurchaseRecordsMode,
-		MaterialCodesMode:              c.MaterialCodesMode,
-		HazardsMode:                    c.HazardsMode,
-		LedgerMode:                     c.LedgerMode,
 		SecondaryWarehouseMode:         c.SecondaryWarehouseMode,
-		WebFeatures:                    c.WebFeatures,
 		UpdatedAt:                      updatedAtValue(c),
 		Version:                        c.Version,
 	}
@@ -313,16 +252,6 @@ func UpdateSetting(s *db.Session, data schema.AiSearchSettingsUpdate) (*Config, 
 
 	newVersion := actual + 1
 	now := common.UTCNow()
-	// 缺省（None）表示保持现状：只改其它字段的调用方不会把后台可见性重置成全显示。
-	var webFeatures schema.WebFeatureVisibility
-	switch {
-	case data.WebFeatures != nil:
-		webFeatures = normalizeWebFeatures(*data.WebFeatures)
-	case current != nil:
-		webFeatures = normalizeWebFeatures(current.WebFeatures)
-	default:
-		webFeatures = schema.AllVisibleWebFeatures()
-	}
 	next := &Config{
 		Endpoint:                       strings.TrimRight(data.Endpoint, "/"),
 		APIKeyEncrypted:                apiKeyEncrypted,
@@ -333,15 +262,7 @@ func UpdateSetting(s *db.Session, data schema.AiSearchSettingsUpdate) (*Config, 
 		MiniProgramRegistrationEnabled: data.MiniProgramRegistrationEnabled,
 		MiniProgramNewUserEnabled:      data.MiniProgramNewUserEnabled,
 		ImageAccelerationServerURL:     data.ImageAccelerationServerURL,
-		InventoryMode:                  data.InventoryMode,
-		HuaxingInventoryMode:           data.HuaxingInventoryMode,
-		PurchasePlansMode:              data.PurchasePlansMode,
-		PurchaseRecordsMode:            data.PurchaseRecordsMode,
-		MaterialCodesMode:              data.MaterialCodesMode,
-		HazardsMode:                    data.HazardsMode,
-		LedgerMode:                     data.LedgerMode,
 		SecondaryWarehouseMode:         data.SecondaryWarehouseMode,
-		WebFeatures:                    webFeatures,
 		UpdatedAt:                      &now,
 		Version:                        newVersion,
 	}
@@ -353,7 +274,7 @@ func UpdateSetting(s *db.Session, data schema.AiSearchSettingsUpdate) (*Config, 
 	if err := common.LogEvent(s, settingBusinessType, settingBusinessID, settingAction, common.EventOptions{
 		OldStatus:  statusText(current != nil && current.Enabled),
 		NewStatus:  statusText(data.Enabled),
-		Remark:     common.StrPtr("超级管理员更新高级设置"),
+		Remark:     common.StrPtr("系统管理员更新高级设置"),
 		BeforeData: beforeData,
 		AfterData:  afterData,
 	}); err != nil {
@@ -378,14 +299,6 @@ func UpdateSetting(s *db.Session, data schema.AiSearchSettingsUpdate) (*Config, 
 	}
 	clearCache()
 	return next, nil
-}
-
-// normalizeWebFeatures 对应 _web_features(model_dump())：全 False 归一到全显示。
-func normalizeWebFeatures(w schema.WebFeatureVisibility) schema.WebFeatureVisibility {
-	if !w.Any() {
-		return schema.AllVisibleWebFeatures()
-	}
-	return w
 }
 
 // GetMiniProgramCodeEnv 对应 get_mini_program_code_env。
@@ -443,7 +356,8 @@ func GetImageAccelerationServerURL(s *db.Session) (string, error) {
 	return setting.ImageAccelerationServerURL, nil
 }
 
-// GetMiniProgramFeatures 对应 get_mini_program_features。
+// GetMiniProgramFeatures 对应 get_mini_program_features：只暴露两端共用的二级库运行模式。
+// 功能是否展示与可写由用户权限位决定，不再有功能开关配置。
 func GetMiniProgramFeatures(s *db.Session) (schema.MiniProgramFeaturesRead, error) {
 	setting, err := GetSetting(s)
 	if err != nil {
@@ -453,15 +367,7 @@ func GetMiniProgramFeatures(s *db.Session) (schema.MiniProgramFeaturesRead, erro
 		setting = defaultConfig()
 	}
 	return schema.MiniProgramFeaturesRead{
-		InventoryMode:          setting.InventoryMode,
-		HuaxingInventoryMode:   setting.HuaxingInventoryMode,
-		PurchasePlansMode:      setting.PurchasePlansMode,
-		PurchaseRecordsMode:    setting.PurchaseRecordsMode,
-		MaterialCodesMode:      setting.MaterialCodesMode,
-		HazardsMode:            setting.HazardsMode,
-		LedgerMode:             setting.LedgerMode,
 		SecondaryWarehouseMode: setting.SecondaryWarehouseMode,
-		WebFeatures:            setting.WebFeatures,
 	}, nil
 }
 

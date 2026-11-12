@@ -19,9 +19,9 @@ func Register(r *web.Router) {
 	g := r.Group("/ai-search")
 	g.POST("/expand", expand, auth.CurrentUser)
 	g.GET("/status", status, auth.CurrentUser)
-	g.GET("/settings", getSettings, auth.SuperAdmin)
-	g.PUT("/settings", updateSettings, auth.SuperAdmin)
-	g.POST("/settings/test", testSettings, auth.SuperAdmin)
+	g.GET("/settings", getSettings, auth.SystemAdmin)
+	g.PUT("/settings", updateSettings, auth.SystemAdmin)
+	g.POST("/settings/test", testSettings, auth.SystemAdmin)
 
 	if os.Getenv("APP_TEST_HOOKS") == "1" {
 		// 测试钩子：把 AI 上游改投到本地桩服务（路径相对 /api/v1 回到根：/__test__/ai-search/upstream）。

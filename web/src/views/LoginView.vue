@@ -25,12 +25,12 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(model)
-    // 没有回跳目标时落到「当前可见的第一个主 tab」（工作台可能已被后台可见功能关闭）
+    // 没有回跳目标时落到「当前权限下可见的第一个主 tab」
     await router.replace(
       route.query.redirect
         ? String(route.query.redirect)
         : {
-            name: resolveLandingRouteName(settings.webFeatures, {
+            name: resolveLandingRouteName((permission) => auth.can(permission), {
               isLiteMode: settings.isLiteMode,
             }),
           },

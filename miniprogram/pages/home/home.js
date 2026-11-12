@@ -12,12 +12,12 @@ Page({
   data: {
     user: null,
     scanning: false,
-    // 登录态与功能配置都返回后才置 true：加载期间只显示加载态，不渲染功能入口，
-    // 避免入口先全量冒出、拿到配置后再逐个收起（精简模式与「禁用」项都会这样闪一下）。
+    // 登录态与运行模式都返回后才置 true：加载期间只显示加载态，不渲染功能入口，
+    // 避免入口先全量冒出、拿到权限后再逐个收起。
     featureReady: false,
     // 首次加载失败：停在错误态给「重新加载」，而不是一直转圈。
     loadFailed: false,
-    // 首页入口是否展示：功能被管理员设为「禁用」的入口直接不渲染（原来全部常驻、点了才提示未开放）。
+    // 首页入口是否展示：只看用户权限位（登录会话的 permissions），无读权限的入口不渲染。
     // 这些值只在 featureReady 置位时一并写入，渲染入口前已是最终结果。
     entryVisible: {
       inventory: true,
@@ -29,7 +29,7 @@ Page({
       materialCodes: true,
     },
     liteMode: false,
-    // 扫码出库入口：精简模式或库存只读/禁用时不渲染（原来常驻、点了才提示未开放）。
+    // 扫码出库入口：精简模式或没有二级库写权限时不渲染。
     canScan: false,
     i18n: getMessages(),
   },
@@ -39,7 +39,7 @@ Page({
   },
 
   /**
-   * 加载登录态与功能配置。
+   * 加载登录态与运行模式。
    *
    * 两者都到齐后才一次性写入 user / entryVisible / liteMode 并置 featureReady，
    * 让页面从「加载中」直接切到完整入口，不出现入口先渲染再隐藏的闪烁。
@@ -48,9 +48,9 @@ Page({
   async loadSession() {
     this.setData({ featureReady: false, loadFailed: false });
     try {
-      const [session, featureModes] = await Promise.all([
+      const [session, runtimeModes] = await Promise.all([
         getApp().globalData.authPromise,
-        getApp().globalData.featureSettingsPromise,
+        getApp().globalData.runtimeSettingsPromise,
       ]);
       if (session.account_disabled) {
         wx.reLaunch({ url: '/pages/disabled/disabled' });
@@ -64,11 +64,11 @@ Page({
         wx.reLaunch({ url: '/pages/bind/bind' });
         return;
       }
-      const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
+      const liteMode = runtimeModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
       this.setData({
         user: session.user,
         featureReady: true,
-        // 入口 = 全局功能开关开启 且 用户权限并集里有对应模块的读权限（RBAC 下放：有权限才看得到）。
+        // 入口 = 用户权限位里有对应模块的读权限（管理端与小程序端同一套权限）。
         entryVisible: {
           inventory: entryEnabled('inventory'),
           huaxing: entryEnabled('huaxing'),
@@ -132,46 +132,31 @@ Page({
   },
 
   openInventory() {
-    if (!this.ensureFeatureEnabled('inventory_mode')) return;
     wx.navigateTo({ url: '/pages/inventory/inventory' });
   },
 
   openHuaXingInventory() {
-    if (!this.ensureFeatureEnabled('huaxing_inventory_mode')) return;
     wx.navigateTo({ url: '/pages/huaxing-inventory/huaxing-inventory' });
   },
 
   openHazards() {
-    if (!this.ensureFeatureEnabled('hazards_mode')) return;
     wx.navigateTo({ url: '/pages/hazards/hazards' });
   },
 
   openPurchasePlans() {
-    if (!this.ensureFeatureEnabled('purchase_plans_mode')) return;
     wx.navigateTo({ url: '/pages/purchase-plans/purchase-plans' });
   },
 
   openPurchaseRecords() {
-    if (!this.ensureFeatureEnabled('purchase_records_mode')) return;
     wx.navigateTo({ url: '/pages/purchase-records/purchase-records' });
   },
 
   openMaterialCodes() {
-    if (!this.ensureFeatureEnabled('material_codes_mode')) return;
     wx.navigateTo({ url: '/pages/material-codes/material-codes' });
   },
 
   openLedger() {
-    if (!this.ensureFeatureEnabled('ledger_mode')) return;
     wx.navigateTo({ url: '/pages/ledger/ledger' });
-  },
-
-  ensureFeatureEnabled(modeKey) {
-    if (isFeatureDisabled(modeKey)) {
-      this.showError(new Error(t('featureNotOpen')));
-      return false;
-    }
-    return true;
   },
 
   onShareAppMessage() {

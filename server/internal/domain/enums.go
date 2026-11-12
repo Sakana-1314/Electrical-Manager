@@ -62,22 +62,6 @@ func (e Enum) OneOf() string {
 	return out
 }
 
-// ---- 角色 ----
-const (
-	RoleSuperAdmin     = "SUPER_ADMIN"
-	RoleWarehouseAdmin = "WAREHOUSE_ADMIN"
-	RolePurchaseAdmin  = "PURCHASE_ADMIN"
-	RoleHazardAdmin    = "HAZARD_ADMIN"
-	RoleReadOnly       = "READ_ONLY"
-	RoleLedgerAdmin    = "LEDGER_ADMIN"
-	RoleWorkAdmin      = "WORK_ADMIN"
-)
-
-var Role = newEnum(
-	"SUPER_ADMIN", "SUPER_ADMIN", "WAREHOUSE_ADMIN", "WAREHOUSE_ADMIN", "PURCHASE_ADMIN", "PURCHASE_ADMIN",
-	"HAZARD_ADMIN", "HAZARD_ADMIN", "READ_ONLY", "READ_ONLY", "LEDGER_ADMIN", "LEDGER_ADMIN", "WORK_ADMIN", "WORK_ADMIN",
-)
-
 // ---- 隐患 ----
 const (
 	HazardStatusPending = "待整改"
@@ -112,15 +96,10 @@ const (
 	MiniProgramStockNormal     = "normal"
 	MiniProgramStockOutOfStock = "out_of_stock"
 	MiniProgramStockLow        = "low_stock"
-
-	FeatureDisabled  = "disabled"
-	FeatureQueryOnly = "query_only"
-	FeatureReadWrite = "read_write"
 )
 
 var MiniProgramCodeEnv = newEnum("TRIAL", "trial", "RELEASE", "release")
 var MiniProgramStockStatus = newEnum("NORMAL", "normal", "OUT_OF_STOCK", "out_of_stock", "LOW_STOCK", "low_stock")
-var MiniProgramFeatureMode = newEnum("DISABLED", "disabled", "QUERY_ONLY", "query_only", "READ_WRITE", "read_write")
 
 // ---- 二级库模式 ----
 const (

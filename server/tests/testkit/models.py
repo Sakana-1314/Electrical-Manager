@@ -82,26 +82,9 @@ class User(AuditColumns, Base):
     department_name: Mapped[str] = mapped_column(String(128), server_default="")
     source: Mapped[UserSource] = mapped_column(_enum(UserSource), server_default="MANAGE")
     wechat_openid: Mapped[str | None] = mapped_column(String(128))
+    permissions: Mapped[int] = mapped_column(BigInteger, server_default="0")
     enabled: Mapped[bool] = mapped_column(server_default="true")
     last_used_at: Mapped[datetime | None]
-
-
-class Role(AuditColumns, Base):
-    __tablename__ = "role"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    name: Mapped[str] = mapped_column(String(64))
-    description: Mapped[str] = mapped_column(String(255), server_default="")
-    permissions: Mapped[dict[str, Any]] = mapped_column(JSON, server_default="[]")
-    is_system: Mapped[bool] = mapped_column(server_default="false")
-
-
-class UserRole(AuditColumns, Base):
-    __tablename__ = "user_role"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    user_id: Mapped[int] = mapped_column(BigInteger)
-    role_id: Mapped[int] = mapped_column(BigInteger)
 
 
 class BusinessEventLog(Base):

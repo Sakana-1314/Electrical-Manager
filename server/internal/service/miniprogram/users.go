@@ -13,14 +13,13 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/webhook"
 )
 
-// User 是带角色的小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号；openid 直存本表）。
+// User 是小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号；openid 直存本表）。
+// 权限位图在 model.User.Permissions，按位判断。
 type User struct {
 	model.User
-	Roles []schema.UserRoleRead
 }
 
 func accountDisabled() error {
@@ -31,38 +30,17 @@ func registrationDisabled() error {
 	return apperr.New("MINI_PROGRAM_REGISTRATION_DISABLED", "当前暂未开放新用户绑定，请联系管理员").WithStatus(403)
 }
 
-// UserRead 对应 MiniProgramUserRead.model_validate(user)：roles / permissions 供小程序端按权限门禁。
+// UserRead 对应 MiniProgramUserRead.model_validate(user)：permissions（权限位展开的键）供小程序端门禁。
 func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
-	permissions, err := role.UserPermissionKeys(s, u.ID)
-	// 权限汇总失败按空权限处理（fail-closed）；正常路径不会走到这里。
-	if err != nil {
-		permissions = []string{}
-	}
 	return schema.MiniProgramUserRead{
 		ID: u.ID, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Enabled: u.Enabled,
-		Source: u.Source, WechatOpenid: u.WechatOpenid, Roles: u.Roles, Permissions: permissions,
+		Source: u.Source, WechatOpenid: u.WechatOpenid, Permissions: domain.Permission(u.Permissions).Normalize().Keys(),
 		LastUsedAt: common.UTCPtr(u.LastUsedAt),
 		CreatedAt:  jtype.NewUTC(u.CreatedAt), UpdatedAt: jtype.NewUTC(u.UpdatedAt), Version: u.Version,
 	}
 }
 
-// loadRoles 批量加载用户角色。
-func loadRoles(s *db.Session, users []*User) error {
-	ids := make([]int64, len(users))
-	for i, u := range users {
-		ids[i] = u.ID
-	}
-	roles := map[int64][]schema.UserRoleRead{}
-	if err := role.WithRoles(s, ids, roles); err != nil {
-		return err
-	}
-	for _, u := range users {
-		u.Roles = roles[u.ID]
-	}
-	return nil
-}
-
-// getUser 对应 session.get(User, id)（含角色）；不存在返回 nil。
+// getUser 对应 session.get(User, id)；不存在返回 nil。
 func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
 	q := "SELECT " + model.ColsUser + " FROM app_user WHERE id = ? AND source = ?"
 	if forUpdate {
@@ -73,23 +51,15 @@ func getUser(s *db.Session, id int64, forUpdate bool) (*User, error) {
 	if err != nil || !ok {
 		return nil, err
 	}
-	u := &User{User: m}
-	if err := loadRoles(s, []*User{u}); err != nil {
-		return nil, err
-	}
-	return u, nil
+	return &User{User: m}, nil
 }
 
-// GetUser 按 id 读取小程序用户（含身份与角色），不存在返回 nil。
+// GetUser 按 id 读取小程序用户，不存在返回 nil。
 func GetUser(s *db.Session, id int64) (*User, error) { return getUser(s, id, false) }
 
-// LoadUser 为已鉴权的小程序用户补齐角色（/me 等接口用）。
+// LoadUser 为已鉴权的小程序用户构造读取结构（/me 等接口用）。
 func LoadUser(s *db.Session, m *model.User) (*User, error) {
-	u := &User{User: *m}
-	if err := loadRoles(s, []*User{u}); err != nil {
-		return nil, err
-	}
-	return u, nil
+	return &User{User: *m}, nil
 }
 
 // markLastUsed 对应 _mark_last_used：登录即刷新最近使用时间，刻意不自增 version。
@@ -108,11 +78,7 @@ func findUserByOpenid(s *db.Session, openid string) (*User, error) {
 	if err != nil || !ok {
 		return nil, err
 	}
-	u := &User{User: m}
-	if err := loadRoles(s, []*User{u}); err != nil {
-		return nil, err
-	}
-	return u, nil
+	return &User{User: m}, nil
 }
 
 // miniProgramUsername 由 openid 派生唯一用户名（openid 本身可含特殊字符，这里哈希定长化）。
@@ -157,8 +123,8 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	return user, effectiveAppID, openid, nil
 }
 
-// RegisterUser 对应 register_user：按注册凭证里的 (app_id, openid) 建统一用户档案并挂各功能只读角色。
-// 新用户是否默认启用由系统设置决定（默认启用 = 只读权限；默认禁用 = 待管理员审核启用）。
+// RegisterUser 对应 register_user：按注册凭证里的 openid 建统一用户档案，默认权限位 = 各功能只读。
+// 新用户是否默认启用由系统设置决定（默认启用 = 直接可读；默认禁用 = 待管理员审核启用）。
 // 已存在时按一次登录处理且不覆盖姓名 / 部门。
 func RegisterUser(s *db.Session, appID, openid, displayName, departmentName string) (*User, error) {
 	existing, err := findUserByOpenid(s, openid)
@@ -190,7 +156,8 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 	user := &User{User: model.User{
 		Username: miniProgramUsername(openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
 		DisplayName: displayName, DepartmentName: departmentName, Source: domain.UserSourceMiniProgram,
-		WechatOpenid: &openid, Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
+		WechatOpenid: &openid, Permissions: int64(domain.DefaultRegistrationPermissions),
+		Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	conflict := func(err error) error {
 		if db.IsIntegrity(err) {
@@ -198,44 +165,22 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		}
 		return err
 	}
-	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, wechat_openid, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, source, wechat_openid, permissions, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.Username, user.PasswordHash, user.APITokenHash, user.APITokenEnc, user.DisplayName, user.DepartmentName,
-		user.Source, user.WechatOpenid, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
+		user.Source, user.WechatOpenid, user.Permissions, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
 	if err != nil {
 		return nil, conflict(err)
 	}
 	user.ID = id
-	// 默认启用的用户挂全部「只读」角色（各功能只读，权限并集）；禁用的用户等管理员启用后再分配角色。
-	if user.Enabled {
-		defaultRoleIDs, err := role.DefaultRegistrationRoleIDs(s)
-		if err != nil {
-			return nil, err
-		}
-		if err := role.ReplaceUserRoles(s, user.ID, defaultRoleIDs); err != nil {
-			return nil, err
-		}
-	}
-	if err := loadRoles(s, []*User{user}); err != nil {
-		return nil, err
-	}
 	if err := webhook.EnqueueEvent(s, domain.EventMiniProgramUserBound, map[string]any{
 		"display_name":    user.DisplayName,
 		"department_name": user.DepartmentName,
 		"app_id":          appID,
 		"enabled":         user.Enabled,
-		"roles":           roleNames(user.Roles),
+		"permissions":     domain.Permission(user.Permissions).Keys(),
 		"bound_at":        user.CreatedAt.Format(time.DateOnly+"T15:04:05") + "Z",
 	}); err != nil {
 		return nil, err
 	}
 	return user, nil
-}
-
-// roleNames 角色名列表（webhook 载荷用）。
-func roleNames(roles []schema.UserRoleRead) []string {
-	names := make([]string, len(roles))
-	for i, r := range roles {
-		names[i] = r.Name
-	}
-	return names
 }

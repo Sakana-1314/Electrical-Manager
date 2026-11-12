@@ -1,16 +1,54 @@
 <script setup lang="ts">
 import { computed, h, onMounted, reactive, ref } from 'vue'
 import { NButton, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
-import type { ManagedUser, RoleRead } from '@/api/generated'
-import { dictionaryApi, roleApi } from '@/api/dictionaries'
+import type { ManagedUser, PermissionRead } from '@/api/generated'
+import { dictionaryApi, permissionApi } from '@/api/dictionaries'
 import { getTableScrollX, preventTableColumnCompression } from '@/constants/table'
 import { activeBackendUrl } from '@/api/backend'
 import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
 
-// 可选角色列表（RBAC）：用户可挂多个角色，权限取并集；「角色管理」页维护角色本体。
-const roleOptions = ref<RoleRead[]>([])
+// 权限位目录（GET /permissions）：系统管理 + 各功能读写，勾选后按位存进用户 permissions。
+const permissionOptions = ref<PermissionRead[]>([])
+const MODULE_LABELS: Record<string, string> = {
+  system: '系统管理',
+  warehouse: '二级库',
+  purchase: '申购',
+  huaxing: '华星总库存',
+  codes: '物料编码库',
+  ledger: '台账',
+  hazard: '隐患',
+  work: '工单',
+}
+const permissionGroups = computed(() => {
+  const groups = new Map<string, PermissionRead[]>()
+  for (const item of permissionOptions.value) {
+    const list = groups.get(item.module) ?? []
+    list.push(item)
+    groups.set(item.module, list)
+  }
+  return Array.from(groups, ([module, items]) => ({
+    module,
+    label: MODULE_LABELS[module] ?? module,
+    items,
+  }))
+})
+// 权限摘要标签：系统管理 / 各模块「读写」「只读」，一眼看出这个账号能做什么。
+function permissionTags(perms: string[] | undefined) {
+  const list = perms ?? []
+  const tags: Array<{ label: string; type: 'info' | 'success' | 'default' }> = []
+  if (list.includes('system:admin')) tags.push({ label: '系统管理', type: 'info' })
+  for (const group of permissionGroups.value) {
+    if (group.module === 'system') continue
+    const prefix = `${group.module}:`
+    if (list.includes(`${prefix}write`)) tags.push({ label: `${group.label}读写`, type: 'info' })
+    else if (list.includes(`${prefix}read`))
+      tags.push({ label: `${group.label}只读`, type: 'default' })
+  }
+  if (tags.length === 0) tags.push({ label: '未分配权限', type: 'default' })
+  return tags
+}
 
 const message = useMessage()
 const dialog = useDialog()
@@ -23,11 +61,13 @@ const { items, loading, load } = usePagedTable<ManagedUser, Record<string, never
 })
 const show = ref(false)
 const editing = ref<ManagedUser | null>(null)
-// 合并账号：从某一行打开「把其他账号并入该账号」的对话框；目标保留资料，角色取并集。
+// 合并账号：从某一行打开「把其他账号并入该账号」的对话框；目标保留资料，权限位取并集。
 const showMerge = ref(false)
 const mergeSourceId = ref<number | null>(null)
 const merging = ref(false)
-const mergeSource = computed(() => items.value.find((item) => item.id === mergeSourceId.value) ?? null)
+const mergeSource = computed(
+  () => items.value.find((item) => item.id === mergeSourceId.value) ?? null,
+)
 // 概览：绑定小程序的人数（列表顶部一眼看出整体绑定情况）。
 const boundCount = computed(() => items.value.filter((item) => item.wechat_openid).length)
 const project = useProjectStore()
@@ -41,14 +81,30 @@ const form = reactive({
   username: '',
   display_name: '',
   department_name: '',
-  role_ids: [] as number[],
+  permissions: [] as string[],
   enabled: true,
   password: '',
   version: 0,
 })
 onMounted(() => {
-  roleApi.roles().then((roles) => (roleOptions.value = roles))
+  permissionApi
+    .list()
+    .then((options) => (permissionOptions.value = options))
+    .catch((e) => message.error(e instanceof Error ? e.message : '权限目录加载失败'))
 })
+
+/** 勾选权限：写权限自动带上同模块读权限；取消读权限时同时取消写权限。 */
+function togglePermission(key: string, checked: boolean) {
+  const next = new Set(form.permissions)
+  if (checked) {
+    next.add(key)
+    if (key.endsWith(':write')) next.add(`${key.slice(0, -':write'.length)}:read`)
+  } else {
+    next.delete(key)
+    if (key.endsWith(':read')) next.delete(`${key.slice(0, -':read'.length)}:write`)
+  }
+  form.permissions = [...next]
+}
 const columns = preventTableColumnCompression<ManagedUser>([
   {
     title: '用户',
@@ -101,18 +157,18 @@ const columns = preventTableColumnCompression<ManagedUser>([
         : h(NTag, { size: 'small', round: true, bordered: false }, { default: () => '未绑定' }),
   },
   {
-    title: '角色',
-    key: 'roles',
-    width: 232,
+    title: '权限',
+    key: 'permissions',
+    width: 260,
     render: (r) =>
       h(
         'div',
-        { style: 'display:flex;flex-wrap:wrap;gap:4px' },
-        (r.roles ?? []).map((role) =>
+        { class: 'permission-tags' },
+        permissionTags(r.permissions).map((tag) =>
           h(
             NTag,
-            { key: role.id, size: 'small', type: role.is_system ? 'info' : 'default', round: true },
-            { default: () => role.name },
+            { key: tag.label, size: 'small', type: tag.type, round: true, bordered: false },
+            { default: () => tag.label },
           ),
         ),
       ),
@@ -146,7 +202,7 @@ function open(row?: ManagedUser): void {
           username: row.username,
           display_name: row.display_name,
           department_name: row.department_name,
-          role_ids: (row.roles ?? []).map((role) => role.id),
+          permissions: [...(row.permissions ?? [])],
           enabled: row.enabled,
           password: '',
           version: row.version,
@@ -155,7 +211,7 @@ function open(row?: ManagedUser): void {
           username: '',
           display_name: '',
           department_name: '',
-          role_ids: [],
+          permissions: [],
           enabled: true,
           password: '',
           version: 0,
@@ -173,7 +229,7 @@ async function save() {
       username: form.username,
       display_name: form.display_name,
       department_name: form.department_name,
-      role_ids: form.role_ids,
+      permissions: form.permissions,
       enabled: form.enabled,
       ...(form.password ? { password: form.password } : {}),
     }
@@ -335,8 +391,7 @@ function remove(row: ManagedUser) {
         ><n-form-item label="用户名" required><n-input v-model:value="form.username" /></n-form-item
         ><n-form-item label="显示名称" required
           ><n-input v-model:value="form.display_name" /></n-form-item
-        ><n-form-item label="部门单位"
-          ><n-input v-model:value="form.department_name" /></n-form-item
+        ><n-form-item label="部门单位"><n-input v-model:value="form.department_name" /></n-form-item
         ><n-form-item v-if="editing" label="小程序绑定">
           <div class="binding-row">
             <n-tag :type="editing.wechat_openid ? 'success' : 'default'" size="small" round>
@@ -346,12 +401,22 @@ function remove(row: ManagedUser) {
               OpenID：{{ editing.wechat_openid }}
             </span>
           </div></n-form-item
-        ><n-form-item label="角色（可多选，权限取并集）"
-          ><n-select
-            v-model:value="form.role_ids"
-            multiple
-            clearable
-            :options="roleOptions.map((role) => ({ value: role.id, label: role.name }))" /></n-form-item
+        ><n-form-item label="权限（按功能勾选，写权限自动包含查看）">
+          <div class="permission-grid">
+            <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
+              <div class="permission-group-label">{{ group.label }}</div>
+              <div class="permission-group-items">
+                <n-checkbox
+                  v-for="item in group.items"
+                  :key="item.key"
+                  :checked="form.permissions.includes(item.key)"
+                  :label="
+                    item.action === 'write' ? '读写' : item.action === 'read' ? '查看' : '可管理'
+                  "
+                  @update:checked="togglePermission(item.key, $event)"
+                />
+              </div>
+            </div></div></n-form-item
         ><n-form-item
           :label="editing ? '重置密码（不修改可留空）' : '初始密码'"
           :required="!editing"
@@ -399,15 +464,18 @@ function remove(row: ManagedUser) {
       ><n-form label-placement="top"
         ><n-form-item label="目标账号（保留姓名与部门）">
           <div class="merge-target">
-            <div class="merge-target-name">{{ editing?.display_name }}（{{ editing?.username }}）</div>
+            <div class="merge-target-name">
+              {{ editing?.display_name }}（{{ editing?.username }}）
+            </div>
             <div class="merge-target-roles">
               <n-tag
-                v-for="role in editing?.roles ?? []"
-                :key="role.id"
+                v-for="tag in permissionTags(editing?.permissions)"
+                :key="tag.label"
                 size="small"
-                type="info"
+                :type="tag.type"
+                bordered
                 round
-                >{{ role.name }}</n-tag
+                >{{ tag.label }}</n-tag
               >
             </div>
           </div></n-form-item
@@ -427,14 +495,19 @@ function remove(row: ManagedUser) {
                 }))
             " /></n-form-item
         ><n-alert v-if="mergeSource" type="warning" :show-icon="true"
-          >将把「{{ mergeSource.display_name }}」的微信身份并入目标账号，角色取两个账号的并集；来源账号随后删除。</n-alert
+          >将把「{{
+            mergeSource.display_name
+          }}」的微信身份并入目标账号，权限位取两个账号的并集；来源账号随后删除。</n-alert
         ></n-form
       ><template #footer
         ><n-space justify="end"
           ><n-button @click="closeMerge">取消</n-button
-          ><n-button type="primary" :loading="merging" @click="saveMerge">确认合并</n-button></n-space
+          ><n-button type="primary" :loading="merging" @click="saveMerge"
+            >确认合并</n-button
+          ></n-space
         ></template
-      ></n-modal>
+      ></n-modal
+    >
   </div>
 </template>
 
@@ -490,6 +563,38 @@ function remove(row: ManagedUser) {
   color: var(--color-text-muted);
   font-size: 12px;
   word-break: break-all;
+}
+.permission-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 18px;
+  width: 100%;
+}
+.permission-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+}
+.permission-group-label {
+  flex: none;
+  width: 74px;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+.permission-group-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
 }
 .merge-target {
   display: flex;

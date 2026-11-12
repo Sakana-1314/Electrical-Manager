@@ -21,9 +21,9 @@ func Register(r *web.Router) {
 	// 公开配置端点：同时服务管理端与小程序（两种鉴权体系不同），故保持匿名。
 	g.GET("/image-acceleration", imageAccelerationSettings)
 	g.GET("/mini-program-features", miniProgramFeatures)
-	g.GET("/webhooks", webhookChannels, auth.SuperAdmin)
-	g.PUT("/webhooks/{platform}", updateWebhookChannel, auth.SuperAdmin)
-	g.POST("/webhooks/{platform}/test", testWebhookChannel, auth.SuperAdmin)
+	g.GET("/webhooks", webhookChannels, auth.SystemAdmin)
+	g.PUT("/webhooks/{platform}", updateWebhookChannel, auth.SystemAdmin)
+	g.POST("/webhooks/{platform}/test", testWebhookChannel, auth.SystemAdmin)
 
 	if webhook.TestHooksEnabled() {
 		// 测试钩子（路径相对 /api/v1 回到根）：/__test__/webhook/upstream、/__test__/webhook/deliver-once。

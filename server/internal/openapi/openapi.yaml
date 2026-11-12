@@ -30,26 +30,22 @@ paths:
                   id: 1
                   username: admin
                   display_name: 系统管理员
-                  roles:
-                  - id: 1
-                    name: 超级管理员
-                    is_system: true
                   enabled: true
                   version: 1
                   department_name: 华星检修维护部电气车间
                   source: MANAGE
                   permissions:
-                  - codes:read
-                  - hazard:read
-                  - hazard:write
-                  - huaxing:read
-                  - ledger:read
-                  - ledger:write
-                  - purchase:read
-                  - purchase:write
-                  - settings:write
+                  - system:admin
                   - warehouse:read
                   - warehouse:write
+                  - purchase:read
+                  - purchase:write
+                  - huaxing:read
+                  - codes:read
+                  - ledger:read
+                  - ledger:write
+                  - hazard:read
+                  - hazard:write
                   - work:read
                   - work:write
         '400':
@@ -202,26 +198,22 @@ paths:
                 id: 1
                 username: admin
                 display_name: 系统管理员
-                roles:
-                - id: 1
-                  name: 超级管理员
-                  is_system: true
                 enabled: true
                 version: 1
                 department_name: 华星检修维护部电气车间
                 source: MANAGE
                 permissions:
-                - codes:read
-                - hazard:read
-                - hazard:write
-                - huaxing:read
-                - ledger:read
-                - ledger:write
-                - purchase:read
-                - purchase:write
-                - settings:write
+                - system:admin
                 - warehouse:read
                 - warehouse:write
+                - purchase:read
+                - purchase:write
+                - huaxing:read
+                - codes:read
+                - ledger:read
+                - ledger:write
+                - hazard:read
+                - hazard:write
                 - work:read
                 - work:write
         '400':
@@ -461,23 +453,7 @@ paths:
                 mini_program_registration_enabled: true
                 mini_program_new_user_enabled: true
                 image_acceleration_server_url: https://img.hxni-electrical.com
-                inventory_mode: read_write
-                huaxing_inventory_mode: query_only
-                purchase_plans_mode: query_only
-                purchase_records_mode: query_only
-                material_codes_mode: query_only
-                hazards_mode: read_write
-                ledger_mode: query_only
                 secondary_warehouse_mode: full
-                web_features:
-                  dashboard: true
-                  memos: true
-                  warehouse: true
-                  huaxing_inventory: true
-                  procurement: true
-                  hazards: true
-                  ledger: true
-                  work: true
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
         '400':
@@ -569,23 +545,7 @@ paths:
                 mini_program_registration_enabled: true
                 mini_program_new_user_enabled: true
                 image_acceleration_server_url: https://img.hxni-electrical.com
-                inventory_mode: read_write
-                huaxing_inventory_mode: query_only
-                purchase_plans_mode: query_only
-                purchase_records_mode: query_only
-                material_codes_mode: query_only
-                hazards_mode: read_write
-                ledger_mode: query_only
                 secondary_warehouse_mode: full
-                web_features:
-                  dashboard: true
-                  memos: true
-                  warehouse: true
-                  huaxing_inventory: true
-                  procurement: true
-                  hazards: true
-                  ledger: true
-                  work: true
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
         '400':
@@ -810,23 +770,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/MiniProgramFeaturesRead'
               example:
-                inventory_mode: read_write
-                huaxing_inventory_mode: query_only
-                purchase_plans_mode: query_only
-                purchase_records_mode: query_only
-                material_codes_mode: query_only
-                hazards_mode: read_write
-                ledger_mode: query_only
                 secondary_warehouse_mode: full
-                web_features:
-                  dashboard: true
-                  memos: true
-                  warehouse: true
-                  huaxing_inventory: true
-                  procurement: true
-                  hazards: true
-                  ledger: true
-                  work: true
         '400':
           description: 业务校验失败
           content:
@@ -6970,12 +6914,12 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
-  /api/v1/roles:
+  /api/v1/permissions:
     get:
       tags:
       - 基础数据
-      summary: 角色列表（含各角色挂载的用户数）
-      operationId: roles_api_v1_roles_get
+      summary: 权限位目录（系统管理 + 各功能读写）
+      operationId: permissions_api_v1_permissions_get
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
@@ -6986,23 +6930,24 @@ paths:
             application/json:
               schema:
                 items:
-                  $ref: '#/components/schemas/RoleRead'
+                  $ref: '#/components/schemas/PermissionRead'
                 type: array
               example:
-              - id: 2
-                name: 库房管理员
-                description: 二级库与出入库、华星库存、编码库查询
-                permissions:
-                - codes:read
-                - dashboard:read
-                - huaxing:read
-                - warehouse:read
-                - warehouse:write
-                is_system: true
-                user_count: 1
-                created_at: '2026-01-01T00:00:00+00:00'
-                updated_at: '2026-01-01T00:00:00+00:00'
-                version: 1
+              - key: system:admin
+                module: system
+                action: admin
+                label: 系统管理（用户 / 项目 / 高级设置 / 附件 / 分享链接）
+                bit: 1
+              - key: warehouse:read
+                module: warehouse
+                action: read
+                label: 二级库与出入库查看
+                bit: 2
+              - key: warehouse:write
+                module: warehouse
+                action: write
+                label: 二级库出入库与库存调整
+                bit: 4
         '401':
           description: 未认证或凭证无效
           content:
@@ -7059,17 +7004,13 @@ paths:
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                   source: MINI_PROGRAM
-                  roles:
-                  - id: 2
-                    name: 全局只读
-                    is_system: true
                   permissions:
-                  - codes:read
-                  - hazard:read
-                  - huaxing:read
-                  - ledger:read
-                  - purchase:read
                   - warehouse:read
+                  - purchase:read
+                  - huaxing:read
+                  - codes:read
+                  - ledger:read
+                  - hazard:read
                   - work:read
                 requires_profile: false
         '400':
@@ -7151,17 +7092,13 @@ paths:
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
                 source: MINI_PROGRAM
-                roles:
-                - id: 2
-                  name: 全局只读
-                  is_system: true
                 permissions:
-                - codes:read
-                - hazard:read
-                - huaxing:read
-                - ledger:read
-                - purchase:read
                 - warehouse:read
+                - purchase:read
+                - huaxing:read
+                - codes:read
+                - ledger:read
+                - hazard:read
                 - work:read
         '400':
           description: 业务校验失败
@@ -7341,17 +7278,13 @@ paths:
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                   source: MINI_PROGRAM
-                  roles:
-                  - id: 2
-                    name: 全局只读
-                    is_system: true
                   permissions:
-                  - codes:read
-                  - hazard:read
-                  - huaxing:read
-                  - ledger:read
-                  - purchase:read
                   - warehouse:read
+                  - purchase:read
+                  - huaxing:read
+                  - codes:read
+                  - ledger:read
+                  - hazard:read
                   - work:read
                 requires_profile: false
         '400':
@@ -16695,15 +16628,11 @@ paths:
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                   department_name: 华星检修维护部电气车间
                   source: MANAGE
-                  roles:
-                  - id: 2
-                    name: 库房管理员
-                    is_system: true
                   permissions:
-                  - codes:read
-                  - huaxing:read
                   - warehouse:read
                   - warehouse:write
+                  - huaxing:read
+                  - codes:read
                 page: 1
                 page_size: 20
                 total: 1
@@ -16792,15 +16721,11 @@ paths:
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
                 source: MANAGE
-                roles:
-                - id: 2
-                  name: 库房管理员
-                  is_system: true
                 permissions:
-                - codes:read
-                - huaxing:read
                 - warehouse:read
                 - warehouse:write
+                - huaxing:read
+                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -16894,15 +16819,11 @@ paths:
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
                 source: MANAGE
-                roles:
-                - id: 2
-                  name: 库房管理员
-                  is_system: true
                 permissions:
-                - codes:read
-                - huaxing:read
                 - warehouse:read
                 - warehouse:write
+                - huaxing:read
+                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -17035,7 +16956,7 @@ paths:
     post:
       tags:
       - 基础数据
-      summary: 合并账号（目标保留资料；来源微信身份随迁、角色取并集；来源账号删除）
+      summary: 合并账号（目标保留资料；来源微信身份随迁、权限位取并集；来源账号删除）
       operationId: merge_user_api_v1_users_item_id_merge_post
       security:
       - HTTPBearer: []
@@ -17066,18 +16987,11 @@ paths:
                 display_name: 仓库管理员
                 department_name: 华星检修维护部电气车间
                 source: MANAGE
-                roles:
-                - id: 2
-                  name: 全局只读
-                  is_system: true
-                - id: 5
-                  name: 隐患读写
-                  is_system: true
                 permissions:
-                - hazard:read
-                - hazard:write
                 - warehouse:read
                 - warehouse:write
+                - hazard:read
+                - hazard:write
                 wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                 enabled: true
                 version: 5
@@ -17175,15 +17089,11 @@ paths:
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
                 source: MANAGE
-                roles:
-                - id: 2
-                  name: 库房管理员
-                  is_system: true
                 permissions:
-                - codes:read
-                - huaxing:read
                 - warehouse:read
                 - warehouse:write
+                - huaxing:read
+                - codes:read
         '400':
           description: 业务校验失败
           content:
@@ -23644,24 +23554,8 @@ components:
         image_acceleration_server_url:
           type: string
           title: Image Acceleration Server Url
-        inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        huaxing_inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        purchase_plans_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        purchase_records_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        material_codes_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        hazards_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        ledger_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
-        web_features:
-          $ref: '#/components/schemas/WebFeatureVisibility'
         updated_at:
           anyOf:
           - type: string
@@ -23683,15 +23577,7 @@ components:
       - mini_program_registration_enabled
       - mini_program_new_user_enabled
       - image_acceleration_server_url
-      - inventory_mode
-      - huaxing_inventory_mode
-      - purchase_plans_mode
-      - purchase_records_mode
-      - material_codes_mode
-      - hazards_mode
-      - ledger_mode
       - secondary_warehouse_mode
-      - web_features
       - version
       title: AiSearchSettingsRead
       examples:
@@ -23707,23 +23593,7 @@ components:
         mini_program_registration_enabled: true
         mini_program_new_user_enabled: true
         image_acceleration_server_url: https://img.hxni-electrical.com
-        inventory_mode: read_write
-        huaxing_inventory_mode: query_only
-        purchase_plans_mode: query_only
-        purchase_records_mode: query_only
-        material_codes_mode: query_only
-        hazards_mode: read_write
-        ledger_mode: query_only
         secondary_warehouse_mode: full
-        web_features:
-          dashboard: true
-          memos: true
-          warehouse: true
-          huaxing_inventory: true
-          procurement: true
-          hazards: true
-          ledger: true
-          work: true
         updated_at: '2026-09-13T10:30:00+08:00'
         version: 3
     AiSearchSettingsUpdate:
@@ -23768,34 +23638,9 @@ components:
           maxLength: 500
           title: Image Acceleration Server Url
           default: ''
-        inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: read_write
-        huaxing_inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: query_only
-        purchase_plans_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: query_only
-        purchase_records_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: query_only
-        material_codes_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: query_only
-        hazards_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: read_write
-        ledger_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-          default: query_only
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
           default: full
-        web_features:
-          anyOf:
-          - $ref: '#/components/schemas/WebFeatureVisibility'
-          - type: 'null'
         version:
           type: integer
           minimum: 0.0
@@ -23815,23 +23660,7 @@ components:
         mini_program_registration_enabled: true
         mini_program_new_user_enabled: true
         image_acceleration_server_url: https://img.hxni-electrical.com
-        inventory_mode: read_write
-        huaxing_inventory_mode: query_only
-        purchase_plans_mode: query_only
-        purchase_records_mode: query_only
-        material_codes_mode: query_only
-        hazards_mode: read_write
-        ledger_mode: query_only
         secondary_warehouse_mode: full
-        web_features:
-          dashboard: true
-          memos: true
-          warehouse: true
-          huaxing_inventory: true
-          procurement: true
-          hazards: true
-          ledger: true
-          work: true
         version: 3
     AiSearchStatusRead:
       properties:
@@ -26203,26 +26032,22 @@ components:
           id: 1
           username: admin
           display_name: 系统管理员
-          roles:
-          - id: 1
-            name: 超级管理员
-            is_system: true
           enabled: true
           version: 1
           department_name: 华星检修维护部电气车间
           source: MANAGE
           permissions:
-          - codes:read
-          - hazard:read
-          - hazard:write
-          - huaxing:read
-          - ledger:read
-          - ledger:write
-          - purchase:read
-          - purchase:write
-          - settings:write
+          - system:admin
           - warehouse:read
           - warehouse:write
+          - purchase:read
+          - purchase:write
+          - huaxing:read
+          - codes:read
+          - ledger:read
+          - ledger:write
+          - hazard:read
+          - hazard:write
           - work:read
           - work:write
     MaterialCodeExistsRead:
@@ -26378,69 +26203,17 @@ components:
       - trial
       - release
       title: MiniProgramCodeEnv
-    MiniProgramFeatureMode:
-      type: string
-      enum:
-      - disabled
-      - query_only
-      - read_write
-      title: MiniProgramFeatureMode
     MiniProgramFeaturesRead:
       properties:
-        inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        huaxing_inventory_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        purchase_plans_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        purchase_records_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        material_codes_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        hazards_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
-        ledger_mode:
-          $ref: '#/components/schemas/MiniProgramFeatureMode'
         secondary_warehouse_mode:
           $ref: '#/components/schemas/SecondaryWarehouseMode'
-        web_features:
-          $ref: '#/components/schemas/WebFeatureVisibility'
       type: object
       required:
-      - inventory_mode
-      - huaxing_inventory_mode
-      - purchase_plans_mode
-      - purchase_records_mode
-      - material_codes_mode
-      - hazards_mode
-      - ledger_mode
       - secondary_warehouse_mode
-      - web_features
       title: MiniProgramFeaturesRead
-      description: '公开功能开关：小程序端档位 + 后台主 tab 可见性。
-
-
-        前端在启动时（mount 前）拉取一次，供侧栏菜单与路由落地页同步读取；
-
-        小程序端只读它认识的 `*_mode` / `secondary_warehouse_mode`，多出的 `web_features` 会被忽略。'
+      description: 公开运行模式：小程序与网页端共用的二级库完整 / 精简模式。功能是否展示与可写由 app_user.permissions 权限位决定，不再有功能开关配置。
       examples:
-      - inventory_mode: read_write
-        huaxing_inventory_mode: query_only
-        purchase_plans_mode: query_only
-        purchase_records_mode: query_only
-        material_codes_mode: query_only
-        hazards_mode: read_write
-        ledger_mode: query_only
-        secondary_warehouse_mode: full
-        web_features:
-          dashboard: true
-          memos: true
-          warehouse: true
-          huaxing_inventory: true
-          procurement: true
-          hazards: true
-          ledger: true
-          work: true
+      - secondary_warehouse_mode: full
     MiniProgramHazardCreate:
       properties:
         inspection_area:
@@ -26923,17 +26696,13 @@ components:
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
           source: MINI_PROGRAM
-          roles:
-          - id: 2
-            name: 全局只读
-            is_system: true
           permissions:
-          - codes:read
-          - hazard:read
-          - huaxing:read
-          - ledger:read
-          - purchase:read
           - warehouse:read
+          - purchase:read
+          - huaxing:read
+          - codes:read
+          - ledger:read
+          - hazard:read
           - work:read
         requires_profile: false
     MiniProgramMaterialCodeRead:
@@ -27807,6 +27576,38 @@ components:
       - out_of_stock
       - low_stock
       title: MiniProgramStockStatus
+    PermissionRead:
+      properties:
+        key:
+          type: string
+          title: Key
+        module:
+          type: string
+          title: Module
+        action:
+          type: string
+          title: Action
+        label:
+          type: string
+          title: Label
+        bit:
+          type: integer
+          title: Bit
+      type: object
+      required:
+      - key
+      - module
+      - action
+      - label
+      - bit
+      title: PermissionRead
+      description: 权限目录项：bit 是权限位图（app_user.permissions）里的数值，按位判断。
+      examples:
+      - key: system:admin
+        module: system
+        action: admin
+        label: 系统管理（用户 / 项目 / 高级设置 / 附件 / 分享链接）
+        bit: 1
     UserMergeRequest:
       properties:
         source_user_id:
@@ -27846,17 +27647,12 @@ components:
           title: Enabled
         source:
           $ref: '#/components/schemas/UserSource'
-        roles:
-          items:
-            $ref: '#/components/schemas/UserRoleRead'
-          type: array
-          title: Roles
         permissions:
           items:
             type: string
           type: array
           title: Permissions
-          description: 角色权限并集（通配已展开），小程序端按它门禁功能入口与写操作
+          description: 权限位展开后的权限键，小程序端按它门禁功能入口与写操作
         last_used_at:
           anyOf:
           - type: string
@@ -27887,7 +27683,6 @@ components:
       - department_name
       - enabled
       - source
-      - roles
       - permissions
       - wechat_openid
       - created_at
@@ -27900,12 +27695,7 @@ components:
         department_name: 检修维护部电气自动化车间
         enabled: true
         source: MINI_PROGRAM
-        roles:
-        - id: 7
-          name: 全局只读
-          is_system: true
         permissions:
-        - dashboard:read
         - warehouse:read
         last_used_at: '2026-09-13T09:12:00+08:00'
         wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
@@ -30097,17 +29887,13 @@ components:
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
           source: MINI_PROGRAM
-          roles:
-          - id: 7
-            name: 全局只读
-            is_system: true
           permissions:
-          - codes:read
-          - hazard:read
-          - huaxing:read
-          - ledger:read
-          - purchase:read
           - warehouse:read
+          - purchase:read
+          - huaxing:read
+          - codes:read
+          - ledger:read
+          - hazard:read
           - work:read
         - id: 2
           display_name: 李建军
@@ -30119,17 +29905,13 @@ components:
           last_used_at: '2026-09-06T14:05:00+08:00'
           version: 1
           source: MINI_PROGRAM
-          roles:
-          - id: 7
-            name: 全局只读
-            is_system: true
           permissions:
-          - codes:read
-          - hazard:read
-          - huaxing:read
-          - ledger:read
-          - purchase:read
           - warehouse:read
+          - purchase:read
+          - huaxing:read
+          - codes:read
+          - ledger:read
+          - hazard:read
           - work:read
         - id: 3
           display_name: 王海涛
@@ -30141,17 +29923,13 @@ components:
           last_used_at: '2026-08-15T08:12:00+08:00'
           version: 2
           source: MINI_PROGRAM
-          roles:
-          - id: 7
-            name: 全局只读
-            is_system: true
           permissions:
-          - codes:read
-          - hazard:read
-          - huaxing:read
-          - ledger:read
-          - purchase:read
           - warehouse:read
+          - purchase:read
+          - huaxing:read
+          - codes:read
+          - ledger:read
+          - hazard:read
           - work:read
         page: 1
         page_size: 20
@@ -31902,15 +31680,11 @@ components:
           api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
           department_name: 华星检修维护部电气车间
           source: MANAGE
-          roles:
-          - id: 2
-            name: 库房管理员
-            is_system: true
           permissions:
-          - codes:read
-          - huaxing:read
           - warehouse:read
           - warehouse:write
+          - huaxing:read
+          - codes:read
         page: 1
         page_size: 20
         total: 1
@@ -34809,89 +34583,6 @@ components:
       - MANAGE
       - MINI_PROGRAM
       title: UserSource
-    UserRoleRead:
-      properties:
-        id:
-          type: integer
-          title: Id
-        name:
-          type: string
-          title: Name
-        is_system:
-          type: boolean
-          title: Is System
-      type: object
-      required:
-      - id
-      - name
-      - is_system
-      title: UserRoleRead
-      examples:
-      - id: 2
-        name: 库房管理员
-        is_system: true
-    RoleRead:
-      properties:
-        id:
-          type: integer
-          title: Id
-        name:
-          type: string
-          title: Name
-        description:
-          type: string
-          title: Description
-        permissions:
-          items:
-            type: string
-          type: array
-          title: Permissions
-        is_system:
-          type: boolean
-          title: Is System
-        user_count:
-          type: integer
-          title: User Count
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        version:
-          type: integer
-          title: Version
-      type: object
-      required:
-      - id
-      - name
-      - description
-      - permissions
-      - is_system
-      - user_count
-      - created_at
-      - updated_at
-      - version
-      title: RoleRead
-      examples:
-      - id: 2
-        name: 全局只读
-        description: 各功能只读：二级库 / 申购 / 隐患 / 台账 / 工单 / 华星 / 编码库查看
-        permissions:
-        - codes:read
-        - hazard:read
-        - huaxing:read
-        - ledger:read
-        - purchase:read
-        - warehouse:read
-        - work:read
-        is_system: true
-        user_count: 3
-        created_at: '2026-01-01T00:00:00+00:00'
-        updated_at: '2026-01-01T00:00:00+00:00'
-        version: 1
     SecondaryWarehouseMode:
       type: string
       enum:
@@ -35664,11 +35355,6 @@ components:
           title: Department Name
         source:
           $ref: '#/components/schemas/UserSource'
-        roles:
-          items:
-            $ref: '#/components/schemas/UserRoleRead'
-          type: array
-          title: Roles
         wechat_openid:
           anyOf:
           - type: string
@@ -35680,7 +35366,7 @@ components:
             type: string
           type: array
           title: Permissions
-          description: 角色权限并集（通配已展开）
+          description: 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
         enabled:
           type: boolean
           title: Enabled
@@ -35701,7 +35387,6 @@ components:
       - display_name
       - department_name
       - source
-      - roles
       - permissions
       - enabled
       - version
@@ -35712,15 +35397,11 @@ components:
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
         source: MANAGE
-        roles:
-        - id: 2
-          name: 库房管理员
-          is_system: true
         permissions:
-        - codes:read
-        - huaxing:read
         - warehouse:read
         - warehouse:write
+        - huaxing:read
+        - codes:read
         enabled: true
         version: 1
         api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
@@ -35757,16 +35438,16 @@ components:
           type: string
           maxLength: 128
           title: Department Name
-        role_ids:
-          items:
-            type: integer
-          type: array
-          title: Role Ids
-          description: 挂载的角色 id 列表（多角色，权限取并集）
         enabled:
           type: boolean
           title: Enabled
           default: true
+        permissions:
+          items:
+            type: string
+          type: array
+          title: Permissions
+          description: 权限键列表（写权限自动带上同模块读权限；省略表示无权限）
       additionalProperties: false
       type: object
       required:
@@ -35780,14 +35461,7 @@ components:
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
         enabled: true
-        source: MANAGE
-        roles:
-        - id: 2
-          name: 库房管理员
-          is_system: true
         permissions:
-        - codes:read
-        - huaxing:read
         - warehouse:read
         - warehouse:write
     UserRead:
@@ -35806,11 +35480,6 @@ components:
           title: Department Name
         source:
           $ref: '#/components/schemas/UserSource'
-        roles:
-          items:
-            $ref: '#/components/schemas/UserRoleRead'
-          type: array
-          title: Roles
         wechat_openid:
           anyOf:
           - type: string
@@ -35822,7 +35491,7 @@ components:
             type: string
           type: array
           title: Permissions
-          description: 角色权限并集（通配已展开）
+          description: 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
         enabled:
           type: boolean
           title: Enabled
@@ -35836,7 +35505,6 @@ components:
       - display_name
       - department_name
       - source
-      - roles
       - permissions
       - enabled
       - version
@@ -35847,22 +35515,18 @@ components:
         display_name: 系统管理员
         department_name: 华星检修维护部电气车间
         source: MANAGE
-        roles:
-        - id: 1
-          name: 超级管理员
-          is_system: true
         permissions:
-        - codes:read
-        - hazard:read
-        - hazard:write
-        - huaxing:read
-        - ledger:read
-        - ledger:write
-        - purchase:read
-        - purchase:write
-        - settings:write
+        - system:admin
         - warehouse:read
         - warehouse:write
+        - purchase:read
+        - purchase:write
+        - huaxing:read
+        - codes:read
+        - ledger:read
+        - ledger:write
+        - hazard:read
+        - hazard:write
         - work:read
         - work:write
         enabled: true
@@ -35896,14 +35560,6 @@ components:
             minLength: 6
           - type: 'null'
           title: Password
-        role_ids:
-          anyOf:
-          - items:
-              type: integer
-            type: array
-          - type: 'null'
-          title: Role Ids
-          description: 全量替换用户的角色（缺省表示不修改）
         enabled:
           anyOf:
           - type: boolean
@@ -35912,6 +35568,14 @@ components:
         version:
           type: integer
           title: Version
+        permissions:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Permissions
+          description: 全量替换用户的权限位（缺省表示不修改）
       additionalProperties: false
       type: object
       required:
@@ -35924,21 +35588,14 @@ components:
         enabled: true
         version: 2
         source: MANAGE
-        roles:
-        - id: 2
-          name: 库房管理员
-          is_system: true
-        - id: 7
-          name: 全局只读
-          is_system: true
         permissions:
-        - codes:read
-        - hazard:read
-        - huaxing:read
-        - ledger:read
-        - purchase:read
         - warehouse:read
         - warehouse:write
+        - purchase:read
+        - huaxing:read
+        - codes:read
+        - ledger:read
+        - hazard:read
         - work:read
     VersionInfoRead:
       properties:
@@ -35968,63 +35625,6 @@ components:
         version: 1.0.0
         commit: 9d21f4c
         build_time: '2026-09-13T09:00:00+08:00'
-    WebFeatureVisibility:
-      properties:
-        dashboard:
-          type: boolean
-          title: Dashboard
-          default: true
-        memos:
-          type: boolean
-          title: Memos
-          default: true
-        warehouse:
-          type: boolean
-          title: Warehouse
-          default: true
-        huaxing_inventory:
-          type: boolean
-          title: Huaxing Inventory
-          default: true
-        procurement:
-          type: boolean
-          title: Procurement
-          default: true
-        hazards:
-          type: boolean
-          title: Hazards
-          default: true
-        ledger:
-          type: boolean
-          title: Ledger
-          default: true
-        work:
-          type: boolean
-          title: Work
-          default: true
-      type: object
-      title: WebFeatureVisibility
-      description: '管理端（后台）侧栏主 tab 的可见性开关：`False` 表示该主 tab 从侧栏隐藏。
-
-
-        约定：
-
-        - **系统管理不在本列表**：它始终显示，保证高级设置本身永远能从侧栏进入；
-
-        - 只影响管理端侧栏渲染，后端数据接口不做对应鉴权：隐藏的页面仍可用链接直达；
-
-        - 字段缺省即显示，新增主 tab 时在服务端与前端 `web/src/utils/navigation.ts` 两处同步登记；
-
-        - 全为 `False` 视为无效配置，读/写时归一到全部显示（避免把侧栏关空）。'
-      examples:
-      - dashboard: true
-        memos: true
-        warehouse: true
-        huaxing_inventory: true
-        procurement: true
-        hazards: true
-        ledger: true
-        work: true
     WebhookChannelRead:
       properties:
         platform:

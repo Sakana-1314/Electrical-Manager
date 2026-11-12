@@ -11,7 +11,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/dictionary"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/memo"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/project"
-	roleSrv "github.com/Sakana-1314/Electrical-Manager/server/internal/service/role"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -21,15 +20,15 @@ func Register(r *web.Router) {
 	a.POST("/refresh", refresh)
 	a.GET("/me", me, auth.CurrentUser)
 
-	r.GET("/users", listUsers, auth.SuperAdmin)
-	r.POST("/users", addUser, auth.SuperAdmin)
-	r.PATCH("/users/{item_id}", editUser, auth.SuperAdmin)
-	r.POST("/users/{item_id}/api-token/regenerate", regenerateToken, auth.SuperAdmin)
-	r.POST("/users/{item_id}/merge", mergeUser, auth.SuperAdmin)
-	r.DELETE("/users/{item_id}", removeUser, auth.SuperAdmin)
+	r.GET("/users", listUsers, auth.SystemAdmin)
+	r.POST("/users", addUser, auth.SystemAdmin)
+	r.PATCH("/users/{item_id}", editUser, auth.SystemAdmin)
+	r.POST("/users/{item_id}/api-token/regenerate", regenerateToken, auth.SystemAdmin)
+	r.POST("/users/{item_id}/merge", mergeUser, auth.SystemAdmin)
+	r.DELETE("/users/{item_id}", removeUser, auth.SystemAdmin)
 
-	// 角色（RBAC）：内置角色固定种子、无 CRUD；本接口只读，供用户编辑的多角色下拉使用。
-	r.GET("/roles", listRoles, auth.SuperAdmin)
+	// 权限位目录：用户编辑界面的可勾选项（系统管理 + 各功能读写），只读。
+	r.GET("/permissions", listPermissions, auth.SystemAdmin)
 
 	m := r.Group("/memos")
 	m.GET("", listMemos, auth.CurrentUser)
@@ -43,9 +42,9 @@ func Register(r *web.Router) {
 // RegisterProjects 项目管理路由（注册顺序靠后，与原版 openapi 顺序一致）。
 func RegisterProjects(r *web.Router) {
 	r.GET("/projects", listProjects, auth.CurrentUser)
-	r.POST("/projects", addProject, auth.SuperAdmin)
-	r.PATCH("/projects/{item_id}", editProject, auth.SuperAdmin)
-	r.DELETE("/projects/{item_id}", removeProject, auth.SuperAdmin)
+	r.POST("/projects", addProject, auth.SystemAdmin)
+	r.PATCH("/projects/{item_id}", editProject, auth.SystemAdmin)
+	r.DELETE("/projects/{item_id}", removeProject, auth.SystemAdmin)
 }
 
 // ---------------- 认证 ----------------
@@ -66,11 +65,6 @@ func login(c *web.Ctx) error {
 		return apperr.New("INVALID_CREDENTIALS", "用户名或密码错误").WithStatus(401)
 	}
 	read := schema.NewUserRead(&u)
-	perms, err := roleSrv.UserPermissionKeys(c.DB, u.ID)
-	if err != nil {
-		return err
-	}
-	read.Permissions = perms
 	return c.OK(schema.LoginResponse{
 		AccessToken:  security.CreateAccessToken(u.ID),
 		RefreshToken: security.CreateRefreshToken(u.ID, u.Version),
@@ -114,28 +108,13 @@ func refresh(c *web.Ctx) error {
 }
 
 func me(c *web.Ctx) error {
-	read := schema.NewUserRead(auth.User(c))
-	roles := map[int64][]schema.UserRoleRead{}
-	if err := roleSrv.WithRoles(c.DB, []int64{read.ID}, roles); err != nil {
-		return err
-	}
-	read.Roles = roles[read.ID]
-	perms, err := roleSrv.UserPermissionKeys(c.DB, read.ID)
-	if err != nil {
-		return err
-	}
-	read.Permissions = perms
-	return c.OK(read)
+	return c.OK(schema.NewUserRead(auth.User(c)))
 }
 
-// ---------------- 角色（RBAC） ----------------
+// ---------------- 权限位目录 ----------------
 
-func listRoles(c *web.Ctx) error {
-	items, err := roleSrv.List(c.DB)
-	if err != nil {
-		return err
-	}
-	return c.OK(items)
+func listPermissions(c *web.Ctx) error {
+	return c.OK(schema.PermissionCatalogRead())
 }
 
 // ---------------- 用户 ----------------

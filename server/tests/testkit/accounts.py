@@ -1,38 +1,32 @@
-"""账号与角色相关的测试夹具助手：统一用户表下的角色挂载与小程序用户建档。"""
+"""账号相关的测试夹具助手：统一用户表下的权限位授予与小程序用户建档。"""
 
 from __future__ import annotations
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 
-import json
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select
-from tests.testkit.enums import DEFAULT_ROLE_NAMES, ROLE_PERMISSIONS, UserSource
-from tests.testkit.models import Role, User, UserRole
-
-
-async def _get_or_create_role(session: AsyncSession, role_name: str) -> Role:
-    """按名取内置角色；缺失（种子时序问题）时按 ROLE_PERMISSIONS 现场补建。"""
-    role = (
-        await session.execute(select(Role).where(Role.name == role_name))
-    ).scalar_one_or_none()
-    if role is None:
-        role = Role(
-            name=role_name,
-            permissions=json.dumps(ROLE_PERMISSIONS.get(role_name, [])),
-            is_system=True,
-        )
-        session.add(role)
-        await session.flush()
-    return role
+from tests.testkit.enums import DEFAULT_PERMISSION_KEYS, permission_bits, UserSource
+from tests.testkit.models import User
 
 
-async def grant_role(session: AsyncSession, user_id: int, role_name: str) -> None:
-    """给用户挂一个角色（按角色名取，缺失则现场补建）。"""
-    role = await _get_or_create_role(session, role_name)
-    session.add(UserRole(user_id=user_id, role_id=role.id))
+async def grant_permissions(
+    session: AsyncSession, user_id: int, keys: tuple[str, ...] | list[str]
+) -> None:
+    """给用户追加权限位（按位或，写权限自动带上同模块读权限）。"""
+    user = await session.get(User, user_id)
+    assert user is not None, f"user {user_id} not found"
+    user.permissions |= permission_bits(*keys)
+    await session.commit()
+
+
+async def set_permissions(
+    session: AsyncSession, user_id: int, keys: tuple[str, ...] | list[str]
+) -> None:
+    """全量替换用户权限位。"""
+    user = await session.get(User, user_id)
+    assert user is not None, f"user {user_id} not found"
+    user.permissions = permission_bits(*keys)
     await session.commit()
 
 
@@ -40,10 +34,10 @@ async def create_mini_program_user(
     session: AsyncSession,
     display_name: str,
     *,
-    role_names: tuple[str, ...] = DEFAULT_ROLE_NAMES,
+    permissions: tuple[str, ...] = DEFAULT_PERMISSION_KEYS,
     enabled: bool = True,
 ) -> int:
-    """直接造一个小程序来源的统一用户（跳过微信登录链路）并挂角色，返回用户 id。"""
+    """直接造一个小程序来源的统一用户（跳过微信登录链路）并写权限位，返回用户 id。"""
     user = User(
         username=f"wx_test_{uuid4().hex[:12]}",
         password_hash="",
@@ -52,12 +46,10 @@ async def create_mini_program_user(
         department_name="华星检修维护部电气车间",
         source=UserSource.MINI_PROGRAM,
         wechat_openid=f"openid-test-{uuid4().hex[:12]}",
+        permissions=permission_bits(*permissions),
         enabled=enabled,
     )
     session.add(user)
     await session.flush()
-    for role_name in role_names:
-        role = await _get_or_create_role(session, role_name)
-        session.add(UserRole(user_id=user.id, role_id=role.id))
     await session.commit()
     return user.id

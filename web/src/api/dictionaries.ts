@@ -1,16 +1,17 @@
 import { apiClient } from './client'
 import type {
   ManagedUser,
-  RoleRead,
-  UserMergeRequest,
   Page,
   PagedQueryParams,
+  PermissionRead,
+  UserCreate,
+  UserMergeRequest,
+  UserUpdate,
 } from './generated'
 
-/** 管理端用户列表查询 */
-/** 角色（RBAC）：内置角色固定种子、无 CRUD；本接口只读，供用户编辑的多角色下拉使用 */
-export const roleApi = {
-  roles: () => apiClient.get<RoleRead[]>('/roles').then((r) => r.data),
+/** 权限位目录：系统管理 + 各功能读写（用户编辑界面的可勾选项） */
+export const permissionApi = {
+  list: () => apiClient.get<PermissionRead[]>('/permissions').then((r) => r.data),
 }
 
 export interface UserListQuery extends PagedQueryParams {
@@ -19,20 +20,20 @@ export interface UserListQuery extends PagedQueryParams {
   keyword?: string
 }
 
-/** 小程序用户列表查询 */
+/** 管理端用户维护 */
 export const dictionaryApi = {
   users: (params?: UserListQuery) =>
     apiClient.get<Page<ManagedUser>>('/users', { params }).then((r) => r.data),
-  createUser: (payload: Partial<ManagedUser> & { password?: string }) =>
+  createUser: (payload: UserCreate) =>
     apiClient.post<ManagedUser>('/users', payload).then((r) => r.data),
-  updateUser: (id: number, payload: Partial<ManagedUser> & { password?: string }) =>
+  updateUser: (id: number, payload: UserUpdate) =>
     apiClient.patch<ManagedUser>(`/users/${id}`, payload).then((r) => r.data),
   regenerateUserApiToken: (id: number, version: number) =>
     apiClient
       .post<ManagedUser>(`/users/${id}/api-token/regenerate`, { version })
       .then((r) => r.data),
   deleteUser: (id: number) => apiClient.delete(`/users/${id}`),
-  /** 合并账号：目标保留资料；来源微信身份随迁、角色取并集；来源账号删除 */
+  /** 合并账号：目标保留资料；来源微信身份随迁、权限位取并集；来源账号删除 */
   mergeUser: (targetId: number, payload: UserMergeRequest) =>
     apiClient.post<ManagedUser>(`/users/${targetId}/merge`, payload).then((r) => r.data),
 }

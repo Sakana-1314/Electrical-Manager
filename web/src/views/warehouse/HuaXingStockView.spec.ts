@@ -125,7 +125,6 @@ async function mountView(path = '/warehouse/hua-xing-stock'): Promise<void> {
     JSON.stringify({
       id: 7,
       username: 'tester',
-      roles: [{ id: 2, name: '库房管理员', is_system: true }],
       permissions: ['warehouse:read', 'warehouse:write'],
     }),
   )

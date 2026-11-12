@@ -90,9 +90,9 @@ Page({
     const shared = readShareParams(options, SHARE_PARAMS);
     this.setData({ fieldDefs: toFieldDefs() });
     try {
-      const [session, featureModes] = await Promise.all([
+      const [session, runtimeModes] = await Promise.all([
         getApp().globalData.authPromise,
-        getApp().globalData.featureSettingsPromise,
+        getApp().globalData.runtimeSettingsPromise,
       ]);
       if (session.account_disabled) {
         wx.reLaunch({ url: '/pages/disabled/disabled' });
@@ -109,7 +109,7 @@ Page({
         return;
       }
       // 精简模式：二级库独立表 + 只读，调用精简接口且无库存状态/详情。
-      const liteMode = featureModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
+      const liteMode = runtimeModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
 
       const filters = {
         stockStatus:

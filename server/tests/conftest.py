@@ -11,8 +11,6 @@ import shutil
 import time
 from collections.abc import AsyncIterator
 
-from sqlalchemy import select
-
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
@@ -20,8 +18,8 @@ from httpx import AsyncClient
 from tests.testkit import settings
 from tests.testkit.database import project_session as _project_session
 from tests.testkit.database import sync_sequence, system_session, truncate_all_tables
-from tests.testkit.enums import ROLE_PERMISSIONS
-from tests.testkit.models import Project, Role, User, UserRole
+from tests.testkit.enums import SEED_USER_PERMISSIONS
+from tests.testkit.models import Project, User
 from tests.testkit.security import hash_password
 
 # 测试库固定两个项目：默认项目（等同于线上现有项目）与第二个项目（用于隔离用例）。
@@ -29,19 +27,15 @@ from tests.testkit.security import hash_password
 DEFAULT_PROJECT_ID = 1
 SECOND_PROJECT_ID = 2
 
-# 内置角色种子（与 init.sql 同名同权限）
-SYSTEM_ROLES = tuple(ROLE_PERMISSIONS.items())
-
-# 种子账号（口令均为 123456）：用户名 → 挂载的内置角色名
+# 种子账号（口令均为 123456）：用户名 → 权限位（与 init.sql 种子一致）
 SEED_USERS = (
-    ("admin", "系统管理员", "超级管理员"),
-    ("warehouse", "仓库管理员", "二级库读写"),
-    ("purchase", "申购管理员", "申购读写"),
-    ("hazard", "隐患管理员", "隐患读写"),
-    ("ledger", "台账管理员", "台账读写"),
-    ("work", "工作管理员", "工单读写"),
-    ("readonly", "只读用户", "全局只读"),
-
+    ("admin", "系统管理员"),
+    ("warehouse", "仓库管理员"),
+    ("purchase", "申购管理员"),
+    ("hazard", "隐患管理员"),
+    ("ledger", "台账管理员"),
+    ("work", "工作管理员"),
+    ("readonly", "只读用户"),
 )
 
 _password_hash: str | None = None
@@ -68,23 +62,17 @@ async def _seed() -> None:
                 Project(id=SECOND_PROJECT_ID, name="二期项目", enabled=True, is_default=False),
             ]
         )
-        session.add_all(
-            [Role(name=name, permissions=perms, is_system=True) for name, perms in SYSTEM_ROLES]
-        )
-        await session.flush()
-        role_rows = (await session.execute(select(Role))).scalars()
-        role_ids = {role.name: role.id for role in role_rows}
-        for username, display_name, role_name in SEED_USERS:
-            user = User(
-                username=username,
-                password_hash=_password_hash,
-                display_name=display_name,
-                department_name="华星检修维护部电气车间",
-                enabled=True,
+        for username, display_name in SEED_USERS:
+            session.add(
+                User(
+                    username=username,
+                    password_hash=_password_hash,
+                    display_name=display_name,
+                    department_name="华星检修维护部电气车间",
+                    permissions=SEED_USER_PERMISSIONS[username],
+                    enabled=True,
+                )
             )
-            session.add(user)
-            await session.flush()
-            session.add(UserRole(user_id=user.id, role_id=role_ids[role_name]))
         await session.commit()
     # 显式插入的 id 不会推进自增序列，推到 MAX(id)，否则后续创建项目会撞主键。
     await sync_sequence("project")

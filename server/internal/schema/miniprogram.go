@@ -14,7 +14,7 @@ import (
 
 // MiniProgramUserRead 是小程序用户（统一 app_user 表里 source = MINI_PROGRAM 的账号）。
 // 小程序只有一个，微信 openid 直接落用户表（wechat_openid）。
-// last_used_at 为最近一次登录小程序的时间；roles / permissions 供小程序端按权限门禁。
+// last_used_at 为最近一次登录小程序的时间；permissions 是权限位展开后的权限键，供小程序端门禁入口与写操作。
 type MiniProgramUserRead struct {
 	ID             int64          `json:"id"`
 	DisplayName    string         `json:"display_name"`
@@ -22,7 +22,6 @@ type MiniProgramUserRead struct {
 	Enabled        bool           `json:"enabled"`
 	Source         string         `json:"source"`
 	WechatOpenid   *string        `json:"wechat_openid"`
-	Roles          []UserRoleRead `json:"roles"`
 	Permissions    []string       `json:"permissions"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
 	CreatedAt      jtype.UTCTime  `json:"created_at"`

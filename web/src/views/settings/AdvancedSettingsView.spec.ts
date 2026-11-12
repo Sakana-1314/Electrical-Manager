@@ -17,7 +17,6 @@ import { defineComponent, h } from 'vue'
 import type { AiSearchSettings, WebhookChannelSettings } from '@/api/generated'
 import { aiSearchApi } from '@/api/aiSearch'
 import { systemSettingsApi } from '@/api/systemSettings'
-import { ALL_NAV_FEATURES_VISIBLE, NAV_FEATURES } from '@/utils/navigation'
 import AdvancedSettingsView from './AdvancedSettingsView.vue'
 
 vi.mock('@/api/aiSearch', () => ({
@@ -47,15 +46,7 @@ const settings = (overrides: Partial<AiSearchSettings> = {}): AiSearchSettings =
   mini_program_registration_enabled: true,
   mini_program_new_user_enabled: true,
   image_acceleration_server_url: '',
-  inventory_mode: 'read_write',
-  huaxing_inventory_mode: 'query_only',
-  purchase_plans_mode: 'query_only',
-  purchase_records_mode: 'query_only',
-  material_codes_mode: 'query_only',
-  hazards_mode: 'read_write',
-  ledger_mode: 'query_only',
   secondary_warehouse_mode: 'full',
-  web_features: { ...ALL_NAV_FEATURES_VISIBLE },
   updated_at: '2026-09-13T10:30:00+08:00',
   version: 1,
   ...overrides,
@@ -107,43 +98,20 @@ async function mountView(data: AiSearchSettings = settings()): Promise<VueWrappe
   return wrapper
 }
 
-/**
- * 「后台」分组里某个主 tab 的可见性下拉框：按 `n-form-item` 的 label 定位，
- * 与页面渲染结构一致（label 就是主 tab 名称）。
- */
-function visibilitySelect(
-  view: VueWrapper,
-  label: string,
-): VueWrapper<InstanceType<typeof NSelect>> {
+/** 按 `n-form-item` 的 label 找下拉框（页面里只有「二级库运行模式」一个功能模式配置）。 */
+function selectByLabel(view: VueWrapper, label: string): VueWrapper<InstanceType<typeof NSelect>> {
   const item = view
     .findAllComponents(NFormItem)
     .find((formItem) => String(formItem.props('label')) === label)
-  expect(item, `未找到「${label}」的可见性下拉框`).toBeTruthy()
+  expect(item, `未找到「${label}」下拉框`).toBeTruthy()
   const select = item!.findComponent(NSelect)
   expect(select.exists()).toBe(true)
   return select
 }
 
-/** 某个主 tab 下拉框里当前显示的文字（「显示」/「隐藏」）。 */
-function visibleLabel(view: VueWrapper, label: string): string {
-  return visibilitySelect(view, label).text().trim()
-}
-
-/** 某个主 tab 当前是否选中「显示」。 */
-function isVisible(view: VueWrapper, label: string): boolean {
-  return visibleLabel(view, label) === '显示'
-}
-
-/**
- * 改某个主 tab 的可见性。
- *
- * jsdom 里展开 naive-ui 下拉面板要跑 vueuc 虚拟列表（依赖 `window.matchMedia`），所以这里不进面板
- * 点选项，而是直接触发 `v-model:value` 对应的 `update:value` 事件。选项本身（显示 / 隐藏）
- * 在同组第一条用例里按 `options` 断言。
- */
-async function chooseVisibility(view: VueWrapper, label: string, visible: boolean) {
-  // 等价于在面板里选中该选项：`v-model:value` 绑定走的就是 `update:value` 事件
-  visibilitySelect(view, label).vm.$emit('update:value', visible)
+/** 改二级库运行模式：直接触发 v-model 对应的 update:value（jsdom 不进下拉面板）。 */
+async function chooseMode(view: VueWrapper, value: 'full' | 'lite') {
+  selectByLabel(view, '运行模式').vm.$emit('update:value', value)
   await flushPromises()
 }
 
@@ -177,59 +145,42 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('AdvancedSettingsView 后台可见功能', () => {
-  it('每个主 tab 一个「显示 / 隐藏」下拉框，且不含系统管理', async () => {
+describe('AdvancedSettingsView 运行模式', () => {
+  it('功能展示不再有配置项：只保留二级库运行模式', async () => {
     const view = await mountView()
 
-    for (const feature of NAV_FEATURES) {
-      const select = visibilitySelect(view, feature.label)
-      expect(select.props('options')).toEqual([
-        { label: '显示', value: true },
-        { label: '隐藏', value: false },
-      ])
-      expect(select.text().trim()).toBe('显示')
-    }
-    // 系统管理固定显示，不参与可见性配置（不是开关，也不出现在下拉框列表里）
+    const select = selectByLabel(view, '运行模式')
+    expect(select.props('options')).toEqual([
+      { label: '完整模式', value: 'full' },
+      { label: '精简模式', value: 'lite' },
+    ])
+    expect(select.text().trim()).toBe('完整模式')
+
     const labels = view
       .findAllComponents(NFormItem)
       .map((formItem) => String(formItem.props('label')))
-    expect(labels).not.toContain('系统管理')
-    expect(labels).not.toContain('可见功能')
+    expect(labels).not.toContain('后台可见功能')
+    expect(labels).not.toContain('二级库库存')
+    expect(labels).not.toContain('隐患管理')
   })
 
-  it('保存时把 web_features 与其它配置一并提交', async () => {
+  it('保存时只提交二级库运行模式，不再有功能开关字段', async () => {
     const reloadTimer = stubReloadTimer()
     const view = await mountView()
-    await chooseVisibility(view, '工作管理', false)
+    await chooseMode(view, 'lite')
     await clickSave(view)
 
     expect(aiSearchApi.updateSettings).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(aiSearchApi.updateSettings).mock.calls[0][0]).toMatchObject({
-      web_features: { ...ALL_NAV_FEATURES_VISIBLE, work: false },
-      version: 1,
-    })
+    const payload = vi.mocked(aiSearchApi.updateSettings).mock.calls[0][0]
+    expect(payload).toMatchObject({ secondary_warehouse_mode: 'lite', version: 1 })
+    expect(payload).not.toHaveProperty('web_features')
+    expect(payload).not.toHaveProperty('inventory_mode')
+    expect(payload).not.toHaveProperty('ledger_mode')
     reloadTimer.mockRestore()
   })
 
-  it('全部选隐藏时给出提示且不发保存请求', async () => {
-    const view = await mountView()
-    for (const feature of NAV_FEATURES) {
-      await chooseVisibility(view, feature.label, false)
-    }
-    await clickSave(view)
-
-    expect(aiSearchApi.updateSettings).not.toHaveBeenCalled()
-    expect(document.body.textContent).toContain('至少保留一个可见的主 tab')
-  })
-
-  it('读取到的已隐藏配置会回显在下拉框上', async () => {
-    const view = await mountView(
-      settings({ web_features: { ...ALL_NAV_FEATURES_VISIBLE, memos: false, ledger: false } }),
-    )
-
-    expect(isVisible(view, '备忘录')).toBe(false)
-    expect(isVisible(view, '台账管理')).toBe(false)
-    expect(isVisible(view, '工作台')).toBe(true)
-    expect(isVisible(view, '工作管理')).toBe(true)
+  it('读取到的精简模式会回显在下拉框上', async () => {
+    const view = await mountView(settings({ secondary_warehouse_mode: 'lite' }))
+    expect(selectByLabel(view, '运行模式').text().trim()).toBe('精简模式')
   })
 })

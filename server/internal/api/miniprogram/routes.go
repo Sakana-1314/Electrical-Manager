@@ -24,8 +24,8 @@ import (
 func Register(r *web.Router) {
 	g := r.Group("/mini-program")
 	user := auth.MiniProgramUser
-	// RBAC：只读能力按模块 read 权限门禁，写操作（出库 / 隐患整改）按 write 权限；
-	// 权限取用户全部角色的并集（见 internal/domain 的 PermissionCatalog）。
+	// RBAC：只读能力按模块 read 权限位门禁，写操作（出库 / 隐患整改）按 write 权限位；
+	// 权限位直接存 app_user.permissions（见 internal/domain 的 PermissionCatalog），管理端与小程序端共用。
 	g.POST("/auth/wx-login", wechatLogin)
 	g.GET("/me", me, user)
 	g.GET("/projects", projects, user)
@@ -83,8 +83,8 @@ func liteOutboundBlocked(c *web.Ctx) error {
 	return nil
 }
 
-// readPerm 可读别名：小程序路由的权限依赖（与 auth.RequirePermission 同一实现，命名只为可读）。
-func readPerm(perm string) web.Dep {
+// readPerm 可读别名：小程序路由的权限位依赖（与 auth.RequirePermission 同一实现，命名只为可读）。
+func readPerm(perm domain.Permission) web.Dep {
 	return auth.RequirePermission(perm)
 }
 

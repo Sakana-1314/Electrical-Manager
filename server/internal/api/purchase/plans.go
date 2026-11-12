@@ -44,10 +44,10 @@ var planResultHeaders = map[string]string{
 }
 
 func archivedForbidden() error {
-	return apperr.New("ARCHIVED_PURCHASE_PLAN_FORBIDDEN", "仅超级管理员可查询已归档申购计划").WithStatus(403)
+	return apperr.New("ARCHIVED_PURCHASE_PLAN_FORBIDDEN", "仅系统管理员可查询已归档申购计划").WithStatus(403)
 }
 
-func isSuperAdmin(c *web.Ctx) bool { return auth.HasPermission(c, domain.PermSettingsWrite) }
+func isSystemAdmin(c *web.Ctx) bool { return auth.HasPermission(c, domain.PermSystemAdmin) }
 
 func containsStr(items []string, s string) bool {
 	for _, it := range items {
@@ -58,9 +58,9 @@ func containsStr(items []string, s string) bool {
 	return false
 }
 
-// normalStatusFor 非超级管理员只能看「正常」状态的计划（nil 表示不过滤）。
+// normalStatusFor 非系统管理员只能看「正常」状态的计划（nil 表示不过滤）。
 func normalStatusFor(c *web.Ctx) *string {
-	if isSuperAdmin(c) {
+	if isSystemAdmin(c) {
 		return nil
 	}
 	v := domain.PlanStatusNormal
@@ -115,7 +115,7 @@ func listMaterials(c *web.Ctx) error {
 	if err := p.Err(); err != nil {
 		return err
 	}
-	if !isSuperAdmin(c) {
+	if !isSystemAdmin(c) {
 		if containsStr(status, domain.PlanStatusArchived) {
 			return archivedForbidden()
 		}
@@ -201,7 +201,7 @@ func exportMaterialResults(c *web.Ctx) error {
 		return err
 	}
 	exportStatus := data.StatusList()
-	if !isSuperAdmin(c) {
+	if !isSystemAdmin(c) {
 		if containsStr(exportStatus, domain.PlanStatusArchived) {
 			return archivedForbidden()
 		}
@@ -435,7 +435,7 @@ func materialDetail(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if item.StatusValue() == domain.PlanStatusArchived && !isSuperAdmin(c) {
+	if item.StatusValue() == domain.PlanStatusArchived && !isSystemAdmin(c) {
 		return archivedForbidden()
 	}
 	out, err := material.PurchaseRead(c.DB, item, nil)

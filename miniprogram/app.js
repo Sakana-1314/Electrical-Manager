@@ -12,8 +12,8 @@ App({
     accountDisabled: false,
     imageBaseUrl: '',
     imageSettingsPromise: null,
-    featureModes: null,
-    featureSettingsPromise: null,
+    runtimeModes: null,
+    runtimeSettingsPromise: null,
     locale: 'zh-CN',
     messages: getMessages(),
   },
@@ -32,16 +32,16 @@ App({
         return this.globalData.imageBaseUrl;
       })
       .catch(() => '');
-    this.globalData.featureSettingsPromise = request({
+    this.globalData.runtimeSettingsPromise = request({
       url: '/system-settings/mini-program-features',
       auth: false,
     })
       .then((modes) => {
-        this.globalData.featureModes = modes || DEFAULT_MODES;
-        return this.globalData.featureModes;
+        this.globalData.runtimeModes = modes || DEFAULT_MODES;
+        return this.globalData.runtimeModes;
       })
       .catch(() => {
-        this.globalData.featureModes = DEFAULT_MODES;
+        this.globalData.runtimeModes = DEFAULT_MODES;
         return DEFAULT_MODES;
       });
     this.installAuthPromise();

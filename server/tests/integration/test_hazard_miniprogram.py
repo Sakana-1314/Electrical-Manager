@@ -18,10 +18,10 @@ def today() -> date:
 
 
 async def mini_headers(display_name: str = "隐患巡检员") -> dict[str, str]:
-    """直接造一个已启用的小程序用户（挂「隐患管理员」角色）并签发令牌。"""
+    """直接造一个已启用的小程序用户（隐患读写权限位）并签发令牌。"""
     async with project_session() as session:
         user_id = await create_mini_program_user(
-            session, display_name, role_names=("隐患读写",)
+            session, display_name, permissions=("hazard:read", "hazard:write")
         )
     return {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
@@ -289,7 +289,7 @@ async def test_mini_program_hazard_identity_isolation(client: AsyncClient) -> No
     # 未启用的小程序用户被拒（账号待审核）
     async with project_session() as session:
         disabled_id = await create_mini_program_user(
-            session, "待审核用户", role_names=(), enabled=False
+            session, "待审核用户", permissions=(), enabled=False
         )
     disabled_headers = {
         "Authorization": f"Bearer {create_mini_program_access_token(disabled_id)}"

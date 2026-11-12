@@ -8,27 +8,59 @@ class UserSource(StrEnum):
     MINI_PROGRAM = "MINI_PROGRAM"
 
 
-# 内置角色（与 init.sql 种子同名同权限，顺序一致以保证种子 id 稳定）：测试按角色名挂 user_role。
-ROLE_PERMISSIONS: dict[str, list[str]] = {
-    "超级管理员": ["*"],
-    "全局只读": [
-        "warehouse:read",
-        "purchase:read",
-        "hazard:read",
-        "ledger:read",
-        "work:read",
-        "huaxing:read",
-        "codes:read",
-    ],
-    "二级库读写": ["warehouse:read", "warehouse:write"],
-    "申购读写": ["purchase:read", "purchase:write"],
-    "隐患读写": ["hazard:read", "hazard:write"],
-    "台账读写": ["ledger:read", "ledger:write"],
-    "工单读写": ["work:read", "work:write"],
+# 权限位（与 server/internal/domain/permissions.go 的 PermissionCatalog 一致）：
+# 用户权限直接存 app_user.permissions（BIGINT 位图），测试按位组合。
+PERMISSION_BITS: dict[str, int] = {
+    "system:admin": 1 << 0,
+    "warehouse:read": 1 << 1,
+    "warehouse:write": 1 << 2,
+    "purchase:read": 1 << 3,
+    "purchase:write": 1 << 4,
+    "huaxing:read": 1 << 5,
+    "codes:read": 1 << 6,
+    "ledger:read": 1 << 7,
+    "ledger:write": 1 << 8,
+    "hazard:read": 1 << 9,
+    "hazard:write": 1 << 10,
+    "work:read": 1 << 11,
+    "work:write": 1 << 12,
 }
 
-# 小程序新用户默认挂载的只读角色
-DEFAULT_ROLE_NAMES = ("全局只读",)
+
+def permission_bits(*keys: str) -> int:
+    """权限键 → 位图（写权限自动带上同模块读权限）。"""
+    bits = 0
+    for key in keys:
+        bits |= PERMISSION_BITS[key]
+        if key.endswith(":write"):
+            bits |= PERMISSION_BITS[key[: -len(":write")] + ":read"]
+    return bits
+
+
+ALL_PERMISSIONS = (1 << len(PERMISSION_BITS)) - 1
+
+# 小程序新用户默认权限：各功能只读
+DEFAULT_PERMISSION_KEYS: tuple[str, ...] = (
+    "warehouse:read",
+    "purchase:read",
+    "huaxing:read",
+    "codes:read",
+    "ledger:read",
+    "hazard:read",
+    "work:read",
+)
+DEFAULT_REGISTRATION_PERMISSIONS = permission_bits(*DEFAULT_PERMISSION_KEYS)
+
+# 种子账号权限位（与 init.sql 种子一致）
+SEED_USER_PERMISSIONS: dict[str, int] = {
+    "admin": ALL_PERMISSIONS,
+    "warehouse": permission_bits("warehouse:read", "warehouse:write"),
+    "purchase": permission_bits("purchase:read", "purchase:write"),
+    "hazard": permission_bits("hazard:read", "hazard:write"),
+    "ledger": permission_bits("ledger:read", "ledger:write"),
+    "work": permission_bits("work:read", "work:write"),
+    "readonly": DEFAULT_REGISTRATION_PERMISSIONS,
+}
 
 
 class PurchasePlanStatus(StrEnum):
