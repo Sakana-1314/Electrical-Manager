@@ -21,7 +21,7 @@ async def mini_headers(display_name: str = "隐患巡检员") -> dict[str, str]:
     """直接造一个已启用的小程序用户（挂「隐患管理员」角色）并签发令牌。"""
     async with project_session() as session:
         user_id = await create_mini_program_user(
-            session, display_name, role_names=("隐患管理员",)
+            session, display_name, role_names=("隐患读写",)
         )
     return {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}
 
