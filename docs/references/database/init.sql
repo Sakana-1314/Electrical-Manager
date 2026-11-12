@@ -1219,12 +1219,18 @@ ON CONFLICT (project_id, major, minor) DO NOTHING;
 INSERT INTO role (name, description, permissions, is_system)
 VALUES
   ('超级管理员', '系统管理 + 全部业务模块读写', '["*"]', TRUE),
-  ('库房管理员', '二级库与出入库、华星库存、编码库查询', '["warehouse:read","warehouse:write","huaxing:read","codes:read"]', TRUE),
-  ('采购管理员', '申购计划 / 请购 / 申购记录与编码库导入', '["purchase:read","purchase:write","huaxing:read","codes:read"]', TRUE),
-  ('隐患管理员', '隐患管理', '["hazard:read","hazard:write"]', TRUE),
-  ('台账管理员', '台账管理', '["ledger:read","ledger:write"]', TRUE),
-  ('工单管理员', '工单管理', '["work:read","work:write"]', TRUE),
-  ('只读用户', '各业务模块只读（小程序新用户默认角色）', '["warehouse:read","purchase:read","huaxing:read","codes:read","ledger:read","hazard:read","work:read"]', TRUE)
+  ('二级库只读', '二级库与出入库记录查看', '["warehouse:read"]', TRUE),
+  ('二级库读写', '二级库出入库 / 导入 / 库存调整', '["warehouse:read","warehouse:write"]', TRUE),
+  ('申购只读', '申购计划与申购记录查看', '["purchase:read"]', TRUE),
+  ('申购读写', '申购计划与申购记录编辑', '["purchase:read","purchase:write"]', TRUE),
+  ('隐患只读', '隐患查看', '["hazard:read"]', TRUE),
+  ('隐患读写', '隐患上报与整改', '["hazard:read","hazard:write"]', TRUE),
+  ('台账只读', '台账查看', '["ledger:read"]', TRUE),
+  ('台账读写', '台账编辑', '["ledger:read","ledger:write"]', TRUE),
+  ('工单只读', '工单查看', '["work:read"]', TRUE),
+  ('工单读写', '工单编辑', '["work:read","work:write"]', TRUE),
+  ('华星只读', '精简库存查看', '["huaxing:read"]', TRUE),
+  ('编码库只读', '物料编码库查看', '["codes:read"]', TRUE)
 ON CONFLICT (name) DO UPDATE
 SET description = EXCLUDED.description,
     permissions = EXCLUDED.permissions,
@@ -1246,17 +1252,17 @@ SET display_name = EXCLUDED.display_name,
     department_name = EXCLUDED.department_name,
     enabled = EXCLUDED.enabled;
 
--- 种子用户按用户名挂到同名内置角色（幂等，不覆盖管理员手工调整过的角色分配）。
+-- 种子用户按用户名挂到内置角色（幂等）：warehouse/purchase/hazard/ledger/work 各挂本模块读写，readonly 挂全部只读。
 INSERT INTO user_role (user_id, role_id)
 SELECT u.id, r.id
 FROM "user" u
 JOIN role r ON (
   (u.username = 'admin' AND r.name = '超级管理员') OR
-  (u.username = 'warehouse' AND r.name = '库房管理员') OR
-  (u.username = 'purchase' AND r.name = '采购管理员') OR
-  (u.username = 'hazard' AND r.name = '隐患管理员') OR
-  (u.username = 'ledger' AND r.name = '台账管理员') OR
-  (u.username = 'work' AND r.name = '工单管理员') OR
-  (u.username = 'readonly' AND r.name = '只读用户')
+  (u.username = 'warehouse' AND r.name = '二级库读写') OR
+  (u.username = 'purchase' AND r.name = '申购读写') OR
+  (u.username = 'hazard' AND r.name = '隐患读写') OR
+  (u.username = 'ledger' AND r.name = '台账读写') OR
+  (u.username = 'work' AND r.name = '工单读写') OR
+  (u.username = 'readonly' AND r.name IN ('二级库只读','申购只读','隐患只读','台账只读','工单只读','华星只读','编码库只读'))
 )
 ON CONFLICT (user_id, role_id) DO NOTHING;

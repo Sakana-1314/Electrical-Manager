@@ -7025,733 +7025,6 @@ paths:
                 message: 没有执行此操作的权限
                 details: {}
                 request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-    post:
-      tags:
-      - 基础数据
-      summary: 新建角色
-      operationId: create_role_api_v1_roles_post
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RoleCreate'
-      responses:
-        '201':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleRead'
-              example:
-                id: 2
-                name: 库房管理员
-                description: 二级库与出入库、华星库存、编码库查询
-                permissions: &id001
-                - codes:read
-                - huaxing:read
-                - warehouse:read
-                - warehouse:write
-                is_system: true
-                user_count: 1
-                created_at: '2026-01-01T00:00:00+00:00'
-                updated_at: '2026-01-01T00:00:00+00:00'
-                version: 1
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-  /api/v1/roles/permissions:
-    get:
-      tags:
-      - 基础数据
-      summary: 权限目录（角色编辑界面的可选项）
-      operationId: permission_catalog_api_v1_roles_permissions_get
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/PermissionDef'
-                type: array
-              example:
-              - key: warehouse:write
-                module: inventory
-                action: write
-                label: 二级库出入库与库存调整
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-  /api/v1/roles/{item_id}:
-    patch:
-      tags:
-      - 基础数据
-      summary: 编辑角色（内置角色不可编辑）
-      operationId: update_role_api_v1_roles_item_id_patch
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          title: Item Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RoleUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleRead'
-              example:
-                id: 2
-                name: 库房管理员
-                description: 二级库与出入库、华星库存、编码库查询
-                permissions: *id001
-                is_system: true
-                user_count: 1
-                created_at: '2026-01-01T00:00:00+00:00'
-                updated_at: '2026-01-01T00:00:00+00:00'
-                version: 1
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-    delete:
-      tags:
-      - 基础数据
-      summary: 删除角色（内置角色不可删除；仍有用户挂载时拒绝）
-      operationId: delete_role_api_v1_roles_item_id_delete
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: item_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          title: Item Id
-      - name: If-Match
-        in: header
-        required: true
-        schema:
-          type: integer
-          title: If-Match
-      responses:
-        '204':
-          description: Successful Response
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-  /api/v1/mini-program-users:
-    get:
-      tags:
-      - 小程序用户管理
-      summary: 小程序用户列表
-      operationId: list_mini_program_users_api_v1_mini_program_users_get
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: page
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          default: 1
-          title: Page
-      - name: page_size
-        in: query
-        required: false
-        schema:
-          type: integer
-          maximum: 200
-          minimum: 1
-          default: 20
-          title: Page Size
-      - name: keyword
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            maxLength: 128
-          - type: 'null'
-          title: Keyword
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Page_MiniProgramUserRead_'
-              example:
-                items:
-                - id: 1
-                  display_name: 孙浩宇
-                  department_name: 检修维护部电气自动化车间
-                  enabled: true
-                  identities:
-                  - id: 11
-                    app_id: wx9d2f1c8a5b3e4701
-                    wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                    created_at: '2026-08-14T10:20:00+08:00'
-                  - id: 12
-                    app_id: wx4b7e0a6d2c918f35
-                    wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                    created_at: '2026-09-02T09:35:00+08:00'
-                  created_at: '2026-08-14T10:20:00+08:00'
-                  updated_at: '2026-09-02T09:35:00+08:00'
-                  last_used_at: '2026-09-13T09:12:00+08:00'
-                  version: 2
-                  source: MINI_PROGRAM
-                  roles:
-                  - id: 7
-                    name: 只读用户
-                    is_system: true
-                  permissions:
-                  - codes:read
-                  - hazard:read
-                  - huaxing:read
-                  - ledger:read
-                  - purchase:read
-                  - warehouse:read
-                  - work:read
-                - id: 2
-                  display_name: 李建军
-                  department_name: 检修维护部电气自动化车间
-                  enabled: true
-                  identities:
-                  - id: 21
-                    app_id: wx9d2f1c8a5b3e4701
-                    wechat_openid: oHXNI-2c4d6e8f0a1b3c5d
-                    created_at: '2026-08-14T10:26:00+08:00'
-                  created_at: '2026-08-14T10:26:00+08:00'
-                  updated_at: '2026-08-14T10:26:00+08:00'
-                  last_used_at: '2026-09-06T14:05:00+08:00'
-                  version: 1
-                  source: MINI_PROGRAM
-                  roles:
-                  - id: 7
-                    name: 只读用户
-                    is_system: true
-                  permissions:
-                  - codes:read
-                  - hazard:read
-                  - huaxing:read
-                  - ledger:read
-                  - purchase:read
-                  - warehouse:read
-                  - work:read
-                - id: 3
-                  display_name: 王海涛
-                  department_name: 检修维护部电气自动化车间
-                  enabled: false
-                  identities:
-                  - id: 31
-                    app_id: wx9d2f1c8a5b3e4701
-                    wechat_openid: oHXNI-3e5f7a9b1c2d4e6f
-                    created_at: '2026-08-15T08:12:00+08:00'
-                  created_at: '2026-08-15T08:12:00+08:00'
-                  updated_at: '2026-09-04T11:02:00+08:00'
-                  last_used_at: '2026-08-15T08:12:00+08:00'
-                  version: 2
-                  source: MINI_PROGRAM
-                  roles:
-                  - id: 7
-                    name: 只读用户
-                    is_system: true
-                  permissions:
-                  - codes:read
-                  - hazard:read
-                  - huaxing:read
-                  - ledger:read
-                  - purchase:read
-                  - warehouse:read
-                  - work:read
-                page: 1
-                page_size: 20
-                total: 3
-        '400':
-          description: 业务校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: NOT_FOUND
-                message: 二级库物资不存在
-                details: {}
-                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '422':
-          description: 请求参数校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VALIDATION_ERROR
-                message: 请求字段或筛选参数不合法
-                details: {}
-                request_id: caf23a6c-e039-448d-a4bf-451c669db663
-  /api/v1/mini-program-users/{user_id}:
-    patch:
-      tags:
-      - 小程序用户管理
-      summary: 编辑小程序用户
-      operationId: update_mini_program_user_api_v1_mini_program_users__user_id__patch
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          title: User Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MiniProgramUserUpdate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MiniProgramUserRead'
-              example:
-                id: 1
-                display_name: 孙浩宇
-                department_name: 检修维护部电气自动化车间
-                enabled: true
-                identities:
-                - id: 11
-                  app_id: wx9d2f1c8a5b3e4701
-                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                  created_at: '2026-08-14T10:20:00+08:00'
-                - id: 12
-                  app_id: wx4b7e0a6d2c918f35
-                  wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                  created_at: '2026-09-02T09:35:00+08:00'
-                created_at: '2026-08-14T10:20:00+08:00'
-                updated_at: '2026-09-02T09:35:00+08:00'
-                last_used_at: '2026-09-13T09:12:00+08:00'
-                version: 2
-                source: MINI_PROGRAM
-                roles:
-                - id: 7
-                  name: 只读用户
-                  is_system: true
-                permissions:
-                - codes:read
-                - hazard:read
-                - huaxing:read
-                - ledger:read
-                - purchase:read
-                - warehouse:read
-                - work:read
-        '400':
-          description: 业务校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: NOT_FOUND
-                message: 二级库物资不存在
-                details: {}
-                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '422':
-          description: 请求参数校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VALIDATION_ERROR
-                message: 请求字段或筛选参数不合法
-                details: {}
-                request_id: caf23a6c-e039-448d-a4bf-451c669db663
-    delete:
-      tags:
-      - 小程序用户管理
-      summary: 删除小程序用户
-      operationId: delete_mini_program_user_api_v1_mini_program_users__user_id__delete
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: user_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          title: User Id
-      - name: if-match
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: If-Match
-      responses:
-        '204':
-          description: Successful Response
-        '400':
-          description: 业务校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: NOT_FOUND
-                message: 二级库物资不存在
-                details: {}
-                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '422':
-          description: 请求参数校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VALIDATION_ERROR
-                message: 请求字段或筛选参数不合法
-                details: {}
-                request_id: caf23a6c-e039-448d-a4bf-451c669db663
-  /api/v1/mini-program-users/{target_user_id}/merge:
-    post:
-      tags:
-      - 小程序用户管理
-      summary: 合并小程序用户
-      operationId: merge_mini_program_users_api_v1_mini_program_users__target_user_id__merge_post
-      security:
-      - HTTPBearer: []
-      - APIKeyHeader: []
-      parameters:
-      - name: target_user_id
-        in: path
-        required: true
-        schema:
-          type: integer
-          title: Target User Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MiniProgramUserMergeRequest'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MiniProgramUserRead'
-              example:
-                id: 1
-                display_name: 孙浩宇
-                department_name: 检修维护部电气自动化车间
-                enabled: true
-                identities:
-                - id: 11
-                  app_id: wx9d2f1c8a5b3e4701
-                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                  created_at: '2026-08-14T10:20:00+08:00'
-                - id: 12
-                  app_id: wx4b7e0a6d2c918f35
-                  wechat_openid: oHXNI-1a2b3c4d5e6f7a8b
-                  created_at: '2026-09-02T09:35:00+08:00'
-                created_at: '2026-08-14T10:20:00+08:00'
-                updated_at: '2026-09-02T09:35:00+08:00'
-                last_used_at: '2026-09-13T09:12:00+08:00'
-                version: 2
-                source: MINI_PROGRAM
-                roles:
-                - id: 7
-                  name: 只读用户
-                  is_system: true
-                permissions:
-                - codes:read
-                - hazard:read
-                - huaxing:read
-                - ledger:read
-                - purchase:read
-                - warehouse:read
-                - work:read
-        '400':
-          description: 业务校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: NOT_FOUND
-                message: 二级库物资不存在
-                details: {}
-                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '422':
-          description: 请求参数校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VALIDATION_ERROR
-                message: 请求字段或筛选参数不合法
-                details: {}
-                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/mini-program/auth/wx-login:
     post:
       tags:
@@ -17738,6 +17011,116 @@ paths:
                 message: 二级库物资不存在
                 details: {}
                 request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/users/{item_id}/merge:
+    post:
+      tags:
+      - 基础数据
+      summary: 合并账号（目标保留资料；来源微信身份随迁、角色取并集；来源账号删除）
+      operationId: merge_user_api_v1_users_item_id_merge_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: item_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserMergeRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserApiTokenRead'
+              example:
+                id: 3
+                username: warehouse
+                display_name: 仓库管理员
+                department_name: 华星检修维护部电气车间
+                source: MANAGE
+                roles:
+                - id: 3
+                  name: 二级库读写
+                  is_system: true
+                - id: 7
+                  name: 隐患读写
+                  is_system: true
+                permissions:
+                - hazard:read
+                - hazard:write
+                - warehouse:read
+                - warehouse:write
+                identities:
+                - id: 11
+                  app_id: wx-test-primary
+                  wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
+                  created_at: '2026-08-14T10:20:00+08:00'
+                enabled: true
+                version: 5
+                api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
         '401':
           description: 未认证或凭证无效
           content:
@@ -28487,7 +27870,7 @@ components:
       - out_of_stock
       - low_stock
       title: MiniProgramStockStatus
-    MiniProgramUserMergeRequest:
+    UserMergeRequest:
       properties:
         source_user_id:
           type: integer
@@ -28505,7 +27888,7 @@ components:
       - source_user_id
       - source_version
       - target_version
-      title: MiniProgramUserMergeRequest
+      title: UserMergeRequest
       examples:
       - source_user_id: 3
         source_version: 2
@@ -28594,51 +27977,6 @@ components:
           created_at: '2026-08-14T10:20:00+08:00'
         created_at: '2026-08-14T10:20:00+08:00'
         updated_at: '2026-09-02T09:35:00+08:00'
-        version: 2
-    MiniProgramUserUpdate:
-      properties:
-        display_name:
-          anyOf:
-          - type: string
-            maxLength: 64
-            minLength: 1
-          - type: 'null'
-          title: Display Name
-        department_name:
-          anyOf:
-          - type: string
-            maxLength: 128
-            minLength: 1
-          - type: 'null'
-          title: Department Name
-        enabled:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Enabled
-        role_ids:
-          anyOf:
-          - items:
-              type: integer
-            type: array
-          - type: 'null'
-          title: Role Ids
-          description: 全量替换用户的角色（缺省表示不修改）
-        version:
-          type: integer
-          title: Version
-      additionalProperties: false
-      type: object
-      required:
-      - version
-      title: MiniProgramUserUpdate
-      examples:
-      - display_name: 孙浩宇
-        department_name: 检修维护部电气自动化车间
-        enabled: true
-        role_ids:
-        - 7
-        - 4
         version: 2
     MiniProgramWechatLoginRequest:
       properties:
@@ -35620,105 +34958,17 @@ components:
       - version
       title: RoleRead
       examples:
-      - id: 2
-        name: 库房管理员
-        description: 二级库与出入库、华星库存、编码库查询
-        permissions: *id001
+      - id: 3
+        name: 二级库读写
+        description: 二级库出入库 / 导入 / 库存调整
+        permissions:
+        - warehouse:read
+        - warehouse:write
         is_system: true
         user_count: 1
         created_at: '2026-01-01T00:00:00+00:00'
         updated_at: '2026-01-01T00:00:00+00:00'
         version: 1
-    RoleCreate:
-      properties:
-        name:
-          type: string
-          maxLength: 64
-          minLength: 1
-          title: Name
-        description:
-          type: string
-          maxLength: 255
-          title: Description
-        permissions:
-          items:
-            type: string
-          type: array
-          title: Permissions
-      additionalProperties: false
-      type: object
-      required:
-      - name
-      title: RoleCreate
-      examples:
-      - name: 采购查询
-        description: 只看申购模块
-        permissions:
-        - dashboard:read
-        - purchase:read
-    RoleUpdate:
-      properties:
-        name:
-          anyOf:
-          - type: string
-            maxLength: 64
-            minLength: 1
-          - type: 'null'
-          title: Name
-        description:
-          anyOf:
-          - type: string
-            maxLength: 255
-          - type: 'null'
-          title: Description
-        permissions:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Permissions
-        version:
-          type: integer
-          title: Version
-      additionalProperties: false
-      type: object
-      required:
-      - version
-      title: RoleUpdate
-      examples:
-      - name: 采购查询
-        description: 只看申购模块（含仪表盘）
-        permissions:
-        - dashboard:read
-        - purchase:read
-        version: 1
-    PermissionDef:
-      properties:
-        key:
-          type: string
-          title: Key
-        module:
-          type: string
-          title: Module
-        action:
-          type: string
-          title: Action
-        label:
-          type: string
-          title: Label
-      type: object
-      required:
-      - key
-      - module
-      - action
-      - label
-      title: PermissionDef
-      examples:
-      - key: warehouse:write
-        module: inventory
-        action: write
-        label: 二级库出入库与库存调整
     SecondaryWarehouseMode:
       type: string
       enum:
@@ -36496,6 +35746,12 @@ components:
             $ref: '#/components/schemas/UserRoleRead'
           type: array
           title: Roles
+        identities:
+          description: 微信身份（小程序来源用户；管理端来源用户为空数组）
+          items:
+            $ref: '#/components/schemas/MiniProgramIdentityRead'
+          type: array
+          title: Identities
         permissions:
           items:
             type: string
@@ -36632,6 +35888,12 @@ components:
             $ref: '#/components/schemas/UserRoleRead'
           type: array
           title: Roles
+        identities:
+          description: 微信身份（小程序来源用户；管理端来源用户为空数组）
+          items:
+            $ref: '#/components/schemas/MiniProgramIdentityRead'
+          type: array
+          title: Identities
         permissions:
           items:
             type: string

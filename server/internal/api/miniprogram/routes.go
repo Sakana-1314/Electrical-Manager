@@ -22,12 +22,6 @@ import (
 
 // Register 注册本模块路由（顺序与原 management_router → mini_router 一致）。
 func Register(r *web.Router) {
-	m := r.Group("/mini-program-users")
-	m.GET("", listUsers, auth.SuperAdmin)
-	m.PATCH("/{user_id}", updateUser, auth.SuperAdmin)
-	m.DELETE("/{user_id}", deleteUser, auth.SuperAdmin)
-	m.POST("/{target_user_id}/merge", mergeUsers, auth.SuperAdmin)
-
 	g := r.Group("/mini-program")
 	user := auth.MiniProgramUser
 	// RBAC：只读能力按模块 read 权限门禁，写操作（出库 / 隐患整改）按 write 权限；
@@ -105,67 +99,6 @@ func acceptLanguage(c *web.Ctx) *string {
 }
 
 // ---------------- 小程序用户管理 ----------------
-
-func listUsers(c *web.Ctx) error {
-	p := c.Params()
-	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=128")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	items, total, err := svc.ListUsers(c.DB, keyword, page, size)
-	if err != nil {
-		return err
-	}
-	reads := make([]schema.MiniProgramUserRead, len(items))
-	for i, it := range items {
-		reads[i] = svc.UserRead(c.DB, it)
-	}
-	return c.OK(schema.NewPage(reads, page, size, total))
-}
-
-func updateUser(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("user_id")
-	var data schema.MiniProgramUserUpdate
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	u, err := svc.UpdateUser(c.DB, id, data)
-	if err != nil {
-		return err
-	}
-	return c.OK(svc.UserRead(c.DB, u))
-}
-
-func deleteUser(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("user_id")
-	ifMatch := p.IfMatch()
-	if err := p.Err(); err != nil {
-		return err
-	}
-	if err := svc.DeleteUser(c.DB, id, ifMatch); err != nil {
-		return err
-	}
-	return c.NoContent()
-}
-
-func mergeUsers(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("target_user_id")
-	var data schema.MiniProgramUserMergeRequest
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	u, err := svc.MergeUsers(c.DB, id, data)
-	if err != nil {
-		return err
-	}
-	return c.OK(svc.UserRead(c.DB, u))
-}
 
 // ---------------- 登录 / 建档 ----------------
 

@@ -27,6 +27,11 @@ const { items, loading, load } = usePagedTable<ManagedUser, Record<string, never
 })
 const show = ref(false)
 const editing = ref<ManagedUser | null>(null)
+// 合并账号：从某一行打开「把其他账号并入该账号」的对话框；目标保留资料，角色取并集。
+const showMerge = ref(false)
+const mergeSourceId = ref<number | null>(null)
+const merging = ref(false)
+const mergeSource = computed(() => items.value.find((item) => item.id === mergeSourceId.value) ?? null)
 const project = useProjectStore()
 // MCP 地址带上当前项目：Agent 连上后就按这个项目读写数据（不带则用系统默认项目）
 const mcpUrl = computed(() =>
@@ -49,6 +54,36 @@ onMounted(() => {
 const columns = preventTableColumnCompression<ManagedUser>([
   { title: '用户名', key: 'username', width: tableColumnWidths.identifier },
   { title: '显示名称', key: 'display_name', width: tableColumnWidths.name },
+  {
+    title: '来源',
+    key: 'source',
+    width: 92,
+    render: (r) =>
+      h(
+        NTag,
+        { size: 'small', type: r.source === 'MANAGE' ? 'info' : 'default', round: true },
+        { default: () => (r.source === 'MANAGE' ? '管理端' : '小程序') },
+      ),
+  },
+  {
+    title: '微信身份',
+    key: 'identities',
+    width: 220,
+    render: (r) =>
+      (r.identities ?? []).length
+        ? h(
+            'div',
+            { style: 'display:flex;flex-direction:column;gap:2px' },
+            (r.identities ?? []).map((identity) =>
+              h(
+                NTag,
+                { key: identity.id, size: 'small', bordered: false },
+                { default: () => `${identity.app_id} / ${identity.wechat_openid}` },
+              ),
+            ),
+          )
+        : '—',
+  },
   {
     title: '角色',
     key: 'roles',
@@ -84,6 +119,7 @@ const columns = preventTableColumnCompression<ManagedUser>([
     render: (r) =>
       h('div', { style: 'display:flex;gap:8px' }, [
         h(NButton, { size: 'small', onClick: () => open(r) }, { default: () => '编辑' }),
+        h(NButton, { size: 'small', secondary: true, onClick: () => openMerge(r) }, { default: () => '合并' }),
         h(
           NButton,
           { size: 'small', type: 'error', secondary: true, onClick: () => remove(r) },
@@ -189,6 +225,37 @@ function regenerateApiToken() {
     },
   })
 }
+function openMerge(row: ManagedUser) {
+  editing.value = row
+  mergeSourceId.value = null
+  showMerge.value = true
+}
+
+async function saveMerge() {
+  const target = editing.value
+  const source = mergeSource.value
+  if (!target || !source) {
+    message.error('请选择要并入的来源账号')
+    return
+  }
+  merging.value = true
+  try {
+    await dictionaryApi.mergeUser(target.id, {
+      source_user_id: source.id,
+      source_version: source.version,
+      target_version: target.version,
+    })
+    message.success(`已将「${source.display_name}」合并到「${target.display_name}」`)
+    showMerge.value = false
+    editing.value = null
+    await load()
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '账号合并失败')
+  } finally {
+    merging.value = false
+  }
+}
+
 function remove(row: ManagedUser) {
   dialog.warning({
     draggable: true,
@@ -279,6 +346,66 @@ function remove(row: ManagedUser) {
           ><n-button type="primary" @click="save">保存</n-button></n-space
         ></template
       ></n-modal
-    >
+    ><n-modal
+      v-model:show="showMerge"
+      preset="card"
+      draggable
+      title="合并账号"
+      style="width: min(560px, calc(100vw - 32px))"
+      ><n-form label-placement="top"
+        ><n-form-item label="目标账号（保留姓名与部门）">
+          <div class="merge-target">
+            <div class="merge-target-name">{{ editing?.display_name }}（{{ editing?.username }}）</div>
+            <div class="merge-target-roles">
+              <n-tag
+                v-for="role in editing?.roles ?? []"
+                :key="role.id"
+                size="small"
+                type="info"
+                round
+                >{{ role.name }}</n-tag
+              >
+            </div>
+          </div></n-form-item
+        ><n-form-item label="要并入的来源账号" required
+          ><n-select
+            v-model:value="mergeSourceId"
+            filterable
+            placeholder="选择要被合并的账号（合并后删除）"
+            :options="
+              items
+                .filter((item) => item.id !== editing?.id)
+                .map((item) => ({
+                  value: item.id,
+                  label: `${item.display_name}（${item.username}｜${
+                    item.source === 'MANAGE' ? '管理端' : '小程序'
+                  }）`,
+                }))
+            " /></n-form-item
+        ><n-alert v-if="mergeSource" type="warning" :show-icon="true"
+          >将把「{{ mergeSource.display_name }}」的微信身份并入目标账号，角色取两个账号的并集；来源账号随后删除。</n-alert
+        ></n-form
+      ><template #footer
+        ><n-space justify="end"
+          ><n-button @click="showMerge = false">取消</n-button
+          ><n-button type="primary" :loading="merging" @click="saveMerge">确认合并</n-button></n-space
+        ></template
+      ></n-modal>
   </div>
 </template>
+
+<style scoped>
+.merge-target {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.merge-target-name {
+  font-weight: 600;
+}
+.merge-target-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+</style>

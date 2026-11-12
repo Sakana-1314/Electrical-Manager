@@ -44,12 +44,10 @@
 | `CLIENT_REQUEST_ID_CONFLICT` | 409 | 请求标识已被其他业务使用 | `service/miniprogram` |
 | `DUPLICATE_MATERIAL` | 409 | 相同名称、型号规格和单位的物资已存在 | `service/material` |
 | `DUPLICATE_USERNAME` | 409 | 用户名已存在 | `service/dictionary` |
-| `ROLE_NAME_CONFLICT` | 409 | 角色名称已存在 | `service/role` |
-| `ROLE_SYSTEM_LOCKED` | 409 | 内置角色不可编辑或删除 | `service/role` |
-| `ROLE_IN_USE` | 409 | 仍有用户挂载此角色，请先解除关联 | `service/role` |
 | `ROLE_NOT_FOUND` | 500 | 内置「只读用户」角色缺失（种子数据被破坏） | `service/role` |
 | `INVALID_ROLES` | 422 | 存在无效的角色 id（用户保存时的角色列表校验） | `service/role` |
-| `INVALID_PERMISSIONS` | 422 | 权限键不在权限目录内或重复（角色保存校验） | `service/role` |
+| `CANNOT_MERGE_SELF` | 400 | 不能将账号合并到自身 | `service/dictionary` |
+| `USER_HAS_REFERENCES` | 409 | 该账号存在业务数据引用（导出任务 / 分享链接 / 备忘录等），无法合并或删除 | `service/dictionary` |
 | `PLAN_NO_CONFLICT` | 409 | 计划号生成冲突，请稍后重试 | `service/material` |
 | `PLAN_ALREADY_MOVED` | 409 | 部分申购计划已转入申购记录 | `service/purchaserequest` |
 | `PLAN_DAILY_LIMIT_EXCEEDED` | 409 | 同一计划日期最多创建 999 条申购计划 | `service/material` |
@@ -65,7 +63,6 @@
 | `IMPORT_IN_PROGRESS` | 409 | 同类导入任务正在进行中 | `service/importjob` |
 | `FILE_IN_USE` | 409 | 图片已被业务引用，不能删除 | `service/file` |
 | `MINI_PROGRAM_IDENTITY_CONFLICT` | 409 | 两个账号包含相同小程序身份，无法直接合并 | `service/miniprogram` |
-| `MINI_PROGRAM_USER_PROFILE_MISMATCH` | 409 | 姓名和部门单位必须一致才能合并账号 | `service/miniprogram` |
 | `WECHAT_USER_CREATE_CONFLICT` | 409 | 微信用户创建冲突，请重新登录 | `service/miniprogram` |
 | `DUPLICATE_HAZARD_UNIT` | 409 | 责任单位名称已存在 | `service/hazard` |
 | `DUPLICATE_HAZARD_TYPE` | 409 | 同一「大类 + 小类」的隐患类型已存在 | `service/hazard` |
@@ -95,7 +92,6 @@
 | `INVALID_WEBHOOK_URL` | 422 | 请输入有效的机器人 Webhook 地址 | `service/webhook` |
 | `WEBHOOK_URL_REQUIRED` | 422 | 启用推送前请填写 Webhook 地址 | `service/webhook` |
 | `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `service/webhook` |
-| `MINI_PROGRAM_USER_MERGE_SAME_ACCOUNT` | 400 | 不能将小程序账号合并到自身 | `service/miniprogram` |
 | `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `service/aisearch` |
 | `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `service/ledger` |
 | `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `service/ledger` |

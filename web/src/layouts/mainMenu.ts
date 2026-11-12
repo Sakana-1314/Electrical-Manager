@@ -144,8 +144,6 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
       icon: renderIcon(SettingsOutline),
       children: [
         link('用户管理', 'users'),
-        link('角色管理', 'roles'),
-        link('小程序用户', 'mini-program-users'),
         link('项目管理', 'projects'),
         link('附件管理', 'attachments'),
         link('高级设置', 'advanced-settings'),

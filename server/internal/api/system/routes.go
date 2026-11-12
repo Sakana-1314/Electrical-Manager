@@ -5,7 +5,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
@@ -26,15 +25,11 @@ func Register(r *web.Router) {
 	r.POST("/users", addUser, auth.SuperAdmin)
 	r.PATCH("/users/{item_id}", editUser, auth.SuperAdmin)
 	r.POST("/users/{item_id}/api-token/regenerate", regenerateToken, auth.SuperAdmin)
+	r.POST("/users/{item_id}/merge", mergeUser, auth.SuperAdmin)
 	r.DELETE("/users/{item_id}", removeUser, auth.SuperAdmin)
 
-	// 角色（RBAC）：内置角色不可改名 / 删除；用户可挂多个角色，实际权限取并集。
-	ro := r.Group("/roles", auth.SuperAdmin)
-	ro.GET("", listRoles)
-	ro.GET("/permissions", permissionCatalog)
-	ro.POST("", addRole)
-	ro.PATCH("/{item_id}", editRole)
-	ro.DELETE("/{item_id}", removeRole)
+	// 角色（RBAC）：内置角色固定种子、无 CRUD；本接口只读，供用户编辑的多角色下拉使用。
+	r.GET("/roles", listRoles, auth.SuperAdmin)
 
 	m := r.Group("/memos")
 	m.GET("", listMemos, auth.CurrentUser)
@@ -143,63 +138,6 @@ func listRoles(c *web.Ctx) error {
 	return c.OK(items)
 }
 
-func permissionCatalog(c *web.Ctx) error {
-	return c.OK(domain.PermissionCatalog)
-}
-
-func addRole(c *web.Ctx) error {
-	p := c.Params()
-	var data schema.RoleCreate
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	r, err := roleSrv.Create(c.DB, data)
-	if err != nil {
-		return err
-	}
-	return c.Created(roleSrv.NewRoleRead(*r, 0))
-}
-
-func editRole(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("item_id")
-	var data schema.RoleUpdate
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	r, err := roleSrv.Update(c.DB, id, data)
-	if err != nil {
-		return err
-	}
-	read := roleSrv.NewRoleRead(*r, 0)
-	// user_count 由列表接口维护，单读路径重查一次保证准确。
-	all, err := roleSrv.List(c.DB)
-	if err != nil {
-		return err
-	}
-	for _, item := range all {
-		if item.ID == read.ID {
-			read.UserCount = item.UserCount
-		}
-	}
-	return c.OK(read)
-}
-
-func removeRole(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("item_id")
-	ifMatch := p.IfMatch()
-	if err := p.Err(); err != nil {
-		return err
-	}
-	if err := roleSrv.Delete(c.DB, id, ifMatch); err != nil {
-		return err
-	}
-	return c.NoContent()
-}
-
 // ---------------- 用户 ----------------
 
 func listUsers(c *web.Ctx) error {
@@ -258,6 +196,22 @@ func regenerateToken(c *web.Ctx) error {
 		return err
 	}
 	u, err := dictionary.RegenerateAPIToken(c.DB, id, data.Version)
+	if err != nil {
+		return err
+	}
+	return c.OK(u.Read())
+}
+
+// mergeUser 把 source 账号并入路径里的 target 账号：目标保留资料，角色取并集，微信身份随迁，来源账号删除。
+func mergeUser(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("item_id")
+	var data schema.UserMergeRequest
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	u, err := dictionary.MergeUsers(c.DB, id, data)
 	if err != nil {
 		return err
 	}

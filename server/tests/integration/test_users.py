@@ -28,7 +28,7 @@ async def test_username_can_change_without_changing_hidden_user_id(client: Async
             "username": "temporary",
             "password": "123456",
             "display_name": "临时用户",
-            "role_ids": [7],
+            "role_ids": [3],
             "enabled": True,
         },
     )
@@ -64,7 +64,7 @@ async def test_user_without_references_can_be_deleted(client: AsyncClient) -> No
             "username": "unused",
             "password": "123456",
             "display_name": "未使用用户",
-            "role_ids": [7],
+            "role_ids": [3],
             "enabled": True,
         },
     )
@@ -86,7 +86,7 @@ async def test_api_token_is_unique_and_can_be_regenerated(client: AsyncClient) -
             "username": "api-user",
             "password": "123456",
             "display_name": "接口用户",
-            "role_ids": [7],
+            "role_ids": [3],
             "enabled": True,
         },
     )
@@ -153,7 +153,7 @@ async def test_api_token_is_echoed_on_every_read(client: AsyncClient) -> None:
             "username": "echo-user",
             "password": "123456",
             "display_name": "回显用户",
-            "role_ids": [7],
+            "role_ids": [3],
             "enabled": True,
         },
     )
@@ -192,7 +192,7 @@ async def test_legacy_hash_only_token_backfilled_and_echoed_after_use(client: As
             "username": "legacy-user",
             "password": "123456",
             "display_name": "旧数据用户",
-            "role_ids": [7],
+            "role_ids": [3],
             "enabled": True,
         },
     )

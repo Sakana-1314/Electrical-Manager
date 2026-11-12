@@ -247,18 +247,6 @@ const router = createRouter({
           meta: { title: '用户管理', parent: '系统管理', permission: 'settings:write' },
         },
         {
-          path: 'settings/roles',
-          name: 'roles',
-          component: () => import('@/views/settings/RolesView.vue'),
-          meta: { title: '角色管理', parent: '系统管理', permission: 'settings:write' },
-        },
-        {
-          path: 'settings/mini-program-users',
-          name: 'mini-program-users',
-          component: () => import('@/views/settings/MiniProgramUsersView.vue'),
-          meta: { title: '小程序用户', parent: '系统管理', permission: 'settings:write' },
-        },
-        {
           path: 'settings/attachments',
           name: 'attachments',
           component: () => import('@/views/settings/AttachmentsView.vue'),

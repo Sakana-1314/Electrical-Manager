@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 
-from tests.testkit.enums import UserSource
+from tests.testkit.enums import DEFAULT_ROLE_NAMES, UserSource
 from tests.testkit.models import Role, User, UserRole
 
 
@@ -23,7 +23,7 @@ async def create_mini_program_user(
     session: AsyncSession,
     display_name: str,
     *,
-    role_names: tuple[str, ...] = ("只读用户",),
+    role_names: tuple[str, ...] = DEFAULT_ROLE_NAMES,
     enabled: bool = True,
 ) -> int:
     """直接造一个小程序来源的统一用户（跳过微信登录链路）并挂角色，返回用户 id。"""
