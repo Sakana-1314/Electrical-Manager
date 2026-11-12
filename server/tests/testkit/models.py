@@ -188,7 +188,7 @@ class ExcelImportJob(ProjectScoped, Base):
     result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(String(1000))
-    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("user.id"))
+    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("app_user.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=NOW)
     started_at: Mapped[datetime | None]
     finished_at: Mapped[datetime | None]
@@ -209,7 +209,7 @@ class ExcelExportJob(ProjectScoped, Base):
     result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(String(1000))
-    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("user.id"))
+    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("app_user.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=NOW)
     started_at: Mapped[datetime | None]
     finished_at: Mapped[datetime | None]
@@ -225,7 +225,7 @@ class ShareLink(ProjectScoped, Base):
     item_ids: Mapped[list[int]] = mapped_column(JSON)
     columns: Mapped[list[str] | None] = mapped_column(JSON)
     expires_at: Mapped[datetime | None]
-    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("user.id"))
+    created_by: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("app_user.id"))
     created_at: Mapped[datetime] = mapped_column(server_default=NOW)
     updated_at: Mapped[datetime] = mapped_column(server_default=NOW)
 
