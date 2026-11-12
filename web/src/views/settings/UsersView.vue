@@ -112,24 +112,16 @@ const columns = preventTableColumnCompression<ManagedUser>([
         { default: () => (r.enabled ? '启用' : '停用') },
       ),
   },
-  {
-    title: '操作',
-    key: 'action',
-    width: tableColumnWidths.action,
-    render: (r) =>
-      h('div', { style: 'display:flex;gap:8px' }, [
-        h(NButton, { size: 'small', onClick: () => open(r) }, { default: () => '编辑' }),
-        h(NButton, { size: 'small', secondary: true, onClick: () => openMerge(r) }, { default: () => '合并' }),
-        h(
-          NButton,
-          { size: 'small', type: 'error', secondary: true, onClick: () => remove(r) },
-          { default: () => '删除' },
-        ),
-      ]),
-  },
 ])
 const tableScrollX = getTableScrollX(columns)
-function open(row?: ManagedUser) {
+// 表格不再有操作列：整行可点，点开即编辑弹窗（删除 / 合并也在这个弹窗里）。
+function rowProps(row: ManagedUser) {
+  return {
+    style: 'cursor:pointer',
+    onClick: () => open(row),
+  }
+}
+function open(row?: ManagedUser): void {
   editing.value = row || null
   Object.assign(
     form,
@@ -231,6 +223,12 @@ function openMerge(row: ManagedUser) {
   showMerge.value = true
 }
 
+/** 合并对话框关闭：回到该用户的编辑弹窗（从编辑弹窗进入的场景），删掉后则整体关闭。 */
+function closeMerge() {
+  showMerge.value = false
+  mergeSourceId.value = null
+}
+
 async function saveMerge() {
   const target = editing.value
   const source = mergeSource.value
@@ -247,6 +245,7 @@ async function saveMerge() {
     })
     message.success(`已将「${source.display_name}」合并到「${target.display_name}」`)
     showMerge.value = false
+    show.value = false
     editing.value = null
     await load()
   } catch (e) {
@@ -267,6 +266,8 @@ function remove(row: ManagedUser) {
       try {
         await dictionaryApi.deleteUser(row.id)
         message.success('用户已删除')
+        show.value = false
+        editing.value = null
         await load()
       } catch (e) {
         message.error(e instanceof Error ? e.message : '删除失败')
@@ -294,7 +295,8 @@ function remove(row: ManagedUser) {
         :data="items"
         :loading="loading"
         :scroll-x="tableScrollX"
-        :row-key="(r: ManagedUser) => r.id" /></n-card
+        :row-key="(r: ManagedUser) => r.id"
+        :row-props="rowProps" /></n-card
     ><n-modal
       v-model:show="show"
       preset="card"
@@ -341,9 +343,14 @@ function remove(row: ManagedUser) {
           </n-input-group></n-form-item
         ><n-form-item label="启用"><n-switch v-model:value="form.enabled" /></n-form-item></n-form
       ><template #footer
-        ><n-space justify="end"
-          ><n-button @click="show = false">取消</n-button
-          ><n-button type="primary" @click="save">保存</n-button></n-space
+        ><n-space justify="space-between" style="width: 100%"
+          ><n-space v-if="editing"
+            ><n-button type="error" secondary @click="remove(editing)">删除</n-button
+            ><n-button secondary @click="openMerge(editing)">合并账号</n-button></n-space
+          ><n-space justify="end"
+            ><n-button @click="show = false">取消</n-button
+            ><n-button type="primary" @click="save">保存</n-button></n-space
+          ></n-space
         ></template
       ></n-modal
     ><n-modal
@@ -387,7 +394,7 @@ function remove(row: ManagedUser) {
         ></n-form
       ><template #footer
         ><n-space justify="end"
-          ><n-button @click="showMerge = false">取消</n-button
+          ><n-button @click="closeMerge">取消</n-button
           ><n-button type="primary" :loading="merging" @click="saveMerge">确认合并</n-button></n-space
         ></template
       ></n-modal>

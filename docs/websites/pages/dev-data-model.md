@@ -902,15 +902,15 @@ flowchart LR
 
 `user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON CONFLICT (username) DO UPDATE display_name/role/enabled`）：
 
-| `username` | `display_name` | `role` | `enabled` | `api_token_hash` |
+| `username` | `display_name` | 挂载角色（`user_role`） | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
-| `admin` | 系统管理员 | `SUPER_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `warehouse` | 仓库管理员 | `WAREHOUSE_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `purchase` | 申购管理员 | `PURCHASE_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `hazard` | 隐患管理员 | `HAZARD_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `ledger` | 台账管理员 | `LEDGER_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `work` | 工作管理员 | `WORK_ADMIN` | 1 | `sha256(gen_random_uuid())` |
-| `readonly` | 只读用户 | `READ_ONLY` | 1 | `sha256(gen_random_uuid())` |
+| `admin` | 系统管理员 | 超级管理员 | 1 | `sha256(gen_random_uuid())` |
+| `warehouse` | 仓库管理员 | 二级库读写 | 1 | `sha256(gen_random_uuid())` |
+| `purchase` | 申购管理员 | 申购读写 | 1 | `sha256(gen_random_uuid())` |
+| `hazard` | 隐患管理员 | 隐患读写 | 1 | `sha256(gen_random_uuid())` |
+| `ledger` | 台账管理员 | 台账读写 | 1 | `sha256(gen_random_uuid())` |
+| `work` | 工作管理员 | 工单读写 | 1 | `sha256(gen_random_uuid())` |
+| `readonly` | 只读用户 | 全局只读 | 1 | `sha256(gen_random_uuid())` |
 
 七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `user` 三表外，其余 38 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 

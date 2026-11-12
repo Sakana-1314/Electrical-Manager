@@ -40,8 +40,7 @@ SEED_USERS = (
     ("hazard", "隐患管理员", "隐患读写"),
     ("ledger", "台账管理员", "台账读写"),
     ("work", "工作管理员", "工单读写"),
-    ("readonly", "只读用户", "二级库只读"),
-    # readonly 种子账号需要跨模块只读：多挂其余只读角色（与旧「只读用户」语义一致）。
+    ("readonly", "只读用户", "全局只读"),
 
 )
 
@@ -86,10 +85,6 @@ async def _seed() -> None:
             session.add(user)
             await session.flush()
             session.add(UserRole(user_id=user.id, role_id=role_ids[role_name]))
-            if username == 'readonly':
-                # 只读种子账号需要跨模块只读：补挂其余只读角色（与旧「只读用户」语义一致）。
-                for extra in ('申购只读', '隐患只读', '台账只读', '工单只读', '华星只读', '编码库只读'):
-                    session.add(UserRole(user_id=user.id, role_id=role_ids[extra]))
         await session.commit()
     # 显式插入的 id 不会推进自增序列，推到 MAX(id)，否则后续创建项目会撞主键。
     await sync_sequence("project")

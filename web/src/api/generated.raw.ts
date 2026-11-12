@@ -4896,8 +4896,8 @@ export interface components {
          *         "source": "MINI_PROGRAM",
          *         "roles": [
          *           {
-         *             "id": 7,
-         *             "name": "只读用户",
+         *             "id": 2,
+         *             "name": "全局只读",
          *             "is_system": true
          *           }
          *         ],
@@ -5557,7 +5557,7 @@ export interface components {
          *       "roles": [
          *         {
          *           "id": 7,
-         *           "name": "只读用户",
+         *           "name": "全局只读",
          *           "is_system": true
          *         }
          *       ],
@@ -7866,7 +7866,7 @@ export interface components {
          *           "roles": [
          *             {
          *               "id": 7,
-         *               "name": "只读用户",
+         *               "name": "全局只读",
          *               "is_system": true
          *             }
          *           ],
@@ -7901,7 +7901,7 @@ export interface components {
          *           "roles": [
          *             {
          *               "id": 7,
-         *               "name": "只读用户",
+         *               "name": "全局只读",
          *               "is_system": true
          *             }
          *           ],
@@ -7936,7 +7936,7 @@ export interface components {
          *           "roles": [
          *             {
          *               "id": 7,
-         *               "name": "只读用户",
+         *               "name": "全局只读",
          *               "is_system": true
          *             }
          *           ],
@@ -11963,15 +11963,20 @@ export interface components {
         /**
          * RoleRead
          * @example {
-         *       "id": 3,
-         *       "name": "二级库读写",
-         *       "description": "二级库出入库 / 导入 / 库存调整",
+         *       "id": 2,
+         *       "name": "全局只读",
+         *       "description": "各功能只读：二级库 / 申购 / 隐患 / 台账 / 工单 / 华星 / 编码库查看",
          *       "permissions": [
+         *         "codes:read",
+         *         "hazard:read",
+         *         "huaxing:read",
+         *         "ledger:read",
+         *         "purchase:read",
          *         "warehouse:read",
-         *         "warehouse:write"
+         *         "work:read"
          *       ],
          *       "is_system": true,
-         *       "user_count": 1,
+         *       "user_count": 3,
          *       "created_at": "2026-01-01T00:00:00+00:00",
          *       "updated_at": "2026-01-01T00:00:00+00:00",
          *       "version": 1
@@ -12748,7 +12753,7 @@ export interface components {
          *         },
          *         {
          *           "id": 7,
-         *           "name": "只读用户",
+         *           "name": "全局只读",
          *           "is_system": true
          *         }
          *       ],
@@ -22190,8 +22195,8 @@ export interface operations {
                      *         "source": "MINI_PROGRAM",
                      *         "roles": [
                      *           {
-                     *             "id": 7,
-                     *             "name": "只读用户",
+                     *             "id": 2,
+                     *             "name": "全局只读",
                      *             "is_system": true
                      *           }
                      *         ],
@@ -22340,8 +22345,8 @@ export interface operations {
                      *       "source": "MINI_PROGRAM",
                      *       "roles": [
                      *         {
-                     *           "id": 7,
-                     *           "name": "只读用户",
+                     *           "id": 2,
+                     *           "name": "全局只读",
                      *           "is_system": true
                      *         }
                      *       ],
@@ -22615,8 +22620,8 @@ export interface operations {
                      *         "source": "MINI_PROGRAM",
                      *         "roles": [
                      *           {
-                     *             "id": 7,
-                     *             "name": "只读用户",
+                     *             "id": 2,
+                     *             "name": "全局只读",
                      *             "is_system": true
                      *           }
                      *         ],
@@ -33714,12 +33719,12 @@ export interface operations {
                      *       "source": "MANAGE",
                      *       "roles": [
                      *         {
-                     *           "id": 3,
-                     *           "name": "二级库读写",
+                     *           "id": 2,
+                     *           "name": "全局只读",
                      *           "is_system": true
                      *         },
                      *         {
-                     *           "id": 7,
+                     *           "id": 5,
                      *           "name": "隐患读写",
                      *           "is_system": true
                      *         }

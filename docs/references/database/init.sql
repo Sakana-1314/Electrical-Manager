@@ -1214,23 +1214,17 @@ CROSS JOIN (VALUES
 WHERE p.is_default = TRUE
 ON CONFLICT (project_id, major, minor) DO NOTHING;
 
--- 内置角色：permissions 为权限键数组，`*` 通配全部权限。管理端与小程序共用同一套角色体系；
--- 小程序新用户（默认只读）注册时自动挂「只读用户」角色。重复导入按角色名更新。
+-- 内置角色（固定种子、无 CRUD）：超级管理员（全部权限）+「全局只读」（各功能查看）+ 各功能读写。
+-- 管理端与小程序共用同一套角色体系；用户可挂多个角色、权限取并集。重复导入按角色名更新。
 INSERT INTO role (name, description, permissions, is_system)
 VALUES
   ('超级管理员', '系统管理 + 全部业务模块读写', '["*"]', TRUE),
-  ('二级库只读', '二级库与出入库记录查看', '["warehouse:read"]', TRUE),
+  ('全局只读', '各功能只读：二级库 / 申购 / 隐患 / 台账 / 工单 / 华星 / 编码库查看', '["warehouse:read","purchase:read","hazard:read","ledger:read","work:read","huaxing:read","codes:read"]', TRUE),
   ('二级库读写', '二级库出入库 / 导入 / 库存调整', '["warehouse:read","warehouse:write"]', TRUE),
-  ('申购只读', '申购计划与申购记录查看', '["purchase:read"]', TRUE),
   ('申购读写', '申购计划与申购记录编辑', '["purchase:read","purchase:write"]', TRUE),
-  ('隐患只读', '隐患查看', '["hazard:read"]', TRUE),
   ('隐患读写', '隐患上报与整改', '["hazard:read","hazard:write"]', TRUE),
-  ('台账只读', '台账查看', '["ledger:read"]', TRUE),
   ('台账读写', '台账编辑', '["ledger:read","ledger:write"]', TRUE),
-  ('工单只读', '工单查看', '["work:read"]', TRUE),
-  ('工单读写', '工单编辑', '["work:read","work:write"]', TRUE),
-  ('华星只读', '精简库存查看', '["huaxing:read"]', TRUE),
-  ('编码库只读', '物料编码库查看', '["codes:read"]', TRUE)
+  ('工单读写', '工单编辑', '["work:read","work:write"]', TRUE)
 ON CONFLICT (name) DO UPDATE
 SET description = EXCLUDED.description,
     permissions = EXCLUDED.permissions,
@@ -1252,7 +1246,7 @@ SET display_name = EXCLUDED.display_name,
     department_name = EXCLUDED.department_name,
     enabled = EXCLUDED.enabled;
 
--- 种子用户按用户名挂到内置角色（幂等）：warehouse/purchase/hazard/ledger/work 各挂本模块读写，readonly 挂全部只读。
+-- 种子用户按用户名挂到内置角色（幂等）：warehouse/purchase/hazard/ledger/work 各挂本模块读写，readonly 挂全局只读。
 INSERT INTO user_role (user_id, role_id)
 SELECT u.id, r.id
 FROM "user" u
@@ -1263,6 +1257,6 @@ JOIN role r ON (
   (u.username = 'hazard' AND r.name = '隐患读写') OR
   (u.username = 'ledger' AND r.name = '台账读写') OR
   (u.username = 'work' AND r.name = '工单读写') OR
-  (u.username = 'readonly' AND r.name IN ('二级库只读','申购只读','隐患只读','台账只读','工单只读','华星只读','编码库只读'))
+  (u.username = 'readonly' AND r.name = '全局只读')
 )
 ON CONFLICT (user_id, role_id) DO NOTHING;
