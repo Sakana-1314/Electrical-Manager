@@ -17,12 +17,13 @@ from tests.testkit.models import User
 
 async def warehouse_headers(client: AsyncClient) -> dict[str, str]:
     """华星导入由 warehouse:write 发起，页面读取需要 huaxing:read；测试操作者两个位都给。"""
-    headers = await warehouse_headers(client)
+    headers = await auth_headers(client, "warehouse")
     async with project_session() as session:
         user_id = await session.scalar(select(User.id).where(User.username == "warehouse"))
         assert user_id is not None
         await grant_permissions(session, user_id, ("huaxing:read",))
     return headers
+
 
 REPORT_HEADERS = [
     "首次入库日期",
