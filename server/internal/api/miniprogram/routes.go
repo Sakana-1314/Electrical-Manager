@@ -28,6 +28,7 @@ func Register(r *web.Router) {
 	// 权限位直接存 app_user.permissions（见 internal/domain 的 PermissionCatalog），管理端与小程序端共用。
 	g.POST("/auth/wx-login", wechatLogin)
 	g.GET("/me", me, user)
+	g.POST("/qr-login/confirm", confirmQrLogin, user)
 	g.GET("/projects", projects, user)
 	g.POST("/profile", createProfile, auth.MiniProgramRegistration)
 	g.GET("/materials/{material_uuid}", scanMaterial, user, readPerm(domain.PermWarehouseRead))

@@ -55,6 +55,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/qr-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 创建扫码登录会话 */
+        post: operations["create_qr_login_session_api_v1_auth_qr_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/qr-sessions/{session_id}/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 扫码登录小程序码 */
+        get: operations["qr_login_code_api_v1_auth_qr_sessions__session_id__code_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/qr-sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 轮询扫码登录状态 */
+        get: operations["poll_qr_login_session_api_v1_auth_qr_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai-search/expand": {
         parameters: {
             query?: never;
@@ -734,6 +785,23 @@ export interface paths {
         get: operations["mini_program_me_api_v1_mini_program_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mini-program/qr-login/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 确认网页扫码登录 */
+        post: operations["confirm_qr_login_api_v1_mini_program_qr_login_confirm_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5218,6 +5286,73 @@ export interface components {
             label: string;
             /** Bit */
             bit: number;
+        };
+        /**
+         * QrLoginSessionRead
+         * @description 新建扫码登录会话（会话不落数据库，默认 5 分钟有效）。
+         * @example {
+         *       "session_id": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "expires_at": "2026-09-13T10:35:00+08:00"
+         *     }
+         */
+        QrLoginSessionRead: {
+            /**
+             * Session Id
+             * @description UUID 会话标识（只在服务端内存中存在）
+             */
+            session_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * QrLoginPollRead
+         * @description 网页轮询结果；confirmed 时返回管理端访问 / 续期令牌并消费会话（只能取一次）。
+         * @example {
+         *       "status": "pending",
+         *       "access_token": null,
+         *       "refresh_token": null,
+         *       "token_type": "",
+         *       "user": null
+         *     }
+         */
+        QrLoginPollRead: {
+            /**
+             * Status
+             * @description pending 等待扫码确认；confirmed 已确认（本次响应带凭据）；expired 已过期或已消费
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "expired";
+            /** Access Token */
+            access_token?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
+            /** Token Type */
+            token_type: string;
+            /** User */
+            user?: components["schemas"]["UserRead"] | null;
+        };
+        /**
+         * QrLoginConfirmRequest
+         * @example {
+         *       "session_id": "0198f3a72c0070008000000000000001"
+         *     }
+         */
+        QrLoginConfirmRequest: {
+            /** Session Id */
+            session_id: string;
+        };
+        /**
+         * QrLoginConfirmRead
+         * @example {
+         *       "status": "confirmed"
+         *     }
+         */
+        QrLoginConfirmRead: {
+            /** Status */
+            status: string;
         };
         /**
          * UserMergeRequest
@@ -13156,6 +13291,153 @@ export interface operations {
             };
         };
     };
+    create_qr_login_session_api_v1_auth_qr_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "session_id": "0198f3a7-2c00-7000-8000-000000000001",
+                     *       "expires_at": "2026-09-13T10:35:00+08:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["QrLoginSessionRead"];
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    qr_login_code_api_v1_auth_qr_sessions__session_id__code_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "WECHAT_MINI_PROGRAM_CODE_UNAVAILABLE",
+                     *       "message": "小程序码生成服务暂时不可用，请稍后重试",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    poll_qr_login_session_api_v1_auth_qr_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "pending",
+                     *       "access_token": null,
+                     *       "refresh_token": null,
+                     *       "token_type": "",
+                     *       "user": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["QrLoginPollRead"];
+                };
+            };
+            /** @description Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     expand_api_v1_ai_search_expand_post: {
         parameters: {
             query?: never;
@@ -21021,6 +21303,120 @@ export interface operations {
                      *       "message": "请求字段或筛选参数不合法",
                      *       "details": {},
                      *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    confirm_qr_login_api_v1_mini_program_qr_login_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QrLoginConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "confirmed"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["QrLoginConfirmRead"];
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];

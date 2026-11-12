@@ -349,14 +349,37 @@ func GenerateUnlimitedMaterialCode(ctx context.Context, materialUUID, env, appID
 	if code, ok := cachedMaterialCode(key); ok {
 		return code, nil
 	}
+	code, err := generateUnlimitedCode(ctx, strings.ReplaceAll(strings.ToLower(materialUUID), "-", ""),
+		"pages/outbound/outbound", env, appID)
+	if err != nil {
+		return nil, err
+	}
+	codeCacheMu.Lock()
+	materialCodes[key] = code
+	codeCacheMu.Unlock()
+	return code, nil
+}
+
+// GenerateLoginCode 生成扫码登录页的小程序码：scene 为会话 UUID 的紧凑形式，
+// page 固定为 pages/web-login/web-login。登录码一次性且短命，不做缓存。
+func GenerateLoginCode(ctx context.Context, sessionID, env, appID string) ([]byte, error) {
+	scene := strings.ReplaceAll(strings.ToLower(sessionID), "-", "")
+	if scene == "" {
+		return nil, apperr.New("QR_SESSION_EXPIRED", "登录二维码已过期，请刷新后重新扫码").WithStatus(400)
+	}
+	return generateUnlimitedCode(ctx, scene, "pages/web-login/web-login", env, appID)
+}
+
+// generateUnlimitedCode 是不限量小程序码的公共实现（登录码与物资码共用）。
+func generateUnlimitedCode(ctx context.Context, scene, page, env, appID string) ([]byte, error) {
 	accessToken, err := getWechatAccessToken(ctx, appID)
 	if err != nil {
 		return nil, err
 	}
 	unavailable := apperr.New("WECHAT_MINI_PROGRAM_CODE_UNAVAILABLE", "小程序码生成服务暂时不可用，请稍后重试").WithStatus(503)
 	payload, err := json.Marshal(unlimitedCodeRequest{
-		Scene:      strings.ReplaceAll(strings.ToLower(materialUUID), "-", ""),
-		Page:       "pages/outbound/outbound",
+		Scene:      scene,
+		Page:       page,
 		CheckPath:  false,
 		EnvVersion: env,
 		Width:      430,
@@ -381,9 +404,6 @@ func GenerateUnlimitedMaterialCode(ctx context.Context, materialUUID, env, appID
 		return nil, unavailable
 	}
 	if strings.HasPrefix(resp.Header.Get("Content-Type"), "image/") {
-		codeCacheMu.Lock()
-		materialCodes[key] = body
-		codeCacheMu.Unlock()
 		return body, nil
 	}
 	raw, err := decodeJSON(body)

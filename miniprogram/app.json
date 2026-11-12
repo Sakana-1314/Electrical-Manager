@@ -22,6 +22,7 @@
     "pages/hazard-detail/hazard-detail",
     "pages/hazard-create/hazard-create",
     "pages/bind/bind",
+    "pages/web-login/web-login",
     "pages/registration-closed/registration-closed",
     "pages/disabled/disabled"
   ],

@@ -19,6 +19,10 @@ func Register(r *web.Router) {
 	a.POST("/login", login)
 	a.POST("/refresh", refresh)
 	a.GET("/me", me, auth.CurrentUser)
+	// 网页端小程序扫码登录：会话只存在内存，创建/轮询/取码均匿名。
+	a.POST("/qr-sessions", createQrSession)
+	a.GET("/qr-sessions/{session_id}/code", qrSessionCode)
+	a.GET("/qr-sessions/{session_id}", pollQrSession)
 
 	r.GET("/users", listUsers, auth.SystemAdmin)
 	r.POST("/users", addUser, auth.SystemAdmin)
