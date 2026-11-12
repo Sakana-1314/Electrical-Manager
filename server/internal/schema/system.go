@@ -46,13 +46,20 @@ type UserRead struct {
 	Roles          []UserRoleRead            `json:"roles"`
 	Permissions    []string                  `json:"permissions"`
 	Identities     []MiniProgramIdentityRead `json:"identities"`
+	LastUsedAt     *jtype.UTCTime            `json:"last_used_at"`
 	Enabled        bool                      `json:"enabled"`
 	Version        int64                     `json:"version"`
 }
 
 func NewUserRead(u *model.User) UserRead {
-	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Source: u.Source, Enabled: u.Enabled, Version: u.Version, Permissions: []string{}}
+	var lastUsed *jtype.UTCTime
+	if u.LastUsedAt != nil {
+		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
+	}
+	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Source: u.Source, LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version, Permissions: []string{}}
 }
+
+func ptr[T any](v T) *T { return &v }
 
 type UserApiTokenRead struct {
 	UserRead

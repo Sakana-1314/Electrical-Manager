@@ -6,15 +6,32 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 
-from tests.testkit.enums import DEFAULT_ROLE_NAMES, UserSource
+import json
+
+from sqlalchemy import select
+from tests.testkit.enums import DEFAULT_ROLE_NAMES, ROLE_PERMISSIONS, UserSource
 from tests.testkit.models import Role, User, UserRole
 
 
-async def grant_role(session: AsyncSession, user_id: int, role_name: str) -> None:
-    """给用户挂一个角色（按角色名查找；角色由 conftest 种子保证存在）。"""
+async def _get_or_create_role(session: AsyncSession, role_name: str) -> Role:
+    """按名取内置角色；缺失（种子时序问题）时按 ROLE_PERMISSIONS 现场补建。"""
     role = (
         await session.execute(select(Role).where(Role.name == role_name))
-    ).scalar_one()
+    ).scalar_one_or_none()
+    if role is None:
+        role = Role(
+            name=role_name,
+            permissions=json.dumps(ROLE_PERMISSIONS.get(role_name, [])),
+            is_system=True,
+        )
+        session.add(role)
+        await session.flush()
+    return role
+
+
+async def grant_role(session: AsyncSession, user_id: int, role_name: str) -> None:
+    """给用户挂一个角色（按角色名取，缺失则现场补建）。"""
+    role = await _get_or_create_role(session, role_name)
     session.add(UserRole(user_id=user_id, role_id=role.id))
     await session.commit()
 
@@ -39,9 +56,7 @@ async def create_mini_program_user(
     session.add(user)
     await session.flush()
     for role_name in role_names:
-        role = (
-            await session.execute(select(Role).where(Role.name == role_name))
-        ).scalar_one()
+        role = await _get_or_create_role(session, role_name)
         session.add(UserRole(user_id=user.id, role_id=role.id))
     await session.commit()
     return user.id
