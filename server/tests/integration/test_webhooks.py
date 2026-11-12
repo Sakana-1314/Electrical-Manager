@@ -7,132 +7,55 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import func, select
 
-from tests.conftest import auth_headers, create_stock, project_session
+from tests.conftest import create_stock, project_session
 from tests.go_upstream import (  # noqa: F401  （go_upstream 是 fixture）
     StartUpstream,
     deliver_pending_once,
     go_upstream,
 )
 from tests.testkit.enums import WebhookDeliveryStatus, WebhookPlatform
-from tests.testkit.models import WebhookChannel, WebhookDelivery
+from tests.testkit.models import WebhookDelivery
 from tests.testkit.security import create_mini_program_registration_token
 
 
 async def configure_channel(
     client: AsyncClient,
-    headers: dict[str, str],
     platform: str,
     webhook_url: str,
     events: list[str],
 ) -> None:
-    response = await client.put(
-        f"/api/v1/system-settings/webhooks/{platform}",
-        headers=headers,
+    """APP_TEST_HOOKS：覆盖服务端环境变量里的一个 Webhook 渠道。"""
+    response = await client.post(
+        "/__test__/webhook/settings",
         json={
+            "platform": platform,
             "enabled": True,
             "webhook_url": webhook_url,
             "secret": f"{platform.lower()}-secret",
             "subscribed_events": events,
-            "version": 0,
         },
     )
     assert response.status_code == 200, response.text
-    assert response.json() == {
-        "platform": platform,
-        "enabled": True,
-        "subscribed_events": events,
-        "webhook_url": webhook_url,
-        "secret": f"{platform.lower()}-secret",
-        "webhook_configured": True,
-        "secret_configured": True,
-        "updated_at": response.json()["updated_at"],
-        "version": 1,
-    }
 
 
 @pytest.mark.asyncio
-async def test_webhook_settings_permissions_and_validation(
-    client: AsyncClient, go_upstream: StartUpstream
-) -> None:
-    unauthorized = await client.get("/api/v1/system-settings/webhooks")
-    assert unauthorized.status_code == 401
-
-    readonly = await auth_headers(client, "readonly")
-    forbidden = await client.get("/api/v1/system-settings/webhooks", headers=readonly)
-    assert forbidden.status_code == 403
-
-    admin = await auth_headers(client, "admin")
-    channels = await client.get("/api/v1/system-settings/webhooks", headers=admin)
-    assert channels.status_code == 200
-    assert channels.json() == [
-        {
-            "platform": "FEISHU",
-            "enabled": False,
-            "subscribed_events": [],
-            "webhook_url": "",
-            "secret": "",
-            "webhook_configured": False,
-            "secret_configured": False,
-            "updated_at": None,
-            "version": 0,
-        },
-        {
-            "platform": "DINGTALK",
-            "enabled": False,
-            "subscribed_events": [],
-            "webhook_url": "",
-            "secret": "",
-            "webhook_configured": False,
-            "secret_configured": False,
-            "updated_at": None,
-            "version": 0,
-        },
-    ]
-
-    invalid = await client.put(
-        "/api/v1/system-settings/webhooks/FEISHU",
-        headers=admin,
-        json={
-            "enabled": True,
-            "webhook_url": "https://example.com/hook/token",
-            "secret": "",
-            "subscribed_events": ["stock.outbound.created"],
-            "version": 0,
-        },
-    )
-    assert invalid.status_code == 422
-    assert invalid.json()["code"] == "INVALID_WEBHOOK_URL"
-
-    captured: list[httpx.Request] = []
-
-    async def handler(request: httpx.Request) -> httpx.Response:
-        captured.append(request)
-        return httpx.Response(200, json={"code": 0, "msg": "success"})
-
-    test_request = {
-        "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/unsaved-token",
-        "secret": "unsaved-secret",
-    }
-    # 推送改投到本地桩服务，由 handler 记录请求。
-    await go_upstream("webhook", handler)
-    tested = await client.post(
-        "/api/v1/system-settings/webhooks/FEISHU/test", headers=admin, json=test_request
-    )
-    assert tested.status_code == 200, tested.text
-    assert len(captured) == 1
-    test_body = __import__("json").loads(captured[0].content)
-    assert test_body["content"]["text"] == "测试通知\n这是一条 Webhook 测试通知。"
+async def test_webhook_config_is_env_only(client: AsyncClient) -> None:
+    """管理端不再有 Webhook 配置接口：未配置环境变量时渠道为空，事件不产生投递。"""
+    async with project_session() as session:
+        count = await session.scalar(select(func.count()).select_from(WebhookDelivery))
+        assert count == 0
 
 
 @pytest.mark.asyncio
 async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms(
     client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
-    admin = await auth_headers(client, "admin")
-    warehouse = await auth_headers(client, "warehouse")
+    warehouse = await client.post(
+        "/api/v1/auth/login", json={"username": "warehouse", "password": "123456"}
+    )
+    warehouse_headers = {"Authorization": f"Bearer {warehouse.json()['access_token']}"}
     await configure_channel(
         client,
-        admin,
         "FEISHU",
         "https://open.feishu.cn/open-apis/bot/v2/hook/feishu-token",
         [
@@ -143,28 +66,12 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
     )
     await configure_channel(
         client,
-        admin,
         "DINGTALK",
         "https://oapi.dingtalk.com/robot/send?access_token=dingtalk-token",
         ["stock.outbound.created", "mini_program.user.bound"],
     )
-    loaded = await client.get("/api/v1/system-settings/webhooks", headers=admin)
-    assert loaded.status_code == 200
-    loaded_by_platform = {item["platform"]: item for item in loaded.json()}
-    assert loaded_by_platform["FEISHU"]["webhook_url"].endswith("/feishu-token")
-    assert loaded_by_platform["FEISHU"]["secret"] == "feishu-secret"
-    assert loaded_by_platform["DINGTALK"]["webhook_url"].endswith(
-        "access_token=dingtalk-token"
-    )
-    assert loaded_by_platform["DINGTALK"]["secret"] == "dingtalk-secret"
 
-    async with project_session() as session:
-        stored = list((await session.scalars(select(WebhookChannel))).all())
-        assert len(stored) == 2
-        assert all("https://" not in item.webhook_url_encrypted for item in stored)
-        assert all("-secret" not in item.secret_encrypted for item in stored)
-
-    material_id = await create_stock(client, warehouse, "Webhook 测试物资")
+    material_id = await create_stock(client, warehouse_headers, "Webhook 测试物资")
     inbound_payload = {
         "client_request_id": "webhook-inbound",
         "occurred_at": "2026-07-31T08:00:00+08:00",
@@ -173,7 +80,7 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
         "lines": [{"stock_material_id": material_id, "quantity": "10"}],
     }
     inbound = await client.post(
-        "/api/v1/inventory/inbounds", headers=warehouse, json=inbound_payload
+        "/api/v1/inventory/inbounds", headers=warehouse_headers, json=inbound_payload
     )
     assert inbound.status_code == 201, inbound.text
 
@@ -186,17 +93,17 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
         "lines": [{"stock_material_id": material_id, "quantity": "2"}],
     }
     outbound = await client.post(
-        "/api/v1/inventory/outbounds", headers=warehouse, json=outbound_payload
+        "/api/v1/inventory/outbounds", headers=warehouse_headers, json=outbound_payload
     )
     replayed = await client.post(
-        "/api/v1/inventory/outbounds", headers=warehouse, json=outbound_payload
+        "/api/v1/inventory/outbounds", headers=warehouse_headers, json=outbound_payload
     )
     assert outbound.status_code == replayed.status_code == 201
     assert outbound.json()["id"] == replayed.json()["id"]
 
     updated = await client.patch(
         f"/api/v1/inventory/operations/{outbound.json()['id']}",
-        headers=warehouse,
+        headers=warehouse_headers,
         json={
             "version": outbound.json()["version"],
             "operation_type": "OUTBOUND",
@@ -239,6 +146,10 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
         assert [item.event_type.value for item in deliveries].count(
             "mini_program.user.bound"
         ) == 2
+        assert {item.platform for item in deliveries} == {
+            WebhookPlatform.FEISHU.value,
+            WebhookPlatform.DINGTALK.value,
+        }
 
     captured: list[httpx.Request] = []
 
@@ -280,11 +191,3 @@ async def test_selected_events_are_enqueued_once_and_delivered_to_both_platforms
             .where(WebhookDelivery.status == WebhookDeliveryStatus.SUCCEEDED)
         )
         assert succeeded == 5
-        platforms = set(
-            (
-                await session.scalars(
-                    select(WebhookChannel.platform).where(WebhookChannel.enabled.is_(True))
-                )
-            ).all()
-        )
-        assert platforms == {WebhookPlatform.FEISHU, WebhookPlatform.DINGTALK}

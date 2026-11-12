@@ -87,10 +87,6 @@
 | `EXPORT_RESULT_LIMIT_EXCEEDED` | 400 | 查询结果超过导出行数上限，请缩小筛选范围 | `api/purchase`、`api/exportjob` |
 | `PURCHASE_APPLICATION_EXPORT_FIELDS_REQUIRED` | 409 | 导出采购申请表前需补全字段（message 列出缺失项） | `service/material` |
 | `PURCHASE_APPROVAL_EXPORT_FIELDS_REQUIRED` | 409 | 导出申购审批表前需补全字段 | `service/material` |
-| `INVALID_WEBHOOK_URL` | 422 | 请输入有效的机器人 Webhook 地址 | `service/webhook` |
-| `WEBHOOK_URL_REQUIRED` | 422 | 启用推送前请填写 Webhook 地址 | `service/webhook` |
-| `WEBHOOK_EVENTS_REQUIRED` | 422 | 启用推送前请至少选择一个事件 | `service/webhook` |
-| `MINI_PROGRAM_APP_NOT_CONFIGURED` | 400 | 所选微信小程序 AppID 未配置 | `service/aisearch` |
 | `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `service/ledger` |
 | `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `service/ledger` |
 | `WORK_DATE_RANGE` | 400 | 日期区间不合法：结束早于开始、同一天的结束时段早于开始时段，或任务计划结束早于开始 | `service/work` |
@@ -147,7 +143,6 @@
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
 | `AI_NOT_CONFIGURED` | 503 | AI 搜索服务未启用或配置不完整 | `service/aisearch` |
-| `AI_API_KEY_DECRYPT_FAILED` | 503 | API Key 无法解密，请重新保存配置 | `service/aisearch` |
 | `AI_CONNECTION_FAILED` | 400 | 无法连接 AI 服务（地址/DNS/TLS/出网） | `service/aisearch` |
 | `AI_CONNECT_TIMEOUT` | 400 | 连接 AI 服务超时 | `service/aisearch` |
 | `AI_REQUEST_FAILED` | 400 | 请求 AI 服务失败 | `service/aisearch` |
@@ -177,8 +172,6 @@
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `WEBHOOK_CREDENTIAL_DECRYPT_FAILED` | 503 | Webhook 配置无法解密，请重新保存 | `service/webhook` |
-| `WEBHOOK_TEST_FAILED` | 502 | 测试推送失败 | `service/webhook` |
 
 ## 系统与框架
 

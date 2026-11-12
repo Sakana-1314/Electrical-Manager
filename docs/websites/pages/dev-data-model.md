@@ -1,6 +1,6 @@
 # 数据模型
 
-PostgreSQL 16+，共 **40 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
+PostgreSQL 16+，共 **39 张表**，结构出自 `docs/references/database/init.sql`（结构与种子数据的唯一来源，仓库不提交增量迁移脚本）。
 
 ```mermaid
 flowchart LR
@@ -29,7 +29,7 @@ flowchart LR
 | 术语 | 代码标识 | 定义 |
 | --- | --- | --- |
 | 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
-| 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting.secondary_warehouse_mode`，影响路由、菜单与写接口 |
+| 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting` 的 `runtime_settings.secondary_warehouse_mode`，影响路由、菜单与写接口 |
 | 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
 | 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放（`service/inventory` 的 `replayMaterials`）；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
 | 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
@@ -47,12 +47,12 @@ flowchart LR
 | 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅系统管理员（`system:admin` 权限位）可查询/打开已归档计划 |
 | 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
 | 编码库 / 物料价格 / 华星总库存 | `material_code_library` / `material_price` / `huaxing_inventory` | 均为 Excel 全量替换导入：编码库是公司编码参照表（用于编码存在性校验），物料价格按「货品编码 = 物料编码」挂单价、只在物料编码库页面展示，华星总库存是上游总库库存快照（仅查询） |
-| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由超管接口清理 |
+| 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由系统管理员接口清理 |
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
 | 接口令牌 | `app_user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
 | 权限位 | `app_user.permissions` | `BIGINT` 位图，每一位对应一个权限点（`system:admin` + 各功能 `read/write`）；管理端与小程序端共用，功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限。权限目录见 `server/internal/domain/permissions.go` |
-| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟）；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.LogEvent`） |
+| Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟），渠道地址 / 密钥 / 订阅事件来自服务端环境变量；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.LogEvent`） |
 | MCP | `server/internal/api/mcp` | 把 OpenAPI 里的业务接口暴露为 MCP 工具，共 5 个：`system_whoami`（当前用户与项目）、`projects_list`（可用项目）、`operations_list`（操作列表）、`operation_describe`（操作参数与参数落位提示）、`operation_call`（执行操作，附件用 `file.content_base64`，带乐观锁的写操作用 `headers` 传 `If-Match`），按接口令牌对应用户的权限位鉴权 |
 | 隐患台账 / 整改闭环 | `hazard` | 现场隐患排查记录：登记（检查信息 + 责任单位 + 类型 + 整改前图片）→ 整改（整改员工 + 整改后图片 + 状态）→ 复查验收；责任人取自责任单位的快照，不随单位换人回写 |
 | 隐患类型 | `hazard_type` | 一行一个「大类 + 小类」组合（如 `电气安全 / 电缆敷设不规范`），无父子层级；同一项目内同一组合唯一，隐患只引用行 id。隐患类型页把同一 `major` 的行按前端分组呈现为两级横向树，层级只存在于展示层。`init.sql` 预置 157 条组合（16 个大类）作为种子字典 |
@@ -90,7 +90,7 @@ flowchart LR
 ```mermaid
 flowchart TD
     M["AuditMixin：创建时间 / 更新时间 / 乐观锁版本"]
-    M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、微信身份绑定、Webhook 渠道、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录、台账记录与标签"]
+    M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录、台账记录与标签"]
     M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
     M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、物料价格、华星总库存、精简库存"]
@@ -147,16 +147,16 @@ erDiagram
 
 每张表都有 `project_id BIGINT NOT NULL` + 索引 `ix_<表>_project_id` + 外键 `fk_<表>_project_id_project`（`ON DELETE` 不级联：有数据的项目删不掉）。Go 侧清单登记在 `server/internal/model` 的 `ProjectScopedTables`（新增业务表必须同时改 `init.sql`、Go 表结构体并登记），业务 SQL 显式按 `project_id` 过滤。后面的「字段明细」只列业务列与业务索引 / 外键：项目域表的 `project_id`、`ix_<表>_project_id`、`fk_<表>_project_id_project`（`ON DELETE` 不级联）按本节约定统一带，不再逐表重复。
 
-### 全局表（8 张，不隔离）
+### 全局表（7 张，不隔离）
 
-`project`、`app_user`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`。
+`project`、`app_user`、`system_setting`、`file_object`、`memo`、`webhook_delivery`、`business_event_log`。
 
 | 表 | 不隔离的原因 |
 | --- | --- |
 | `project` | 项目自身就是隔离维度 |
 | `app_user` | 用户与权限位属用户管理 |
-| `system_setting`、`webhook_channel` | 系统配置类（含二级库精简模式、AI 搜索配置、Webhook 渠道与订阅） |
-| `webhook_delivery` | 集成投递队列（无查询接口；投递内容里带 `project_id` / `project_name` 供接收方区分） |
+| `system_setting` | 系统配置类（高级设置开关：小程序注册、新用户默认状态、二级库精简模式） |
+| `webhook_delivery` | 集成投递队列（无查询接口；渠道配置在环境变量，投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
 | `file_object` | 全局附件池：按 `sha256` 全局去重、引用计数跨项目统计 |
 | `memo` | 个人备忘录按创建人隔离，不随项目切换 |
@@ -205,8 +205,7 @@ flowchart TD
 | `app_user` | `User` | 统一用户（管理端 + 小程序端，微信 openid 直存；权限位图直接落 `permissions`） | 用户 |
 | `system_setting` | `SystemSetting` | 系统设置键值表 | 系统配置 |
 | `business_event_log` | `BusinessEventLog` | 业务事件日志（状态流转与数据快照） | 系统配置 |
-| `webhook_channel` | `WebhookChannel` | Webhook 渠道配置（飞书 / 钉钉） | Webhook |
-| `webhook_delivery` | `WebhookDelivery` | Webhook 投递记录与重试状态 | Webhook |
+| `webhook_delivery` | `WebhookDelivery` | Webhook 投递记录与重试状态（渠道来自环境变量） | Webhook |
 | `file_object` | `FileObject` | 文件对象元数据（图片等） | 文件 |
 | `excel_import_job` | `ExcelImportJob` | Excel 导入任务 | 导入导出 |
 | `excel_export_job` | `ExcelExportJob` | Excel 导出任务（`file_uuid` 为派生属性，无独立列） | 导入导出 |
@@ -305,7 +304,6 @@ erDiagram
 
 ```mermaid
 erDiagram
-    webhook_channel ||--o{ webhook_delivery : "投递记录（事件 + 渠道幂等）"
     business_event_log {
         VARCHAR business_type
         BIGINT business_id
@@ -388,17 +386,10 @@ erDiagram
 | `business_event_log` | `before_data` | JSON | 是 | NULL | 变更前数据快照 |
 | `business_event_log` | `after_data` | JSON | 是 | NULL | 变更后数据快照 |
 | `business_event_log` | *索引 / 外键* | — | — | — | 索引 `pk_business_event_log(id)`、`ix_business_event_entity(business_type, business_id, id)`；外键：无 |
-| `webhook_channel` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `webhook_channel` | `platform` | ENUM('FEISHU','DINGTALK') | 否 | 无 | 渠道平台，唯一 |
-| `webhook_channel` | `enabled` | TINYINT(1) | 否 | 0 | 是否启用该渠道 |
-| `webhook_channel` | `webhook_url_encrypted` | VARCHAR(2000) | 否 | `''` | 加密后的 Webhook 地址 |
-| `webhook_channel` | `secret_encrypted` | VARCHAR(2000) | 否 | `''` | 加密后的签名密钥 |
-| `webhook_channel` | `subscribed_events` | JSON | 否 | 无 | 订阅事件名数组 |
-| `webhook_channel` | *索引 / 外键* | — | — | — | 索引 `pk_webhook_channel(id)`；唯一 `uq_webhook_channel_platform(platform)`；外键：无 |
 | `webhook_delivery` | `id` | BIGINT UNSIGNED | 否 | 自增 | 主键 |
-| `webhook_delivery` | `event_id` | VARCHAR(36) | 否 | 无 | 事件 id（与 `channel_id` 组合唯一，幂等） |
+| `webhook_delivery` | `event_id` | VARCHAR(36) | 否 | 无 | 事件 id（与 `platform` 组合唯一，幂等） |
 | `webhook_delivery` | `event_type` | ENUM('STOCK_OUTBOUND_CREATED','STOCK_INBOUND_CREATED','MINI_PROGRAM_USER_BOUND') | 否 | 无 | 事件类型，接口值为 `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` |
-| `webhook_delivery` | `channel_id` | BIGINT UNSIGNED | 否 | 无 | 目标渠道 |
+| `webhook_delivery` | `platform` | ENUM('FEISHU','DINGTALK') | 否 | 无 | 目标平台（地址 / 密钥来自环境变量） |
 | `webhook_delivery` | `payload` | JSON | 否 | 无 | 投递报文 |
 | `webhook_delivery` | `status` | ENUM('PENDING','SENDING','SUCCEEDED','FAILED') | 否 | `'PENDING'` | 投递状态 |
 | `webhook_delivery` | `attempts` | TINYINT UNSIGNED | 否 | 0 | 已尝试次数 |
@@ -407,7 +398,7 @@ erDiagram
 | `webhook_delivery` | `response_excerpt` | VARCHAR(1000) | 是 | NULL | 响应摘录 |
 | `webhook_delivery` | `last_error` | VARCHAR(1000) | 是 | NULL | 最近错误信息 |
 | `webhook_delivery` | `delivered_at` | DATETIME(6) | 是 | NULL | 投递成功时间 |
-| `webhook_delivery` | *索引 / 外键* | — | — | — | 索引 `pk_webhook_delivery(id)`；唯一 `uq_webhook_delivery_event_id(event_id, channel_id)`；`ix_webhook_delivery_pending(status, next_retry_at, id)`；外键 `channel_id → webhook_channel.id`（无 `ON DELETE` 子句，即 RESTRICT） |
+| `webhook_delivery` | *索引 / 外键* | — | — | — | 索引 `pk_webhook_delivery(id)`；唯一 `uq_webhook_delivery_event_id_platform(event_id, platform)`；`ix_webhook_delivery_pending(status, next_retry_at, id)`；外键：无 |
 | `file_object` | `id` | VARCHAR(36) | 否 | 无 | 主键，UUID 字符串（`uuid7_string`） |
 | `file_object` | `original_name` | VARCHAR(255) | 否 | 无 | 原始文件名 |
 | `file_object` | `mime_type` | VARCHAR(32) | 否 | 无 | MIME 类型 |
@@ -823,9 +814,10 @@ flowchart TD
 ```mermaid
 flowchart LR
     U["用户启用开关"] --> U1["决定能否登录"]
-    W["Webhook 渠道开关"] --> W1["默认关闭；启用时必须至少订阅一个事件"]
+    W["Webhook 环境变量开关"] --> W1["默认关闭；启用时必须配置地址，事件为空则不推送"]
     P["补库策略开关"] --> P1["默认开启；关闭后不计入低库存判定"]
-    M["小程序用户开关"] --> M1["决定小程序端是否可用"]
+    M["小程序注册开关 / 新用户默认状态"] --> M1["决定能否新绑定、注册后是否待审核"]
+    L["二级库精简模式开关"] --> L1["开启后只提供 Excel 导入与只读查询，小程序禁用出库"]
 ```
 
 ### 凭证加密与回显
@@ -856,7 +848,7 @@ flowchart LR
 
 | 约定 | 说明 |
 | --- | --- |
-| JSON 列 | `system_setting.setting_value`、`webhook_channel.subscribed_events`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 PostgreSQL `JSON` 类型，不建额外索引 |
+| JSON 列 | `system_setting.setting_value`、`webhook_delivery.payload`、`excel_import_job.result`、`excel_export_job.params` / `result`、`share_link.item_ids` / `columns`、`business_event_log.before_data` / `after_data` 为 PostgreSQL `JSON` 类型，不建额外索引 |
 | 默认值差异 | `memo.content` 在 `init.sql` 无 `DEFAULT`，由 `service/memo` 插入时显式写入；`file_object.mime_type` 同样由 `service/file` 上传时显式写 `image/png`（Go 测试不校验默认值） |
 | DDL 导入与变更 | `init.sql` 不创建数据库与账号、不由业务容器自动执行，需部署方手工导入（`psql -f`）；脚本按依赖顺序建表，无需关闭外键检查；当前不存在增量迁移脚本、`updated_by` 列与数据库分区/视图，业务表也没有软删除列（唯一例外是 `file_object.deleted_at`：附件的软删标记，保留 7 个完整自然日、到期后的第一个凌晨 2 点复查引用后才物理清除），表结构变更必须同时改 `init.sql` 与 Go 表结构体（`server/internal/model`） |
 

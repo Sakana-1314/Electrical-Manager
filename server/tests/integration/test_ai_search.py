@@ -7,14 +7,10 @@ from typing import Any
 import httpx
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import select
 
-from tests.conftest import auth_headers, project_session
+from tests.conftest import auth_headers
 from tests.go_upstream import StartUpstream, go_upstream  # noqa: F401  （go_upstream 是 fixture）
 from tests.integration.test_procurement import create_purchase_plan, move_to_record
-from tests.testkit.constants import utcnow
-from tests.testkit.models import BusinessEventLog, SystemSetting
-from tests.testkit.security import encrypt_secret
 
 # AI 上游桩返回的内容
 AI_EXPANSION_RESPONSE: dict[str, Any] = {
@@ -32,110 +28,52 @@ GLM_RESPONSE: dict[str, Any] = {
 }
 
 
-@pytest.mark.asyncio
-async def test_super_admin_configures_ai_search_and_key_is_returned_but_encrypted_at_rest(
+async def configure_ai(
     client: AsyncClient,
+    *,
+    enabled: bool = True,
+    endpoint: str = "https://example.test/v1",
+    api_key: str = "secret-key",
+    model: str = "fast-model",
 ) -> None:
-    admin = await auth_headers(client, "admin")
-    purchase = await auth_headers(client, "purchase")
-
-    forbidden = await client.get("/api/v1/ai-search/settings", headers=purchase)
-    assert forbidden.status_code == 403
-    default_image_settings = await client.get(
-        "/api/v1/system-settings/image-acceleration"
-    )
-    assert default_image_settings.status_code == 200
-    assert default_image_settings.json() == {"image_acceleration_server_url": ""}
-
-    saved = await client.put(
-        "/api/v1/ai-search/settings",
-        headers=admin,
+    """APP_TEST_HOOKS 测试钩子：覆盖服务端环境变量里的 AI 配置。"""
+    response = await client.post(
+        "/__test__/ai-search/settings",
         json={
-            "endpoint": "https://example.test/v1/",
-            "api_key": "secret-key",
-            "model": "fast-model",
-            "enabled": True,
-            "mini_program_code_env": "trial",
-            "mini_program_code_app_id": "wx-test-secondary",
-            "mini_program_registration_enabled": False,
-            "mini_program_new_user_enabled": False,
-            "image_acceleration_server_url": "http://192.168.1.10/",
-            "version": 0,
+            "enabled": enabled,
+            "endpoint": endpoint,
+            "api_key": api_key,
+            "model": model,
         },
     )
-    assert saved.status_code == 200, saved.text
-    assert saved.json() == {
-        "endpoint": "https://example.test/v1",
-        "api_key": "secret-key",
-        "model": "fast-model",
-        "enabled": True,
-        "mini_program_code_env": "trial",
-        "mini_program_code_app_id": "wx-test-secondary",
-        "mini_program_app_ids": ["wx-test-primary", "wx-test-secondary"],
-        "mini_program_registration_enabled": False,
-        "mini_program_new_user_enabled": False,
-        "image_acceleration_server_url": "http://192.168.1.10",
-        "secondary_warehouse_mode": "full",
-        "updated_at": saved.json()["updated_at"],
-        "version": 1,
-    }
-    assert "secret-key" in saved.text
+    assert response.status_code == 200, response.text
 
-    loaded = await client.get("/api/v1/ai-search/settings", headers=admin)
-    assert loaded.status_code == 200, loaded.text
-    assert loaded.json()["api_key"] == "secret-key"
-    image_settings = await client.get("/api/v1/system-settings/image-acceleration")
-    assert image_settings.status_code == 200
-    assert image_settings.json() == {
-        "image_acceleration_server_url": "http://192.168.1.10"
-    }
 
-    status = await client.get("/api/v1/ai-search/status", headers=purchase)
-    assert status.status_code == 200
-    assert status.json() == {"available": True}
+@pytest.mark.asyncio
+async def test_ai_status_follows_server_environment_config(client: AsyncClient) -> None:
+    """AI 配置只来自服务端环境变量：未配置时状态为不可用，配置完整后立即可用。"""
+    purchase = await auth_headers(client, "purchase")
+    await configure_ai(client, enabled=False, endpoint="", api_key="", model="")
+    disabled = await client.get("/api/v1/ai-search/status", headers=purchase)
+    assert disabled.status_code == 200
+    assert disabled.json() == {"available": False}
 
-    async with project_session() as session:
-        event = await session.scalar(
-            select(BusinessEventLog).where(
-                BusinessEventLog.action == "AI_SEARCH_CONFIG_UPDATED"
-            )
-        )
-        assert event is not None
-        assert event.after_data is not None
-        encrypted = event.after_data["api_key_encrypted"]
-        assert encrypted != "secret-key"
-        assert "secret-key" not in str(encrypted)
-        assert event.after_data["mini_program_code_env"] == "trial"
-        assert event.after_data["mini_program_code_app_id"] == "wx-test-secondary"
-        assert event.after_data["mini_program_registration_enabled"] is False
-        assert event.after_data["mini_program_new_user_enabled"] is False
-        assert event.after_data["image_acceleration_server_url"] == "http://192.168.1.10"
+    await configure_ai(client)
+    enabled = await client.get("/api/v1/ai-search/status", headers=purchase)
+    assert enabled.status_code == 200
+    assert enabled.json() == {"available": True}
 
 
 @pytest.mark.asyncio
 async def test_ai_expansion_applies_to_plans_and_records(
     client: AsyncClient, go_upstream: StartUpstream
 ) -> None:
-    admin = await auth_headers(client, "admin")
     purchase = await auth_headers(client, "purchase")
     # AI 上游改投到本地桩服务。
     await go_upstream(
         "ai-search", lambda _request: httpx.Response(200, json=AI_EXPANSION_RESPONSE)
     )
-
-    configured = await client.put(
-        "/api/v1/ai-search/settings",
-        headers=admin,
-        json={
-            "endpoint": "https://example.test/v1",
-            "api_key": "secret-key",
-            "model": "fast-model",
-            "enabled": True,
-            "mini_program_code_env": "release",
-            "version": 0,
-        },
-    )
-    assert configured.status_code == 200, configured.text
+    await configure_ai(client)
 
     expanded = await client.post(
         "/api/v1/ai-search/expand",
@@ -183,29 +121,25 @@ async def test_ai_response_timeout_returns_specific_bad_request(
 ) -> None:
     admin = await auth_headers(client, "admin")
 
-    # 桩服务迟迟不返回；实际等待缩短为 0.3 秒（文案与 details 仍按 30 秒）。
+    # 桩服务迟迟不返回；实际等待缩短为 0.3 秒（文案与 details 仍按接口默认超时）。
     async def slow_handler(_request: httpx.Request) -> httpx.Response:
         await asyncio.sleep(2)
         return httpx.Response(200, json=AI_EXPANSION_RESPONSE)
 
     await go_upstream("ai-search", slow_handler, response_timeout_seconds=0.3)
+    await configure_ai(client, model="slow-model")
 
     response = await client.post(
-        "/api/v1/ai-search/settings/test",
+        "/api/v1/ai-search/expand",
         headers=admin,
-        json={
-            "endpoint": "https://example.test/v1",
-            "api_key": "secret-key",
-            "model": "slow-model",
-        },
+        json={"value": "电机"},
     )
     assert response.status_code == 400, response.text
     assert response.json()["code"] == "AI_RESPONSE_TIMEOUT"
-    assert "等待上游响应数据阶段" in response.json()["message"]
     assert "slow-model" in response.json()["message"]
     assert "https://example.test/v1/chat/completions" in response.json()["message"]
     assert response.json()["details"]["phase"] == "response_wait"
-    assert response.json()["details"]["timeout_seconds"] == 30.0
+    assert response.json()["details"]["timeout_seconds"] == 10.0
 
 
 @pytest.mark.asyncio
@@ -221,15 +155,14 @@ async def test_glm_models_disable_thinking_and_request_json_output(
         return httpx.Response(200, json=GLM_RESPONSE)
 
     await go_upstream("ai-search", glm_handler)
+    await configure_ai(
+        client,
+        endpoint="https://open.bigmodel.cn/api/paas/v4",
+        model="glm-4.7-flash",
+    )
 
     response = await client.post(
-        "/api/v1/ai-search/settings/test",
-        headers=admin,
-        json={
-            "endpoint": "https://open.bigmodel.cn/api/paas/v4",
-            "api_key": "secret-key",
-            "model": "glm-4.7-flash",
-        },
+        "/api/v1/ai-search/expand", headers=admin, json={"value": "电机"}
     )
     assert response.status_code == 200, response.text
     assert response.json()["expanded"] == "电机|电动机"
@@ -244,71 +177,3 @@ async def test_glm_models_disable_thinking_and_request_json_output(
         "role": "user",
         "content": '{"input_terms": ["电机"]}',
     }
-    settings = await client.get("/api/v1/ai-search/settings", headers=admin)
-    assert settings.status_code == 200
-    assert settings.json()["version"] == 0
-
-
-@pytest.mark.asyncio
-async def test_setting_migrates_from_event_log_to_system_setting_table(
-    client: AsyncClient,
-) -> None:
-    """旧部署配置存于 business_event_log；system_setting 空时回退读取，更新时迁移到新表。"""
-    admin = await auth_headers(client, "admin")
-    # 模拟旧部署：只写事件日志，不写 system_setting。
-    async with project_session() as session:
-        session.add(
-            BusinessEventLog(
-                business_type="SYSTEM_SETTING",
-                business_id=1,
-                action="AI_SEARCH_CONFIG_UPDATED",
-                occurred_at=utcnow(),
-                after_data={
-                    "endpoint": "https://legacy.test/v1",
-                    "api_key_encrypted": encrypt_secret("legacy-key"),
-                    "model": "legacy-model",
-                    "enabled": True,
-                    "mini_program_code_env": "release",
-                    "mini_program_code_app_id": "wx-test-secondary",
-                    "mini_program_registration_enabled": True,
-                    "mini_program_new_user_enabled": True,
-                    "image_acceleration_server_url": "",
-                },
-            )
-        )
-        await session.commit()
-
-    loaded = await client.get("/api/v1/ai-search/settings", headers=admin)
-    assert loaded.status_code == 200, loaded.text
-    assert loaded.json()["endpoint"] == "https://legacy.test/v1"
-    assert loaded.json()["api_key"] == "legacy-key"
-    legacy_version = loaded.json()["version"]
-
-    saved = await client.put(
-        "/api/v1/ai-search/settings",
-        headers=admin,
-        json={
-            "endpoint": "https://new.test/v1/",
-            "api_key": "new-key",
-            "model": "new-model",
-            "enabled": True,
-            "mini_program_code_env": "release",
-            "mini_program_code_app_id": "wx-test-secondary",
-            "version": legacy_version,
-        },
-    )
-    assert saved.status_code == 200, saved.text
-    assert saved.json()["endpoint"] == "https://new.test/v1"
-    assert saved.json()["version"] == legacy_version + 1
-
-    async with project_session() as session:
-        row = await session.get(SystemSetting, "ai_search_config")
-        assert row is not None
-        assert row.setting_value["endpoint"] == "https://new.test/v1"
-        assert row.setting_value["api_key_encrypted"] != "new-key"
-        assert row.version == legacy_version + 1
-
-    reloaded = await client.get("/api/v1/ai-search/settings", headers=admin)
-    assert reloaded.status_code == 200, reloaded.text
-    assert reloaded.json()["endpoint"] == "https://new.test/v1"
-    assert reloaded.json()["api_key"] == "new-key"

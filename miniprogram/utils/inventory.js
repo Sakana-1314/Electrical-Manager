@@ -18,26 +18,12 @@ function decorateStock(item) {
   };
 }
 
-function resolveImageBaseUrl(serverUrl) {
-  const normalized = String(serverUrl || '').trim().replace(/\/+$/, '');
-  if (!normalized) {
-    return `${apiBaseUrl}/files/images`;
-  }
-  if (/^https?:\/\/[^/]+$/i.test(normalized)) {
-    return `${normalized}/api/v1/files/images`;
-  }
-  return normalized;
-}
-
 function imageUrl(fileId, size) {
-  const appImageBaseUrl =
-    typeof getApp === 'function' ? getApp().globalData.imageBaseUrl : '';
-  const url = `${appImageBaseUrl || resolveImageBaseUrl('')}/${fileId}`;
+  const url = `${apiBaseUrl}/files/images/${fileId}`;
   return size ? `${url}?size=${size}` : url;
 }
 
 module.exports = {
   decorateStock,
   imageUrl,
-  resolveImageBaseUrl,
 };

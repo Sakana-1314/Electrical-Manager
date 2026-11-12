@@ -20,8 +20,6 @@ export type PurchasePlanStatus = components['schemas']['PurchasePlanStatus']
 export type MiniProgramCodeEnv = components['schemas']['MiniProgramCodeEnv']
 export type MiniProgramStockStatus = components['schemas']['MiniProgramStockStatus']
 export type SecondaryWarehouseMode = components['schemas']['SecondaryWarehouseMode']
-export type WebhookPlatform = components['schemas']['WebhookPlatform']
-export type WebhookEventType = components['schemas']['WebhookEventType']
 
 /* ===== 接口类型（映射自 openapi schema） ===== */
 export type ApiError = components['schemas']['ApiError']
@@ -36,11 +34,10 @@ export type LoginRequest = components['schemas']['LoginRequest']
 export type LoginResponse = components['schemas']['LoginResponse']
 export type TokenPairResponse = components['schemas']['TokenPairResponse']
 export type MiniProgramLoginResponse = components['schemas']['MiniProgramLoginResponse']
-export type AiSearchSettings = components['schemas']['AiSearchSettingsRead']
 export type AiSearchStatus = components['schemas']['AiSearchStatusRead']
-export type AiSearchTestRequest = components['schemas']['AiSearchTestRequest']
+export type AdvancedSettings = components['schemas']['AdvancedSettingsRead']
+export type AdvancedSettingsWrite = components['schemas']['AdvancedSettingsUpdate']
 export type MiniProgramFeatures = components['schemas']['MiniProgramFeaturesRead']
-export type ImageAccelerationSettings = components['schemas']['ImageAccelerationSettingsRead']
 /* 项目（多项目数据隔离）：业务数据都挂在项目下，右上角切换当前项目。 */
 export type Project = components['schemas']['ProjectRead']
 export type ProjectCreate = components['schemas']['ProjectCreate']
@@ -161,54 +158,6 @@ export interface AiSearchExpandInput {
 export interface AiSearchExpandResult {
   original: string
   expanded: string
-}
-export interface AiSearchTestResult {
-  original: string
-  expanded: string
-}
-
-/** AI 配置写入（版本化 PUT） */
-export interface AiSearchSettingsWrite {
-  endpoint: string
-  api_key: string
-  model: string
-  enabled: boolean
-  mini_program_code_env: MiniProgramCodeEnv
-  mini_program_code_app_id: string
-  mini_program_registration_enabled: boolean
-  mini_program_new_user_enabled: boolean
-  image_acceleration_server_url: string
-  secondary_warehouse_mode: SecondaryWarehouseMode
-  version: number
-}
-
-/** Webhook 渠道配置 */
-export interface WebhookChannelSettings {
-  platform: WebhookPlatform
-  enabled: boolean
-  subscribed_events: WebhookEventType[]
-  webhook_url: string
-  secret: string
-  webhook_configured: boolean
-  secret_configured: boolean
-  updated_at?: string | null
-  version: number
-}
-export interface WebhookChannelSettingsWrite {
-  enabled: boolean
-  webhook_url: string
-  secret: string
-  subscribed_events: WebhookEventType[]
-  version: number
-}
-export interface WebhookTestInput {
-  webhook_url: string
-  secret: string
-}
-export interface WebhookTestResult {
-  platform: WebhookPlatform
-  success: boolean
-  message: string
 }
 
 /** 物资档案导入结果 */

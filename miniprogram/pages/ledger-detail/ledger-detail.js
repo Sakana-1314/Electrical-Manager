@@ -32,7 +32,6 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      await getApp().globalData.imageSettingsPromise;
       await this.loadRecord(this.recordId);
     } catch (error) {
       this.setData({ loading: false, failed: true });

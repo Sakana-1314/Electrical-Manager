@@ -66,10 +66,7 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      await Promise.all([
-        app.globalData.runtimeSettingsPromise,
-        app.globalData.imageSettingsPromise,
-      ]);
+      await app.globalData.runtimeSettingsPromise;
       const options = await requestCached({ url: '/mini-program/hazards/form-options' });
       const units = options.units || [];
       const types = options.types || [];

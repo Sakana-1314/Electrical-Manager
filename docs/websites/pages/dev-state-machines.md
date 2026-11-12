@@ -31,7 +31,7 @@ flowchart LR
 | `MiniProgramStockStatus` | `normal` / `out_of_stock` / `low_stock` | 计算得出，不落库 | 小程序库存标签 |
 | `SecondaryWarehouseMode` | `full` / `lite` | `system_setting.setting_value` JSON | 二级库运行模式（管理端与小程序端共用） |
 | `WebhookPlatform` | `FEISHU` / `DINGTALK` | ENUM 同名 | 推送渠道 |
-| `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `webhook_channel.subscribed_events` JSON 存**值**（点号形式） |
+| `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `APP_*_WEBHOOK_EVENTS` 环境变量存**值**（点号形式，逗号分隔） |
 | `WebhookDeliveryStatus` / `ExcelImportJobStatus` / `ExcelExportJobStatus` | 前者 `PENDING` / `SENDING` / `SUCCEEDED` / `FAILED`，后两者 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` | ENUM 同名 | 投递队列 / 异步任务 |
 | `WorkTaskStatus` | `未开始` / `进行中` / `已完成` / `已暂停` | ENUM `PENDING` / `IN_PROGRESS` / `DONE` / `PAUSED` | DB 存枚举名，API 返回中文值；人工维护，不做流转校验 |
 | `WorkHalfDay` | `AM` / `PM`（界面「上午」/「下午」） | ENUM 同名 | 工作记录起止的半天档 |
@@ -55,7 +55,7 @@ stateDiagram-v2
     已归档 --> [*] : 删除（需写入权限与版本号）
     note right of 已归档
         三个状态是运营标记，不是流程阶段：任意互转，只校验版本号
-        非超管看不到「已归档」（显式筛选会 403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN）；
+        无系统管理权限看不到「已归档」（显式筛选会 403 ARCHIVED_PURCHASE_PLAN_FORBIDDEN）；
         不传 status 时查询默认只返回「正常」，「暂不申购」可以显式筛选出来
         删除已转入申购记录的计划会被拒绝：PURCHASE_PLAN_IN_USE
     end note
@@ -276,7 +276,7 @@ flowchart LR
     A --> C["同步返回：未编码清单、采购申请表"]
     C --> D["必填字段缺失时导出被拒绝：采购申请表 / 申购审批表字段不足"]
     B --> E["文件保留 3 天，过期或缺失的下载被拒绝"]
-    B --> F["任务状态只对创建者与超管可见，文件本身按文件号匿名下载"]
+    B --> F["任务状态只对创建者与系统管理员可见，文件本身按文件号匿名下载"]
 ```
 
 ### Webhook 投递
@@ -297,30 +297,24 @@ stateDiagram-v2
     end note
     note left of 成功
         终态没有重试入口
-        渠道配置变更不影响已经入队的投递
+        环境变量变更需重启服务；已入队的投递不受影响
     end note
 ```
 
-渠道配置本身的校验与结果：
+Webhook 渠道配置只来自服务端环境变量：
 
 ```mermaid
 flowchart TD
-    A["保存渠道配置"] --> B{"启用？"}
-    B -- "否" --> OK["允许保存"]
-    B -- "是" --> C{"地址已填？"}
-    C -- "否" --> N1["拒绝：缺少地址"]
-    C -- "是" --> D{"已选订阅事件？"}
-    D -- "否" --> N2["拒绝：缺少订阅事件"]
-    D -- "是" --> E{"地址是该平台的 https 域名与路径？"}
-    E -- "否" --> N3["拒绝：地址不合法"]
-    E -- "是" --> F{"密钥密文可解密？"}
-    F -- "否" --> N4["读取与投递被拒绝：凭证解密失败"]
-    F -- "是" --> OK2["保存并递增版本号"]
-    G["推送测试失败"] --> N5["返回上游失败（WEBHOOK_TEST_FAILED），配置不变"]
-    H["密钥无法解密"] --> N6["读取与投递被拒绝（WEBHOOK_CREDENTIAL_DECRYPT_FAILED）"]
+    A["启动读取 APP_*_WEBHOOK_*"] --> B{"ENABLED？"}
+    B -- "否" --> D["渠道关闭，不产生新投递"]
+    B -- "是" --> C{"URL 已填？"}
+    C -- "否" --> N1["启动失败：启用时必须配置 URL"]
+    C -- "是" --> E{"EVENTS 包含事件？"}
+    E -- "否" --> D
+    E -- "是" --> F["事件入队，投递失败按 1/5/15/60/180 分钟重试"]
 ```
 
-新建渠道时传入的版本号与库中不一致会被拒绝；地址与事件缺失、地址非法分别报缺少地址 / 缺少订阅事件 / 地址不合法。
+管理端不再提供渠道地址 / 密钥 / 订阅事件的读取或保存接口，也没有「测试推送」接口；地址不合法或平台拒绝会在投递阶段记入 `webhook_delivery.last_error` 并按退避重试。
 
 </TabsContent>
 
@@ -428,8 +422,8 @@ stateDiagram-v2
 stateDiagram-v2
     direction LR
     [*] --> 完整模式 : 未配置时的兜底值
-    完整模式 --> 精简模式 : 超管在高级设置保存
-    精简模式 --> 完整模式 : 超管在高级设置保存
+    完整模式 --> 精简模式 : 系统管理员在高级设置保存
+    精简模式 --> 完整模式 : 系统管理员在高级设置保存
     note right of 精简模式
         完整模式写接口全部被拒绝：二级库为精简模式
         小程序出库相关入口被拒绝：出库已关闭
@@ -464,12 +458,12 @@ stateDiagram-v2
     已过期 --> [*] : 每日清理任务删除行
     note right of 生效
         展示列为空表示默认列：该类型的全部列去掉「状态」
-        非创建者且非超管不能修改或撤回
+        非创建者且无系统管理权限不能修改或撤回
         勾选项包含不存在的计划 / 记录会被拒绝
     end note
     note left of 已过期
         读取已过期链接：SHARE_EXPIRED；读取不存在的链接：SHARE_NOT_FOUND
-        展示列包含该类型不支持的列会被拒绝；非创建者且非超管的修改或撤回被拒绝
+        展示列包含该类型不支持的列会被拒绝；非创建者且无系统管理权限的修改或撤回被拒绝
     end note
 ```
 

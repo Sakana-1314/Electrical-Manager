@@ -8,7 +8,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/miniprogram"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
@@ -58,11 +58,8 @@ func materialMiniProgramCodeRedirect(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	env, err := aisearch.GetMiniProgramCodeEnv(c.DB)
-	if err != nil {
-		return err
-	}
-	appID, err := aisearch.GetMiniProgramCodeAppID(c.DB)
+	env := appsettings.GetMiniProgramCodeEnv()
+	appID, err := appsettings.GetMiniProgramCodeAppID()
 	if err != nil {
 		return err
 	}

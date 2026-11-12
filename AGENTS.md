@@ -99,7 +99,7 @@ npm run build             # 类型检查 + 生产构建
 > 原则：**凭证可以加密（或哈希）入库，但界面必须每次都回显已保存的值，避免每次重新生成 / 重置。**
 
 - **存储**：接口令牌、API Key 等敏感凭证不得明文落库，须加密（如 Fernet 对称加密，参考 `server/internal/security` 的 `EncryptSecret` / `DecryptSecret` 与 `server/internal/service/aisearch`，密文存 `*_encrypted` 字段）或哈希后存储；需要界面回显的凭证必须**加密**（可逆）入库，哈希仅用于纯认证查找。
-- **回显**：读取接口必须解密回显明文凭证，前端每次进入页面都能看到已保存的值（如 AI 搜索配置读取时 `api_key` 字段始终回显，用户无需每次重置）。**禁止**让界面出现「库中只存哈希，请重新生成后再复制」之类需要用户每次重新生成 / 输入的提示。
+- **回显**：读取接口必须解密回显明文凭证，前端每次进入页面都能看到已保存的值（如用户接口令牌读取时 `api_token` 字段始终回显，用户无需每次重新生成）。**禁止**让界面出现「库中只存哈希，请重新生成后再复制」之类需要用户每次重新生成 / 输入的提示。
 - **用户接口令牌（已按约定改造）**：`user` 表双列存储——`api_token_hash`（SHA-256，认证快速查找）+ `api_token_enc`（Fernet 密文，可逆回显）；`/users` 读取与 PATCH 每次解密回显（见 `server/internal/service/dictionary` 的 `echoAPIToken`）。仅存哈希的历史数据在令牌下次成功用于接口调用时由认证路径自动加密回写（见 `server/internal/auth` 的 `FindUserByAPIToken`），此后持续回显，无需用户重新生成。
 - **涉及此类存储 / 回显改动时**：同步更新 `docs/openapi.yaml` 契约并重新生成前端类型（在 `web/` 目录执行 `npm run generate:api`），在 PR 描述中说明加解密与回显方案。
 
@@ -113,7 +113,7 @@ npm run build             # 类型检查 + 生产构建
 - **项目域表的每条 SQL 都显式带 `project_id = ?`**：项目 id 一律取 `s.ProjectID()`（未设定上下文时返回 `PROJECT_REQUIRED`，fail-closed），INSERT 时写入当前项目；只有显式跨项目语义的地方（按 id 反查任意项目的数据）才不加过滤，并放在系统上下文（`s.System()` / `db.SystemSession`）里。
 - **后台任务与匿名入口必须显式声明上下文**：按行记录恢复用 `db.ProjectSession(ctx, job.ProjectID)` / `s.WithProject(pid)`；系统级（清理、附件引用统计、匿名导出下载）用 `db.SystemSession(ctx)` / `s.System()`。
 - **项目域唯一键要带 `project_id`**（如 `(project_id, plan_no)`）：编号/编码按项目生成，跨项目必须允许同号。
-- **不隔离的全局表**（`project`、`user`、`mini_program_user`、`mini_program_identity`、`system_setting`、`file_object`、`memo`、`webhook_channel`、`webhook_delivery`、`business_event_log`）不加 `project_id` 过滤。
+- **不隔离的全局表**（`project`、`app_user`、`system_setting`、`file_object`、`memo`、`webhook_delivery`、`business_event_log`）不加 `project_id` 过滤。
 - **匿名分享/导出下载按记录自身解析项目**：分享页先在系统上下文取 `share_link`，再切到该分享的项目读数据。
 - **老库升级**：仓库不提交迁移脚本；已有库的升级 SQL 放在 PR 描述或对话里（`outputs/` 下的脚本不入库），新库直接用 `init.sql`。
 

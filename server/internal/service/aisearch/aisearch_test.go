@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
 )
 
 func appErr(t *testing.T, err error) *apperr.Error {
@@ -178,42 +176,6 @@ func TestCacheEvictsOldestInserted(t *testing.T) {
 	}
 }
 
-func TestConfigFromData(t *testing.T) {
-	config.S.WechatMiniProgramAppID = "wx-a, wx-b,wx-a"
-	defer func() { config.S.WechatMiniProgramAppID = "" }()
-	c := configFromData(map[string]any{
-		"endpoint": 5, "enabled": "yes", "secondary_warehouse_mode": "lite",
-		"mini_program_code_app_id": "wx-b",
-	}, 7, nil, false)
-	if c.Endpoint != "" || c.Enabled || c.SecondaryWarehouseMode != "lite" || c.MiniProgramCodeAppID != "wx-b" {
-		t.Fatalf("config: %+v", c)
-	}
-	if got := configFromData(map[string]any{"mini_program_code_app_id": "wx-x"}, 1, nil, false).MiniProgramCodeAppID; got != "wx-a" {
-		t.Fatalf("unknown app id falls back to first: %s", got)
-	}
-	if got := configFromData(map[string]any{"secondary_warehouse_mode": "bogus"}, 1, nil, false).SecondaryWarehouseMode; got != "full" {
-		t.Fatalf("unknown mode falls back to full: %s", got)
-	}
-	if ids := configuredWechatAppIDs(); fmt.Sprint(ids) != "[wx-a wx-b]" {
-		t.Fatalf("app ids: %v", ids)
-	}
-}
-
-func TestWechatCredentials(t *testing.T) {
-	config.S.WechatMiniProgramAppID, config.S.WechatMiniProgramAppSecret = "wx-a,wx-b", "s-a,s-b"
-	defer func() { config.S.WechatMiniProgramAppID, config.S.WechatMiniProgramAppSecret = "", "" }()
-	if id, secret, err := getWechatCredentials(""); id != "wx-a" || secret != "s-a" || err != nil {
-		t.Fatalf("default: %s %s %v", id, secret, err)
-	}
-	if _, _, err := getWechatCredentials("wx-c"); appErr(t, err).Code != "WECHAT_NOT_CONFIGURED" {
-		t.Fatalf("unknown: %v", err)
-	}
-	config.S.WechatMiniProgramAppSecret = "s-a"
-	if _, _, err := getWechatCredentials(""); appErr(t, err).Code != "WECHAT_CONFIGURATION_INVALID" {
-		t.Fatalf("mismatch: %v", err)
-	}
-}
-
 func TestPyFormatting(t *testing.T) {
 	if pyFloat(30*time.Second) != "30.0" || pyFloat(1500*time.Millisecond) != "1.5" {
 		t.Fatalf("pyFloat")
@@ -225,12 +187,7 @@ func TestPyFormatting(t *testing.T) {
 
 func testConfig(t *testing.T, endpoint, model string) *Config {
 	t.Helper()
-	config.S.JWTSecret = "test-secret-that-is-long-enough-123456"
-	security.ResetFernetKey()
-	c := defaultConfig()
-	c.Endpoint, c.Model, c.Enabled, c.Version = endpoint, model, true, 1
-	c.APIKeyEncrypted = security.EncryptSecret("secret-key")
-	return c
+	return &Config{Endpoint: endpoint, APIKey: "secret-key", Model: model, Enabled: true}
 }
 
 func TestRequestExpansionsEndToEnd(t *testing.T) {

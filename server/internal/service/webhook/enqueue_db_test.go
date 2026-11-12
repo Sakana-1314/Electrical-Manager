@@ -34,11 +34,21 @@ func TestEnqueueEventDB(t *testing.T) {
 			t.Fatalf("%s: %v", q, err)
 		}
 	}
-	mustExec("TRUNCATE TABLE webhook_delivery, webhook_channel, project RESTART IDENTITY CASCADE")
+	mustExec("TRUNCATE TABLE webhook_delivery, project RESTART IDENTITY CASCADE")
 	mustExec("INSERT INTO project (id, name, enabled, is_default, created_at, updated_at, version) VALUES (1, '默认项目', TRUE, TRUE, NOW(), NOW(), 1), (2, '二期', TRUE, FALSE, NOW(), NOW(), 1)")
-	mustExec(`INSERT INTO webhook_channel (platform, enabled, webhook_url_encrypted, secret_encrypted, subscribed_events, created_at, updated_at, version) VALUES
-		('FEISHU', TRUE, '', '', '["stock.outbound.created","mini_program.user.bound"]', NOW(), NOW(), 1),
-		('DINGTALK', FALSE, '', '', '["stock.outbound.created"]', NOW(), NOW(), 1)`)
+	oldFeishu, oldDingTalk := config.S.FeishuWebhook, config.S.DingTalkWebhook
+	defer func() {
+		config.S.FeishuWebhook = oldFeishu
+		config.S.DingTalkWebhook = oldDingTalk
+	}()
+	config.S.FeishuWebhook = config.WebhookConfig{
+		Enabled: true, URL: "https://open.feishu.cn/open-apis/bot/v2/hook/test",
+		Events: []string{"stock.outbound.created", "mini_program.user.bound"},
+	}
+	config.S.DingTalkWebhook = config.WebhookConfig{
+		Enabled: false, URL: "https://oapi.dingtalk.com/robot/send?access_token=test",
+		Events: []string{"stock.outbound.created"},
+	}
 
 	// 请求上下文里有项目：载荷带该项目；无项目上下文：退回默认项目。
 	if err := EnqueueEvent(s.WithProject(2), "stock.outbound.created", map[string]any{"receiver_name": "张三"}); err != nil {
@@ -56,6 +66,9 @@ func TestEnqueueEventDB(t *testing.T) {
 	}
 	if len(rows) != 2 {
 		t.Fatalf("deliveries = %d, want 2 (仅已启用且订阅的渠道)", len(rows))
+	}
+	if rows[0].Platform != "FEISHU" || rows[1].Platform != "FEISHU" {
+		t.Fatalf("platforms = %q %q", rows[0].Platform, rows[1].Platform)
 	}
 	if rows[0].EventType != "STOCK_OUTBOUND_CREATED" || rows[0].Status != "PENDING" || rows[0].Attempts != 0 {
 		t.Fatalf("row0: %+v", rows[0])

@@ -111,24 +111,13 @@ class SystemSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=NOW)
 
 
-class WebhookChannel(AuditColumns, Base):
-    __tablename__ = "webhook_channel"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    platform: Mapped[WebhookPlatform] = mapped_column(_enum(WebhookPlatform))
-    enabled: Mapped[bool] = mapped_column(server_default="false")
-    webhook_url_encrypted: Mapped[str] = mapped_column(String(2000), server_default="")
-    secret_encrypted: Mapped[str] = mapped_column(String(2000), server_default="")
-    subscribed_events: Mapped[list[str]] = mapped_column(JSON, default=list)
-
-
 class WebhookDelivery(Base):
     __tablename__ = "webhook_delivery"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     event_id: Mapped[str] = mapped_column(String(36))
     event_type: Mapped[WebhookEventType] = mapped_column(_enum(WebhookEventType))
-    channel_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("webhook_channel.id"))
+    platform: Mapped[WebhookPlatform] = mapped_column(_enum(WebhookPlatform))
     payload: Mapped[dict[str, Any]] = mapped_column(JSON)
     status: Mapped[WebhookDeliveryStatus] = mapped_column(
         _enum(WebhookDeliveryStatus), server_default="PENDING"

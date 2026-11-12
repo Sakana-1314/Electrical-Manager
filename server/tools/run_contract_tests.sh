@@ -25,6 +25,11 @@ export APP_DATABASE_URL="postgresql+asyncpg://$PGUSER$PGPASS_PART@$PGHOST:$PGPOR
 export APP_JWT_SECRET="test-secret-that-is-long-enough-123456"
 export APP_WECHAT_MINI_PROGRAM_APP_ID="wx-test-primary,wx-test-secondary"
 export APP_WECHAT_MINI_PROGRAM_APP_SECRET="test-primary-secret,test-secondary-secret"
+# 契约测试固定小程序码环境（管理端不再配置）；AI / Webhook 由用例通过 APP_TEST_HOOKS 钩子按需覆盖。
+export APP_WECHAT_MINI_PROGRAM_CODE_ENV="trial"
+export APP_AI_SEARCH_ENABLED="false"
+export APP_FEISHU_WEBHOOK_ENABLED="false"
+export APP_DINGTALK_WEBHOOK_ENABLED="false"
 export APP_UPLOAD_DIR="$WORK_DIR/uploads"
 export APP_LOG_DIR="$WORK_DIR/logs"
 export APP_TEMPLATE_DIR="${APP_TEMPLATE_DIR:-$HERE/templates}"

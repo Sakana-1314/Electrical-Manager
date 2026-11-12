@@ -1,4 +1,7 @@
 // Package settings 是系统设置接口（对应原 api/v1/system_settings.py）。
+//
+// 管理端只保留「高级设置」里的开关（小程序注册 / 新用户默认状态 / 二级库精简模式）；
+// 模型服务与 Webhook 走服务端环境变量，图片加速能力已移除。
 package settings
 
 import (
@@ -9,84 +12,55 @@ import (
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/webhook"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
-const platformOneOf = "oneof=FEISHU|DINGTALK"
-
 func Register(r *web.Router) {
 	g := r.Group("/system-settings")
 	// 公开配置端点：同时服务管理端与小程序（两种鉴权体系不同），故保持匿名。
-	g.GET("/image-acceleration", imageAccelerationSettings)
 	g.GET("/mini-program-features", miniProgramFeatures)
-	g.GET("/webhooks", webhookChannels, auth.SystemAdmin)
-	g.PUT("/webhooks/{platform}", updateWebhookChannel, auth.SystemAdmin)
-	g.POST("/webhooks/{platform}/test", testWebhookChannel, auth.SystemAdmin)
+	g.GET("/advanced-settings", getAdvancedSettings, auth.SystemAdmin)
+	g.PUT("/advanced-settings", updateAdvancedSettings, auth.SystemAdmin)
 
 	if webhook.TestHooksEnabled() {
-		// 测试钩子（路径相对 /api/v1 回到根）：/__test__/webhook/upstream、/__test__/webhook/deliver-once。
+		// 测试钩子（路径相对 /api/v1 回到根）：/__test__/webhook/upstream、/__test__/webhook/deliver-once、
+		// /__test__/webhook/settings（运行时覆盖 Webhook 环境变量）。
 		r.Raw().POST("/../../__test__/webhook/upstream", setWebhookUpstream)
 		r.Raw().POST("/../../__test__/webhook/deliver-once", deliverOnce)
+		r.Raw().POST("/../../__test__/webhook/settings", setWebhookSettings)
 	}
-}
-
-func imageAccelerationSettings(c *web.Ctx) error {
-	serverURL, err := aisearch.GetImageAccelerationServerURL(c.DB)
-	if err != nil {
-		return err
-	}
-	return c.OK(schema.ImageAccelerationSettingsRead{ImageAccelerationServerURL: serverURL})
 }
 
 func miniProgramFeatures(c *web.Ctx) error {
-	features, err := aisearch.GetMiniProgramFeatures(c.DB)
+	features, err := appsettings.GetMiniProgramFeatures(c.DB)
 	if err != nil {
 		return err
 	}
 	return c.OK(features)
 }
 
-func webhookChannels(c *web.Ctx) error {
-	items, err := webhook.ListChannels(c.DB)
+func getAdvancedSettings(c *web.Ctx) error {
+	setting, err := appsettings.Get(c.DB)
 	if err != nil {
 		return err
 	}
-	return c.OK(items)
+	return c.OK(appsettings.Read(setting))
 }
 
-func updateWebhookChannel(c *web.Ctx) error {
+func updateAdvancedSettings(c *web.Ctx) error {
 	p := c.Params()
-	platform := p.PathStr("platform", platformOneOf)
-	data := schema.WebhookChannelUpdate{SubscribedEvents: []string{}}
+	var data schema.AdvancedSettingsUpdate
 	p.Body(&data)
 	if err := p.Err(); err != nil {
 		return err
 	}
-	ch, err := webhook.UpdateChannel(c.DB, platform, data)
+	setting, err := appsettings.Update(c.DB, data)
 	if err != nil {
 		return err
 	}
-	read, err := webhook.ChannelRead(ch, platform)
-	if err != nil {
-		return err
-	}
-	return c.OK(read)
-}
-
-func testWebhookChannel(c *web.Ctx) error {
-	p := c.Params()
-	platform := p.PathStr("platform", platformOneOf)
-	var data schema.WebhookTestRequest
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	if err := webhook.TestChannel(platform, data); err != nil {
-		return err
-	}
-	return c.OK(schema.WebhookTestRead{Platform: platform, Success: true, Message: "测试消息已发送"})
+	return c.OK(appsettings.Read(setting))
 }
 
 // setWebhookUpstream 请求体：{"base_url": "http://127.0.0.1:port" | ""}
@@ -113,4 +87,24 @@ func deliverOnce(g *gin.Context) {
 		return
 	}
 	g.JSON(http.StatusOK, gin.H{"delivered": delivered})
+}
+
+// setWebhookSettings 测试钩子：运行时覆盖一个平台的 Webhook 环境变量（仅 APP_TEST_HOOKS=1 可调用）。
+func setWebhookSettings(g *gin.Context) {
+	var body struct {
+		Platform         string   `json:"platform"`
+		Enabled          bool     `json:"enabled"`
+		WebhookURL       string   `json:"webhook_url"`
+		Secret           string   `json:"secret"`
+		SubscribedEvents []string `json:"subscribed_events"`
+	}
+	if err := json.NewDecoder(g.Request.Body).Decode(&body); err != nil {
+		g.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := webhook.SetTestConfig(body.Platform, body.Enabled, body.WebhookURL, body.Secret, body.SubscribedEvents); err != nil {
+		g.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	g.JSON(http.StatusOK, gin.H{"ok": true})
 }

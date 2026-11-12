@@ -26,19 +26,17 @@ def build_lite_report(rows: list[list[object]]) -> bytes:
 
 
 async def _set_mode(client: AsyncClient, admin: dict[str, str], mode: str) -> int:
-    current = await client.get("/api/v1/ai-search/settings", headers=admin)
+    current = await client.get("/api/v1/system-settings/advanced-settings", headers=admin)
     assert current.status_code == 200, current.text
-    version = current.json()["version"]
+    body = current.json()
     settings = await client.put(
-        "/api/v1/ai-search/settings",
+        "/api/v1/system-settings/advanced-settings",
         headers=admin,
         json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            "enabled": False,
+            "mini_program_registration_enabled": body["mini_program_registration_enabled"],
+            "mini_program_new_user_enabled": body["mini_program_new_user_enabled"],
             "secondary_warehouse_mode": mode,
-            "version": version,
+            "version": body["version"],
         },
     )
     assert settings.status_code == 200, settings.text
@@ -82,7 +80,7 @@ async def test_settings_roundtrip_persists_mode(client: AsyncClient) -> None:
     admin = await auth_headers(client, "admin")
     version = await _set_mode(client, admin, "lite")
 
-    read = await client.get("/api/v1/ai-search/settings", headers=admin)
+    read = await client.get("/api/v1/system-settings/advanced-settings", headers=admin)
     assert read.status_code == 200, read.text
     assert read.json()["secondary_warehouse_mode"] == "lite"
     assert read.json()["version"] == version

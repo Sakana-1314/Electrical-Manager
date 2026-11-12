@@ -614,28 +614,13 @@ type User struct {
 const TableUser = "app_user"
 const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "source", "wechat_openid", "permissions", "enabled", "last_used_at", "created_at", "updated_at", "version"`
 
-// WebhookChannel ↔ 表 `webhook_channel`。
-type WebhookChannel struct {
-	ID                  int64      `db:"id" json:"id"`
-	Platform            string     `db:"platform" json:"platform"` // enum: FEISHU, DINGTALK
-	Enabled             bool       `db:"enabled" json:"enabled"`
-	WebhookURLEncrypted string     `db:"webhook_url_encrypted" json:"webhook_url_encrypted"`
-	SecretEncrypted     string     `db:"secret_encrypted" json:"secret_encrypted"`
-	SubscribedEvents    jtype.JSON `db:"subscribed_events" json:"subscribed_events"`
-	CreatedAt           time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt           time.Time  `db:"updated_at" json:"updated_at"`
-	Version             int64      `db:"version" json:"version"`
-}
-
-const TableWebhookChannel = "webhook_channel"
-const ColsWebhookChannel = `"id", "platform", "enabled", "webhook_url_encrypted", "secret_encrypted", "subscribed_events", "created_at", "updated_at", "version"`
-
-// WebhookDelivery ↔ 表 `webhook_delivery`。
+// WebhookDelivery ↔ 表 `webhook_delivery`。渠道地址 / 密钥 / 订阅事件由服务端环境变量提供，
+// 本表只记录投递队列与重试状态。
 type WebhookDelivery struct {
 	ID              int64      `db:"id" json:"id"`
 	EventID         string     `db:"event_id" json:"event_id"`
 	EventType       string     `db:"event_type" json:"event_type"` // enum: STOCK_OUTBOUND_CREATED, STOCK_INBOUND_CREATED, MINI_PROGRAM_USER_BOUND
-	ChannelID       int64      `db:"channel_id" json:"channel_id"`
+	Platform        string     `db:"platform" json:"platform"`     // enum: FEISHU, DINGTALK
 	Payload         jtype.JSON `db:"payload" json:"payload"`
 	Status          string     `db:"status" json:"status"` // enum: PENDING, SENDING, SUCCEEDED, FAILED
 	Attempts        int64      `db:"attempts" json:"attempts"`
@@ -649,7 +634,7 @@ type WebhookDelivery struct {
 }
 
 const TableWebhookDelivery = "webhook_delivery"
-const ColsWebhookDelivery = `"id", "event_id", "event_type", "channel_id", "payload", "status", "attempts", "next_retry_at", "response_status", "response_excerpt", "last_error", "created_at", "updated_at", "delivered_at"`
+const ColsWebhookDelivery = `"id", "event_id", "event_type", "platform", "payload", "status", "attempts", "next_retry_at", "response_status", "response_excerpt", "last_error", "created_at", "updated_at", "delivered_at"`
 
 // WorkRecord ↔ 表 `work_record`（项目域）。
 type WorkRecord struct {

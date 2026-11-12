@@ -45,10 +45,7 @@ Page({
         this.showError(new Error(t('invalidHazard')));
         return;
       }
-      await Promise.all([
-        app.globalData.runtimeSettingsPromise,
-        app.globalData.imageSettingsPromise,
-      ]);
+      await app.globalData.runtimeSettingsPromise;
       this.setData({ canWrite: canWriteHazards() });
       await this.loadHazard();
     } catch (error) {

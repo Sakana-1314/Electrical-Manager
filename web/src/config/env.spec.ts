@@ -5,7 +5,6 @@ import {
   publicUrl,
   resolveApiBaseUrl,
   resolveApiBaseUrls,
-  resolveImageBaseUrl,
   resolveMcpUrl,
 } from './env'
 
@@ -57,15 +56,6 @@ describe('构建环境配置', () => {
   it('地址列表为空（纯空白 / 逗号）时退回缺省地址', () => {
     expect(resolveApiBaseUrls(' , ,', undefined)).toEqual(['/api/v1'])
     expect(resolveApiBaseUrls(undefined, undefined)).toEqual(['/api/v1'])
-  })
-
-  it('图床服务器地址自动补全图片接口路径', () => {
-    expect(resolveImageBaseUrl('https://img.example.com', '/api/v1')).toBe(
-      'https://img.example.com/api/v1/files/images',
-    )
-    expect(resolveImageBaseUrl(undefined, 'https://api.example.com/api/v1')).toBe(
-      'https://api.example.com/api/v1/files/images',
-    )
   })
 
   it('把 public 资源按构建 base 拼成路径', () => {

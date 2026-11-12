@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  configureImageBaseUrl,
   dedupMinBytes,
   imagePreviewUrl,
   imageUrl,
@@ -26,15 +25,9 @@ describe('图片上传限制', () => {
     const file = new File(['x'], 'ok.webp', { type: 'image/webp' })
     expect(validateImageSelection(9, [file])).toContain('最多上传 9 张')
   })
-  it('仅根据文件 ID 拼接图片地址', () => {
-    configureImageBaseUrl('')
+  it('图片直接走当前后端线路的 /files/images', () => {
     expect(imageUrl('019abc')).toBe('/api/v1/files/images/019abc')
     expect(imagePreviewUrl('019abc', 192)).toBe('/api/v1/files/images/019abc?size=192')
-  })
-  it('使用运行时配置的图片加速服务器', () => {
-    configureImageBaseUrl('https://images.example.com')
-    expect(imageUrl('019abc')).toBe('https://images.example.com/api/v1/files/images/019abc')
-    configureImageBaseUrl('')
   })
 })
 

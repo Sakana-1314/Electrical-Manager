@@ -10,7 +10,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/file"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/hazard"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/huaxing"
@@ -73,7 +73,7 @@ func Register(r *web.Router) {
 
 // liteOutboundBlocked 精简模式下小程序出库整体禁用：先于权限依赖执行，保持服务层 OUTBOUND_DISABLED 语义。
 func liteOutboundBlocked(c *web.Ctx) error {
-	lite, err := aisearch.IsLiteSecondaryWarehouse(c.DB)
+	lite, err := appsettings.IsLiteSecondaryWarehouse(c.DB)
 	if err != nil {
 		return err
 	}

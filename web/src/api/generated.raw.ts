@@ -89,58 +89,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ai-search/settings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 读取配置 */
-        get: operations["get_settings_api_v1_ai_search_settings_get"];
-        /** 保存配置 */
-        put: operations["update_settings_api_v1_ai_search_settings_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ai-search/settings/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 测试连接 */
-        post: operations["test_settings_api_v1_ai_search_settings_test_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/system-settings/image-acceleration": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 图片加速设置 */
-        get: operations["image_acceleration_settings_api_v1_system_settings_image_acceleration_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/system-settings/mini-program-features": {
         parameters: {
             query?: never;
@@ -158,51 +106,18 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/system-settings/webhooks": {
+    "/api/v1/system-settings/advanced-settings": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Webhook 配置 */
-        get: operations["webhook_channels_api_v1_system_settings_webhooks_get"];
-        put?: never;
+        /** 高级设置（仅开关） */
+        get: operations["get_advanced_settings_api_v1_system_settings_advanced_settings_get"];
+        /** 保存高级设置 */
+        put: operations["update_advanced_settings_api_v1_system_settings_advanced_settings_put"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/system-settings/webhooks/{platform}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** 保存 Webhook 配置 */
-        put: operations["update_webhook_channel_api_v1_system_settings_webhooks__platform__put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/system-settings/webhooks/{platform}/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 测试 Webhook */
-        post: operations["test_webhook_channel_api_v1_system_settings_webhooks__platform__test_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2589,6 +2504,46 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * AdvancedSettingsRead
+         * @description 管理端高级设置：小程序注册开关、新用户默认状态、二级库运行模式。模型 / Webhook 走服务端环境变量，图片加速已移除。
+         * @example {
+         *       "mini_program_registration_enabled": true,
+         *       "mini_program_new_user_enabled": true,
+         *       "secondary_warehouse_mode": "full",
+         *       "updated_at": "2026-09-13T10:30:00+08:00",
+         *       "version": 3
+         *     }
+         */
+        AdvancedSettingsRead: {
+            /** Mini Program Registration Enabled */
+            mini_program_registration_enabled: boolean;
+            /** Mini Program New User Enabled */
+            mini_program_new_user_enabled: boolean;
+            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
+            /** Updated At */
+            updated_at?: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * AdvancedSettingsUpdate
+         * @example {
+         *       "mini_program_registration_enabled": true,
+         *       "mini_program_new_user_enabled": false,
+         *       "secondary_warehouse_mode": "lite",
+         *       "version": 3
+         *     }
+         */
+        AdvancedSettingsUpdate: {
+            /** Mini Program Registration Enabled */
+            mini_program_registration_enabled: boolean;
+            /** Mini Program New User Enabled */
+            mini_program_new_user_enabled: boolean;
+            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
+            /** Version */
+            version: number;
+        };
+        /**
          * AiSearchExpandRead
          * @example {
          *       "original": "电机|接触器",
@@ -2612,117 +2567,6 @@ export interface components {
             value: string;
         };
         /**
-         * AiSearchSettingsRead
-         * @example {
-         *       "endpoint": "https://api.deepseek.com/v1",
-         *       "api_key": "sk-4f2c1a4e8b7d4c1e9f2a5d6e7f8a9b0c",
-         *       "model": "deepseek-chat",
-         *       "enabled": true,
-         *       "mini_program_code_env": "release",
-         *       "mini_program_code_app_id": "wx9d2f1c8a5b3e4701",
-         *       "mini_program_app_ids": [
-         *         "wx9d2f1c8a5b3e4701",
-         *         "wx4b7e0a6d2c918f35"
-         *       ],
-         *       "mini_program_registration_enabled": true,
-         *       "mini_program_new_user_enabled": true,
-         *       "image_acceleration_server_url": "https://img.hxni-electrical.com",
-         *       "secondary_warehouse_mode": "full",
-         *       "updated_at": "2026-09-13T10:30:00+08:00",
-         *       "version": 3
-         *     }
-         */
-        AiSearchSettingsRead: {
-            /** Endpoint */
-            endpoint: string;
-            /** Api Key */
-            api_key: string;
-            /** Model */
-            model: string;
-            /** Enabled */
-            enabled: boolean;
-            mini_program_code_env: components["schemas"]["MiniProgramCodeEnv"];
-            /** Mini Program Code App Id */
-            mini_program_code_app_id: string;
-            /** Mini Program App Ids */
-            mini_program_app_ids: string[];
-            /** Mini Program Registration Enabled */
-            mini_program_registration_enabled: boolean;
-            /** Mini Program New User Enabled */
-            mini_program_new_user_enabled: boolean;
-            /** Image Acceleration Server Url */
-            image_acceleration_server_url: string;
-            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
-            /** Updated At */
-            updated_at?: string | null;
-            /** Version */
-            version: number;
-        };
-        /**
-         * AiSearchSettingsUpdate
-         * @example {
-         *       "endpoint": "https://api.deepseek.com/v1",
-         *       "api_key": "sk-4f2c1a4e8b7d4c1e9f2a5d6e7f8a9b0c",
-         *       "model": "deepseek-chat",
-         *       "enabled": true,
-         *       "mini_program_code_env": "release",
-         *       "mini_program_code_app_id": "wx9d2f1c8a5b3e4701",
-         *       "mini_program_registration_enabled": true,
-         *       "mini_program_new_user_enabled": true,
-         *       "image_acceleration_server_url": "https://img.hxni-electrical.com",
-         *       "secondary_warehouse_mode": "full",
-         *       "version": 3
-         *     }
-         */
-        AiSearchSettingsUpdate: {
-            /**
-             * Endpoint
-             * @default
-             */
-            endpoint: string;
-            /**
-             * Api Key
-             * @default
-             */
-            api_key: string;
-            /**
-             * Model
-             * @default
-             */
-            model: string;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-            /** @default release */
-            mini_program_code_env: components["schemas"]["MiniProgramCodeEnv"];
-            /**
-             * Mini Program Code App Id
-             * @default
-             */
-            mini_program_code_app_id: string;
-            /**
-             * Mini Program Registration Enabled
-             * @default true
-             */
-            mini_program_registration_enabled: boolean;
-            /**
-             * Mini Program New User Enabled
-             * @default true
-             */
-            mini_program_new_user_enabled: boolean;
-            /**
-             * Image Acceleration Server Url
-             * @default
-             */
-            image_acceleration_server_url: string;
-            /** @default full */
-            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
-            /** Version */
-            version: number;
-        };
-        /**
          * AiSearchStatusRead
          * @example {
          *       "available": true
@@ -2731,35 +2575,6 @@ export interface components {
         AiSearchStatusRead: {
             /** Available */
             available: boolean;
-        };
-        /**
-         * AiSearchTestRead
-         * @example {
-         *       "original": "空开",
-         *       "expanded": "空开|小型断路器|微型断路器"
-         *     }
-         */
-        AiSearchTestRead: {
-            /** Original */
-            original: string;
-            /** Expanded */
-            expanded: string;
-        };
-        /**
-         * AiSearchTestRequest
-         * @example {
-         *       "endpoint": "https://api.deepseek.com/v1",
-         *       "api_key": "sk-4f2c1a4e8b7d4c1e9f2a5d6e7f8a9b0c",
-         *       "model": "deepseek-chat"
-         *     }
-         */
-        AiSearchTestRequest: {
-            /** Endpoint */
-            endpoint: string;
-            /** Api Key */
-            api_key: string;
-            /** Model */
-            model: string;
         };
         /**
          * ApiError
@@ -3856,16 +3671,6 @@ export interface components {
             purchase_department?: string | null;
             /** Subitem No Name */
             subitem_no_name?: string | null;
-        };
-        /**
-         * ImageAccelerationSettingsRead
-         * @example {
-         *       "image_acceleration_server_url": "https://img.hxni-electrical.com"
-         *     }
-         */
-        ImageAccelerationSettingsRead: {
-            /** Image Acceleration Server Url */
-            image_acceleration_server_url: string;
         };
         /**
          * ImageDigestCheckRequest
@@ -12519,116 +12324,6 @@ export interface components {
             build_time?: string | null;
         };
         /**
-         * WebhookChannelRead
-         * @example {
-         *       "platform": "FEISHU",
-         *       "enabled": true,
-         *       "subscribed_events": [
-         *         "stock.outbound.created",
-         *         "stock.inbound.created"
-         *       ],
-         *       "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/8f0c2b74-5d19-4a63-9c81-2e7b4a0d5f13",
-         *       "secret": "hxni-feishu-2026Kx7Q",
-         *       "webhook_configured": true,
-         *       "secret_configured": true,
-         *       "updated_at": "2026-09-13T10:30:00+08:00",
-         *       "version": 2
-         *     }
-         */
-        WebhookChannelRead: {
-            platform: components["schemas"]["WebhookPlatform"];
-            /** Enabled */
-            enabled: boolean;
-            /** Subscribed Events */
-            subscribed_events: components["schemas"]["WebhookEventType"][];
-            /** Webhook Url */
-            webhook_url: string;
-            /** Secret */
-            secret: string;
-            /** Webhook Configured */
-            webhook_configured: boolean;
-            /** Secret Configured */
-            secret_configured: boolean;
-            /** Updated At */
-            updated_at?: string | null;
-            /** Version */
-            version: number;
-        };
-        /**
-         * WebhookChannelUpdate
-         * @example {
-         *       "enabled": true,
-         *       "webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=9c1d4f7a2b6e8c0d3f5a7b9c1e2d4f60",
-         *       "secret": "hxni-dingtalk-2026Wm3T",
-         *       "subscribed_events": [
-         *         "stock.outbound.created"
-         *       ],
-         *       "version": 1
-         *     }
-         */
-        WebhookChannelUpdate: {
-            /**
-             * Enabled
-             * @default false
-             */
-            enabled: boolean;
-            /**
-             * Webhook Url
-             * @default
-             */
-            webhook_url: string;
-            /**
-             * Secret
-             * @default
-             */
-            secret: string;
-            /** Subscribed Events */
-            subscribed_events?: components["schemas"]["WebhookEventType"][];
-            /** Version */
-            version: number;
-        };
-        /**
-         * WebhookEventType
-         * @enum {string}
-         */
-        WebhookEventType: "stock.outbound.created" | "stock.inbound.created" | "mini_program.user.bound";
-        /**
-         * WebhookPlatform
-         * @enum {string}
-         */
-        WebhookPlatform: "FEISHU" | "DINGTALK";
-        /**
-         * WebhookTestRead
-         * @example {
-         *       "platform": "FEISHU",
-         *       "success": true,
-         *       "message": "测试消息已发送"
-         *     }
-         */
-        WebhookTestRead: {
-            platform: components["schemas"]["WebhookPlatform"];
-            /** Success */
-            success: boolean;
-            /** Message */
-            message: string;
-        };
-        /**
-         * WebhookTestRequest
-         * @example {
-         *       "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/8f0c2b74-5d19-4a63-9c81-2e7b4a0d5f13",
-         *       "secret": "hxni-feishu-2026Kx7Q"
-         *     }
-         */
-        WebhookTestRequest: {
-            /** Webhook Url */
-            webhook_url: string;
-            /**
-             * Secret
-             * @default
-             */
-            secret: string;
-        };
-        /**
          * WorkHalfDay
          * @description 工作记录的半天档：一条记录的起止都精确到上午 / 下午。
          *
@@ -13686,485 +13381,6 @@ export interface operations {
             };
         };
     };
-    get_settings_api_v1_ai_search_settings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "endpoint": "https://api.deepseek.com/v1",
-                     *       "api_key": "sk-4f2c1a4e8b7d4c1e9f2a5d6e7f8a9b0c",
-                     *       "model": "deepseek-chat",
-                     *       "enabled": true,
-                     *       "mini_program_code_env": "release",
-                     *       "mini_program_code_app_id": "wx9d2f1c8a5b3e4701",
-                     *       "mini_program_app_ids": [
-                     *         "wx9d2f1c8a5b3e4701",
-                     *         "wx4b7e0a6d2c918f35"
-                     *       ],
-                     *       "mini_program_registration_enabled": true,
-                     *       "mini_program_new_user_enabled": true,
-                     *       "image_acceleration_server_url": "https://img.hxni-electrical.com",
-                     *       "secondary_warehouse_mode": "full",
-                     *       "updated_at": "2026-09-13T10:30:00+08:00",
-                     *       "version": 3
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AiSearchSettingsRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    update_settings_api_v1_ai_search_settings_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AiSearchSettingsUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "endpoint": "https://api.deepseek.com/v1",
-                     *       "api_key": "sk-4f2c1a4e8b7d4c1e9f2a5d6e7f8a9b0c",
-                     *       "model": "deepseek-chat",
-                     *       "enabled": true,
-                     *       "mini_program_code_env": "release",
-                     *       "mini_program_code_app_id": "wx9d2f1c8a5b3e4701",
-                     *       "mini_program_app_ids": [
-                     *         "wx9d2f1c8a5b3e4701",
-                     *         "wx4b7e0a6d2c918f35"
-                     *       ],
-                     *       "mini_program_registration_enabled": true,
-                     *       "mini_program_new_user_enabled": true,
-                     *       "image_acceleration_server_url": "https://img.hxni-electrical.com",
-                     *       "secondary_warehouse_mode": "full",
-                     *       "updated_at": "2026-09-13T10:30:00+08:00",
-                     *       "version": 3
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AiSearchSettingsRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    test_settings_api_v1_ai_search_settings_test_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AiSearchTestRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "original": "空开",
-                     *       "expanded": "空开|小型断路器|微型断路器"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AiSearchTestRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    image_acceleration_settings_api_v1_system_settings_image_acceleration_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "image_acceleration_server_url": "https://img.hxni-electrical.com"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ImageAccelerationSettingsRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
     mini_program_features_api_v1_system_settings_mini_program_features_get: {
         parameters: {
             query?: never;
@@ -14275,7 +13491,7 @@ export interface operations {
             };
         };
     };
-    webhook_channels_api_v1_system_settings_webhooks_get: {
+    get_advanced_settings_api_v1_system_settings_advanced_settings_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -14291,168 +13507,15 @@ export interface operations {
                 };
                 content: {
                     /**
-                     * @example [
-                     *       {
-                     *         "platform": "FEISHU",
-                     *         "enabled": true,
-                     *         "subscribed_events": [
-                     *           "stock.outbound.created",
-                     *           "stock.inbound.created"
-                     *         ],
-                     *         "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/8f0c2b74-5d19-4a63-9c81-2e7b4a0d5f13",
-                     *         "secret": "hxni-feishu-2026Kx7Q",
-                     *         "webhook_configured": true,
-                     *         "secret_configured": true,
-                     *         "updated_at": "2026-09-13T10:30:00+08:00",
-                     *         "version": 2
-                     *       }
-                     *     ]
-                     */
-                    "application/json": components["schemas"]["WebhookChannelRead"][];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
                      * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    update_webhook_channel_api_v1_system_settings_webhooks__platform__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                platform: components["schemas"]["WebhookPlatform"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WebhookChannelUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "platform": "FEISHU",
-                     *       "enabled": true,
-                     *       "subscribed_events": [
-                     *         "stock.outbound.created",
-                     *         "stock.inbound.created"
-                     *       ],
-                     *       "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/8f0c2b74-5d19-4a63-9c81-2e7b4a0d5f13",
-                     *       "secret": "hxni-feishu-2026Kx7Q",
-                     *       "webhook_configured": true,
-                     *       "secret_configured": true,
+                     *       "mini_program_registration_enabled": true,
+                     *       "mini_program_new_user_enabled": true,
+                     *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
-                     *       "version": 2
+                     *       "version": 3
                      *     }
                      */
-                    "application/json": components["schemas"]["WebhookChannelRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
+                    "application/json": components["schemas"]["AdvancedSettingsRead"];
                 };
             };
             /** @description 未认证或凭证无效 */
@@ -14489,54 +13552,18 @@ export interface operations {
                     "application/json": components["schemas"]["ApiError"];
                 };
             };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
         };
     };
-    test_webhook_channel_api_v1_system_settings_webhooks__platform__test_post: {
+    update_advanced_settings_api_v1_system_settings_advanced_settings_put: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                platform: components["schemas"]["WebhookPlatform"];
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WebhookTestRequest"];
+                "application/json": components["schemas"]["AdvancedSettingsUpdate"];
             };
         };
         responses: {
@@ -14548,12 +13575,14 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "platform": "FEISHU",
-                     *       "success": true,
-                     *       "message": "测试消息已发送"
+                     *       "mini_program_registration_enabled": true,
+                     *       "mini_program_new_user_enabled": true,
+                     *       "secondary_warehouse_mode": "full",
+                     *       "updated_at": "2026-09-13T10:30:00+08:00",
+                     *       "version": 3
                      *     }
                      */
-                    "application/json": components["schemas"]["WebhookTestRead"];
+                    "application/json": components["schemas"]["AdvancedSettingsRead"];
                 };
             };
             /** @description 业务校验失败 */
