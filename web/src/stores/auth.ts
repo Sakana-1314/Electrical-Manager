@@ -18,7 +18,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function login(payload: LoginRequest) {
-    const response = await authApi.login(payload)
+    adoptSession(await authApi.login(payload))
+  }
+
+  /** 登录响应写入本地会话：密码登录与小程序扫码登录共用。 */
+  function adoptSession(response: { access_token: string; refresh_token: string; user: User }) {
     token.value = response.access_token
     user.value = response.user
     localStorage.setItem('access_token', response.access_token)
@@ -40,5 +44,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_user')
   }
 
-  return { user, token, isAuthenticated, can, login, refresh, logout }
+  return { user, token, isAuthenticated, can, login, adoptSession, refresh, logout }
 })

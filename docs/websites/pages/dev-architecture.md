@@ -95,7 +95,7 @@ web/src/
 
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
-| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：账号密码表单，调 `auth.login`，支持 `?redirect=` 回跳 |
+| `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：「账号密码」表单 + 「小程序扫码」页签；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 左下角用户菜单（移动端抽屉，顶部窄导航条） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位与二级库精简模式）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
@@ -161,7 +161,7 @@ web/src/
 
 | store | state | getters | actions | 持久化 | 职责 |
 | --- | --- | --- | --- | --- | --- |
-| `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与权限位门禁 |
+| `stores/auth.ts`（`useAuthStore`） | `user: User \| null`、`token: string \| null` | `isAuthenticated`（`Boolean(token && user)`） | `login(payload)`、`adoptSession(response)`（扫码登录写登录态）、`refresh()`（调 `/auth/me` 回填 user）、`logout()`、`can(permission)` | 读写 `localStorage`：`access_token`、`refresh_token`、`auth_user`；`user`/`token` 初值在 store 定义时就读取 `auth_user` / `access_token` | 登录态与权限位门禁 |
 | `stores/project.ts`（`useProjectStore`） | `projects: Project[]`、`currentProjectId: number \| null`（初值读本地 `current_project_id`）、`loaded: boolean` | `enabledProjects`、`currentProject` | `ensureLoaded()`（首次导航前拉 `projectApi.list()`，失败不抛出）、`select(id)`（写本地并 `location.reload()`）、`clear()`、`fetchProjects()` | `localStorage` key `current_project_id`；已存项目被停用/删除时回退默认项目 | 当前项目：由 `web/src/api/client.ts` 注入 `X-Project-Id`，左下角用户菜单与 MCP 链接共用 |
 | `stores/settings.ts`（`useSettingsStore`） | `secondaryWarehouseMode: SecondaryWarehouseMode`（初值 `'full'`）、`loaded: boolean` | `isLiteMode`（`secondaryWarehouseMode === 'lite'`） | `load()`（调 `systemSettingsApi.miniProgramFeatures()`，失败回退 `'full'`） | 无持久化（每次启动重新拉公开配置） | 全局二级库运行模式，供路由守卫、落地页与侧边菜单在首次导航前同步读取 |
 | `stores/theme.ts`（`useThemeStore`） | `mode: ThemeMode`（初值读本地 `theme.mode`，缺省 `'auto'`） | `isDark`（`auto` 时取 `usePreferredDark()`，否则看档位） | `setMode(mode)`（写本地并立即生效）、`apply()`（把解析结果写到 `<html data-theme>` + `color-scheme` + `meta[name=theme-color]`） | `localStorage` key `theme.mode`（`auto` / `light` / `dark`）；系统外观变化由 `watch(isDark)` 实时同步 | 界面外观，供 App.vue 切 Naive UI 主题、styles.css 切令牌 |
@@ -229,7 +229,7 @@ web/src/
 #### `web/src/api/` 模块职责
 | 模块 | 接口域 | 职责 |
 | --- | --- | --- |
-| `auth.ts` | `/auth/login`、`/auth/refresh`、`/auth/me` | 登录、刷新令牌、取当前用户 |
+| `auth.ts` | `/auth/login`、`/auth/refresh`、`/auth/me`、`/auth/qr-sessions*` | 登录、刷新令牌、取当前用户、创建/轮询扫码会话与小程序码地址 |
 | `inventory.ts` | `/dashboard/summary`、`/stock-materials*`、`/inventory/*` | 工作台汇总、物资档案 CRUD + 小程序码、补库策略、库存查询、低库存、出入库、流水查询/修改/冲减、补库草稿 |
 | `procurement.ts` | `/material-code-library*`、`/purchase-materials*`、`/purchase-records*`、`/excel-export-jobs/:id` | 申购计划/记录 CRUD 与批量操作、筛选选项、计划转记录、未编码物资、物料编码库导入（`table=material` 物料表 / `table=price` 价格表）与编码检查、各类导出与导出任务轮询 |
 | `purchasePlanTemplates.ts` | `/purchase-plan-templates*` | 周期性计划模板 CRUD 与「生成申购计划」 |
@@ -463,7 +463,7 @@ server/
 
 | 路由包 | 接口前缀 | 依赖（按需列出） |
 | --- | --- | --- |
-| `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version` 公开 |
+| `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version`、`/auth/login`、`/auth/refresh`、`/auth/qr-sessions*` 公开 |
 | `api/aisearch` | `/ai-search` | `auth.CurrentUser`（模型服务由 `APP_AI_SEARCH_*` 环境变量配置） |
 | `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features` 公开读取；`advanced-settings` 需系统管理位） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse` |
@@ -569,6 +569,32 @@ sequenceDiagram
 | `mini_program` | `security.CreateMiniProgramAccessToken` | `APP_ACCESS_TOKEN_MINUTES` | `auth.MiniProgramUser` |
 | `mini_program_registration` | `security.CreateMiniProgramRegistrationToken` | 固定 10 分钟，带 `app_id` 声明 | `auth.MiniProgramRegistration` |
 三类凭据互不通用；注册令牌只能用于绑定/注册接口（`token_type` 不匹配即 `INVALID_TOKEN`）。密码哈希为 argon2id（PHC 字符串，`t=3, m=65536, p=4`），同时能校验 argon2i 格式。
+
+#### 小程序扫码登录（内存会话）
+
+网页登录页的「小程序扫码」页签调用匿名接口创建会话，服务只把会话放在进程内存（`service/qrlogin`），**不写数据库、不写审计**：
+
+```mermaid
+sequenceDiagram
+    participant W as 网页登录页
+    participant API as 服务端
+    participant M as 微信小程序
+    W->>API: POST /auth/qr-sessions
+    API-->>W: session_id（UUID）+ expires_at（5 分钟）
+    W->>API: GET /auth/qr-sessions/{id}/code
+    API->>微信: getwxacodeunlimit（scene=紧凑 UUID，page=pages/web-login/web-login）
+    API-->>W: 小程序码 PNG（同一会话内存缓存）
+    W->>M: 用户用微信扫码
+    M->>API: POST /mini-program/qr-login/confirm（小程序令牌 + session_id）
+    API-->>M: 会话标记 confirmed（记录 user_id）
+    W->>API: GET /auth/qr-sessions/{id}（轮询）
+    API-->>W: confirmed + 一次性 access/refresh + user（随后删除会话）
+```
+
+- 会话状态只有 `pending` / `confirmed` / `expired`；轮询只消费一次，取走登录结果后立即删除；5 分钟未确认自动过期。
+- 确认接口要求小程序登录态；同一会话被不同账号重复确认返回 `QR_SESSION_CONFLICT`，过期/已消费返回 `QR_SESSION_EXPIRED`。
+- 小程序码 `scene` 是去掉连字符的 32 位 UUID；网页展示的是微信小程序码，微信扫码直接打开 `pages/web-login/web-login` 确认页。
+- 登录成功后服务端签发管理端 `management_access` / `management_refresh` 令牌，网页与密码登录共用同一套权限位与项目选择逻辑。
 
 #### 乐观锁版本（`If-Match`）
 所有带乐观锁的写操作（PATCH/PUT/DELETE/restore）版本号放 `If-Match` 头而非 query 参数，**避免版本号进入访问日志**（`web.Params.IfMatch`，允许带引号）；缺失或非整数时返回 `nil`，由 service 决定是否强制（`apperr.ValidateVersion` → `VERSION_CONFLICT`，`details` 带 `expected`/`actual`）。
@@ -886,7 +912,7 @@ flowchart LR
 | --- | --- |
 | 挂载 | `mcp.Register` 在 `/api/v1/mcp/` 上接收全部方法；传输为 Streamable HTTP 的**无状态 JSON** 模式：只接受 `POST`（`GET` / `DELETE` 返回 405，不提供 SSE 流与会话），`Content-Type` 必须是 `application/json`，响应为 JSON（支持 JSON-RPC 批量请求，纯通知返回 202）；请求体上限 16 MB；协议版本支持 `2024-11-05` / `2025-03-26` / `2025-06-18` / `2025-11-25`；`serverInfo.name` 为 `spare-parts-management` |
 | 工具 | `system_whoami`（返回令牌对应用户、权限键、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
-| 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
+| 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/` 与扫码登录会话前缀 `/api/v1/auth/qr-sessions`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
 | 参数映射 | `operation_describe` 的 `call_arguments` 由契约派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号（String(version)）；不传则不校验版本」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。`headers` 只接受契约里该操作声明的请求头；令牌头与项目头（`ManagedHeaders`）由 MCP 层统一设置，不接受调用方传入 |
 | 上限 | 请求体上限 16 MB（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
 | 调用方式 | `operation_call` 用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、权限位、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
@@ -934,7 +960,7 @@ flowchart LR
 
 | 分组 | 页面 |
 | --- | --- |
-| 入口与身份 | `pages/home/home`、`pages/bind/bind`、`pages/disabled/disabled`、`pages/registration-closed/registration-closed` |
+| 入口与身份 | `pages/home/home`、`pages/profile/profile`、`pages/bind/bind`、`pages/web-login/web-login`（微信扫码登录确认）、`pages/disabled/disabled`、`pages/registration-closed/registration-closed` |
 | 库存与出库 | `pages/inventory/inventory`、`pages/material-detail/material-detail`、`pages/outbound/outbound`、`pages/outbound-success/outbound-success` |
 | 申购与记录 | `pages/purchase-plans/purchase-plans`、`pages/purchase-plan-detail/purchase-plan-detail`、`pages/purchase-records/purchase-records`、`pages/purchase-record-detail/purchase-record-detail`、`pages/records/records` |
 | 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |

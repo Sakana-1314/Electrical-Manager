@@ -757,6 +757,24 @@ async function run() {
   assert(!storage.get('bindRedirect'), 'launch at home must not store a redirect');
   delete global.wx.getLaunchOptionsSync;
 
+  // ===== 网页扫码登录确认页 =====
+  const webLogin = await mountPage('pages/web-login/web-login.js', {
+    scene: '0198f3a72c0070008000000000000001',
+  });
+  assert(webLogin.data.user && webLogin.data.user.display_name === '张三', 'web login reads current user');
+  assert(webLogin.data.confirmed === false, 'web login starts unconfirmed');
+  await webLogin.confirm();
+  const confirmRequest = requests.find((item) => item.url === '/mini-program/qr-login/confirm');
+  assert(confirmRequest && confirmRequest.method === 'POST', 'web login confirm must POST to server');
+  assert(
+    confirmRequest.data.session_id === '0198f3a72c0070008000000000000001',
+    'web login confirm must carry the scanned session id',
+  );
+  assert(webLogin.data.confirmed === true, 'web login must switch to confirmed state');
+
+  const invalidWebLogin = await mountPage('pages/web-login/web-login.js', { scene: '' });
+  assert(invalidWebLogin.data.invalid === true, 'web login without scene must show invalid state');
+
   // ===== 导入时间：绝对时间 + 括号相对时间 =====
   const { importTimeLabel, relativeLabel } = require(path.join(root, 'utils/time.js'));
   const timeNow = new Date('2026-11-10T13:00:00+08:00').getTime();

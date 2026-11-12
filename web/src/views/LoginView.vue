@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, type FormInst, type FormRules } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
+import { authApi } from '@/api/auth'
 import { resolveLandingRouteName } from '@/utils/navigation'
 import { LOGO_URL } from '@/constants/branding'
 
@@ -20,27 +21,109 @@ const rules: FormRules = {
   password: { required: true, message: '请输入密码', trigger: 'blur' },
 }
 
+type QrStatus = 'idle' | 'loading' | 'ready' | 'expired' | 'error'
+const activeTab = ref<'password' | 'qr'>('password')
+const qrStatus = ref<QrStatus>('idle')
+const qrImageUrl = ref('')
+const qrImageFailed = ref(false)
+const qrSessionId = ref('')
+let qrPollTimer: number | undefined
+let disposed = false
+
+/** 登录成功后的落地页：有回跳目标就回跳，否则落到当前权限下第一个可见主 tab。 */
+async function afterLogin() {
+  await router.replace(
+    route.query.redirect
+      ? String(route.query.redirect)
+      : {
+          name: resolveLandingRouteName((permission) => auth.can(permission), {
+            isLiteMode: settings.isLiteMode,
+          }),
+        },
+  )
+}
+
 async function submit() {
   await formRef.value?.validate()
   loading.value = true
   try {
     await auth.login(model)
-    // 没有回跳目标时落到「当前权限下可见的第一个主 tab」
-    await router.replace(
-      route.query.redirect
-        ? String(route.query.redirect)
-        : {
-            name: resolveLandingRouteName((permission) => auth.can(permission), {
-              isLiteMode: settings.isLiteMode,
-            }),
-          },
-    )
+    await afterLogin()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '登录失败')
   } finally {
     loading.value = false
   }
 }
+
+function stopQrPolling() {
+  if (qrPollTimer === undefined) return
+  window.clearTimeout(qrPollTimer)
+  qrPollTimer = undefined
+}
+
+/** 创建扫码会话并开始轮询；同一时间只保留一个会话。 */
+async function startQrLogin() {
+  stopQrPolling()
+  qrSessionId.value = ''
+  qrImageUrl.value = ''
+  qrImageFailed.value = false
+  qrStatus.value = 'loading'
+  try {
+    const session = await authApi.createQrSession()
+    if (disposed || activeTab.value !== 'qr') return
+    qrSessionId.value = session.session_id
+    qrImageUrl.value = authApi.qrCodeUrl(session.session_id)
+    qrStatus.value = 'ready'
+    void pollQrLogin()
+  } catch {
+    qrStatus.value = 'error'
+  }
+}
+
+/** 轮询扫码结果；confirmed 时写入登录态并跳转。网络抖动只等下一轮。 */
+async function pollQrLogin() {
+  const sessionId = qrSessionId.value
+  if (!sessionId || disposed || activeTab.value !== 'qr') return
+  try {
+    const result = await authApi.qrSession(sessionId)
+    if (result.status === 'confirmed') {
+      if (result.access_token && result.refresh_token && result.user) {
+        auth.adoptSession({
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+          user: result.user,
+        })
+        stopQrPolling()
+        await afterLogin()
+        return
+      }
+    }
+    if (result.status === 'expired') {
+      qrStatus.value = 'expired'
+      return
+    }
+  } catch {
+    // 会话创建后偶发网络失败不终止轮询，下一轮继续。
+  }
+  if (!disposed && activeTab.value === 'qr') {
+    qrPollTimer = window.setTimeout(() => void pollQrLogin(), 1500)
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'qr') {
+    void startQrLogin()
+  } else {
+    stopQrPolling()
+    qrStatus.value = 'idle'
+  }
+})
+
+onBeforeUnmount(() => {
+  disposed = true
+  stopQrPolling()
+})
 </script>
 
 <template>
@@ -55,22 +138,64 @@ async function submit() {
     <section class="login-panel">
       <n-card class="login-card" :bordered="false">
         <h2>欢迎登录</h2>
-        <n-form ref="formRef" :model="model" :rules="rules" size="large" @submit.prevent="submit">
-          <n-form-item label="用户名" path="username"
-            ><n-input v-model:value="model.username" placeholder="用户名"
-          /></n-form-item>
-          <n-form-item label="密码" path="password"
-            ><n-input
-              v-model:value="model.password"
-              type="password"
-              show-password-on="click"
-              placeholder="密码"
-              @keyup.enter="submit"
-          /></n-form-item>
-          <n-button type="primary" block size="large" :loading="loading" @click="submit"
-            >登录</n-button
-          >
-        </n-form>
+        <n-tabs v-model:value="activeTab" type="segment" animated>
+          <n-tab-pane name="password" tab="账号密码">
+            <n-form
+              ref="formRef"
+              :model="model"
+              :rules="rules"
+              size="large"
+              @submit.prevent="submit"
+            >
+              <n-form-item label="用户名" path="username"
+                ><n-input v-model:value="model.username" placeholder="用户名"
+              /></n-form-item>
+              <n-form-item label="密码" path="password"
+                ><n-input
+                  v-model:value="model.password"
+                  type="password"
+                  show-password-on="click"
+                  placeholder="密码"
+                  @keyup.enter="submit"
+              /></n-form-item>
+              <n-button type="primary" block size="large" :loading="loading" @click="submit"
+                >登录</n-button
+              >
+            </n-form>
+          </n-tab-pane>
+          <n-tab-pane name="qr" tab="小程序扫码">
+            <div class="qr-login">
+              <div v-if="qrStatus === 'loading'" class="qr-state">
+                <n-spin size="small" />
+                <span>正在生成二维码…</span>
+              </div>
+              <template v-else-if="qrStatus === 'ready' && !qrImageFailed">
+                <img
+                  class="qr-image"
+                  :src="qrImageUrl"
+                  alt="小程序扫码登录二维码"
+                  @error="qrImageFailed = true"
+                />
+                <p class="qr-hint">请使用微信扫一扫，在小程序中确认登录</p>
+                <p class="qr-subhint">二维码 5 分钟内有效</p>
+              </template>
+              <div v-else-if="qrStatus === 'ready'" class="qr-state qr-error">
+                <p>二维码生成失败，请重试或使用账号密码登录。</p>
+                <n-button size="small" @click="startQrLogin">重新生成</n-button>
+              </div>
+              <div v-else-if="qrStatus === 'expired'" class="qr-state qr-error">
+                <p>二维码已过期</p>
+                <n-button size="small" type="primary" secondary @click="startQrLogin"
+                  >刷新二维码</n-button
+                >
+              </div>
+              <div v-else-if="qrStatus === 'error'" class="qr-state qr-error">
+                <p>扫码登录暂时不可用，请使用账号密码登录。</p>
+                <n-button size="small" @click="startQrLogin">重试</n-button>
+              </div>
+            </div>
+          </n-tab-pane>
+        </n-tabs>
       </n-card>
     </section>
   </main>
@@ -142,6 +267,50 @@ h1 {
 h2 {
   font-size: 28px;
   margin: 0 0 22px;
+}
+.qr-login {
+  display: flex;
+  min-height: 292px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 0 4px;
+}
+.qr-image {
+  width: 220px;
+  height: 220px;
+  padding: 6px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  /* 小程序码是白底图片，深色模式下也保持白底以保证可扫描 */
+  background: #fff;
+}
+.qr-state {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+.qr-error p {
+  margin: 0;
+  line-height: 1.6;
+}
+.qr-hint {
+  margin: 6px 0 0;
+  color: var(--color-text);
+  font-size: 14px;
+  text-align: center;
+}
+.qr-subhint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
 }
 @media (max-width: 768px) {
   .login-page {

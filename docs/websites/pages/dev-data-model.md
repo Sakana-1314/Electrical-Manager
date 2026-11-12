@@ -50,6 +50,7 @@ flowchart LR
 | 图片 / 附件与悬空文件 | `file_object` / orphan | 磁盘 `data/uploads/{uuid7}.png` + 元数据行；上传时统一转 PNG 并按 SHA-256 去重。大于 1MB 的图片另记原始字节摘要与中间片段窗口摘要（`source_sha256` / `source_probes`），供网页端上传前查重、命中即免重复上传。悬空文件指未被任何 `*_image` 关联表引用的记录、无记录的磁盘文件、缺失的磁盘文件，由系统管理员接口清理 |
 | 分享链接 | `share_link` | 匿名公开页 `/share/{token}`，token 为 UUIDv7；可配置展示列与失效时间，`columns=NULL` 表示默认列（全部列去掉「状态」） |
 | 导出 / 导入任务 | `excel_export_job` / `excel_import_job` | 同一状态机 `PENDING → RUNNING → SUCCEEDED/FAILED`；导出成功后文件保留 3 天、按 uuid 匿名下载；导入同类型同时只允许一个进行中任务（409 `IMPORT_IN_PROGRESS`），完成后删临时文件 |
+| 扫码登录会话 | `service/qrlogin` | 网页端小程序扫码登录的临时会话：UUID 键，只存在进程内存，5 分钟过期；不建表、不落库，进程重启即失效；网页轮询确认后一次性取走登录令牌并删除会话 |
 | 接口令牌 | `app_user.api_token_hash` / `api_token_enc` | 36 位令牌，SHA-256 哈希用于查找 + Fernet 密文用于界面回显；请求头 `X-API-Token` |
 | 权限位 | `app_user.permissions` | `BIGINT` 位图，每一位对应一个权限点（`system:admin` + 各功能 `read/write`）；管理端与小程序端共用，功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限。权限目录见 `server/internal/domain/permissions.go` |
 | Webhook 投递 / 业务事件日志 | `webhook_delivery` / `business_event_log` | 前者是事件出站队列（最多 5 次尝试，退避 `1/5/15/60/180` 分钟），渠道地址 / 密钥 / 订阅事件来自服务端环境变量；后者记录库存流水创建/修改/冲销等动作的前后 JSON 快照与操作者（`common.LogEvent`） |

@@ -274,6 +274,117 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+  /api/v1/auth/qr-sessions:
+    post:
+      tags:
+      - 认证
+      summary: 创建扫码登录会话
+      operationId: create_qr_login_session_api_v1_auth_qr_sessions_post
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrLoginSessionRead'
+              example:
+                session_id: 0198f3a7-2c00-7000-8000-000000000001
+                expires_at: '2026-09-13T10:35:00+08:00'
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+  /api/v1/auth/qr-sessions/{session_id}/code:
+    get:
+      tags:
+      - 认证
+      summary: 扫码登录小程序码
+      operationId: qr_login_code_api_v1_auth_qr_sessions__session_id__code_get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '503':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: WECHAT_MINI_PROGRAM_CODE_UNAVAILABLE
+                message: 小程序码生成服务暂时不可用，请稍后重试
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+  /api/v1/auth/qr-sessions/{session_id}:
+    get:
+      tags:
+      - 认证
+      summary: 轮询扫码登录状态
+      operationId: poll_qr_login_session_api_v1_auth_qr_sessions__session_id__get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrLoginPollRead'
+              example:
+                status: pending
+                access_token: null
+                refresh_token: null
+                token_type: ''
+                user: null
+        '422':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
   /api/v1/ai-search/expand:
     post:
       tags:
@@ -6686,6 +6797,82 @@ paths:
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
       security:
       - HTTPBearer: []
+  /api/v1/mini-program/qr-login/confirm:
+    post:
+      tags:
+      - 小程序
+      summary: 确认网页扫码登录
+      operationId: confirm_qr_login_api_v1_mini_program_qr_login_confirm_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QrLoginConfirmRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QrLoginConfirmRead'
+              example:
+                status: confirmed
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '401':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '422':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
   /api/v1/mini-program/projects:
     get:
       tags:
@@ -27004,6 +27191,90 @@ components:
         action: admin
         label: 系统管理（用户 / 项目 / 高级设置 / 附件 / 分享链接）
         bit: 1
+    QrLoginSessionRead:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+          description: UUID 会话标识（只在服务端内存中存在）
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - session_id
+      - expires_at
+      title: QrLoginSessionRead
+      description: 新建扫码登录会话（会话不落数据库，默认 5 分钟有效）。
+      examples:
+      - session_id: 0198f3a7-2c00-7000-8000-000000000001
+        expires_at: '2026-09-13T10:35:00+08:00'
+    QrLoginPollRead:
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - expired
+          title: Status
+          description: pending 等待扫码确认；confirmed 已确认（本次响应带凭据）；expired 已过期或已消费
+        access_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+        refresh_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+        user:
+          anyOf:
+          - $ref: '#/components/schemas/UserRead'
+          - type: 'null'
+          title: User
+      type: object
+      required:
+      - status
+      - token_type
+      title: QrLoginPollRead
+      description: 网页轮询结果；confirmed 时返回管理端访问 / 续期令牌并消费会话（只能取一次）。
+      examples:
+      - status: pending
+        access_token: null
+        refresh_token: null
+        token_type: ''
+        user: null
+    QrLoginConfirmRequest:
+      properties:
+        session_id:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      additionalProperties: false
+      type: object
+      required:
+      - session_id
+      title: QrLoginConfirmRequest
+      examples:
+      - session_id: 0198f3a72c0070008000000000000001
+    QrLoginConfirmRead:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: QrLoginConfirmRead
+      examples:
+      - status: confirmed
     UserMergeRequest:
       properties:
         source_user_id:

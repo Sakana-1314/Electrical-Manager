@@ -1,0 +1,32 @@
+<app-navbar title="{{i18n.webLoginTitle}}" />
+<view class="page-shell web-login-page">
+  <view wx:if="{{loading}}" class="detail-state">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+  <view wx:elif="{{invalid}}" class="detail-state failed-state">
+    <t-empty icon="error-circle" description="{{i18n.webLoginInvalid}}" />
+  </view>
+
+  <block wx:else>
+    <view class="section-card web-login-card">
+      <view class="web-login-icon"><t-icon name="scan" size="56rpx" /></view>
+      <view class="web-login-title">{{i18n.webLoginConfirmTitle}}</view>
+      <view class="web-login-desc">{{i18n.webLoginConfirmHint}}</view>
+      <view wx:if="{{user}}" class="web-login-user">
+        <text user-select="{{true}}">{{user.display_name}}</text>
+        <text wx:if="{{user.department_name}}" class="web-login-department" user-select="{{true}}">{{user.department_name}}</text>
+      </view>
+      <t-button
+        theme="primary"
+        block
+        size="large"
+        loading="{{confirming}}"
+        disabled="{{confirmed}}"
+        bind:tap="confirm"
+      >{{confirmed ? i18n.webLoginSuccess : i18n.webLoginConfirm}}</t-button>
+      <view wx:if="{{confirmed}}" class="web-login-success">{{i18n.webLoginSuccessHint}}</view>
+    </view>
+  </block>
+
+  <t-toast id="web-login-toast" />
+</view>
