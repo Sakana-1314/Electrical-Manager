@@ -7,6 +7,7 @@
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
 | `INVALID_CREDENTIALS` | 401 | 用户名或密码错误 | `api/system` |
+| `INVALID_CURRENT_PASSWORD` | 400 | 当前密码错误（用户设置里修改密码时校验） | `service/dictionary` |
 | `INVALID_REFRESH_TOKEN` | 401 | 续期凭证无效或已过期 | `api/system` |
 | `INVALID_TOKEN` | 401 | 接口令牌无效 | `auth` |
 | `UNAUTHORIZED` | 401 | 请先登录 | `auth` |

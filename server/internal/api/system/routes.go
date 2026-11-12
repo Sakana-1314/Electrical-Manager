@@ -19,6 +19,8 @@ func Register(r *web.Router) {
 	a.POST("/login", login)
 	a.POST("/refresh", refresh)
 	a.GET("/me", me, auth.CurrentUser)
+	a.GET("/me/api-token", myAPIToken, auth.CurrentUser)
+	a.PATCH("/me/password", changeMyPassword, auth.CurrentUser)
 	// 网页端小程序扫码登录：会话只存在内存，创建/轮询/取码均匿名。
 	a.POST("/qr-sessions", createQrSession)
 	a.GET("/qr-sessions/{session_id}/code", qrSessionCode)
@@ -116,6 +118,29 @@ func refresh(c *web.Ctx) error {
 
 func me(c *web.Ctx) error {
 	return c.OK(schema.NewUserRead(auth.User(c)))
+}
+
+// myAPIToken 当前用户读取自己的接口令牌（用于复制 MCP 地址）；从未生成过时自动创建一次。
+func myAPIToken(c *web.Ctx) error {
+	u, err := dictionary.EnsureSelfAPIToken(c.DB, auth.User(c).ID)
+	if err != nil {
+		return err
+	}
+	return c.OK(u.Read())
+}
+
+// changeMyPassword 当前用户修改密码：只能改密码，不能改姓名 / 部门等资料。
+func changeMyPassword(c *web.Ctx) error {
+	p := c.Params()
+	var data schema.PasswordChangeRequest
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	if err := dictionary.ChangeOwnPassword(c.DB, auth.User(c).ID, data.CurrentPassword, data.NewPassword); err != nil {
+		return err
+	}
+	return c.NoContent()
 }
 
 // ---------------- 权限位目录 ----------------

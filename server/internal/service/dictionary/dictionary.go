@@ -35,6 +35,48 @@ func issueAPIToken(u *UserWithToken) {
 // echoAPIToken 读取路径解密回显（旧数据 / 解密失败为 nil）。
 func echoAPIToken(u *UserWithToken) { u.APIToken = security.DecryptSecret(u.APITokenEnc) }
 
+// EnsureSelfAPIToken 返回当前用户自己的接口令牌：从未生成过时创建一次，
+// 首次打开「用户设置」即可复制 MCP 令牌。已有令牌只解密回显，不轮换；
+// 只有哈希的旧数据保持 nil，等令牌下次用于鉴权后由认证路径自动回填密文。
+func EnsureSelfAPIToken(s *db.Session, userID int64) (*UserWithToken, error) {
+	u, err := getUser(s, userID)
+	if err != nil {
+		return nil, err
+	}
+	if u.APITokenHash != "" {
+		return u, nil
+	}
+	issueAPIToken(u)
+	// 首次生成令牌不改 version：这只是补齐凭证，不应让当前刷新令牌失效。
+	u.UpdatedAt = common.UTCNow()
+	if _, err := s.Exec("UPDATE app_user SET api_token_hash = ?, api_token_enc = ?, updated_at = ? WHERE id = ?",
+		u.APITokenHash, u.APITokenEnc, u.UpdatedAt, u.ID); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// ChangeOwnPassword 修改当前用户密码：已设置密码时必须校验当前密码；
+// 仅扫码登录、从未设置过密码的账号可以直接设置第一个密码。
+// 版本号 +1 使旧刷新令牌失效（接口令牌不受影响）。
+func ChangeOwnPassword(s *db.Session, userID int64, current *string, next string) error {
+	u, err := getUser(s, userID)
+	if err != nil {
+		return err
+	}
+	if u.PasswordHash != "" {
+		if current == nil || !security.VerifyPassword(*current, u.PasswordHash) {
+			return apperr.New("INVALID_CURRENT_PASSWORD", "当前密码错误").WithStatus(400)
+		}
+	}
+	u.PasswordHash = security.HashPassword(next)
+	u.Version++
+	u.UpdatedAt = common.UTCNow()
+	_, err = s.Exec("UPDATE app_user SET password_hash = ?, version = ?, updated_at = ? WHERE id = ?",
+		u.PasswordHash, u.Version, u.UpdatedAt, u.ID)
+	return err
+}
+
 func duplicateUsername() error {
 	return apperr.New("DUPLICATE_USERNAME", "用户名已存在").WithStatus(409)
 }

@@ -16,6 +16,13 @@ type UserMergeRequest struct {
 	TargetVersion int64 `json:"target_version" v:"required"`
 }
 
+// PasswordChangeRequest 当前用户修改密码。尚未设置密码的账号（仅扫码登录）
+// 可不传 current_password 直接设置第一个密码；已有密码的账号必须校验当前密码。
+type PasswordChangeRequest struct {
+	CurrentPassword *string `json:"current_password" v:"max=128"`
+	NewPassword     string  `json:"new_password" v:"required,min=6,max=128"`
+}
+
 // UserRead 是统一用户。permissions 是权限位展开后的权限键（按目录顺序），
 // 网页端与小程序端共用同一套权限位；不再有账号来源字段。
 type UserRead struct {

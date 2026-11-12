@@ -55,6 +55,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me/api-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 我的接口令牌
+         * @description 当前用户读取自己的接口令牌（用于复制 MCP 地址）；从未生成过时自动创建一次，已有令牌不轮换。
+         */
+        get: operations["my_api_token_api_v1_auth_me_api_token_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * 修改我的密码
+         * @description 当前用户修改密码；只能改密码，不能改姓名 / 部门等资料。已设置密码的账号必须提供当前密码，仅扫码登录的账号可直接设置第一个密码。
+         */
+        patch: operations["change_my_password_api_v1_auth_me_password_patch"];
+        trace?: never;
+    };
     "/api/v1/auth/qr-sessions": {
         parameters: {
             query?: never;
@@ -12425,6 +12465,22 @@ export interface components {
             version: number;
         };
         /**
+         * PasswordChangeRequest
+         * @example {
+         *       "current_password": "123456",
+         *       "new_password": "new-pass-123"
+         *     }
+         */
+        PasswordChangeRequest: {
+            /**
+             * Current Password
+             * @description 当前密码；尚未设置密码的账号（仅扫码登录）可省略
+             */
+            current_password?: string | null;
+            /** New Password */
+            new_password: string;
+        };
+        /**
          * UserUpdate
          * @example {
          *       "username": "warehouse",
@@ -13290,6 +13346,160 @@ export interface operations {
                      *       "message": "数据已被其他用户修改，请刷新后重试",
                      *       "details": {},
                      *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    my_api_token_api_v1_auth_me_api_token_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 1,
+                     *       "username": "admin",
+                     *       "display_name": "系统管理员",
+                     *       "department_name": "华星检修维护部电气车间",
+                     *       "created_at": "2026-08-14T10:20:00+08:00",
+                     *       "last_used_at": "2026-09-13T09:12:00+08:00",
+                     *       "permissions": [
+                     *         "system:admin",
+                     *         "warehouse:read",
+                     *         "warehouse:write",
+                     *         "purchase:read",
+                     *         "purchase:write",
+                     *         "huaxing:read",
+                     *         "ledger:read",
+                     *         "ledger:write",
+                     *         "hazard:read",
+                     *         "hazard:write",
+                     *         "work:read",
+                     *         "work:write"
+                     *       ],
+                     *       "enabled": true,
+                     *       "version": 1,
+                     *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserApiTokenRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    change_my_password_api_v1_auth_me_password_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordChangeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 当前密码错误 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];

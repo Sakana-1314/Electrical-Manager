@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AccountSettingsModal: typeof import('./src/components/AccountSettingsModal.vue')['default']
     ColumnVisibilityPicker: typeof import('./src/components/ColumnVisibilityPicker.vue')['default']
     ExportButton: typeof import('./src/components/ExportButton.vue')['default']
     ExportLoadingOverlay: typeof import('./src/components/ExportLoadingOverlay.vue')['default']

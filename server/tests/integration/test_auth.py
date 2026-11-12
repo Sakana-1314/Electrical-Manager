@@ -5,6 +5,78 @@ from uuid import UUID
 import pytest
 from httpx import AsyncClient
 
+from tests.conftest import auth_headers, project_session
+from tests.testkit.accounts import create_mini_program_user
+from tests.testkit.security import create_access_token
+
+
+@pytest.mark.asyncio
+async def test_my_api_token_is_created_once_and_authenticates(client: AsyncClient) -> None:
+    """用户设置里读取自己的 MCP 令牌：没有时自动生成，之后保持同一令牌（不轮换）。"""
+    # 小程序注册的来源用户没有密码和接口令牌，与线上普通用户一致。
+    async with project_session() as session:
+        user_id = await create_mini_program_user(
+            session, "自助令牌用户", permissions=("warehouse:read",)
+        )
+    headers = {"Authorization": f"Bearer {create_access_token(user_id)}"}
+
+    first = await client.get("/api/v1/auth/me/api-token", headers=headers)
+    assert first.status_code == 200, first.text
+    token = first.json()["api_token"]
+    assert token
+    UUID(token)
+
+    second = await client.get("/api/v1/auth/me/api-token", headers=headers)
+    assert second.status_code == 200, second.text
+    assert second.json()["api_token"] == token
+
+    me = await client.get("/api/v1/auth/me", headers={"X-API-Token": token})
+    assert me.status_code == 200, me.text
+    assert me.json()["id"] == user_id
+
+
+@pytest.mark.asyncio
+async def test_change_my_password_checks_current_and_updates_login(client: AsyncClient) -> None:
+    """用户设置只能改密码：当前密码错误被拒，修改后旧密码失效、新密码可登录。"""
+    admin = await auth_headers(client, "admin")
+    created = await client.post(
+        "/api/v1/users",
+        headers=admin,
+        json={
+            "username": "self-password",
+            "password": "123456",
+            "display_name": "自助改密用户",
+            "permissions": ["warehouse:read"],
+            "enabled": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    headers = await auth_headers(client, "self-password")
+
+    wrong = await client.patch(
+        "/api/v1/auth/me/password",
+        headers=headers,
+        json={"current_password": "wrong-pass", "new_password": "new-pass-123"},
+    )
+    assert wrong.status_code == 400, wrong.text
+    assert wrong.json()["code"] == "INVALID_CURRENT_PASSWORD"
+
+    changed = await client.patch(
+        "/api/v1/auth/me/password",
+        headers=headers,
+        json={"current_password": "123456", "new_password": "new-pass-123"},
+    )
+    assert changed.status_code == 204, changed.text
+
+    old_login = await client.post(
+        "/api/v1/auth/login", json={"username": "self-password", "password": "123456"}
+    )
+    assert old_login.status_code == 401
+    new_login = await client.post(
+        "/api/v1/auth/login", json={"username": "self-password", "password": "new-pass-123"}
+    )
+    assert new_login.status_code == 200, new_login.text
+
 
 @pytest.mark.asyncio
 async def test_login_returns_timestamps_and_refreshes_last_used_at(client: AsyncClient) -> None:
