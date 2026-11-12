@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { computed, h, onMounted, reactive, ref } from 'vue'
-import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
+import { NButton, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
 import type { ManagedUser, RoleRead } from '@/api/generated'
 import { dictionaryApi, roleApi } from '@/api/dictionaries'
-import {
-  getTableScrollX,
-  preventTableColumnCompression,
-  tableColumnWidths,
-} from '@/constants/table'
+import { getTableScrollX, preventTableColumnCompression } from '@/constants/table'
 import { activeBackendUrl } from '@/api/backend'
 import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
@@ -32,6 +28,8 @@ const showMerge = ref(false)
 const mergeSourceId = ref<number | null>(null)
 const merging = ref(false)
 const mergeSource = computed(() => items.value.find((item) => item.id === mergeSourceId.value) ?? null)
+// 概览：绑定小程序的人数（列表顶部一眼看出整体绑定情况）。
+const boundCount = computed(() => items.value.filter((item) => item.wechat_openid).length)
 const project = useProjectStore()
 // MCP 地址带上当前项目：Agent 连上后就按这个项目读写数据（不带则用系统默认项目）
 const mcpUrl = computed(() =>
@@ -52,30 +50,60 @@ onMounted(() => {
   roleApi.roles().then((roles) => (roleOptions.value = roles))
 })
 const columns = preventTableColumnCompression<ManagedUser>([
-  { title: '用户名', key: 'username', width: tableColumnWidths.identifier },
-  { title: '显示名称', key: 'display_name', width: tableColumnWidths.name },
   {
-    title: '来源',
-    key: 'source',
-    width: 92,
+    title: '用户',
+    key: 'user',
+    width: 240,
     render: (r) =>
-      h(
-        NTag,
-        { size: 'small', type: r.source === 'MANAGE' ? 'info' : 'default', round: true },
-        { default: () => (r.source === 'MANAGE' ? '管理端' : '小程序') },
-      ),
+      h('div', { class: 'user-cell' }, [
+        h('div', { class: 'user-name-row' }, [
+          h('span', { class: 'user-name' }, r.display_name || r.username),
+          h(
+            NTag,
+            {
+              size: 'small',
+              type: r.source === 'MANAGE' ? 'info' : 'default',
+              bordered: false,
+              round: true,
+            },
+            { default: () => (r.source === 'MANAGE' ? '管理端' : '小程序') },
+          ),
+        ]),
+        h('div', { class: 'user-username' }, `@${r.username}`),
+      ]),
   },
   {
-    title: '微信 OpenID',
-    key: 'wechat_openid',
-    width: 220,
+    title: '部门',
+    key: 'department_name',
+    width: 160,
     ellipsis: { tooltip: true },
-    render: (r) => r.wechat_openid || '—',
+    render: (r) => r.department_name || '—',
+  },
+  {
+    title: '小程序绑定',
+    key: 'wechat_binding',
+    width: 116,
+    render: (r) =>
+      r.wechat_openid
+        ? h(
+            NTooltip,
+            { trigger: 'hover' },
+            {
+              trigger: () =>
+                h(
+                  NTag,
+                  { size: 'small', type: 'success', round: true },
+                  { default: () => '已绑定' },
+                ),
+              default: () => `OpenID：${r.wechat_openid}`,
+            },
+          )
+        : h(NTag, { size: 'small', round: true, bordered: false }, { default: () => '未绑定' }),
   },
   {
     title: '角色',
     key: 'roles',
-    width: tableColumnWidths.description,
+    width: 232,
     render: (r) =>
       h(
         'div',
@@ -92,11 +120,11 @@ const columns = preventTableColumnCompression<ManagedUser>([
   {
     title: '状态',
     key: 'enabled',
-    width: tableColumnWidths.status,
+    width: 80,
     render: (r) =>
       h(
         NTag,
-        { type: r.enabled ? 'success' : 'default' },
+        { size: 'small', type: r.enabled ? 'success' : 'default' },
         { default: () => (r.enabled ? '启用' : '停用') },
       ),
   },
@@ -270,7 +298,17 @@ function remove(row: ManagedUser) {
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">用户管理</h1>
+        <div class="title-row">
+          <h1 class="page-title">用户管理</h1>
+          <n-tag round size="small" type="info">{{ items.length }} 位</n-tag>
+          <n-tag
+            round
+            size="small"
+            :type="items.length > 0 && boundCount === items.length ? 'success' : 'default'"
+          >
+            已绑定小程序 {{ boundCount }} 位
+          </n-tag>
+        </div>
       </div>
       <div class="page-actions">
         <n-button type="primary" @click="open()">新建用户</n-button>
@@ -278,6 +316,8 @@ function remove(row: ManagedUser) {
     </div>
     <n-card class="data-card"
       ><n-data-table
+        class="compact-table"
+        size="small"
         :bordered="false"
         :columns="columns"
         :data="items"
@@ -297,6 +337,15 @@ function remove(row: ManagedUser) {
           ><n-input v-model:value="form.display_name" /></n-form-item
         ><n-form-item label="部门单位"
           ><n-input v-model:value="form.department_name" /></n-form-item
+        ><n-form-item v-if="editing" label="小程序绑定">
+          <div class="binding-row">
+            <n-tag :type="editing.wechat_openid ? 'success' : 'default'" size="small" round>
+              {{ editing.wechat_openid ? '已绑定' : '未绑定' }}
+            </n-tag>
+            <span v-if="editing.wechat_openid" class="binding-openid">
+              OpenID：{{ editing.wechat_openid }}
+            </span>
+          </div></n-form-item
         ><n-form-item label="角色（可多选，权限取并集）"
           ><n-select
             v-model:value="form.role_ids"
@@ -390,6 +439,58 @@ function remove(row: ManagedUser) {
 </template>
 
 <style scoped>
+/* 紧凑版式：用户格两行（姓名 + 用户名），单元格上下留白压到 6px，一屏能多看三成行。 */
+.title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.compact-table :deep(.n-data-table-th),
+.compact-table :deep(.n-data-table-td) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.user-name {
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.user-username {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.binding-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.binding-openid {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  word-break: break-all;
+}
 .merge-target {
   display: flex;
   flex-direction: column;
