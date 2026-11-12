@@ -8,8 +8,21 @@ import pytest
 import xlwt
 from httpx import AsyncClient
 from openpyxl import Workbook
+from sqlalchemy import select
 
-from tests.conftest import auth_headers
+from tests.conftest import auth_headers, project_session
+from tests.testkit.accounts import grant_permissions
+from tests.testkit.models import User
+
+
+async def warehouse_headers(client: AsyncClient) -> dict[str, str]:
+    """华星导入由 warehouse:write 发起，页面读取需要 huaxing:read；测试操作者两个位都给。"""
+    headers = await warehouse_headers(client)
+    async with project_session() as session:
+        user_id = await session.scalar(select(User.id).where(User.username == "warehouse"))
+        assert user_id is not None
+        await grant_permissions(session, user_id, ("huaxing:read",))
+    return headers
 
 REPORT_HEADERS = [
     "首次入库日期",
@@ -142,7 +155,7 @@ async def _import_ok(
 
 @pytest.mark.asyncio
 async def test_warehouse_import_and_search(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
@@ -232,7 +245,7 @@ async def test_warehouse_import_and_search(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_import_replaces_existing_rows(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
@@ -252,7 +265,7 @@ async def test_import_replaces_existing_rows(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_header_alias_first_inbound_time(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
@@ -266,7 +279,7 @@ async def test_header_alias_first_inbound_time(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_import_deduplicates_fully_identical_rows(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     dup = _row("Y001", "按钮")
     await _import_ok(
         client,
@@ -287,7 +300,7 @@ async def test_import_deduplicates_fully_identical_rows(client: AsyncClient) -> 
 
 @pytest.mark.asyncio
 async def test_missing_headers_marks_job_failed(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.append(["编码", "名称"])  # 缺大部分必需列
@@ -320,7 +333,7 @@ async def test_import_permissions(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_import_rejects_unsupported_extension(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     response = await _submit_import(client, headers, "stock.txt", b"not excel")
     assert response.status_code == 400
     assert response.json()["code"] == "UNSUPPORTED_EXCEL_FILE"
@@ -328,7 +341,7 @@ async def test_import_rejects_unsupported_extension(client: AsyncClient) -> None
 
 @pytest.mark.asyncio
 async def test_import_csv(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     response = await _submit_import(
         client, headers, "stock.csv", build_report_csv([_row("C001", "按钮")])
     )
@@ -347,7 +360,7 @@ async def test_import_csv(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_import_xls(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     response = await _submit_import(
         client, headers, "stock.xls", build_report_xls([_row("X001", "接触器")])
     )
@@ -365,7 +378,7 @@ async def test_import_xls(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_filter_by_model_spec(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
@@ -386,7 +399,7 @@ async def test_filter_by_model_spec(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_filter_code_or_and_cross_field_and(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
@@ -426,7 +439,7 @@ async def test_filter_code_or_and_cross_field_and(client: AsyncClient) -> None:
 
 @pytest.mark.asyncio
 async def test_filter_by_first_inbound_date_range(client: AsyncClient) -> None:
-    headers = await auth_headers(client, "warehouse")
+    headers = await warehouse_headers(client)
     await _import_ok(
         client,
         headers,
