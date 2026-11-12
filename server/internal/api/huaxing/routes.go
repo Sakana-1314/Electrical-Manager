@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/huaxing"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/importjob"
@@ -14,11 +15,13 @@ import (
 // Register 注册本模块路由。
 func Register(r *web.Router) {
 	g := r.Group("/huaxing-inventory", auth.RequireProject)
-	g.GET("", list, auth.CurrentUser)
-	g.GET("/filter-options", filterOptions, auth.CurrentUser)
-	g.GET("/last-import", lastImport, auth.CurrentUser)
+	g.GET("", list, auth.HuaxingReader)
+	g.GET("/filter-options", filterOptions, auth.HuaxingReader)
+	// 导入由 warehouse:write 发起（无 huaxing:read 也可导入），导入状态对导入者同步可见。
+	g.GET("/last-import", lastImport, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermWarehouseWrite))
 	g.POST("/import", importInventory, auth.WarehouseWriter)
-	g.GET("/import-jobs/{job_id}", getImportJob, auth.CurrentUser)
+	// 导入由 warehouse:write 发起（无 huaxing:read 也可导入），任务轮询需同时放行导入者。
+	g.GET("/import-jobs/{job_id}", getImportJob, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermWarehouseWrite))
 }
 
 func list(c *web.Ctx) error {

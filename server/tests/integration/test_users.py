@@ -219,3 +219,48 @@ async def test_legacy_hash_only_token_backfilled_and_echoed_after_use(client: As
     after = await client.get("/api/v1/users?page_size=200", headers=admin)
     row_after = next(i for i in after.json()["items"] if i["id"] == user["id"])
     assert row_after["api_token"] == token
+
+
+@pytest.mark.asyncio
+async def test_default_read_permissions_gate_module_reads(client: AsyncClient) -> None:
+    """默认权限（二级库 / 申购 / 华星只读）只放行对应模块的读取，其它模块读写都被拒绝。"""
+    admin = await auth_headers(client, "admin")
+    created = await client.post(
+        "/api/v1/users",
+        headers=admin,
+        json={
+            "username": "default-reader",
+            "password": "123456",
+            "display_name": "默认只读用户",
+            "permissions": ["warehouse:read", "purchase:read", "huaxing:read"],
+            "enabled": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    headers = await auth_headers(client, "default-reader")
+
+    for path in (
+        "/api/v1/stock-materials",
+        "/api/v1/inventory/balances",
+        "/api/v1/secondary-warehouse",
+        "/api/v1/purchase-materials",
+        "/api/v1/material-code-library",
+        "/api/v1/huaxing-inventory",
+    ):
+        response = await client.get(path, headers=headers)
+        assert response.status_code == 200, (path, response.text)
+
+    # 未授予的模块：读取同样 403
+    for path in ("/api/v1/hazards", "/api/v1/ledger-items", "/api/v1/work-tasks"):
+        response = await client.get(path, headers=headers)
+        assert response.status_code == 403, (path, response.text)
+        assert response.json()["code"] == "PERMISSION_DENIED"
+
+    # 默认权限只有 read，写操作仍被拒绝
+    denied_write = await client.post(
+        "/api/v1/stock-materials",
+        headers=headers,
+        json={"name": "越权物资", "model_spec": "X", "unit_name": "个", "image_ids": []},
+    )
+    assert denied_write.status_code == 403, denied_write.text
+    assert denied_write.json()["code"] == "PERMISSION_DENIED"

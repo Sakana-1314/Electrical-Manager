@@ -13,20 +13,20 @@ import (
 func Register(r *web.Router) {
 	g := r.Group("", auth.RequireProject)
 
-	g.GET("/hazards", listHazards, auth.CurrentUser)
-	g.GET("/hazards/filter-options", filterOptions, auth.CurrentUser)
-	g.GET("/hazards/stats", stats, auth.CurrentUser)
-	g.GET("/hazards/{hazard_id}", getHazard, auth.CurrentUser)
+	g.GET("/hazards", listHazards, auth.HazardReader)
+	g.GET("/hazards/filter-options", filterOptions, auth.HazardReader)
+	g.GET("/hazards/stats", stats, auth.HazardReader)
+	g.GET("/hazards/{hazard_id}", getHazard, auth.HazardReader)
 	g.POST("/hazards", createHazard, auth.HazardWriter)
 	g.PATCH("/hazards/{hazard_id}", updateHazard, auth.HazardWriter)
 	g.DELETE("/hazards/{hazard_id}", deleteHazard, auth.HazardWriter)
 
-	g.GET("/hazard-units", listUnits, auth.CurrentUser)
+	g.GET("/hazard-units", listUnits, auth.HazardReader)
 	g.POST("/hazard-units", createUnit, auth.HazardWriter)
 	g.PATCH("/hazard-units/{unit_id}", updateUnit, auth.HazardWriter)
 	g.DELETE("/hazard-units/{unit_id}", deleteUnit, auth.HazardWriter)
 
-	g.GET("/hazard-types", listTypes, auth.CurrentUser)
+	g.GET("/hazard-types", listTypes, auth.HazardReader)
 	g.POST("/hazard-types", createType, auth.HazardWriter)
 	g.PATCH("/hazard-types/{type_id}", updateType, auth.HazardWriter)
 	g.DELETE("/hazard-types/{type_id}", deleteType, auth.HazardWriter)

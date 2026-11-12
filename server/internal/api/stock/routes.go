@@ -13,11 +13,11 @@ import (
 // Register 注册 stock_materials 与 inventory 路由（顺序与原版一致）。
 func Register(r *web.Router) {
 	m := r.Group("/stock-materials", auth.RequireProject)
-	m.GET("", listMaterials, auth.CurrentUser)
+	m.GET("", listMaterials, auth.WarehouseReader)
 	m.POST("", createMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	m.GET("/{material_id}", materialDetail, auth.CurrentUser)
-	m.GET("/mini-program-codes/{material_uuid}", materialMiniProgramCode, auth.CurrentUser)
-	m.GET("/{material_id}/mini-program-code", materialMiniProgramCodeRedirect, auth.CurrentUser)
+	m.GET("/{material_id}", materialDetail, auth.WarehouseReader)
+	m.GET("/mini-program-codes/{material_uuid}", materialMiniProgramCode, auth.WarehouseReader)
+	m.GET("/{material_id}/mini-program-code", materialMiniProgramCodeRedirect, auth.WarehouseReader)
 	m.PATCH("/{material_id}", updateMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
 	m.DELETE("/{material_id}", deleteMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
 	m.PUT("/{material_id}/replenishment-policy", savePolicy, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)

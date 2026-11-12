@@ -14,10 +14,10 @@ import (
 // Register 注册本模块路由。
 func Register(r *web.Router) {
 	g := r.Group("/secondary-warehouse", auth.RequireProject)
-	g.GET("", list, auth.CurrentUser)
-	g.GET("/last-import", lastImport, auth.CurrentUser)
+	g.GET("", list, auth.WarehouseReader)
+	g.GET("/last-import", lastImport, auth.WarehouseReader)
 	g.POST("/import", importInventory, auth.WarehouseWriter)
-	g.GET("/import-jobs/{job_id}", getImportJob, auth.CurrentUser)
+	g.GET("/import-jobs/{job_id}", getImportJob, auth.WarehouseReader)
 }
 
 func list(c *web.Ctx) error {

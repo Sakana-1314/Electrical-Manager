@@ -14,21 +14,21 @@ import (
 func Register(r *web.Router) {
 	g := r.Group("", auth.RequireProject)
 
-	g.GET("/work-tasks", listTasks, auth.CurrentUser)
-	g.GET("/work-tasks/{task_id}", getTask, auth.CurrentUser)
+	g.GET("/work-tasks", listTasks, auth.WorkReader)
+	g.GET("/work-tasks/{task_id}", getTask, auth.WorkReader)
 	g.POST("/work-tasks", createTask, auth.WorkWriter)
 	g.PATCH("/work-tasks/{task_id}", updateTask, auth.WorkWriter)
 	g.DELETE("/work-tasks/{task_id}", deleteTask, auth.WorkWriter)
 
-	g.GET("/work-records/{record_id}", getRecord, auth.CurrentUser)
+	g.GET("/work-records/{record_id}", getRecord, auth.WorkReader)
 	g.POST("/work-records", createRecord, auth.WorkWriter)
 	g.PATCH("/work-records/{record_id}", updateRecord, auth.WorkWriter)
 	g.DELETE("/work-records/{record_id}", deleteRecord, auth.WorkWriter)
 
-	g.GET("/work-overview", overview, auth.CurrentUser)
-	g.GET("/work-task-timeline", taskTimeline, auth.CurrentUser)
-	g.GET("/work-worker-timeline", workerTimeline, auth.CurrentUser)
-	g.GET("/work-participants", participants, auth.CurrentUser)
+	g.GET("/work-overview", overview, auth.WorkReader)
+	g.GET("/work-task-timeline", taskTimeline, auth.WorkReader)
+	g.GET("/work-worker-timeline", workerTimeline, auth.WorkReader)
+	g.GET("/work-participants", participants, auth.WorkReader)
 }
 
 // ===== 任务 =====
