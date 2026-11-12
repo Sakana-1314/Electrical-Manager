@@ -11,6 +11,14 @@ import (
 	"strings"
 )
 
+// WebhookConfig 是一个机器人渠道的环境变量配置（飞书 / 钉钉）。
+type WebhookConfig struct {
+	Enabled bool
+	URL     string
+	Secret  string
+	Events  []string
+}
+
 type Settings struct {
 	AppName                    string
 	Environment                string
@@ -22,6 +30,16 @@ type Settings struct {
 	FernetKey                  string
 	WechatMiniProgramAppID     string
 	WechatMiniProgramAppSecret string
+	// 小程序码环境（trial / release），不在管理端配置。
+	WechatMiniProgramCodeEnv string
+	// AI 搜索（OpenAI 兼容端点）完全由服务端环境变量配置，管理端不再提供配置入口。
+	AISearchEnabled  bool
+	AISearchEndpoint string
+	AISearchAPIKey   string
+	AISearchModel    string
+	// 飞书 / 钉钉机器人推送：地址、密钥、订阅事件都由环境变量提供。
+	FeishuWebhook   WebhookConfig
+	DingTalkWebhook WebhookConfig
 	// 微信接口根地址（默认官方地址；测试可指向本地桩服务）。
 	WechatAPIBase              string
 	UploadDir                  string
@@ -69,14 +87,52 @@ func Load() (*Settings, error) {
 		FernetKey:                  env("APP_FERNET_KEY", ""),
 		WechatMiniProgramAppID:     env("APP_WECHAT_MINI_PROGRAM_APP_ID", ""),
 		WechatMiniProgramAppSecret: env("APP_WECHAT_MINI_PROGRAM_APP_SECRET", ""),
-		WechatAPIBase:              strings.TrimRight(env("APP_WECHAT_API_BASE", "https://api.weixin.qq.com"), "/"),
-		UploadDir:                  env("APP_UPLOAD_DIR", filepath.Join(base, "data", "uploads")),
-		PreviewCacheDir:            env("APP_PREVIEW_CACHE_DIR", filepath.Join(base, "data", "preview-cache")),
-		TemplateDir:                env("APP_TEMPLATE_DIR", filepath.Join(base, "templates")),
-		LogDir:                     env("APP_LOG_DIR", filepath.Join(base, "data", "logs")),
-		Host:                       env("APP_HOST", "0.0.0.0"),
+		WechatMiniProgramCodeEnv:   env("APP_WECHAT_MINI_PROGRAM_CODE_ENV", "release"),
+		AISearchEndpoint:           strings.TrimRight(strings.TrimSpace(env("APP_AI_SEARCH_ENDPOINT", "")), "/"),
+		AISearchAPIKey:             strings.TrimSpace(env("APP_AI_SEARCH_API_KEY", "")),
+		AISearchModel:              strings.TrimSpace(env("APP_AI_SEARCH_MODEL", "")),
+		FeishuWebhook: WebhookConfig{
+			URL:    strings.TrimSpace(env("APP_FEISHU_WEBHOOK_URL", "")),
+			Secret: strings.TrimSpace(env("APP_FEISHU_WEBHOOK_SECRET", "")),
+			Events: splitList(env("APP_FEISHU_WEBHOOK_EVENTS", "")),
+		},
+		DingTalkWebhook: WebhookConfig{
+			URL:    strings.TrimSpace(env("APP_DINGTALK_WEBHOOK_URL", "")),
+			Secret: strings.TrimSpace(env("APP_DINGTALK_WEBHOOK_SECRET", "")),
+			Events: splitList(env("APP_DINGTALK_WEBHOOK_EVENTS", "")),
+		},
+		WechatAPIBase:   strings.TrimRight(env("APP_WECHAT_API_BASE", "https://api.weixin.qq.com"), "/"),
+		UploadDir:       env("APP_UPLOAD_DIR", filepath.Join(base, "data", "uploads")),
+		PreviewCacheDir: env("APP_PREVIEW_CACHE_DIR", filepath.Join(base, "data", "preview-cache")),
+		TemplateDir:     env("APP_TEMPLATE_DIR", filepath.Join(base, "templates")),
+		LogDir:          env("APP_LOG_DIR", filepath.Join(base, "data", "logs")),
+		Host:            env("APP_HOST", "0.0.0.0"),
+	}
+	if s.WechatMiniProgramCodeEnv != "trial" && s.WechatMiniProgramCodeEnv != "release" {
+		return nil, fmt.Errorf("APP_WECHAT_MINI_PROGRAM_CODE_ENV 只能是 trial 或 release")
 	}
 	var err error
+	if s.AISearchEnabled, err = envBool("APP_AI_SEARCH_ENABLED", false); err != nil {
+		return nil, err
+	}
+	if s.FeishuWebhook.Enabled, err = envBool("APP_FEISHU_WEBHOOK_ENABLED", false); err != nil {
+		return nil, err
+	}
+	if s.DingTalkWebhook.Enabled, err = envBool("APP_DINGTALK_WEBHOOK_ENABLED", false); err != nil {
+		return nil, err
+	}
+	if s.AISearchEnabled && (s.AISearchEndpoint == "" || s.AISearchAPIKey == "" || s.AISearchModel == "") {
+		return nil, fmt.Errorf("启用 APP_AI_SEARCH_ENABLED 时必须配置 APP_AI_SEARCH_ENDPOINT / APP_AI_SEARCH_API_KEY / APP_AI_SEARCH_MODEL")
+	}
+	if s.AISearchEndpoint != "" && !strings.HasPrefix(s.AISearchEndpoint, "http://") && !strings.HasPrefix(s.AISearchEndpoint, "https://") {
+		return nil, fmt.Errorf("APP_AI_SEARCH_ENDPOINT 必须使用 http:// 或 https://")
+	}
+	if s.FeishuWebhook.Enabled && s.FeishuWebhook.URL == "" {
+		return nil, fmt.Errorf("启用 APP_FEISHU_WEBHOOK_ENABLED 时必须配置 APP_FEISHU_WEBHOOK_URL")
+	}
+	if s.DingTalkWebhook.Enabled && s.DingTalkWebhook.URL == "" {
+		return nil, fmt.Errorf("启用 APP_DINGTALK_WEBHOOK_ENABLED 时必须配置 APP_DINGTALK_WEBHOOK_URL")
+	}
 	if s.AccessTokenMinutes, err = envInt("APP_ACCESS_TOKEN_MINUTES", 30, 1); err != nil {
 		return nil, err
 	}
@@ -157,6 +213,17 @@ func (s *Settings) PostgresDSN() (string, error) {
 }
 
 func lookup(key string) (string, bool) { return os.LookupEnv(key) }
+
+// splitList 英文逗号分隔列表（去空白、去空项）。
+func splitList(raw string) []string {
+	var out []string
+	for _, item := range strings.Split(raw, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
 
 func env(key, fallback string) string {
 	if v, ok := os.LookupEnv(key); ok {

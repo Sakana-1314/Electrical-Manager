@@ -11,7 +11,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/inventory"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
@@ -221,7 +221,7 @@ func outboundRead(op *inventory.Operation, materialID int64, materialUUID string
 
 // ensureNotLiteSecondaryWarehouse 对应 _ensure_not_lite_secondary_warehouse：精简模式下二级库仅支持查看。
 func ensureNotLiteSecondaryWarehouse(s *db.Session) error {
-	lite, err := aisearch.IsLiteSecondaryWarehouse(s)
+	lite, err := appsettings.IsLiteSecondaryWarehouse(s)
 	if err != nil {
 		return err
 	}

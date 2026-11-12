@@ -3,7 +3,7 @@ package deps
 
 import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/web"
 )
 
@@ -12,7 +12,7 @@ const OrSearchDescription = "可使用 | 或 ｜ 分隔多个关键词，同一�
 
 // RequireFullSecondaryWarehouse 二级库精简模式下只允许导入与查询：拦截完整模式写接口。
 func RequireFullSecondaryWarehouse(c *web.Ctx) error {
-	lite, err := aisearch.IsLiteSecondaryWarehouse(c.DB)
+	lite, err := appsettings.IsLiteSecondaryWarehouse(c.DB)
 	if err != nil {
 		return err
 	}

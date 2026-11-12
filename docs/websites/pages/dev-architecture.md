@@ -68,7 +68,7 @@ Electrical-Manager/
 ```text
 web/src/
 ├── App.vue                 根组件：n-config-provider（中文 locale + 按外观解析的 theme/theme-overrides）包 4 个 provider + router-view
-├── main.ts                 启动引导：拉图片加速配置 → createApp + 应用外观 + 加载 settings store → mount
+├── main.ts                 启动引导：createApp + 应用外观 + 加载 settings store → mount
 ├── theme.ts / styles.css   Naive UI 全局主题覆盖（明/暗两套调色板）；全局样式与 CSS 变量（--color-*、--radius-*），深色档见 [data-theme='dark']
 ├── env.d.ts                ImportMetaEnv 声明 + __BUILD_TIME__
 ├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
@@ -123,7 +123,7 @@ web/src/
 | `/work/overview` | `work-overview` | `views/work/WorkOverviewView.vue`（`keepAlive`） | 需登录 | 工作总览：一行 = 日期 + 任务 + 时段（全天 / 上午 / 下午）并列出当天参与人员；日期区间（必填、≤92 天，`WorkRangePicker` 快捷档）/ 任务 / 参与人员 / 关键字筛选、分页与列显隐、URL 同步；点行打开记录弹窗（无写权限为只读详情） |
 | `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 任务视图：半日格时间线（一行一个任务，色块 = 该任务的一段工作并显示参与人员），点色块编辑记录、行尾编辑任务 / 排活、点任务名看该任务的时间段明细；任务 CRUD 按 `work:write` 隐藏 |
 | `/work/workers` | `work-workers` | `views/work/WorkWorkersView.vue`（`keepAlive`） | 需登录 | 人员视图：半日格时间线（一行一个人，色块 = 该人干的任务，按任务固定配色），姓名由工作记录的参与人员派生并按拼音排序；点色块编辑记录、行尾给该人排活 |
-| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | AI 搜索、小程序注册开关、二级库运行模式、图片加速、Webhook |
+| `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | 只保留开关：小程序注册、新用户默认状态、二级库精简模式 |
 | `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `system:admin` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一含小程序来源用户） |
@@ -237,8 +237,8 @@ web/src/
 | `secondaryWarehouse.ts` | `/secondary-warehouse*` | 精简二级库列表、Excel 导入任务与最近导入 |
 | `dictionaries.ts` | `/users*`、`/mini-program-users*` | 管理端用户 CRUD 与接口令牌重置、小程序用户查询/更新/删除/合并 |
 | `projects.ts` | `/projects*` | 项目列表、新增、编辑（名称/启停）与删除 |
-| `systemSettings.ts` | `/system-settings/*` | 图片加速配置、功能开关（小程序档位 + 后台主 tab 可见性，启动时拉取一次）、Webhook 渠道读取/更新/测试 |
-| `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展、状态、配置读取/更新/测试 |
+| `systemSettings.ts` | `/system-settings/*` | 公开的 mini-program-features（启动时拉取运行模式）与高级设置开关读写 |
+| `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展与可用状态（模型配置在服务端环境变量） |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
@@ -378,7 +378,6 @@ Apifox 智能 Mock，按字段名自己编数据（见 [/api](/api)）。
 | --- | --- |
 | `VITE_API_BASE_URLS` | 多后端线路，英文逗号分隔；配置后优先于 `VITE_API_BASE_URL`，启动时探测选延迟最低的一条 |
 | `VITE_API_BASE_URL` | 单后端地址（兼容旧配置），缺省 `/api/v1`；只填域名时自动补 `/api/v1` |
-| `VITE_IMAGE_BASE_URL` | 图片读取前缀，缺省为当前后端线路的 `/files/images` |
 | `VITE_API_PROXY` | **仅供 `npm run dev` 的 Vite 代理目标**，生产构建不读取 |
 | `VITE_BASE_PATH` | 子路径部署前缀（如 `/Electrical-Manager/demo/`），写进 Vite `base`；缺省 `/` 与既有部署一致（演示构建见 `web/.env.demo`） |
 这些值在**构建阶段**被写入静态产物，部署后改环境变量无效，需重新构建（详见 [前后端分离部署](/guide#前后端分离部署)）。
@@ -465,8 +464,8 @@ server/
 | 路由包 | 接口前缀 | 依赖（按需列出） |
 | --- | --- | --- |
 | `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version` 公开 |
-| `api/aisearch` | `/ai-search` | `auth.SystemAdmin`、`auth.CurrentUser` |
-| `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features`、`/system-settings/image-acceleration` 公开读取） |
+| `api/aisearch` | `/ai-search` | `auth.CurrentUser`（模型服务由 `APP_AI_SEARCH_*` 环境变量配置） |
+| `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features` 公开读取；`advanced-settings` 需系统管理位） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse` |
 | `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.CurrentUser`、`auth.PurchaseWriter` |
 | `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.CurrentUser`、`auth.WarehouseWriter` |
@@ -779,9 +778,14 @@ flowchart LR
 | `JWTAlgorithm` | `APP_JWT_ALGORITHM` | `string` | `HS256` | JWT 签名算法 |
 | `AccessTokenMinutes` | `APP_ACCESS_TOKEN_MINUTES` | `int` | `30` | `≥1`；管理端与小程序访问令牌有效期 |
 | `RefreshTokenDays` | `APP_REFRESH_TOKEN_DAYS` | `int` | `7` | `≥1` |
-| `FernetKey` | `APP_FERNET_KEY` | `string` | `""` | 为空时由 `APP_JWT_SECRET` 派生（经 SHA-256 定长，`internal/security`），影响接口令牌/API Key 等密文可解密性 |
+| `FernetKey` | `APP_FERNET_KEY` | `string` | `""` | 为空时由 `APP_JWT_SECRET` 派生（经 SHA-256 定长，`internal/security`），影响用户接口令牌密文可解密性 |
 | `WechatMiniProgramAppID` | `APP_WECHAT_MINI_PROGRAM_APP_ID` | `string` | `""` | 多个 AppID 逗号分隔，顺序须与 secret 一致（数量或唯一性不符返回 503 `WECHAT_CONFIGURATION_INVALID`） |
 | `WechatMiniProgramAppSecret` | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | `string` | `""` | 同上，仅后端保存 |
+| `WechatMiniProgramCodeEnv` | `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | `string` | `release` | 小程序码环境：`trial` / `release` |
+| `AISearchEnabled` | `APP_AI_SEARCH_ENABLED` | `bool` | `false` | 启用时必须同时配置端点 / Key / 模型 |
+| `AISearchEndpoint` / `AISearchAPIKey` / `AISearchModel` | `APP_AI_SEARCH_ENDPOINT` / `APP_AI_SEARCH_API_KEY` / `APP_AI_SEARCH_MODEL` | `string` | `""` | OpenAI 兼容端点、密钥与模型 |
+| `FeishuWebhook` | `APP_FEISHU_WEBHOOK_ENABLED` / `_URL` / `_SECRET` / `_EVENTS` | `struct` | 关闭 | 飞书机器人推送；事件逗号分隔 |
+| `DingTalkWebhook` | `APP_DINGTALK_WEBHOOK_ENABLED` / `_URL` / `_SECRET` / `_EVENTS` | `struct` | 关闭 | 钉钉机器人推送；事件逗号分隔 |
 | `WechatAPIBase` | `APP_WECHAT_API_BASE` | `string` | `https://api.weixin.qq.com` | 微信接口根地址（去掉末尾 `/`），测试可指向本地桩服务 |
 | `UploadDir` | `APP_UPLOAD_DIR` | `string` | `<server>/data/uploads` | 启动时自动创建；图片、导入临时文件（`imports/`）与导出文件（`exports/`）根目录 |
 | `PreviewCacheDir` | `APP_PREVIEW_CACHE_DIR` | `string` | `<server>/data/preview-cache` | 缩略图缓存目录，独立于上传目录（可单独清理）；读写失败只告警，预览退化为每次渲染 |
@@ -812,6 +816,9 @@ flowchart LR
 | `APP_ACCESS_TOKEN_MINUTES` / `APP_REFRESH_TOKEN_DAYS` | `30` / `7` |
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 多个小程序按相同顺序逗号分隔 |
+| `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | `trial` / `release`，默认 `release` |
+| `APP_AI_SEARCH_*` | 启用时配置端点 / Key / 模型 |
+| `APP_FEISHU_WEBHOOK_*` / `APP_DINGTALK_WEBHOOK_*` | 地址 / 密钥 / 订阅事件 |
 | `APP_LOG_DIR` / `APP_LOG_BACKUP_COUNT` | `./data/logs` / `90` |
 | `APP_PREVIEW_CONCURRENCY` / `APP_PREVIEW_CACHE_DIR` | `6` / `./data/preview-cache` |
 模板未列出但代码支持的变量：`APP_FERNET_KEY`、`APP_CORS_ORIGINS`、`APP_UPLOAD_DIR`、`APP_TEMPLATE_DIR`、`APP_MAX_IMAGE_BYTES`、`APP_PURCHASE_PLAN_CLEANUP_ENABLED`、`APP_ATTACHMENT_CLEANUP_ENABLED`、`APP_APP_NAME`、`APP_JWT_ALGORITHM`、`APP_WECHAT_API_BASE`、`APP_HOST`、`APP_PORT`、`APP_BASE_DIR`、`APP_BUILD_TIME`、`APP_GIT_SHA`。

@@ -468,17 +468,14 @@ func transportError(kind errKind, err error, endpoint, model string, timeout tim
 
 // requestExpansions 对应 _request_expansions。
 func requestExpansions(setting *Config, terms []string, timeout time.Duration, useCache bool) ([]string, error) {
-	key := cacheKey(setting.Version, terms)
+	key := cacheKey(0, terms)
 	now := time.Now()
 	if useCache {
 		if cached, ok := cacheGet(key, now); ok {
 			return cached, nil
 		}
 	}
-	apiKey, err := decryptAPIKey(setting.APIKeyEncrypted)
-	if err != nil {
-		return nil, err
-	}
+	apiKey := setting.APIKey
 	endpoint := completionURL(setting.Endpoint)
 	body, err := json.Marshal(completionPayload(setting.Model, terms))
 	if err != nil {

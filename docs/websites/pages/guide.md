@@ -37,9 +37,14 @@ docker compose up -d
 | `APP_DATABASE_URL` | 如 `postgresql+asyncpg://user:pass@postgresql:5432/db`（也接受 `postgresql://`），密码需 URL 编码。 |
 | `APP_JWT_SECRET` | 至少 32 位随机字符串，生产环境必须修改。 |
 | `APP_ACCESS_TOKEN_MINUTES` | 登录有效期（分钟），默认 480。 |
-| `APP_FERNET_KEY` | 可选，加密 API Key / Webhook 密钥的专用密钥；留空则从 `APP_JWT_SECRET` 派生。 |
+| `APP_FERNET_KEY` | 可选，加密用户接口令牌的专用密钥；留空则从 `APP_JWT_SECRET` 派生。 |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` | HXNI 电气无忧小程序 AppID，多个按相同顺序用英文逗号分隔。 |
 | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 与上一项一一对应，只能保存在服务端。 |
+| `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | 小程序码环境：`trial` / `release`（默认 `release`）；AppID 取上面第一个已配置项。 |
+| `APP_AI_SEARCH_ENABLED` | 是否启用 AI 搜索扩展，默认 `false`。 |
+| `APP_AI_SEARCH_ENDPOINT` / `APP_AI_SEARCH_API_KEY` / `APP_AI_SEARCH_MODEL` | OpenAI 兼容端点、API Key 与模型；启用时必须全部填写。 |
+| `APP_FEISHU_WEBHOOK_ENABLED` / `APP_FEISHU_WEBHOOK_URL` / `APP_FEISHU_WEBHOOK_SECRET` / `APP_FEISHU_WEBHOOK_EVENTS` | 飞书机器人推送开关、地址、签名密钥与订阅事件（英文逗号分隔：`stock.outbound.created,stock.inbound.created,mini_program.user.bound`）。 |
+| `APP_DINGTALK_WEBHOOK_ENABLED` / `APP_DINGTALK_WEBHOOK_URL` / `APP_DINGTALK_WEBHOOK_SECRET` / `APP_DINGTALK_WEBHOOK_EVENTS` | 钉钉机器人推送，字段同飞书。 |
 | `BACKEND_PORT` / `FRONTEND_PORT` | 宿主机映射端口，默认 8000 / 8080。 |
 
 模板见 `docs/env/.env.example`（Compose 部署）与 `docs/env/backend.env.example`、`docs/env/frontend.env.example`（独立部署后端 / 前端时使用）；完整清单（含日志、跨域、限流等）见[架构设计](/dev-architecture)。
@@ -65,7 +70,7 @@ docker compose up -d
 
 ## 前后端分离部署
 
-前端用 Vite 构建，后端与图片地址在**构建阶段**注入并写进静态产物，部署后改服务器环境变量不生效，必须重新构建。
+前端用 Vite 构建，后端地址在**构建阶段**注入并写进静态产物，部署后改服务器环境变量不生效，必须重新构建。图片直接走当前后端线路的 `/api/v1/files/images`。
 
 ### 构建变量
 
@@ -73,7 +78,6 @@ docker compose up -d
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URLS` | 否 | `https://api-a.example.com,https://api-b.example.com` | 多后端线路，英文逗号分隔；配置后优先于 `VITE_API_BASE_URL`，首次进入并发探测并选延迟更低的一条，见[双后端线路](#双后端线路) |
 | `VITE_API_BASE_URL` | 单后端时必填 | `https://api.example.com` | 后端地址（兼容旧配置）；只填域名会自动补 `/api/v1`，也可填完整 API 根地址 |
-| `VITE_IMAGE_BASE_URL` | 否 | `https://img.example.com` | 图床/CDN；只填域名会自动补 `/api/v1/files/images`，留空则从当前后端线路读 |
 | `VITE_API_PROXY` | 否 | `http://localhost:8000` | 仅 `npm run dev` 的本地代理 |
 | `VITE_BASE_PATH` | 否 | `/Electrical-Manager/demo/` | 部署到子路径时用，默认 `/` |
 
@@ -83,8 +87,8 @@ docker compose up -d
 
 | 平台 | 命令 |
 | --- | --- |
-| Linux | `cd web && npm ci && VITE_API_BASE_URL=https://api.example.com VITE_IMAGE_BASE_URL=https://img.example.com npm run build` |
-| PowerShell | `Set-Location web; npm ci; $env:VITE_API_BASE_URL='https://api.example.com'; $env:VITE_IMAGE_BASE_URL='https://img.example.com'; npm run build` |
+| Linux | `cd web && npm ci && VITE_API_BASE_URL=https://api.example.com npm run build` |
+| PowerShell | `Set-Location web; npm ci; $env:VITE_API_BASE_URL='https://api.example.com'; npm run build` |
 
 产物在 `web/dist/`，CD 阶段把它发布到静态站点、对象存储或 CDN 即可。
 
@@ -101,10 +105,10 @@ docker compose up -d
 
 ### 环境划分
 
-| 环境 | `VITE_API_BASE_URL` | `VITE_IMAGE_BASE_URL` |
-| --- | --- | --- |
-| 测试 | `https://api-test.example.com` | `https://img-test.example.com` |
-| 生产 | `https://api.example.com` | `https://img.example.com` |
+| 环境 | `VITE_API_BASE_URL` |
+| --- | --- |
+| 测试 | `https://api-test.example.com` |
+| 生产 | `https://api.example.com` |
 
 每套环境单独出产物，避免同一个静态包跨环境复用。
 
@@ -130,20 +134,6 @@ Vary: Origin, Referer
 | `APP_CORS_MAX_AGE` | `86400` | 预检结果缓存秒数 |
 
 正常部署时 `Referer` 所属站点应与浏览器 `Origin` 相同；浏览器不发送 `Referer` 时自动回退 `Origin`。
-
-### 图片 CDN / 图床
-
-`VITE_IMAGE_BASE_URL` 只影响图片展示与预览；上传、删除仍走 `VITE_API_BASE_URL`。
-
-| CDN 规则 | 要求 |
-| --- | --- |
-| 代理范围 | 仅 `GET /api/v1/files/images/*`，不要切上传/删除接口 |
-| 缓存键 | 必须包含 `size` 查询参数，否则不同尺寸预览互相覆盖 |
-| 缓存时间 | 遵循后端 `Cache-Control`；文件 ID 不变则内容不变，适合长缓存 |
-| 路径处理 | 转发原始路径与查询串，不要重写 `file_id` |
-| 协议 | 图床与前端都用 HTTPS |
-
-不用图床时留空 `VITE_IMAGE_BASE_URL` 即可。
 
 ### EdgeOne Pages
 

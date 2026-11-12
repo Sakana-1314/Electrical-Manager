@@ -50,12 +50,6 @@ export function resolveApiBaseUrls(
   return [...new Set((values.length ? values : [fallback]).map(resolveApiBaseUrl))]
 }
 
-export function resolveImageBaseUrl(value: string | undefined, resolvedApiBaseUrl: string): string {
-  if (!value?.trim()) return joinUrl(resolvedApiBaseUrl, 'files/images')
-  const baseUrl = normalizeBaseUrl(value, resolvedApiBaseUrl)
-  return isAbsoluteOrigin(baseUrl) ? joinUrl(baseUrl, 'api/v1/files/images') : baseUrl
-}
-
 export function resolveMcpUrl(
   resolvedApiBaseUrl: string,
   token: string,

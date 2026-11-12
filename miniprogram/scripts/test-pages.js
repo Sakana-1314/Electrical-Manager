@@ -121,7 +121,6 @@ global.getApp = () => ({
       ],
     },
     pendingMaterialUuid: '',
-    imageSettingsPromise: Promise.resolve(),
   },
 });
 

@@ -74,7 +74,7 @@ var client = func() *http.Client {
 	}
 }()
 
-// sendError 是 _send 中 httpx.HTTPError / RuntimeError 一类的失败（测试推送时转为 WEBHOOK_TEST_FAILED）。
+// sendError 是 _send 中 httpx.HTTPError / RuntimeError 一类的失败（投递失败重试，最终记入 last_error）。
 type sendError struct{ msg string }
 
 func (e *sendError) Error() string { return e.msg }
@@ -241,21 +241,13 @@ func claimDelivery(ctx context.Context) (*claimedDelivery, error) {
 	if err != nil || !found {
 		return nil, err
 	}
-	var ch model.WebhookChannel
-	if err := s.Get(&ch, "SELECT "+model.ColsWebhookChannel+" FROM webhook_channel WHERE id = ?", d.ChannelID); err != nil {
-		return nil, err
-	}
 	attempts := d.Attempts + 1
 	if _, err := s.Exec("UPDATE webhook_delivery SET status = ?, attempts = ?, updated_at = ? WHERE id = ?", domain.DeliverySending, attempts, now, d.ID); err != nil {
 		return nil, err
 	}
-	webhookURL, err := decrypt(ch.WebhookURLEncrypted)
-	if err != nil {
-		return nil, err
-	}
-	secret, err := decrypt(ch.SecretEncrypted)
-	if err != nil {
-		return nil, err
+	webhookURL, secret := "", ""
+	if cfg := platformConfig(d.Platform); cfg != nil {
+		webhookURL, secret = cfg.URL, cfg.Secret
 	}
 	payload := map[string]any{}
 	dec := json.NewDecoder(bytes.NewReader(d.Payload))
@@ -266,7 +258,7 @@ func claimDelivery(ctx context.Context) (*claimedDelivery, error) {
 			payload = m
 		}
 	}
-	claimed := &claimedDelivery{deliveryID: d.ID, platform: ch.Platform, webhookURL: webhookURL, secret: secret, payload: payload, attempts: attempts}
+	claimed := &claimedDelivery{deliveryID: d.ID, platform: d.Platform, webhookURL: webhookURL, secret: secret, payload: payload, attempts: attempts}
 	if err := s.Commit(); err != nil {
 		return nil, err
 	}

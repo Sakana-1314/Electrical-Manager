@@ -5,13 +5,18 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
-
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 )
+
+func testPayload() map[string]any {
+	return map[string]any{
+		"event_id":    "10000000-0000-4000-8000-000000000001",
+		"event_type":  "webhook.test",
+		"occurred_at": "2026-01-01T00:00:00Z",
+		"data":        map[string]any{},
+	}
+}
 
 // 对应 tests/integration/test_webhooks.py::test_notification_message_format。
 func TestMessageText(t *testing.T) {
@@ -81,41 +86,6 @@ func TestQuantityText(t *testing.T) {
 		if got := quantityText(in); got != want {
 			t.Errorf("quantityText(%v) = %q, want %q", in, got, want)
 		}
-	}
-}
-
-func TestValidateWebhookURL(t *testing.T) {
-	ok := map[string]string{
-		"https://open.feishu.cn/open-apis/bot/v2/hook/x":     "FEISHU",
-		"https://open.larksuite.com/open-apis/bot/v2/hook/x": "FEISHU",
-		" HTTPS://Open.Feishu.CN:443/open-apis/bot/v2/hook/": "FEISHU",
-		"https://oapi.dingtalk.com/robot/send?access_token=": "DINGTALK",
-	}
-	for u, p := range ok {
-		if _, err := validateWebhookURL(p, u); err != nil {
-			t.Errorf("%s should be valid: %v", u, err)
-		}
-	}
-	bad := map[string]string{
-		"https://example.com/hook/token":                     "FEISHU",
-		"http://open.feishu.cn/open-apis/bot/v2/hook/x":      "FEISHU",
-		"https://oapi.dingtalk.com/other":                    "DINGTALK",
-		"https://open.feishu.cn/x?/open-apis/bot/v2/hook/":   "FEISHU",
-		"https://oapi.dingtalk.com.evil.test/robot/send":     "DINGTALK",
-		"https://user@evil.test/open-apis/bot/v2/hook/token": "FEISHU",
-	}
-	for u, p := range bad {
-		_, err := validateWebhookURL(p, u)
-		ae, isApp := err.(*apperr.Error)
-		if !isApp || ae.Code != "INVALID_WEBHOOK_URL" || ae.Status != 422 {
-			t.Errorf("%s should be invalid, got %v", u, err)
-		}
-	}
-	if _, err := validateWebhookURL("DINGTALK", "https://example.com"); err == nil || !strings.Contains(err.Error(), "钉钉") {
-		t.Errorf("dingtalk message: %v", err)
-	}
-	if u, err := validateWebhookURL("FEISHU", "   "); u != "" || err != nil {
-		t.Errorf("blank should pass through")
 	}
 }
 
@@ -190,11 +160,6 @@ func TestSendThroughTestUpstream(t *testing.T) {
 		t.Fatalf("status error:\n got %v\nwant %s", err, want)
 	}
 
-	err = TestChannel("DINGTALK", schema.WebhookTestRequest{WebhookURL: "https://oapi.dingtalk.com/robot/send?access_token=x"})
-	ae, ok := err.(*apperr.Error)
-	if !ok || ae.Code != "WEBHOOK_TEST_FAILED" || ae.Status != 502 || ae.Message != "测试推送失败："+want {
-		t.Fatalf("test channel: %v", err)
-	}
 }
 
 func TestPyEqualsZero(t *testing.T) {

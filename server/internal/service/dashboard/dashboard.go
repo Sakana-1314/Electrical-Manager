@@ -7,7 +7,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/db"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 )
 
@@ -27,7 +27,7 @@ func todayRange(now time.Time) (time.Time, time.Time) {
 // 合并后一次往返完成，各子查询仍按 project_id 走各自索引。
 func Summary(s *db.Session) (schema.DashboardSummaryRead, error) {
 	var out schema.DashboardSummaryRead
-	lite, err := aisearch.IsLiteSecondaryWarehouse(s)
+	lite, err := appsettings.IsLiteSecondaryWarehouse(s)
 	if err != nil {
 		return out, err
 	}

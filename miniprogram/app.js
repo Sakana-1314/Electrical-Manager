@@ -1,6 +1,5 @@
 const { loginSilently } = require('./utils/auth');
 const { request } = require('./utils/request');
-const { resolveImageBaseUrl } = require('./utils/inventory');
 const { DEFAULT_MODES } = require('./utils/features');
 const { getMessages, initializeI18n } = require('./utils/i18n');
 
@@ -10,8 +9,6 @@ App({
     pendingMaterialUuid: '',
     user: null,
     accountDisabled: false,
-    imageBaseUrl: '',
-    imageSettingsPromise: null,
     runtimeModes: null,
     runtimeSettingsPromise: null,
     locale: 'zh-CN',
@@ -21,17 +18,6 @@ App({
   onLaunch() {
     this.globalData.locale = initializeI18n();
     this.globalData.messages = getMessages();
-    this.globalData.imageSettingsPromise = request({
-      url: '/system-settings/image-acceleration',
-      auth: false,
-    })
-      .then((settings) => {
-        this.globalData.imageBaseUrl = resolveImageBaseUrl(
-          settings.image_acceleration_server_url,
-        );
-        return this.globalData.imageBaseUrl;
-      })
-      .catch(() => '');
     this.globalData.runtimeSettingsPromise = request({
       url: '/system-settings/mini-program-features',
       auth: false,

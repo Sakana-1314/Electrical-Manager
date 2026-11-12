@@ -96,6 +96,22 @@ async def client() -> AsyncIterator[AsyncClient]:
     async with api_client() as http:
         # 默认项目：业务接口都要求项目上下文，这样用例不用逐个加请求头。
         http.headers["X-Project-Id"] = str(DEFAULT_PROJECT_ID)
+        # 环境变量配置在测试服务进程内是全局状态：每个用例前重置 AI 与 Webhook（APP_TEST_HOOKS=1）。
+        await http.post(
+            "/__test__/ai-search/settings",
+            json={"enabled": False, "endpoint": "", "api_key": "", "model": ""},
+        )
+        for platform in ("FEISHU", "DINGTALK"):
+            await http.post(
+                "/__test__/webhook/settings",
+                json={
+                    "platform": platform,
+                    "enabled": False,
+                    "webhook_url": "",
+                    "secret": "",
+                    "subscribed_events": [],
+                },
+            )
         yield http
 
 

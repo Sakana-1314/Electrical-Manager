@@ -174,25 +174,11 @@ CREATE TABLE IF NOT EXISTS system_setting (
   CONSTRAINT pk_system_setting PRIMARY KEY (setting_key)
 );
 
-CREATE TABLE IF NOT EXISTS webhook_channel (
-  id BIGSERIAL NOT NULL,
-  platform webhookplatform NOT NULL,
-  enabled BOOLEAN NOT NULL DEFAULT FALSE,
-  webhook_url_encrypted VARCHAR(2000) NOT NULL DEFAULT '',
-  secret_encrypted VARCHAR(2000) NOT NULL DEFAULT '',
-  subscribed_events JSON NOT NULL,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_webhook_channel PRIMARY KEY (id),
-  CONSTRAINT uq_webhook_channel_platform UNIQUE (platform)
-);
-
 CREATE TABLE IF NOT EXISTS webhook_delivery (
   id BIGSERIAL NOT NULL,
   event_id VARCHAR(36) NOT NULL,
   event_type webhookeventtype NOT NULL,
-  channel_id BIGINT NOT NULL,
+  platform webhookplatform NOT NULL,
   payload JSON NOT NULL,
   status webhookdeliverystatus NOT NULL DEFAULT 'PENDING',
   attempts SMALLINT NOT NULL DEFAULT 0,
@@ -204,9 +190,7 @@ CREATE TABLE IF NOT EXISTS webhook_delivery (
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   delivered_at TIMESTAMP WITHOUT TIME ZONE NULL,
   CONSTRAINT pk_webhook_delivery PRIMARY KEY (id),
-  CONSTRAINT uq_webhook_delivery_event_id UNIQUE (event_id, channel_id),
-  CONSTRAINT fk_webhook_delivery_channel_id_webhook_channel
-    FOREIGN KEY (channel_id) REFERENCES webhook_channel (id)
+  CONSTRAINT uq_webhook_delivery_event_id_platform UNIQUE (event_id, platform)
 );
 
 CREATE INDEX IF NOT EXISTS ix_webhook_delivery_pending
@@ -1241,21 +1225,11 @@ COMMENT ON COLUMN system_setting."setting_key" IS '设置键，主键';
 COMMENT ON COLUMN system_setting."setting_value" IS '设置值（JSON 文档）';
 COMMENT ON COLUMN system_setting."version" IS '乐观锁版本号（每次更新 +1）';
 COMMENT ON COLUMN system_setting."updated_at" IS '更新时间';
-COMMENT ON TABLE webhook_channel IS 'Webhook 渠道配置（飞书 / 钉钉）';
-COMMENT ON COLUMN webhook_channel."id" IS '主键';
-COMMENT ON COLUMN webhook_channel."platform" IS '渠道平台，唯一';
-COMMENT ON COLUMN webhook_channel."enabled" IS '是否启用该渠道';
-COMMENT ON COLUMN webhook_channel."webhook_url_encrypted" IS '加密后的 Webhook 地址';
-COMMENT ON COLUMN webhook_channel."secret_encrypted" IS '加密后的签名密钥';
-COMMENT ON COLUMN webhook_channel."subscribed_events" IS '订阅事件名数组';
-COMMENT ON COLUMN webhook_channel."created_at" IS '创建时间';
-COMMENT ON COLUMN webhook_channel."updated_at" IS '更新时间';
-COMMENT ON COLUMN webhook_channel."version" IS '乐观锁版本号（每次更新 +1）';
-COMMENT ON TABLE webhook_delivery IS 'Webhook 投递记录与重试状态';
+COMMENT ON TABLE webhook_delivery IS 'Webhook 投递记录与重试状态（渠道地址 / 订阅事件来自服务端环境变量）';
 COMMENT ON COLUMN webhook_delivery."id" IS '主键';
-COMMENT ON COLUMN webhook_delivery."event_id" IS '事件 id（与 `channel_id` 组合唯一，幂等）';
+COMMENT ON COLUMN webhook_delivery."event_id" IS '事件 id（与 `platform` 组合唯一，幂等）';
 COMMENT ON COLUMN webhook_delivery."event_type" IS '事件类型，接口值为 `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound`';
-COMMENT ON COLUMN webhook_delivery."channel_id" IS '目标渠道';
+COMMENT ON COLUMN webhook_delivery."platform" IS '目标平台（FEISHU / DINGTALK），地址与密钥来自环境变量';
 COMMENT ON COLUMN webhook_delivery."payload" IS '投递报文';
 COMMENT ON COLUMN webhook_delivery."status" IS '投递状态';
 COMMENT ON COLUMN webhook_delivery."attempts" IS '已尝试次数';

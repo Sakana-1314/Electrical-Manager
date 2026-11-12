@@ -98,7 +98,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert material.status_code == 201, material.text
     material_data = material.json()
 
-    # 小程序码由微信接口桩生成；体验版环境与第二个 AppID 走高级设置。
+    # 小程序码由微信接口桩生成；体验版环境来自服务端环境变量（APP_WECHAT_MINI_PROGRAM_CODE_ENV），AppID 取第一个已配置项。
     def fake_material_code(body: dict[str, object]) -> bytes:
         assert body["scene"] == str(material_data["uuid"]).replace("-", "")
         assert body["env_version"] == MiniProgramCodeEnv.TRIAL.value
@@ -107,22 +107,6 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     wechat_stub = await go_wechat(
         exchange=fake_exchange_wechat_code, material_code=fake_material_code
     )
-    code_settings = await client.put(
-        "/api/v1/ai-search/settings",
-        headers=admin,
-        json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            "enabled": False,
-            "mini_program_code_env": "trial",
-            "mini_program_code_app_id": "wx-test-secondary",
-            "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "version": 0,
-        },
-    )
-    assert code_settings.status_code == 200, code_settings.text
     mini_program_code_entry_url = (
         f"/api/v1/stock-materials/{material_data['id']}/mini-program-code"
     )
@@ -140,7 +124,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert redirect.headers["cache-control"] == "no-store"
     assert redirect.headers["location"] == (
         f"/api/v1/stock-materials/mini-program-codes/{material_data['uuid']}"
-        "?env=trial&appid=wx-test-secondary"
+        "?env=trial&appid=wx-test-primary"
     )
     assert missing_env.status_code == 422
     assert invalid_env.status_code == 422
@@ -159,7 +143,7 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
         request.url.params["appid"]
         for request in wechat_stub.requests
         if request.url.path == "/cgi-bin/token"
-    ] == ["wx-test-secondary"]
+    ] == ["wx-test-primary"]
 
     inbound = await client.post(
         "/api/v1/inventory/inbounds",
@@ -1384,17 +1368,17 @@ async def test_advanced_setting_can_close_new_mini_program_bindings(
     )
     pending_token = pending_login.json()["registration_token"]
 
+    current = await client.get(
+        "/api/v1/system-settings/advanced-settings", headers=admin
+    )
     settings = await client.put(
-        "/api/v1/ai-search/settings",
+        "/api/v1/system-settings/advanced-settings",
         headers=admin,
         json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            "enabled": False,
-            "mini_program_code_env": "release",
             "mini_program_registration_enabled": False,
-            "version": 0,
+            "mini_program_new_user_enabled": current.json()["mini_program_new_user_enabled"],
+            "secondary_warehouse_mode": current.json()["secondary_warehouse_mode"],
+            "version": current.json()["version"],
         },
     )
     assert settings.status_code == 200, settings.text
@@ -1436,16 +1420,12 @@ async def test_advanced_setting_controls_new_mini_program_user_status(
     admin = await auth_headers(client, "admin")
 
     pending_settings = await client.put(
-        "/api/v1/ai-search/settings",
+        "/api/v1/system-settings/advanced-settings",
         headers=admin,
         json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            "enabled": False,
-            "mini_program_code_env": "release",
             "mini_program_registration_enabled": True,
             "mini_program_new_user_enabled": False,
+            "secondary_warehouse_mode": "full",
             "version": 0,
         },
     )
@@ -1486,16 +1466,12 @@ async def test_advanced_setting_controls_new_mini_program_user_status(
     assert pending_again.json()["message"] == "您的账号待审核，请联系管理员"
 
     enabled_settings = await client.put(
-        "/api/v1/ai-search/settings",
+        "/api/v1/system-settings/advanced-settings",
         headers=admin,
         json={
-            "endpoint": "",
-            "api_key": "",
-            "model": "",
-            "enabled": False,
-            "mini_program_code_env": "release",
             "mini_program_registration_enabled": True,
             "mini_program_new_user_enabled": True,
+            "secondary_warehouse_mode": "full",
             "version": pending_settings.json()["version"],
         },
     )
@@ -1610,15 +1586,14 @@ async def test_wechat_registration_without_project_header_falls_back_to_default_
     否则新用户绑定会以 500（“服务器异常”）失败。
     """
     admin = await auth_headers(client, "admin")
-    configured = await client.put(
-        "/api/v1/system-settings/webhooks/FEISHU",
-        headers=admin,
+    configured = await client.post(
+        "/__test__/webhook/settings",
         json={
+            "platform": "FEISHU",
             "enabled": True,
             "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/bind-without-header",
             "secret": "feishu-secret",
             "subscribed_events": ["mini_program.user.bound"],
-            "version": 0,
         },
     )
     assert configured.status_code == 200, configured.text

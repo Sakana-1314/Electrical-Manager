@@ -758,7 +758,6 @@ for (const page of pages) {
 }
 
 const { extractMaterialUuid } = require(path.join(root, 'utils/material.js'));
-const { resolveImageBaseUrl } = require(path.join(root, 'utils/inventory.js'));
 const {
   LOCALE_ID_ID,
   LOCALE_ZH_CN,
@@ -803,11 +802,9 @@ const requestScript = read('utils/request.js');
 if (!requestScript.includes("'Accept-Language': getLocale()")) {
   throw new Error('Mini Program API requests must declare the selected locale.');
 }
-if (
-  resolveImageBaseUrl('https://images.example.com/') !==
-  'https://images.example.com/api/v1/files/images'
-) {
-  throw new Error('Mini Program image acceleration server URL is invalid.');
+const { imageUrl } = require(path.join(root, 'utils/inventory.js'));
+if (!imageUrl('file-id').endsWith('/files/images/file-id')) {
+  throw new Error('Mini Program images must be served from the active API base URL.');
 }
 
 for (const pageConfig of pageConfigs) {

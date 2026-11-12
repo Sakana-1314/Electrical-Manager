@@ -11,7 +11,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/webhook"
 )
@@ -106,7 +106,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 		return nil, "", "", accountDisabled()
 	}
 	if user == nil {
-		enabled, err := aisearch.IsMiniProgramRegistrationEnabled(s)
+		enabled, err := appsettings.IsMiniProgramRegistrationEnabled(s)
 		if err != nil {
 			return nil, "", "", err
 		}
@@ -141,14 +141,14 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		}
 		return existing, nil
 	}
-	registrationEnabled, err := aisearch.IsMiniProgramRegistrationEnabled(s)
+	registrationEnabled, err := appsettings.IsMiniProgramRegistrationEnabled(s)
 	if err != nil {
 		return nil, err
 	}
 	if !registrationEnabled {
 		return nil, registrationDisabled()
 	}
-	newUserEnabled, err := aisearch.IsMiniProgramNewUserEnabled(s)
+	newUserEnabled, err := appsettings.IsMiniProgramNewUserEnabled(s)
 	if err != nil {
 		return nil, err
 	}
