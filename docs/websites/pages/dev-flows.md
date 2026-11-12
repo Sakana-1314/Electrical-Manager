@@ -612,7 +612,7 @@ sequenceDiagram
 | 区间必填且封顶 | 三个视图都要求 `start_date` / `end_date`，最长 92 天（`WORK_RANGE_TOO_LONG`）；总览按天展开、人员按姓名分组都在服务端过滤与分页（区间封顶后是车间量级的数据） |
 | 参与人筛选 | 工作总览的 `participants` 按拆分后的姓名列表精确匹配（不是子串匹配）：「张三」不会命中「张三丰」 |
 | 任务与记录的关系 | 任务名项目内唯一（同一件活反复干都挂同一个任务）；删任务前必须先删记录（409 `WORK_TASK_HAS_RECORDS`），不做级联删除 |
-| 权限 | 读取对所有登录用户开放；写操作需要 `work:write` 权限位（`auth.WorkWriter`），任务图片上传走同一写权限（`auth.FileWriter`） |
+| 权限 | 读取需要 `work:read` 权限位（`auth.WorkReader`）；写操作需要 `work:write` 权限位（`auth.WorkWriter`），任务图片上传走同一写权限（`auth.FileWriter`） |
 | 图片 | 任务图片一张关联表，与其它模块共用图片存储；附件管理的引用次数含这张表，因此不会被判为悬空 |
 | 并发 | 任务与工作记录的 PATCH 都带 `version`、DELETE 走 `If-Match`，冲突返回 `VERSION_CONFLICT` 提示刷新后重试 |
 

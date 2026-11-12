@@ -13,13 +13,13 @@ import (
 func Register(r *web.Router) {
 	g := r.Group("", auth.RequireProject)
 
-	g.GET("/ledger-tags", listTags, auth.CurrentUser)
+	g.GET("/ledger-tags", listTags, auth.LedgerReader)
 	g.POST("/ledger-tags", createTag, auth.LedgerWriter)
 	g.PATCH("/ledger-tags/{tag_id}", updateTag, auth.LedgerWriter)
 	g.DELETE("/ledger-tags/{tag_id}", deleteTag, auth.LedgerWriter)
 
-	g.GET("/ledger-items", listItems, auth.CurrentUser)
-	g.GET("/ledger-items/{item_id}", getItem, auth.CurrentUser)
+	g.GET("/ledger-items", listItems, auth.LedgerReader)
+	g.GET("/ledger-items/{item_id}", getItem, auth.LedgerReader)
 	g.POST("/ledger-items", createItem, auth.LedgerWriter)
 	g.PATCH("/ledger-items/{item_id}", updateItem, auth.LedgerWriter)
 	g.DELETE("/ledger-items/{item_id}", deleteItem, auth.LedgerWriter)

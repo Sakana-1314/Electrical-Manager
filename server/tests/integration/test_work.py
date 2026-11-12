@@ -436,12 +436,14 @@ async def test_write_permissions(client: AsyncClient) -> None:
     )
     assert denied_delete.status_code == 403
 
-    # 读取对所有登录用户开放
-    for headers in (readonly, warehouse):
-        listed = await client.get("/api/v1/work-tasks", headers=headers)
-        assert listed.status_code == 200, listed.text
-        detail = await client.get(f"/api/v1/work-tasks/{task['id']}", headers=headers)
-        assert detail.status_code == 200
+    # 读取按 work:read 门禁：只读用户有该权限位，仓库管理员没有
+    listed = await client.get("/api/v1/work-tasks", headers=readonly)
+    assert listed.status_code == 200, listed.text
+    detail = await client.get(f"/api/v1/work-tasks/{task['id']}", headers=readonly)
+    assert detail.status_code == 200
+    denied_read = await client.get("/api/v1/work-tasks", headers=warehouse)
+    assert denied_read.status_code == 403, denied_read.text
+    assert denied_read.json()["code"] == "PERMISSION_DENIED"
 
 
 async def test_records_and_participants_are_project_scoped(client: AsyncClient) -> None:

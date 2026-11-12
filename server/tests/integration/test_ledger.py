@@ -616,9 +616,12 @@ async def test_ledger_write_requires_ledger_admin(client: AsyncClient) -> None:
 
     created = await create_tag(client, ledger_headers, name="配电柜")
 
-    # 读取对所有登录用户开放
+    # 读取按 ledger:read 门禁：只读用户有该权限位，仓库管理员没有
     assert (await client.get("/api/v1/ledger-tags", headers=readonly_headers)).status_code == 200
     assert (await client.get("/api/v1/ledger-items", headers=readonly_headers)).status_code == 200
+    denied_read = await client.get("/api/v1/ledger-items", headers=warehouse_headers)
+    assert denied_read.status_code == 403, denied_read.text
+    assert denied_read.json()["code"] == "PERMISSION_DENIED"
 
     denied_tag = await client.post(
         "/api/v1/ledger-tags", headers=readonly_headers, json={"name": "越权标签"}

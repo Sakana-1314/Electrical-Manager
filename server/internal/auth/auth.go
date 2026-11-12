@@ -207,11 +207,16 @@ var (
 	// SystemAdmin 系统管理：用户 / 项目 / 高级设置 / 附件池 / 分享链接。
 	// 「超级管理员」不再是角色，系统管理与各功能读写位全开即等价于旧超级管理员。
 	SystemAdmin     = RequirePermission(domain.PermSystemAdmin)
+	WarehouseReader = RequirePermission(domain.PermWarehouseRead)
 	WarehouseWriter = RequirePermission(domain.PermWarehouseWrite)
 	PurchaseReader  = RequirePermission(domain.PermPurchaseRead)
 	PurchaseWriter  = RequirePermission(domain.PermPurchaseWrite)
+	HuaxingReader   = RequirePermission(domain.PermHuaxingRead)
+	HazardReader    = RequirePermission(domain.PermHazardRead)
 	HazardWriter    = RequirePermission(domain.PermHazardWrite)
+	LedgerReader    = RequirePermission(domain.PermLedgerRead)
 	LedgerWriter    = RequirePermission(domain.PermLedgerWrite)
+	WorkReader      = RequirePermission(domain.PermWorkRead)
 	WorkWriter      = RequirePermission(domain.PermWorkWrite)
 	// LinkAnyWriter 跨模块写操作（如申购物资关联二级库物资）：命中任一模块写权限即可。
 	LinkAnyWriter = RequireAnyPermission(domain.PermPurchaseWrite, domain.PermWarehouseWrite)

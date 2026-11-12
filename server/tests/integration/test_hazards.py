@@ -392,6 +392,10 @@ async def test_hazard_write_permissions(client: AsyncClient) -> None:
     assert response.json()["code"] == "PERMISSION_DENIED"
 
     warehouse = await auth_headers(client, "warehouse")
+    # 读取按 hazard:read 门禁：仓库管理员没有该权限位，列表也不可读
+    denied_read = await client.get("/api/v1/hazards", headers=warehouse)
+    assert denied_read.status_code == 403, denied_read.text
+    assert denied_read.json()["code"] == "PERMISSION_DENIED"
     response = await client.post(
         "/api/v1/hazard-types", headers=warehouse, json={"major": "x", "minor": "y"}
     )

@@ -14,11 +14,11 @@ import (
 // Register 注册本模块路由。
 func Register(r *web.Router) {
 	g := r.Group("/huaxing-inventory", auth.RequireProject)
-	g.GET("", list, auth.CurrentUser)
-	g.GET("/filter-options", filterOptions, auth.CurrentUser)
-	g.GET("/last-import", lastImport, auth.CurrentUser)
+	g.GET("", list, auth.HuaxingReader)
+	g.GET("/filter-options", filterOptions, auth.HuaxingReader)
+	g.GET("/last-import", lastImport, auth.HuaxingReader)
 	g.POST("/import", importInventory, auth.WarehouseWriter)
-	g.GET("/import-jobs/{job_id}", getImportJob, auth.CurrentUser)
+	g.GET("/import-jobs/{job_id}", getImportJob, auth.HuaxingReader)
 }
 
 func list(c *web.Ctx) error {
