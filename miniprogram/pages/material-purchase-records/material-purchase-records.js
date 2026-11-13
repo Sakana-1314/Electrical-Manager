@@ -37,8 +37,9 @@ Page({
         return;
       }
       if (session.requires_profile) {
+        // 回跳只带主键 material_code：name 纯展示，绑定后由首条记录补齐，不带进 redirect。
         const redirect = buildRedirectQuery(
-          `/pages/material-purchase-records/material-purchase-records?material_code=${encodeURIComponent(materialCode)}&name=${encodeURIComponent(materialName)}`,
+          `/pages/material-purchase-records/material-purchase-records?material_code=${encodeURIComponent(materialCode)}`,
         );
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
@@ -94,12 +95,18 @@ Page({
       if (requestId !== this.requestId) return;
       const incoming = (result.items || []).map(decoratePurchaseRecord);
       const items = reset ? incoming : [...this.data.items, ...incoming];
+      // 标题栏展示名：链接里没带 name（回跳 / 旧分享）时用首条记录的物料名补齐。
+      const captionPatch =
+        !this.data.materialName && incoming.length && incoming[0].material_name
+          ? { materialName: incoming[0].material_name }
+          : {};
       this.setData({
         items,
         page,
         total: result.total || 0,
         resultCount: t('purchaseRecordResultCount', { count: result.total || 0 }),
         hasMore: items.length < (result.total || 0),
+        ...captionPatch,
       });
     } catch (error) {
       if (requestId === this.requestId) {
