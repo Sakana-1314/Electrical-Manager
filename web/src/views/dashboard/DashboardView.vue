@@ -114,7 +114,7 @@ const groups = computed<MetricGroup[]>(() => {
   if (showLite.value) {
     out.push({
       key: 'warehouse_lite',
-      title: '精简二级库',
+      title: '二级库',
       to: { name: 'warehouse-lite' },
       metrics: [
         {
