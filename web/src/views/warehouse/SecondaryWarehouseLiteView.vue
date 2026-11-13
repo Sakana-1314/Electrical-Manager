@@ -44,7 +44,7 @@ const {
       page_size: pager.page_size,
     }),
   initialFilters: () => ({ name: '', modelSpec: '' }),
-  onError: (error) => message.error(error instanceof Error ? error.message : '加载精简二级库失败'),
+  onError: (error) => message.error(error instanceof Error ? error.message : '加载二级库失败'),
   pageSizeOptions: [20, 50, 100, 200],
 })
 const importJob = useImportJob({
@@ -114,7 +114,7 @@ function showImportSummary(result: Record<string, unknown> | null) {
   dialog.success({
     draggable: true,
     title: '导入完成',
-    content: `已全量更新 ${importedCount.toLocaleString()} 条精简二级库数据。`,
+    content: `已全量更新 ${importedCount.toLocaleString()} 条二级库数据。`,
     positiveText: '知道了',
     positiveButtonProps: { type: 'primary' },
   })
@@ -135,8 +135,8 @@ function onFileChange(event: Event) {
   input.value = ''
   if (!file) return
   confirmImport({
-    title: '全量更新精简二级库',
-    content: `确认导入“${file.name}”吗？现有精简版二级库数据将被全部删除，并由该文件完整替换。`,
+    title: '全量更新二级库',
+    content: `确认导入“${file.name}”吗？现有二级库数据将被全部删除，并由该文件完整替换。`,
     runningText: '正在导入并全量更新，请勿重复提交，完成后自动刷新列表…',
     run: () => importFile(file),
     onError: (error) => message.error(error instanceof Error ? error.message : '导入失败'),
@@ -147,7 +147,7 @@ function onFileChange(event: Event) {
 <template>
   <div class="page">
     <div class="page-header">
-      <h1 class="page-title">精简二级库</h1>
+      <h1 class="page-title">二级库</h1>
       <div class="page-actions">
         <n-button
           v-if="auth.can('lite:write')"

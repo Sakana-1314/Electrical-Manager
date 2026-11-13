@@ -225,6 +225,10 @@ a {
 .n-menu {
   --n-item-height: 34px !important;
 }
+/* 紧凑密度配套：默认尺寸按钮的图标 18px → 16px（图标按钮的点击热区不变） */
+.n-button {
+  --n-icon-size: 16px !important;
+}
 .filter-card {
   background: linear-gradient(145deg, var(--color-surface) 0%, var(--color-surface-soft) 100%);
 }

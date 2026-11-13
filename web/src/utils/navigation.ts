@@ -18,7 +18,7 @@ export const NAV_FEATURES = [
   { key: 'warehouse', label: '二级库', route: 'stock', permission: 'warehouse:read' },
   {
     key: 'warehouse_lite',
-    label: '精简二级库',
+    label: '二级库',
     route: 'warehouse-lite',
     permission: 'lite:read',
   },

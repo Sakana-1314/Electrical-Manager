@@ -48,7 +48,7 @@ const permissionLabel = computed(() => {
   if (perms.includes('system:admin')) return '系统管理'
   const modules: Array<[string, string]> = [
     ['warehouse', '二级库'],
-    ['lite', '精简库'],
+    ['lite', '二级库'],
     ['purchase', '申购'],
     ['huaxing', '华星'],
     ['codes', '编码库'],
@@ -133,7 +133,7 @@ function logout() {
       aria-label="打开用户菜单"
     >
       <span class="user-menu-icon" aria-hidden="true">
-        <n-icon :size="20"><PersonCircleOutline /></n-icon>
+        <n-icon :size="18"><PersonCircleOutline /></n-icon>
       </span>
       <span v-if="!collapsed" class="user-summary">
         <span class="user-name">{{ displayName }}</span>

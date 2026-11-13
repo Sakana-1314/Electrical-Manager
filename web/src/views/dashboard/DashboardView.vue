@@ -373,7 +373,7 @@ onMounted(() => void load())
         :to="action.to"
         class="quick-action"
       >
-        <span class="quick-action__icon"><n-icon :size="18" :component="action.icon" /></span>
+        <span class="quick-action__icon"><n-icon :size="16" :component="action.icon" /></span>
         <span>{{ action.label }}</span>
       </router-link>
     </nav>
@@ -394,7 +394,7 @@ onMounted(() => void load())
             class="metric"
             :class="`metric--${metricTone(metric)}`"
           >
-            <span class="metric__icon"><n-icon :size="18" :component="metric.icon" /></span>
+            <span class="metric__icon"><n-icon :size="16" :component="metric.icon" /></span>
             <span class="metric__label">{{ metric.label }}</span>
             <n-skeleton v-if="loading" text class="metric__skeleton" />
             <strong v-else class="metric__value">{{ metric.value ?? '—' }}</strong>

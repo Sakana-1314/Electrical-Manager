@@ -104,7 +104,7 @@ const router = createRouter({
           path: 'warehouse/lite',
           name: 'warehouse-lite',
           component: () => import('@/views/warehouse/SecondaryWarehouseLiteView.vue'),
-          meta: { title: '精简二级库', permission: 'lite:read' },
+          meta: { title: '二级库', permission: 'lite:read' },
         },
         {
           path: 'warehouse/operations',
