@@ -14,11 +14,12 @@ const PAGE_ROUTE = '/pages/ledger/ledger';
 
 const PAGE_SIZE = 15;
 
-/** 列表行装饰：数量与单位合并展示，子项号缺省显示「未设置」。 */
+/** 列表行装饰：数量与单位拆开存（卡片数值大字 + 单位小字后缀），子项号缺省显示「未设置」。 */
 function decorateLedger(item) {
   return {
     ...item,
-    quantity_label: `${item.quantity} ${item.unit_name}`,
+    quantity: item.quantity != null ? String(item.quantity) : '',
+    quantity_unit: item.unit_name || '',
     subitem_no_label: item.subitem_no || t('notSet'),
   };
 }

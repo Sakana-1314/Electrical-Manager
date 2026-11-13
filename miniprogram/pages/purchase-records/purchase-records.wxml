@@ -46,7 +46,7 @@
       <view class="card-meta">
         <view class="meta-item">
           <view class="meta-label">{{i18n.purchaseQuantity}}</view>
-          <view class="quantity-value">{{item.quantity_label}}</view>
+          <view class="quantity-value">{{item.quantity}}<text wx:if="{{item.quantity_unit}}" class="quantity-unit">{{item.quantity_unit}}</text></view>
         </view>
         <view class="meta-item responsible-item">
           <view class="meta-label">{{i18n.purchaseOrderNo}}</view>

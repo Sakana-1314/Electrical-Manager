@@ -31,20 +31,24 @@
       bind:tap="openDetail"
       data-index="{{index}}"
     >
+      <view wx:if="{{item.purchaser}}" class="card-topline">
+        <view class="topline-right">
+          <t-tag theme="default" variant="light" size="small">{{item.purchaser}}</t-tag>
+        </view>
+      </view>
       <view class="card-heading">
         <view class="material-name">{{item.name || i18n.notSet}}</view>
-        <t-tag wx:if="{{item.purchaser}}" theme="default" variant="light" size="small">{{item.purchaser}}</t-tag>
       </view>
       <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
       <view class="card-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.stockQuantity}}</view>
+          <view class="quantity-value">{{item.quantity}}<text wx:if="{{item.quantity_unit}}" class="quantity-unit">{{item.quantity_unit}}</text></view>
+        </view>
         <view class="meta-item code-item">
           <view class="meta-label">{{i18n.materialCodeLabel}}</view>
           <view class="meta-code">{{item.material_code}}</view>
-        </view>
-        <view class="meta-item">
-          <view class="meta-label">{{i18n.stockQuantity}}</view>
-          <view class="quantity-value">{{item.qtyDisplay}}</view>
         </view>
         <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
       </view>

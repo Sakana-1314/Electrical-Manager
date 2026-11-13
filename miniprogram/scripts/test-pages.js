@@ -567,7 +567,8 @@ async function run() {
       name: '内丝三通',
       model_spec: 'DN15',
       material_code: 'L012-05048',
-      qtyDisplay: '25 个',
+      quantity: '25',
+      quantity_unit: '个',
     },
   ];
   let huaxingDetailUrl = '';

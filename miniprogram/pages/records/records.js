@@ -21,7 +21,9 @@ function decorateRecord(item) {
     occurred_at_label: formatDateTime(item.occurred_at),
     receiver_name_label: item.receiver_name || t('notSet'),
     subitem_no_label: item.subitem_no || t('notSet'),
-    quantity_label: `${item.quantity} ${item.unit_name}`,
+    // 数量与单位拆开存：卡片数值用主色大字、单位做小字后缀（与其它列表页同一形态）。
+    quantity: item.quantity != null ? String(item.quantity) : '',
+    quantity_unit: item.unit_name || '',
     stock_change_label: `${item.before_qty} → ${item.after_qty} ${item.unit_name}`,
   };
 }
