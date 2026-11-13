@@ -46,7 +46,7 @@
         </view>
       </view>
       <view class="card-heading">
-        <view class="hazard-description">{{item.description}}</view>
+        <view class="material-name">{{item.description}}</view>
       </view>
       <view class="hazard-meta-line">
         <t-tag theme="{{item.level_theme}}" variant="light" size="small">{{item.level}}</t-tag>

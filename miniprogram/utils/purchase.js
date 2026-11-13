@@ -14,7 +14,9 @@ function decoratePurchaseRecord(item) {
     ...item,
     plan_date_label: String(item.plan_date || '').replace(/-/g, '/'),
     purchase_date_label: String(item.purchase_date || '').replace(/-/g, '/'),
-    quantity_label: `${item.purchase_qty} ${item.unit_name}`,
+    // 数量与单位拆开存：卡片数值用主色大字、单位做小字后缀（与其它列表页同一形态）。
+    quantity: item.purchase_qty != null ? String(item.purchase_qty) : '',
+    quantity_unit: item.unit_name || '',
     purchase_order_no_label: item.purchase_order_no || t('notSet'),
     status_theme: purchaseStatusTheme(item.status),
   }

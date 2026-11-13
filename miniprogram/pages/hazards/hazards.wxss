@@ -1,5 +1,6 @@
 /* 卡片骨架、分割线上下排版与箭头由 app.wxss 的 .list-card 通用件承担。
- * 隐患卡数据区是三列等宽（区域 / 整改人 / 期限），没有主数量列。 */
+ * 隐患卡没有数量列：数据区是三列等宽（区域 / 整改人 / 期限）；标题用通用 .material-name。
+ * 标题下的等级 tag + 隐患类型行对应其它列表卡的「型号规格」位置。 */
 .hazard-list {
   display: flex;
   flex-direction: column;
@@ -9,13 +10,6 @@
 .meta-item {
   flex: 1;
   min-width: 0;
-}
-
-.hazard-description {
-  color: var(--app-text-strong);
-  font-size: 30rpx;
-  font-weight: 650;
-  line-height: 1.45;
 }
 
 .hazard-meta-line {

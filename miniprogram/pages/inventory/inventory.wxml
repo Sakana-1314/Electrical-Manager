@@ -34,22 +34,22 @@
       data-uuid="{{item.uuid}}"
       bind:tap="openDetail"
     >
+      <view wx:if="{{item.stock_status}}" class="card-topline">
+        <view class="topline-right">
+          <t-tag theme="{{item.stock_status_theme}}" variant="light" size="small">
+            {{item.stock_status_label}}
+          </t-tag>
+        </view>
+      </view>
       <view class="card-heading">
         <view class="material-name">{{item.name}}</view>
-        <t-tag wx:if="{{item.stock_status}}" theme="{{item.stock_status_theme}}" variant="light" size="small">
-          {{item.stock_status_label}}
-        </t-tag>
       </view>
       <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
       <view class="card-divider"></view>
       <view class="card-meta">
         <view class="meta-item">
           <view class="meta-label">{{i18n.stockQuantity}}</view>
-          <view class="quantity-value">{{item.current_qty}}</view>
-        </view>
-        <view class="meta-item unit-item">
-          <view class="meta-label">{{i18n.unit}}</view>
-          <view class="meta-value">{{item.unit_name}}</view>
+          <view class="quantity-value">{{item.current_qty}}<text wx:if="{{item.unit_name}}" class="quantity-unit">{{item.unit_name}}</text></view>
         </view>
         <t-icon wx:if="{{!item.is_lite}}" class="card-arrow" name="chevron-right" size="36rpx" />
       </view>

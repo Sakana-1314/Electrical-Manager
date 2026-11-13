@@ -1,33 +1,26 @@
-/* 卡片骨架与分割线由 app.wxss 的 .list-card 通用件承担。
- * 操作记录没有详情页：卡片不可点、不带箭头，分割线下方是逐行的字段明细。 */
+/* 卡片骨架与分割线上下排版由 app.wxss 的 .list-card 通用件承担。
+ * 操作记录没有详情页：卡片不可点、不带箭头。数量 / 库存变化走通用数据区，
+ * 用途 / 领用人 / 子项号 / 单号这类逐行明细紧跟数据区（detail-list）。 */
 .records-list {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
 }
 
-.record-no {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--app-text-secondary);
-  font-size: 23rpx;
-  text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.meta-item {
+  min-width: 190rpx;
 }
 
-.material-line {
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-  margin-top: 12rpx;
+.change-item {
+  flex: 1;
+  min-width: 0;
 }
 
 .detail-list {
   display: flex;
   flex-direction: column;
   gap: 10rpx;
+  margin-top: 18rpx;
 }
 
 .detail-row {

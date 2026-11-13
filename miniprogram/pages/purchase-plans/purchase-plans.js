@@ -55,7 +55,9 @@ function decoratePlan(item) {
   return {
     ...item,
     plan_date_label: String(item.plan_date || '').replace(/-/g, '/'),
-    quantity_label: `${item.planned_qty} ${item.unit_name}`,
+    // 数量与单位拆开存：卡片数值用主色大字、单位做小字后缀（与其它列表页同一形态）。
+    quantity: item.planned_qty != null ? String(item.planned_qty) : '',
+    quantity_unit: item.unit_name || '',
     // 紧急程度三档：非常紧急用危险色，紧急用警告色，正常不额外强调。
     urgency_theme:
       item.urgency === '非常紧急' ? 'danger' : item.urgency === '紧急' ? 'warning' : 'default',

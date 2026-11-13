@@ -5,7 +5,11 @@
   gap: 16rpx;
 }
 
-/* 编码列是本卡的主信息，吃掉剩余宽度；数量列保持内容宽。 */
+.meta-item {
+  min-width: 190rpx;
+}
+
+/* 编码列是本卡的长信息，吃掉剩余宽度（覆盖 .meta-item 的 min-width）。 */
 .code-item {
   flex: 1;
   min-width: 0;
