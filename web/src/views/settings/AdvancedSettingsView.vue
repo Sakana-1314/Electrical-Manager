@@ -13,12 +13,17 @@ const permissionOptions = ref<PermissionRead[]>([])
 const MODULE_LABELS: Record<string, string> = {
   system: '系统管理',
   warehouse: '二级库',
-  lite: '精简二级库',
+  lite: '二级库',
   purchase: '申购',
   huaxing: '华星总库存',
   ledger: '台账',
   hazard: '隐患',
   work: '工单',
+}
+/** 权限勾选项文案：精简二级库的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
+function permissionItemLabel(item: PermissionRead): string {
+  if (item.module === 'lite' && item.action === 'write') return '导入'
+  return item.action === 'write' ? '读写' : item.action === 'read' ? '查看' : '可管理'
 }
 const permissionGroups = computed(() => {
   const groups = new Map<string, PermissionRead[]>()
@@ -111,17 +116,10 @@ onMounted(load)
               <span>{{ form.mini_program_registration_enabled ? '允许' : '关闭' }}</span>
             </div>
           </n-form-item>
-          <p class="settings-hint">
-            关闭后小程序不再接受新用户绑定；新注册用户直接启用，能做什么由下面的默认权限决定。
-          </p>
         </n-form>
       </n-card>
 
       <n-card class="settings-card" title="默认用户权限" :bordered="false">
-        <p class="settings-hint">
-          新建用户与小程序新注册用户默认获得这些权限；写权限会自动包含同模块查看。
-          标准二级库与精简二级库是两套独立权限，按需勾选。
-        </p>
         <div class="permission-grid">
           <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
             <div class="permission-group-label">{{ group.label }}</div>
@@ -130,9 +128,7 @@ onMounted(load)
                 v-for="item in group.items"
                 :key="item.key"
                 :checked="form.default_permissions.includes(item.key)"
-                :label="
-                  item.action === 'write' ? '读写' : item.action === 'read' ? '查看' : '可管理'
-                "
+                :label="permissionItemLabel(item)"
                 @update:checked="togglePermission(item.key, $event)"
               />
             </div>
@@ -175,14 +171,6 @@ onMounted(load)
   gap: 10px;
   color: var(--color-text);
   font-size: 13px;
-}
-
-.settings-hint {
-  max-width: 680px;
-  margin: 0 0 12px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 .permission-grid {
