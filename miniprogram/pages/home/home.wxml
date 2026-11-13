@@ -1,6 +1,6 @@
 <app-navbar title="{{i18n.homeTitle}}" back="{{false}}" />
 <view class="page-shell home-page">
-  <!-- 品牌头图：渐变实底 + 轨道装饰，承载标题、身份入口与首页唯一主动作（扫码出库）。
+  <!-- 品牌头图：渐变实底 + 轨道装饰，承载标题、身份入口与首页唯一主动作（扫一扫）。
        与绑定页的品牌面板同一套语言，首屏先立住品牌，再往下铺功能入口。 -->
   <view class="brand-panel">
     <view class="brand-orbit brand-orbit-large"></view>
@@ -18,22 +18,23 @@
 
     <!-- 登录态与功能配置返回前不渲染扫码入口：canScan 依赖功能配置，先渲染再收起会闪。 -->
     <block wx:if="{{featureReady}}">
-      <!-- 扫码出库：首页唯一的主动作，整张卡片可点（不再嵌套「开始扫码」按钮）；
-           放在头图内的玻璃卡里，与下方功能卡拉开层级。 -->
+      <!-- 扫一扫：首页唯一的主动作，整张卡片可点（不再嵌套「开始扫码」按钮）；
+           放在头图内的玻璃卡里，与下方功能卡拉开层级。描述随权限变化：
+           有出库写权限时进入出库确认，只有读权限时查看物资详情。 -->
       <view
         wx:if="{{canScan}}"
         class="scan-card"
         hover-class="scan-card-active"
         aria-role="button"
-        aria-label="{{i18n.scanMaterialCode}}"
+        aria-label="{{i18n.scanTitle}}"
         bind:tap="scanMaterial"
       >
         <view class="scan-icon">
           <t-icon class="{{scanning ? 'scan-spinner' : ''}}" name="{{scanning ? 'loading' : 'scan'}}" size="52rpx" />
         </view>
         <view class="scan-content">
-          <view class="scan-title">{{i18n.scanMaterialCode}}</view>
-          <view class="scan-description">{{i18n.scanDescription}}</view>
+          <view class="scan-title">{{i18n.scanTitle}}</view>
+          <view class="scan-description">{{scanDescription}}</view>
         </view>
         <view class="scan-arrow">
           <t-icon name="chevron-right" size="32rpx" />

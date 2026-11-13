@@ -1,6 +1,6 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
-const { canOutbound, entryEnabled } = require('../../utils/features');
+const { canOutbound, entryEnabled, hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
@@ -28,8 +28,10 @@ Page({
       hazards: true,
       materialCodes: true,
     },
-    // 扫码出库入口：没有标准二级库写权限时不渲染。
+    // 扫一扫入口：没有标准二级库读权限时不渲染（出库还需写权限，扫到物资后按权限分流）。
     canScan: false,
+    // 扫一扫描述文案：随权限变化——有出库写权限时提示进入出库确认，只读时提示查看详情。
+    scanDescription: '',
     i18n: getMessages(),
   },
 
@@ -73,7 +75,8 @@ Page({
           hazards: entryEnabled('hazards'),
           materialCodes: entryEnabled('materialCodes'),
         },
-        canScan: canOutbound(),
+        canScan: hasStandardInventory(),
+        scanDescription: canOutbound() ? t('scanDescription') : t('scanDescriptionView'),
       });
     } catch (error) {
       this.setData({ loadFailed: true });
@@ -167,7 +170,7 @@ Page({
   },
 
   async scanMaterial() {
-    if (!canOutbound()) {
+    if (!hasStandardInventory()) {
       this.showError(new Error(t('outboundNotOpen')));
       return;
     }
@@ -180,7 +183,12 @@ Page({
       if (!materialUuid) {
         throw new Error(t('materialUuidMissing'));
       }
-      wx.navigateTo({ url: `/pages/outbound/outbound?uuid=${materialUuid}` });
+      // 扫一扫按权限分流：有出库写权限进出库确认，只读权限查看物资详情。
+      if (canOutbound()) {
+        wx.navigateTo({ url: `/pages/outbound/outbound?uuid=${materialUuid}` });
+      } else {
+        wx.navigateTo({ url: `/pages/material-detail/material-detail?uuid=${materialUuid}` });
+      }
     } catch (error) {
       if (!String(error.errMsg || '').includes('cancel')) {
         this.showError(error);

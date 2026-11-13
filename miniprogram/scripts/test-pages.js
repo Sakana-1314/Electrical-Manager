@@ -4,7 +4,7 @@
  * 用最小 wx / App / 组件桩加载页面与 filter-panel 组件，验证：
  *  - 页面把筛选面板的 sections / active 组装正确，面板确认后按 key 拼请求参数；
  *  - 面板内部：草稿、选中态、确定回传、胶囊删除、分享值补齐；
- *  - 首页扫码入口只按 canOutbound 渲染。
+ *  - 首页扫码入口按标准二级库读权限渲染，描述随出库写权限变化。
  * 只读产物，不发网络请求（request 模块被桩替换）。
  */
 const path = require('path');
@@ -82,33 +82,16 @@ require.cache[requestPath] = {
 };
 
 // ---- getApp 桩 ----
-global.getApp = () => ({
-  globalData: {
-    authPromise: Promise.resolve({
-      user: {
-        display_name: '张三',
-        created_at: '2026-01-01T00:00:00Z',
-        permissions: [
-          'warehouse:read',
-          'warehouse:write',
-          'purchase:read',
-          'huaxing:read',
-          'ledger:read',
-          'hazard:read',
-          'hazard:write',
-        ],
-      },
-      account_disabled: false,
-      registration_disabled: false,
-      requires_profile: false,
-    }),
+// globalData 用单例承载：页面中途写的 pendingMaterialUuid 等字段全跑测试共享，
+// 也方便单个用例直接改 user.permissions 模拟不同权限（用完记得还原）。
+const appGlobalData = {
+  authPromise: Promise.resolve({
     user: {
       display_name: '张三',
       created_at: '2026-01-01T00:00:00Z',
       permissions: [
         'warehouse:read',
         'warehouse:write',
-        'lite:read',
         'purchase:read',
         'huaxing:read',
         'ledger:read',
@@ -116,9 +99,27 @@ global.getApp = () => ({
         'hazard:write',
       ],
     },
-    pendingMaterialUuid: '',
+    account_disabled: false,
+    registration_disabled: false,
+    requires_profile: false,
+  }),
+  user: {
+    display_name: '张三',
+    created_at: '2026-01-01T00:00:00Z',
+    permissions: [
+      'warehouse:read',
+      'warehouse:write',
+      'lite:read',
+      'purchase:read',
+      'huaxing:read',
+      'ledger:read',
+      'hazard:read',
+      'hazard:write',
+    ],
   },
-});
+  pendingMaterialUuid: '',
+};
+global.getApp = () => ({ globalData: appGlobalData });
 
 // ---- Page 桩：拿到配置对象，模拟 setData ----
 let pageConfig = null;
@@ -690,12 +691,49 @@ async function run() {
   assert(page.data.optionsFailed === true, 'ledger option failure must set optionsFailed');
   delete global.__cachedFail;
 
-  // ===== 首页：扫码入口按 canOutbound 显示 =====
+  // ===== 首页：扫码入口按标准二级库读权限显示，描述随出库写权限变化 =====
+  const globalUser = global.getApp().globalData.user;
+  const homePermissions = globalUser.permissions;
   const home = loadPage('pages/home/home.js');
   void home.onLoad();
   await waitFor(() => home.data.featureReady || home.data.loadFailed, 'home session');
-  assert(home.data.canScan === true, 'warehouse:write permission allows scanning');
+  assert(home.data.canScan === true, 'warehouse write permission allows scanning');
   assert(home.data.featureReady === true, 'home entries must be ready');
+  assert(
+    home.data.scanDescription === i18n.t('scanDescription'),
+    'outbound permission must keep the outbound scan description',
+  );
+
+  // 扫码分流：有出库写权限时进入出库确认页
+  const originalScanCode = global.wx.scanCode;
+  const originalHomeNavigate = global.wx.navigateTo;
+  const navigatedTo = [];
+  global.wx.scanCode = ({ success }) => success({ path: '550e8400-e29b-41d4-a716-446655440000' });
+  global.wx.navigateTo = (options) => navigatedTo.push(options.url);
+  await home.scanMaterial();
+  assert(
+    navigatedTo.pop() === '/pages/outbound/outbound?uuid=550e8400-e29b-41d4-a716-446655440000',
+    'scanning with outbound permission must open the outbound page',
+  );
+
+  // 只读权限：入口保留，描述换成查看详情，扫码直达物资详情页
+  globalUser.permissions = homePermissions.filter((key) => key !== 'warehouse:write');
+  const readOnlyHome = loadPage('pages/home/home.js');
+  void readOnlyHome.onLoad();
+  await waitFor(() => readOnlyHome.data.featureReady || readOnlyHome.data.loadFailed, 'home session (read only)');
+  assert(readOnlyHome.data.canScan === true, 'warehouse read permission must keep the scan entry');
+  assert(
+    readOnlyHome.data.scanDescription === i18n.t('scanDescriptionView'),
+    'read-only permission must switch the scan description to viewing details',
+  );
+  await readOnlyHome.scanMaterial();
+  assert(
+    navigatedTo.pop() === '/pages/material-detail/material-detail?uuid=550e8400-e29b-41d4-a716-446655440000',
+    'scanning without outbound permission must open the material detail page',
+  );
+  globalUser.permissions = homePermissions;
+  global.wx.scanCode = originalScanCode;
+  global.wx.navigateTo = originalHomeNavigate;
 
   // ===== 个人信息页：用户 / 功能模式走 getApp().globalData，项目选择器在此页 =====
   global.__cachedResponse = {};

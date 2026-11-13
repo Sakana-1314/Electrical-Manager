@@ -292,15 +292,18 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     }
   }
   // 扫码是首页唯一的主动作：整卡可点，不能再嵌套「开始扫码」按钮（版式与功能入口一致）。
-  if (!homeMarkup.includes('aria-label="{{i18n.scanMaterialCode}}"') ||
+  if (!homeMarkup.includes('aria-label="{{i18n.scanTitle}}"') ||
       !homeMarkup.includes('bind:tap="scanMaterial"')) {
     throw new Error('The home scan card must be tappable as a whole.');
   }
   if (homeMarkup.includes('class="scan-action"')) {
     throw new Error('The home scan card must not nest a separate start-scan button.');
   }
-  if (!homeScript.includes('canScan: canOutbound()')) {
-    throw new Error('The home scan card must only render when outbound is allowed.');
+  if (!homeScript.includes('canScan: hasStandardInventory()')) {
+    throw new Error('The home scan card must only render when standard inventory is readable.');
+  }
+  if (!homeScript.includes("canOutbound() ? t('scanDescription') : t('scanDescriptionView')")) {
+    throw new Error('The home scan description must follow the outbound permission.');
   }
   for (const snippet of ['!featureReady && !loadFailed', 'bind:tap="retryLoad"']) {
     if (!homeMarkup.includes(snippet)) {
