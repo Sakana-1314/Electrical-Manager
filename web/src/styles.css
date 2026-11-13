@@ -221,6 +221,20 @@ a {
 .n-card.n-modal .n-card-content {
   padding: 14px 22px 18px;
 }
+/* 用户详情弹窗：标题下加分隔线，表单行之间留 14px（scoped :deep 作用不到 teleport 出来的弹窗根，写在全局） */
+.n-card.n-modal.user-edit-modal .n-card-header {
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.n-card.n-modal.user-edit-modal .n-card-content {
+  padding: 14px 22px 18px;
+}
+.n-card.n-modal.user-edit-modal .n-form-item {
+  margin-bottom: 14px;
+}
+.n-card.n-modal.user-edit-modal .n-form-item:last-child {
+  margin-bottom: 0;
+}
 /* 侧栏菜单密度：默认 42px 菜单项压到 34px（!important 压过 Naive 写在根上的内联变量） */
 .n-menu {
   --n-item-height: 36px !important;

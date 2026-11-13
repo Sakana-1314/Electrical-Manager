@@ -613,19 +613,6 @@ function remove(row: ManagedUser) {
   white-space: nowrap;
 }
 /* ===== 用户详情弹窗：左标签 + 双列 + 小控件，整体高度压到一屏内 ===== */
-.user-edit-modal :deep(.n-card-header) {
-  padding: 16px 22px 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-.user-edit-modal :deep(.n-card-content) {
-  padding: 14px 22px 18px;
-}
-.user-edit-modal :deep(.n-form-item) {
-  margin-bottom: 10px;
-}
-.user-edit-modal :deep(.n-form-item:last-child) {
-  margin-bottom: 0;
-}
 .form-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
