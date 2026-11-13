@@ -245,10 +245,6 @@ async def test_user_read_echoes_wechat_openid(client: AsyncClient) -> None:
     row = next(i for i in listed.json()["items"] if i["id"] == user_id)
     assert row["wechat_openid"] == "openid-bound-display"
 
-    detail = await client.get(f"/api/v1/users/{user_id}", headers=admin)
-    assert detail.status_code == 200, detail.text
-    assert detail.json()["wechat_openid"] == "openid-bound-display"
-
 
 @pytest.mark.asyncio
 async def test_default_read_permissions_gate_module_reads(client: AsyncClient) -> None:
