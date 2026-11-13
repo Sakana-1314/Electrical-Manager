@@ -71,7 +71,7 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
     {
       // 精简二级库：独立权限位（lite:read），Excel 导入 + 只读查询，与标准二级库互不依赖。
       key: 'warehouse_lite',
-      build: () => link('精简二级库', 'warehouse-lite', ListOutline),
+      build: () => link('二级库', 'warehouse-lite', ListOutline),
     },
     {
       key: 'huaxing_inventory',
