@@ -2,14 +2,13 @@ import { h, type Component as VueComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { NIcon, type MenuOption } from 'naive-ui'
 import {
-  BusinessOutline,
   CalendarOutline,
   CartOutline,
-  CubeOutline,
   DocumentTextOutline,
+  FileTrayStackedOutline,
   GridOutline,
+  LayersOutline,
   LibraryOutline,
-  ListOutline,
   SettingsOutline,
   WarningOutline,
 } from '@vicons/ionicons5'
@@ -57,7 +56,7 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
       build: () => ({
         label: '二级库',
         key: 'warehouse-group',
-        icon: renderIcon(CubeOutline),
+        icon: renderIcon(FileTrayStackedOutline),
         children: [
           link('库存查询', 'stock'),
           link('物资档案', 'stock-materials'),
@@ -71,11 +70,11 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
     {
       // 精简二级库：独立权限位（lite:read），Excel 导入 + 只读查询，与标准二级库互不依赖。
       key: 'warehouse_lite',
-      build: () => link('二级库', 'warehouse-lite', ListOutline),
+      build: () => link('二级库', 'warehouse-lite', FileTrayStackedOutline),
     },
     {
       key: 'huaxing_inventory',
-      build: () => link('华星总库存', 'hua-xing-stock', BusinessOutline),
+      build: () => link('华星总库存', 'hua-xing-stock', LayersOutline),
     },
     {
       key: 'procurement',
