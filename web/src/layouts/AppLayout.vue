@@ -61,7 +61,8 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
         class="sider-menu"
         :collapsed="collapsed"
         :collapsed-width="64"
-        :collapsed-icon-size="22"
+        :icon-size="16"
+        :collapsed-icon-size="18"
         :options="menuOptions"
         :value="String(route.name || '')"
       />
@@ -81,7 +82,7 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
           aria-label="打开导航菜单"
           @click="drawerOpen = true"
         >
-          <n-icon :size="20"><MenuOutline /></n-icon>
+          <n-icon :size="18"><MenuOutline /></n-icon>
         </button>
         <div class="mobile-title">{{ route.meta.title }}</div>
       </n-layout-header>
@@ -123,6 +124,7 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
     </div>
     <n-menu
       class="drawer-menu"
+      :icon-size="16"
       :options="menuOptions"
       :value="String(route.name || '')"
       @update:value="closeDrawer"
