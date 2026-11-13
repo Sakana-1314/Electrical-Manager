@@ -9,7 +9,11 @@ export const tableColumnWidths = {
   datetime: 172,
   status: 104,
   person: 120,
+  /** 需求部门：部门名称比人名长，给更宽的列，避免频繁省略。 */
+  department: 160,
   code: 150,
+  /** 申购列表的物料编码列：编码定长，120px 足够，把宽度让给部门。 */
+  codeNarrow: 120,
   identifier: 176,
   name: 220,
   description: 260,

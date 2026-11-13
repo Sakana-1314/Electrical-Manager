@@ -419,7 +419,7 @@ const availableColumns: Array<{
     column: {
       title: '需求部门',
       key: 'demand_department',
-      width: tableColumnWidths.person,
+      width: tableColumnWidths.department,
       render: (row) => renderTwoLineText(row.demand_department),
     },
   },
@@ -451,7 +451,7 @@ const availableColumns: Array<{
     column: {
       title: '物料编码',
       key: 'material_code',
-      width: tableColumnWidths.code,
+      width: tableColumnWidths.codeNarrow,
       // 与申购计划 / 周期性计划同一渲染：缺编码时统一显示黄色「暂无编码」
       render: (row) => renderMaterialCode(row.material_code),
     },

@@ -212,7 +212,7 @@ const availableColumns: Array<{
     column: {
       title: '物料编码',
       key: 'material_code',
-      width: tableColumnWidths.code,
+      width: tableColumnWidths.codeNarrow,
       render: (row) => renderMaterialCode(row.material_code),
     },
   },
@@ -242,7 +242,7 @@ const availableColumns: Array<{
     column: {
       title: '需求部门',
       key: 'demand_department',
-      width: tableColumnWidths.person,
+      width: tableColumnWidths.department,
       render: (row) => renderTwoLineText(row.demand_department, '-'),
     },
   },
