@@ -399,29 +399,60 @@ function remove(row: ManagedUser) {
       draggable
       class="user-edit-modal"
       :title="editing ? '用户详情' : '新建用户'"
-      style="width: min(640px, calc(100vw - 32px))"
-      ><n-form label-placement="left" label-width="92" size="small" :show-feedback="false"
-        ><div class="form-grid-2">
+      style="width: min(660px, calc(100vw - 32px))"
+      ><n-form label-placement="left" label-width="84" size="small" :show-feedback="false"
+        ><div v-if="editing" class="identity-header">
+          <div class="identity-avatar">
+            {{ (editing.display_name || editing.username).slice(0, 1) }}
+          </div>
+          <div class="identity-text">
+            <div class="identity-name">{{ editing.display_name || editing.username }}</div>
+            <div class="identity-sub">@{{ editing.username }}</div>
+          </div>
+          <n-tag :type="editing.wechat_openid ? 'success' : 'default'" size="small" round>
+            {{ editing.wechat_openid ? '小程序已绑定' : '未绑定小程序' }}
+          </n-tag>
+        </div>
+        <div class="form-grid-2">
           <n-form-item label="用户名" required
             ><n-input v-model:value="form.username" /></n-form-item
           ><n-form-item label="显示名称" required
             ><n-input v-model:value="form.display_name"
           /></n-form-item>
         </div>
-        <n-form-item label="部门单位"><n-input v-model:value="form.department_name" /></n-form-item>
-        <div v-if="editing" class="user-meta">
-          <n-tag :type="editing.wechat_openid ? 'success' : 'default'" size="small" round>
-            {{ editing.wechat_openid ? '小程序已绑定' : '小程序未绑定' }}
-          </n-tag>
-          <span v-if="editing.wechat_openid" class="meta-openid" :title="editing.wechat_openid">
-            OpenID：{{ editing.wechat_openid }}
-          </span>
-          <span class="meta-time">首次 {{ formatShanghaiTime(editing.created_at) }}</span>
-          <span class="meta-time">
-            最近 {{ formatShanghaiTime(editing.last_used_at ?? undefined) }}
-          </span>
+        <div class="form-grid-2">
+          <n-form-item label="部门单位"
+            ><n-input v-model:value="form.department_name" /></n-form-item
+          ><n-form-item label="账号状态">
+            <div class="status-control">
+              <n-switch v-model:value="form.enabled" size="small" />
+              <span>{{ form.enabled ? '启用' : '停用' }}</span>
+            </div></n-form-item
+          >
         </div>
-        <n-form-item label="权限">
+        <n-form-item v-if="!editing" label="初始密码" required
+          ><n-input v-model:value="form.password" type="password" show-password-on="click"
+        /></n-form-item>
+        <div v-if="editing" class="login-strip">
+          <div class="login-item login-item--openid">
+            <span class="login-label">OpenID</span>
+            <span class="login-value login-mono" :title="editing.wechat_openid || ''">
+              {{ editing.wechat_openid || '—' }}
+            </span>
+          </div>
+          <div class="login-item">
+            <span class="login-label">首次登录</span>
+            <span class="login-value">{{ formatShanghaiTime(editing.created_at) }}</span>
+          </div>
+          <div class="login-item">
+            <span class="login-label">最近登录</span>
+            <span class="login-value">{{
+              formatShanghaiTime(editing.last_used_at ?? undefined)
+            }}</span>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-title">权限</div>
           <div class="permission-grid">
             <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
               <div class="permission-group-label">{{ group.label }}</div>
@@ -435,40 +466,44 @@ function remove(row: ManagedUser) {
                   @update:checked="togglePermission(item.key, $event)"
                 />
               </div>
-            </div></div
-        ></n-form-item>
-        <div class="form-grid-2">
-          <n-form-item :label="editing ? '重置密码' : '初始密码'" :required="!editing"
+            </div>
+          </div>
+        </div>
+        <div v-if="editing" class="form-section">
+          <div class="section-title">安全与接入</div>
+          <n-form-item label="重置密码"
             ><n-input
               v-model:value="form.password"
               type="password"
               show-password-on="click"
-              :placeholder="editing ? '留空表示不修改' : ''" /></n-form-item
-          ><n-form-item label="启用"
-            ><n-switch v-model:value="form.enabled" size="small"
-          /></n-form-item>
-        </div>
-        <n-form-item v-if="editing" label="接口令牌"
-          ><n-input-group>
-            <n-input
-              :value="
-                editing.api_token ??
-                '（旧版令牌将在其下次接口调用后自动回显；点击重新生成立即可见）'
-              "
-              readonly
-            />
-            <n-button size="small" :disabled="!editing.api_token" @click="copyApiToken"
-              >复制</n-button
-            ><n-button size="small" @click="regenerateApiToken">重新生成</n-button></n-input-group
-          ></n-form-item
-        ><n-form-item v-if="editing" label="MCP 地址"
-          ><n-input-group>
-            <n-input :value="mcpUrl || '（接口令牌回显后可复制 MCP 地址）'" readonly />
-            <n-button size="small" type="primary" secondary :disabled="!mcpUrl" @click="copyMcpUrl"
-              >复制</n-button
-            ></n-input-group
-          ></n-form-item
-        ></n-form
+              placeholder="留空表示不修改" /></n-form-item
+          ><n-form-item label="接口令牌"
+            ><n-input-group>
+              <n-input
+                :value="
+                  editing.api_token ??
+                  '（旧版令牌将在其下次接口调用后自动回显；点击重新生成立即可见）'
+                "
+                readonly
+              />
+              <n-button size="small" :disabled="!editing.api_token" @click="copyApiToken"
+                >复制</n-button
+              ><n-button size="small" @click="regenerateApiToken">重新生成</n-button></n-input-group
+            ></n-form-item
+          ><n-form-item label="MCP 地址"
+            ><n-input-group>
+              <n-input :value="mcpUrl || '（接口令牌回显后可复制 MCP 地址）'" readonly />
+              <n-button
+                size="small"
+                type="primary"
+                secondary
+                :disabled="!mcpUrl"
+                @click="copyMcpUrl"
+                >复制</n-button
+              ></n-input-group
+            ></n-form-item
+          >
+        </div></n-form
       ><template #footer
         ><n-space justify="space-between" style="width: 100%"
           ><n-space v-if="editing"
@@ -580,59 +615,136 @@ function remove(row: ManagedUser) {
 }
 /* ===== 用户详情弹窗：左标签 + 双列 + 小控件，整体高度压到一屏内 ===== */
 .user-edit-modal :deep(.n-card-header) {
-  padding: 14px 18px 6px;
+  padding: 16px 22px 8px;
 }
 .user-edit-modal :deep(.n-card-content) {
-  padding: 8px 18px 12px;
+  padding: 4px 22px 18px;
 }
 .user-edit-modal :deep(.n-form-item) {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .user-edit-modal :deep(.n-form-item:last-child) {
   margin-bottom: 0;
 }
-.form-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 16px;
-}
-.user-meta {
+/* 身份摘要：头像 + 姓名 + 绑定状态，一眼确认在编辑谁 */
+.identity-header {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  margin: 0 0 12px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.4;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 2px 0 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
-.meta-openid {
+.identity-avatar {
+  display: grid;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+  font-size: 15px;
+  font-weight: 600;
+}
+.identity-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.identity-name {
   overflow: hidden;
-  max-width: 230px;
+  color: var(--color-text-strong);
+  font-size: 15px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.meta-time {
+.identity-sub {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
   white-space: nowrap;
+}
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+.status-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 13px;
+}
+/* 登录信息：浅底三列，避免一行小字挤在输入框下面 */
+.login-strip {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 6px 14px;
+  margin: 2px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-panel);
+}
+.login-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.login-label {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+.login-value {
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.login-item--openid .login-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.login-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+/* 分区：细分割线 + 小标题，给权限 / 安全区留出呼吸感 */
+.form-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+.section-title {
+  margin-bottom: 8px;
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  width: 100%;
+  gap: 6px 8px;
 }
 .permission-group {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-  padding: 5px 9px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 7px;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--color-panel);
 }
 .permission-group-label {
   flex: none;
-  width: 66px;
+  width: 64px;
   color: var(--color-text-strong);
   font-size: 12px;
   font-weight: 600;
@@ -640,13 +752,16 @@ function remove(row: ManagedUser) {
 .permission-group-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 10px;
+  gap: 4px 12px;
 }
 @media (max-width: 560px) {
   .form-grid-2 {
     grid-template-columns: minmax(0, 1fr);
   }
   .permission-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .login-strip {
     grid-template-columns: minmax(0, 1fr);
   }
 }
