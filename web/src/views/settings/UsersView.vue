@@ -546,8 +546,8 @@ function remove(row: ManagedUser) {
 }
 .compact-table :deep(.n-data-table-th),
 .compact-table :deep(.n-data-table-td) {
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 .user-cell {
   display: flex;
@@ -586,7 +586,7 @@ function remove(row: ManagedUser) {
   padding: 8px 18px 12px;
 }
 .user-edit-modal :deep(.n-form-item) {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .user-edit-modal :deep(.n-form-item:last-child) {
   margin-bottom: 0;
@@ -601,7 +601,7 @@ function remove(row: ManagedUser) {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 14px;
-  margin: -2px 0 10px;
+  margin: 0 0 12px;
   color: var(--color-text-muted);
   font-size: 12px;
   line-height: 1.4;
@@ -618,7 +618,7 @@ function remove(row: ManagedUser) {
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 10px;
+  gap: 8px 12px;
   width: 100%;
 }
 .permission-group {
@@ -626,13 +626,13 @@ function remove(row: ManagedUser) {
   align-items: baseline;
   gap: 8px;
   min-width: 0;
-  padding: 4px 8px;
+  padding: 5px 9px;
   border: 1px solid var(--color-border-subtle);
   border-radius: 7px;
 }
 .permission-group-label {
   flex: none;
-  width: 62px;
+  width: 66px;
   color: var(--color-text-strong);
   font-size: 12px;
   font-weight: 600;
