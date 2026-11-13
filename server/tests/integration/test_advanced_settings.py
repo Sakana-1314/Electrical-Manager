@@ -48,13 +48,10 @@ async def test_advanced_settings_permissions_and_round_trip(client: AsyncClient)
     invalid = await client.put(
         "/api/v1/system-settings/advanced-settings",
         headers=admin,
-        json={
-            "mini_program_registration_enabled": True,
-            "version": 1,
-        },
+        json={"mini_program_registration_enabled": True},
     )
     assert invalid.status_code == 422
-    # 全量提交：缺 version 时校验失败
+    # version 是必填的乐观锁字段
     assert invalid.json()["code"] == "VALIDATION_ERROR"
 
 

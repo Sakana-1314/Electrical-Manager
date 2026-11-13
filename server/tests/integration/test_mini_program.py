@@ -526,6 +526,11 @@ async def test_mini_program_inventory_search_filters_pagination_and_detail(
         },
     )
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
+    # 标准库存接口按 warehouse:read 门禁；默认注册用户只有精简位，这里补上标准库读权限。
+    async with project_session() as session:
+        await grant_permissions(
+            session, profile.json()["user"]["id"], ("warehouse:read",)
+        )
 
     source = io.BytesIO()
     Image.new("RGB", (32, 24), "blue").save(source, format="PNG")

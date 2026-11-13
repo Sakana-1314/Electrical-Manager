@@ -13,6 +13,7 @@ from tests.conftest import (
 )
 from tests.go_upstream import StartWechat
 from tests.go_upstream import go_wechat as _go_wechat_fixture
+from tests.testkit.accounts import grant_permissions
 from tests.testkit.models import StockMaterial
 
 go_wechat = _go_wechat_fixture  # 微信接口桩（pytest fixture）
@@ -263,6 +264,11 @@ async def test_mini_program_follows_project_header(
         json={"display_name": "项目切换测试", "department_name": "华星检修维护部电气车间"},
     )
     mini_headers = {"Authorization": f"Bearer {profile.json()['access_token']}"}
+    # 标准库存接口按 warehouse:read 门禁；默认注册用户只有精简位，这里补上标准库读权限。
+    async with project_session() as session:
+        await grant_permissions(
+            session, profile.json()["user"]["id"], ("warehouse:read",)
+        )
 
     # 项目列表对小程序可读，只给名称（排序：默认项目在前）。
     projects = await client.get("/api/v1/mini-program/projects", headers=mini_headers)
