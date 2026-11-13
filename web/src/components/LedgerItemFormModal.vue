@@ -210,7 +210,14 @@ function confirmDelete(): void {
     :mask-closable="false"
     @update:show="close"
   >
-    <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" :disabled="loading">
+    <n-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-placement="top"
+      size="small"
+      :disabled="loading"
+    >
       <n-grid :cols="2" :x-gap="20">
         <n-grid-item>
           <n-form-item label="名称" path="name">

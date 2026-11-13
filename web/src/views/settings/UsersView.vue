@@ -522,7 +522,7 @@ function remove(row: ManagedUser) {
       draggable
       title="合并账号"
       style="width: min(560px, calc(100vw - 32px))"
-      ><n-form label-placement="top"
+      ><n-form label-placement="top" size="small" :show-feedback="false"
         ><n-form-item label="目标账号（保留姓名与部门）">
           <div class="merge-target">
             <div class="merge-target-name">

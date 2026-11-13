@@ -250,6 +250,18 @@
 | 失败与刷新 | 各块（概览、隐患统计、低库存、最近出入库）独立请求、独立失败：失败的块显示「—」并在顶部提示「重试」，不拖垮整页；页头显示「更新于 HH:mm」；页面重新可见且数据超过 2 分钟时静默刷新一次（不遮罩） |
 | 加载态 | 指标用骨架屏占位，不用整页遮罩 |
 
+### 弹窗密度
+
+所有 `preset="card"` 弹窗共用一套紧凑密度（与用户详情弹窗同口径），由全局规则与表单 props 统一，**不要逐弹窗再写间距覆盖**：
+
+| 项 | 要求 |
+| --- | --- |
+| 表单尺寸 | 弹窗内的 `n-form` 一律 `size="small"`（输入控件 28px 高）；带 `:rules` 内联校验的表单保留反馈区，纯展示编辑 / 无校验表单再加 `:show-feedback="false"` |
+| 表单行距 | `styles.css` 全局把 `.n-card.n-modal .n-form-item` 行距压到 `14px`（末行归零）——scoped `:deep` 作用不到 teleport 出去的弹窗根，不要往页面里写 |
+| 页脚按钮 | `styles.css` 全局把弹窗页脚按钮统一为 `28px` 高 / `12px` 字 / 左右内边距 `10px`（`.n-card__footer` / `.n-card__action` 内的 `.n-button`），与移动端断点、用户详情弹窗 footer 同口径 |
+| 弹窗外框 | header `16px 22px 10px`、content `14px 22px 18px`（同样全局声明）；宽度仍用 `width: min(标准宽, calc(100vw - 24px/32px))` 按弹窗信息量定 |
+| 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），只统一尺寸与行距 |
+
 ### 详情弹窗
 
 **网页端不再有详情页**：物资档案、操作记录、申购计划、申购记录四类详情统一用弹窗承载

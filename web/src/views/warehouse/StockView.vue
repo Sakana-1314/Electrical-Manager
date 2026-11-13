@@ -368,7 +368,7 @@ async function confirmReplenishment() {
         >
       </n-descriptions>
       <n-divider />
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="需求日期" required>
             <n-date-picker

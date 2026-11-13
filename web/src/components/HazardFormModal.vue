@@ -305,7 +305,14 @@ function confirmDelete(): void {
     @update:show="close"
   >
     <div class="modal-body">
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" :disabled="loading">
+      <n-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-placement="top"
+        size="small"
+        :disabled="loading"
+      >
         <n-grid :cols="2" :x-gap="20">
           <n-grid-item>
             <n-form-item label="检查区域" path="inspectionArea">

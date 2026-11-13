@@ -680,7 +680,7 @@ onBeforeUnmount(() => {
       style="width: min(680px, calc(100vw - 24px))"
       :mask-closable="false"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" size="small">
         <div class="form-grid">
           <n-form-item label="物料编码">
             <MaterialCodeSelector

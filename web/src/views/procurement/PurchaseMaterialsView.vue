@@ -1463,7 +1463,7 @@ onBeforeUnmount(() => {
       <n-alert type="info" style="margin-bottom: 16px">
         已选择 {{ selectedPlans.length }} 条计划。仅勾选的字段会被统一修改。
       </n-alert>
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item>
             <template #label>
@@ -1590,7 +1590,7 @@ onBeforeUnmount(() => {
       <n-alert type="info" style="margin-bottom: 16px">
         已选择 {{ selectedPlans.length }} 条计划，将使用同一申购单号、追溯号和申购日期转入。
       </n-alert>
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="申购单号">
             <n-input
@@ -1687,6 +1687,7 @@ onBeforeUnmount(() => {
         :model="form"
         :rules="rules"
         label-placement="top"
+        size="small"
         :disabled="!canWrite"
       >
         <div class="form-grid">
@@ -1860,7 +1861,7 @@ onBeforeUnmount(() => {
       <n-alert type="info" style="margin-bottom: 16px">
         计划信息将带入申购记录，转入后仍可继续修改和整理。
       </n-alert>
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="申购单号">
             <n-input

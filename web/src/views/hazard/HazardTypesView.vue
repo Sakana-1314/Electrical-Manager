@@ -233,7 +233,7 @@ function confirmDelete(): void {
       style="width: min(520px, calc(100vw - 24px))"
       :mask-closable="false"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" size="small">
         <n-form-item label="大类" path="major">
           <n-select
             v-model:value="form.major"

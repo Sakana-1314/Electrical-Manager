@@ -309,7 +309,14 @@ watch(
       <span class="card-header-time">{{ formatShanghaiTime(material.updated_at) }}</span>
     </template>
     <LoadingMask :show="loading" text="加载中…" />
-    <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" :disabled="!canWrite">
+    <n-form
+      ref="formRef"
+      :model="form"
+      :rules="rules"
+      label-placement="top"
+      size="small"
+      :disabled="!canWrite"
+    >
       <div class="form-grid">
         <n-form-item label="物资名称" path="name" required>
           <n-input v-model:value="form.name" maxlength="128" />
