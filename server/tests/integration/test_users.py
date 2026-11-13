@@ -222,6 +222,35 @@ async def test_legacy_hash_only_token_backfilled_and_echoed_after_use(client: As
 
 
 @pytest.mark.asyncio
+async def test_user_read_echoes_wechat_openid(client: AsyncClient) -> None:
+    """用户读取必须回显 wechat_openid：管理端列表据此判断小程序绑定状态。"""
+    admin = await auth_headers(client, "admin")
+    async with project_session() as session:
+        item = User(
+            username="bound-openid-user",
+            password_hash="",
+            api_token_hash="",
+            display_name="绑定展示用户",
+            department_name="华星检修维护部电气车间",
+            wechat_openid="openid-bound-display",
+            permissions=0,
+            enabled=True,
+        )
+        session.add(item)
+        await session.commit()
+        user_id = item.id
+
+    listed = await client.get("/api/v1/users?page_size=200", headers=admin)
+    assert listed.status_code == 200, listed.text
+    row = next(i for i in listed.json()["items"] if i["id"] == user_id)
+    assert row["wechat_openid"] == "openid-bound-display"
+
+    detail = await client.get(f"/api/v1/users/{user_id}", headers=admin)
+    assert detail.status_code == 200, detail.text
+    assert detail.json()["wechat_openid"] == "openid-bound-display"
+
+
+@pytest.mark.asyncio
 async def test_default_read_permissions_gate_module_reads(client: AsyncClient) -> None:
     """默认权限（精简二级库 / 申购 / 华星只读）只放行对应模块的读取，其它模块读写都被拒绝。"""
     admin = await auth_headers(client, "admin")

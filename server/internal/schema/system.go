@@ -44,8 +44,8 @@ func NewUserRead(u *model.User) UserRead {
 		lastUsed = ptr(jtype.NewUTC(*u.LastUsedAt))
 	}
 	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
-		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), CreatedAt: jtype.NewUTC(u.CreatedAt),
-		LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version}
+		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), WechatOpenid: u.WechatOpenid,
+		CreatedAt: jtype.NewUTC(u.CreatedAt), LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version}
 }
 
 func ptr[T any](v T) *T { return &v }
