@@ -463,7 +463,7 @@ server/
 | --- | --- | --- |
 | `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version`、`/auth/login`、`/auth/refresh`、`/auth/qr-sessions*` 公开 |
 | `api/aisearch` | `/ai-search` | `auth.CurrentUser`（模型服务由 `APP_AI_SEARCH_*` 环境变量配置） |
-| `api/settings` | `/system-settings` | `auth.SystemAdmin`（`/system-settings/mini-program-features` 公开读取；`advanced-settings` 需系统管理位） |
+| `api/settings` | `/system-settings` | `advanced-settings` 读写均需系统管理位（公开运行模式端点已移除） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse`；仪表盘汇总只要求登录 |
 | `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
 | `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.HuaxingReader`、`auth.WarehouseWriter` |
