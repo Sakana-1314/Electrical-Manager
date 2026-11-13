@@ -403,19 +403,7 @@ function remove(row: ManagedUser) {
       :title="editing ? '用户详情' : '新建用户'"
       style="width: min(660px, calc(100vw - 32px))"
       ><n-form label-placement="left" label-width="84" size="small" :show-feedback="false"
-        ><div v-if="editing" class="identity-header">
-          <div class="identity-avatar">
-            {{ (editing.display_name || editing.username).slice(0, 1) }}
-          </div>
-          <div class="identity-text">
-            <div class="identity-name">{{ editing.display_name || editing.username }}</div>
-            <div class="identity-sub">@{{ editing.username }}</div>
-          </div>
-          <n-tag :type="editing.wechat_openid ? 'success' : 'default'" size="small" round>
-            {{ editing.wechat_openid ? '小程序已绑定' : '未绑定小程序' }}
-          </n-tag>
-        </div>
-        <div class="form-grid-2">
+        ><div class="form-grid-2">
           <n-form-item label="用户名" required
             ><n-input v-model:value="form.username" /></n-form-item
           ><n-form-item label="显示名称" required
@@ -506,6 +494,15 @@ function remove(row: ManagedUser) {
             ></n-form-item
           >
         </div></n-form
+      ><template #header-extra>
+        <n-tag
+          v-if="editing"
+          :type="editing.wechat_openid ? 'success' : 'default'"
+          size="small"
+          round
+        >
+          {{ editing.wechat_openid ? '小程序已绑定' : '未绑定小程序' }}
+        </n-tag> </template
       ><template #footer
         ><n-space justify="space-between" style="width: 100%"
           ><n-space v-if="editing"
@@ -617,59 +614,17 @@ function remove(row: ManagedUser) {
 }
 /* ===== 用户详情弹窗：左标签 + 双列 + 小控件，整体高度压到一屏内 ===== */
 .user-edit-modal :deep(.n-card-header) {
-  padding: 16px 22px 8px;
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 .user-edit-modal :deep(.n-card-content) {
-  padding: 4px 22px 18px;
+  padding: 14px 22px 18px;
 }
 .user-edit-modal :deep(.n-form-item) {
   margin-bottom: 10px;
 }
 .user-edit-modal :deep(.n-form-item:last-child) {
   margin-bottom: 0;
-}
-/* 身份摘要：头像 + 姓名 + 绑定状态，一眼确认在编辑谁 */
-.identity-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 2px 0 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
-}
-.identity-avatar {
-  display: grid;
-  flex: none;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--color-primary);
-  background: var(--color-primary-soft);
-  font-size: 15px;
-  font-weight: 600;
-}
-.identity-text {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.identity-name {
-  overflow: hidden;
-  color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.identity-sub {
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .form-grid-2 {
   display: grid;
