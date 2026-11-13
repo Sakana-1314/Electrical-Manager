@@ -1,8 +1,9 @@
-// Package appsettings 管理端「高级设置」里仅剩的开关与运行模式：
-// 小程序注册开关、小程序新用户默认状态、二级库完整 / 精简模式。
+// Package appsettings 管理端「高级设置」里仅剩的配置：
+// 小程序注册开关与新建用户 / 小程序新注册用户的默认权限位。
 //
 // 模型搜索、Webhook 与图片加速不在数据库配置：模型与 Webhook 走服务端环境变量
 // （见 internal/config），图片加速能力已移除（图片直接走当前后端线路）。
+// 标准二级库与精简二级库不再有运行模式：可见性由用户权限位决定。
 package appsettings
 
 import (
@@ -21,15 +22,13 @@ import (
 const (
 	settingKey = "runtime_settings"
 	// legacyKey 是旧版本把「AI 配置 + 小程序开关 + 图片加速 + 可见性」混存一行时的键。
-	// 新代码优先读 runtime_settings；旧库迁移前也能读到这里保留的三个字段。
+	// 新代码优先读 runtime_settings；旧库迁移前也能读到这里保留的字段。
 	legacyKey = "ai_search_config"
 )
 
 // Config 是管理端高级设置（不含模型 / Webhook / 图片加速）。
 type Config struct {
 	MiniProgramRegistrationEnabled bool
-	MiniProgramNewUserEnabled      bool
-	SecondaryWarehouseMode         string
 	// DefaultPermissions 新建用户 / 小程序新注册用户的默认权限位。
 	DefaultPermissions domain.Permission
 	UpdatedAt          *jtype.UTCTime
@@ -37,17 +36,13 @@ type Config struct {
 }
 
 type payload struct {
-	MiniProgramRegistrationEnabled bool   `json:"mini_program_registration_enabled"`
-	MiniProgramNewUserEnabled      bool   `json:"mini_program_new_user_enabled"`
-	SecondaryWarehouseMode         string `json:"secondary_warehouse_mode"`
-	DefaultPermissions             int64  `json:"default_permissions"`
+	MiniProgramRegistrationEnabled bool  `json:"mini_program_registration_enabled"`
+	DefaultPermissions             int64 `json:"default_permissions"`
 }
 
 func (c *Config) payload() payload {
 	return payload{
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled,
-		MiniProgramNewUserEnabled:      c.MiniProgramNewUserEnabled,
-		SecondaryWarehouseMode:         c.SecondaryWarehouseMode,
 		DefaultPermissions:             int64(c.DefaultPermissions),
 	}
 }
@@ -55,17 +50,8 @@ func (c *Config) payload() payload {
 func defaults() *Config {
 	return &Config{
 		MiniProgramRegistrationEnabled: true,
-		MiniProgramNewUserEnabled:      true,
-		SecondaryWarehouseMode:         domain.SecondaryWarehouseFull,
 		DefaultPermissions:             domain.DefaultRegistrationPermissions,
 	}
-}
-
-func enumOr(v any, def string) string {
-	if s, ok := v.(string); ok && domain.SecondaryWarehouseMode.Valid(s) {
-		return s
-	}
-	return def
 }
 
 func boolOr(v any, def bool) bool {
@@ -100,8 +86,6 @@ func jsonObject(j jtype.JSON) map[string]any {
 func fromData(data map[string]any, version int64, updatedAt *jtype.UTCTime) *Config {
 	c := defaults()
 	c.MiniProgramRegistrationEnabled = boolOr(data["mini_program_registration_enabled"], true)
-	c.MiniProgramNewUserEnabled = boolOr(data["mini_program_new_user_enabled"], true)
-	c.SecondaryWarehouseMode = enumOr(data["secondary_warehouse_mode"], domain.SecondaryWarehouseFull)
 	c.DefaultPermissions = permissionOr(data["default_permissions"], domain.DefaultRegistrationPermissions)
 	c.Version = version
 	c.UpdatedAt = updatedAt
@@ -134,8 +118,6 @@ func Get(s *db.Session) (*Config, error) {
 func Read(c *Config) schema.AdvancedSettingsRead {
 	return schema.AdvancedSettingsRead{
 		MiniProgramRegistrationEnabled: c.MiniProgramRegistrationEnabled,
-		MiniProgramNewUserEnabled:      c.MiniProgramNewUserEnabled,
-		SecondaryWarehouseMode:         c.SecondaryWarehouseMode,
 		DefaultPermissions:             c.DefaultPermissions.Keys(),
 		UpdatedAt:                      c.UpdatedAt,
 		Version:                        c.Version,
@@ -164,8 +146,6 @@ func Update(s *db.Session, data schema.AdvancedSettingsUpdate) (*Config, error) 
 	updated := jtype.NewUTC(now)
 	next := &Config{
 		MiniProgramRegistrationEnabled: data.MiniProgramRegistrationEnabled,
-		MiniProgramNewUserEnabled:      data.MiniProgramNewUserEnabled,
-		SecondaryWarehouseMode:         data.SecondaryWarehouseMode,
 		DefaultPermissions:             defaultPermissions,
 		UpdatedAt:                      &updated,
 		Version:                        current.Version + 1,
@@ -201,15 +181,6 @@ func GetDefaultPermissions(s *db.Session) (domain.Permission, error) {
 	return setting.DefaultPermissions, nil
 }
 
-// IsLiteSecondaryWarehouse 二级库是否处于精简模式（独立表 + 只读 + Excel 导入）。
-func IsLiteSecondaryWarehouse(s *db.Session) (bool, error) {
-	setting, err := Get(s)
-	if err != nil {
-		return false, err
-	}
-	return setting.SecondaryWarehouseMode == domain.SecondaryWarehouseLite, nil
-}
-
 // IsMiniProgramRegistrationEnabled 小程序新用户绑定开关。
 func IsMiniProgramRegistrationEnabled(s *db.Session) (bool, error) {
 	setting, err := Get(s)
@@ -217,24 +188,6 @@ func IsMiniProgramRegistrationEnabled(s *db.Session) (bool, error) {
 		return false, err
 	}
 	return setting.MiniProgramRegistrationEnabled, nil
-}
-
-// IsMiniProgramNewUserEnabled 小程序新用户默认状态（false = 待审核）。
-func IsMiniProgramNewUserEnabled(s *db.Session) (bool, error) {
-	setting, err := Get(s)
-	if err != nil {
-		return false, err
-	}
-	return setting.MiniProgramNewUserEnabled, nil
-}
-
-// GetMiniProgramFeatures 公开运行模式（小程序启动时拉取）。
-func GetMiniProgramFeatures(s *db.Session) (schema.MiniProgramFeaturesRead, error) {
-	setting, err := Get(s)
-	if err != nil {
-		return schema.MiniProgramFeaturesRead{}, err
-	}
-	return schema.MiniProgramFeaturesRead{SecondaryWarehouseMode: setting.SecondaryWarehouseMode}, nil
 }
 
 // GetMiniProgramCodeEnv 小程序码环境由服务端环境变量决定。

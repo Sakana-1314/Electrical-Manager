@@ -13,6 +13,7 @@ const permissionOptions = ref<PermissionRead[]>([])
 const MODULE_LABELS: Record<string, string> = {
   system: '系统管理',
   warehouse: '二级库',
+  lite: '精简二级库',
   purchase: '申购',
   huaxing: '华星总库存',
   ledger: '台账',
@@ -34,13 +35,9 @@ const permissionGroups = computed(() => {
 })
 const form = reactive({
   mini_program_registration_enabled: true,
-  mini_program_new_user_enabled: true,
-  secondary_warehouse_lite: false,
   default_permissions: [] as string[],
   version: 0,
 })
-// 服务端仍用 full / lite 枚举，页面只暴露一个「精简模式」开关。
-const secondaryWarehouseMode = computed(() => (form.secondary_warehouse_lite ? 'lite' : 'full'))
 
 async function load() {
   loading.value = true
@@ -51,8 +48,6 @@ async function load() {
     ])
     permissionOptions.value = permissions
     form.mini_program_registration_enabled = data.mini_program_registration_enabled
-    form.mini_program_new_user_enabled = data.mini_program_new_user_enabled
-    form.secondary_warehouse_lite = data.secondary_warehouse_mode === 'lite'
     form.default_permissions = [...data.default_permissions]
     form.version = data.version
   } catch (error) {
@@ -80,15 +75,12 @@ async function save() {
   try {
     const data = await systemSettingsApi.updateAdvancedSettings({
       mini_program_registration_enabled: form.mini_program_registration_enabled,
-      mini_program_new_user_enabled: form.mini_program_new_user_enabled,
-      secondary_warehouse_mode: secondaryWarehouseMode.value,
       default_permissions: form.default_permissions,
       version: form.version,
     })
-    form.secondary_warehouse_lite = data.secondary_warehouse_mode === 'lite'
     form.version = data.version
     message.success('高级设置已保存')
-    // 二级库模式影响侧栏 / 路由与小程序，保存后整页刷新立即生效。
+    // 权限目录影响侧栏 / 用户管理，保存后整页刷新立即生效。
     window.setTimeout(() => window.location.reload(), 600)
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败')
@@ -119,24 +111,16 @@ onMounted(load)
               <span>{{ form.mini_program_registration_enabled ? '允许' : '关闭' }}</span>
             </div>
           </n-form-item>
-          <n-form-item label="新用户默认状态">
-            <div class="switch-control">
-              <n-switch v-model:value="form.mini_program_new_user_enabled" />
-              <span>
-                {{
-                  form.mini_program_new_user_enabled
-                    ? '默认启用（各功能只读权限）'
-                    : '默认禁用（待管理员审核）'
-                }}
-              </span>
-            </div>
-          </n-form-item>
+          <p class="settings-hint">
+            关闭后小程序不再接受新用户绑定；新注册用户直接启用，能做什么由下面的默认权限决定。
+          </p>
         </n-form>
       </n-card>
 
       <n-card class="settings-card" title="默认用户权限" :bordered="false">
         <p class="settings-hint">
           新建用户与小程序新注册用户默认获得这些权限；写权限会自动包含同模块查看。
+          标准二级库与精简二级库是两套独立权限，按需勾选。
         </p>
         <div class="permission-grid">
           <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
@@ -154,21 +138,6 @@ onMounted(load)
             </div>
           </div>
         </div>
-      </n-card>
-
-      <n-card class="settings-card" title="二级库运行模式" :bordered="false">
-        <n-form label-placement="left" label-width="160">
-          <n-form-item label="使用精简模式">
-            <div class="switch-control">
-              <n-switch v-model:value="form.secondary_warehouse_lite" />
-              <span>{{ form.secondary_warehouse_lite ? '精简模式' : '完整模式' }}</span>
-            </div>
-          </n-form-item>
-          <p class="settings-hint">
-            完整模式提供物资 / 出入库 / 流水；精简模式只提供 Excel
-            导入与只读查询，小程序同步禁用出库。
-          </p>
-        </n-form>
       </n-card>
     </div>
   </div>

@@ -1,16 +1,5 @@
-const SECONDARY_WAREHOUSE_FULL = 'full';
-const SECONDARY_WAREHOUSE_LITE = 'lite';
-
-// 公开运行模式：只剩二级库完整 / 精简模式（管理端与小程序端共用）。
-// 功能是否展示与可写不再有配置：统一按用户权限位判断（登录会话返回的 permissions）。
-const DEFAULT_MODES = {
-  secondary_warehouse_mode: SECONDARY_WAREHOUSE_FULL,
-};
-
-function getModes() {
-  const app = getApp();
-  return (app && app.globalData && app.globalData.runtimeModes) || DEFAULT_MODES;
-}
+// 功能可见性：只看用户权限位（登录会话返回的 permissions），不再有全局运行模式配置。
+// 标准二级库（物资 / 出入库）与精简二级库（Excel 导入台账）是两套独立权限，可单独授予。
 
 /** 当前用户的权限位展开的权限键（登录会话返回，见后端 MiniProgramUserRead.permissions）。 */
 function getPermissions() {
@@ -24,14 +13,27 @@ function hasPermission(key) {
   return getPermissions().indexOf(key) !== -1;
 }
 
-// 二级库精简模式：独立表 + 只读，不支持出入库。
-function isLiteMode() {
-  return getModes().secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
+/** 标准二级库（库存查询 / 扫码出库 / 出入库流水）。 */
+function hasStandardInventory() {
+  return hasPermission('warehouse:read');
 }
 
-// 出库（写操作）：非精简模式且用户持有二级库写权限位。
+/** 精简二级库（Excel 导入的只读台账）。 */
+function hasLiteInventory() {
+  return hasPermission('lite:read');
+}
+
+/**
+ * 库存页数据源：两种二级库在小程序里共用同一个库存页。
+ * 同时持有两种权限时优先展示标准二级库（有物资详情 / 出入库联动）；只有精简权限才用精简数据源。
+ */
+function inventoryUseLite() {
+  return !hasStandardInventory() && hasLiteInventory();
+}
+
+// 出库（写操作）：用户持有标准二级库写权限位。
 function canOutbound() {
-  return !isLiteMode() && hasPermission('warehouse:write');
+  return hasPermission('warehouse:write');
 }
 
 // 隐患登记 / 整改（写操作）：用户持有隐患写权限位。
@@ -41,7 +43,7 @@ function canWriteHazards() {
 
 /** 各功能入口对应的读权限键：入口是否展示只看权限位。 */
 const ENTRY_PERMISSION = {
-  inventory: 'warehouse:read',
+  inventory: 'standard-or-lite',
   huaxing: 'huaxing:read',
   purchasePlans: 'purchase:read',
   purchaseRecords: 'purchase:read',
@@ -51,17 +53,17 @@ const ENTRY_PERMISSION = {
 };
 
 function entryEnabled(key) {
-  return hasPermission(ENTRY_PERMISSION[key]);
+  const permission = ENTRY_PERMISSION[key];
+  if (permission === 'standard-or-lite') return hasStandardInventory() || hasLiteInventory();
+  return hasPermission(permission);
 }
 
 module.exports = {
-  SECONDARY_WAREHOUSE_FULL,
-  SECONDARY_WAREHOUSE_LITE,
-  DEFAULT_MODES,
-  getModes,
   getPermissions,
   hasPermission,
-  isLiteMode,
+  hasStandardInventory,
+  hasLiteInventory,
+  inventoryUseLite,
   entryEnabled,
   canOutbound,
   canWriteHazards,

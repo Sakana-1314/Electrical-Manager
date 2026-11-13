@@ -12,6 +12,7 @@ import {
   CubeOutline,
   DocumentTextOutline,
   HourglassOutline,
+  ListOutline,
   RefreshOutline,
   ShieldCheckmarkOutline,
   TimeOutline,
@@ -26,7 +27,6 @@ import type {
   StockOperation,
 } from '@/api/generated'
 import { useAuthStore } from '@/stores/auth'
-import { useSettingsStore } from '@/stores/settings'
 import { formatShanghaiTime } from '@/utils/time'
 
 type Tone = 'primary' | 'success' | 'warning' | 'danger' | 'neutral'
@@ -50,7 +50,6 @@ interface MetricGroup {
 
 const router = useRouter()
 const auth = useAuthStore()
-const settings = useSettingsStore()
 
 const loading = ref(true)
 const refreshing = ref(false)
@@ -63,29 +62,28 @@ const lowStockTotal = ref(0)
 const recentOperations = ref<StockOperation[]>([])
 
 const showWarehouse = computed(() => auth.can('warehouse:read'))
+const showLite = computed(() => auth.can('lite:read'))
 const showProcurement = computed(() => auth.can('purchase:read'))
 const showHazards = computed(() => auth.can('hazard:read'))
-/** 精简模式没有出入库流水与补库策略，库存区只保留物资数 */
-const fullWarehouse = computed(() => showWarehouse.value && !settings.isLiteMode)
 
 const groups = computed<MetricGroup[]>(() => {
   const s = summary.value
   const h = hazardStats.value
   const out: MetricGroup[] = []
   if (showWarehouse.value) {
-    const stockRoute = settings.isLiteMode ? { name: 'warehouse-lite' } : { name: 'stock' }
-    const metrics: Metric[] = [
-      {
-        key: 'stock',
-        label: '库存物资',
-        value: s?.stock_material_count ?? null,
-        icon: CubeOutline,
-        tone: 'primary',
-        to: stockRoute,
-      },
-    ]
-    if (!settings.isLiteMode) {
-      metrics.push(
+    out.push({
+      key: 'warehouse',
+      title: '二级库',
+      to: { name: 'stock' },
+      metrics: [
+        {
+          key: 'stock',
+          label: '库存物资',
+          value: s?.stock_material_count ?? null,
+          icon: CubeOutline,
+          tone: 'primary',
+          to: { name: 'stock' },
+        },
         {
           key: 'low',
           label: '低库存',
@@ -110,9 +108,25 @@ const groups = computed<MetricGroup[]>(() => {
           tone: 'primary',
           to: { name: 'operations', query: { operation_type: 'OUTBOUND' } },
         },
-      )
-    }
-    out.push({ key: 'warehouse', title: '二级库', to: stockRoute, metrics })
+      ],
+    })
+  }
+  if (showLite.value) {
+    out.push({
+      key: 'warehouse_lite',
+      title: '精简二级库',
+      to: { name: 'warehouse-lite' },
+      metrics: [
+        {
+          key: 'lite',
+          label: '精简库存',
+          value: s?.lite_inventory_count ?? null,
+          icon: ListOutline,
+          tone: 'primary',
+          to: { name: 'warehouse-lite' },
+        },
+      ],
+    })
   }
   if (showProcurement.value) {
     out.push({
@@ -208,7 +222,7 @@ interface QuickAction {
 /** 快捷操作：只给有对应写权限的入口（模块可见性同样来自读权限位） */
 const quickActions = computed<QuickAction[]>(() => {
   const actions: QuickAction[] = []
-  if (fullWarehouse.value && auth.can('warehouse:write')) {
+  if (auth.can('warehouse:write')) {
     actions.push(
       { key: 'inbound', label: '办理入库', icon: ArrowDownCircleOutline, to: { name: 'inbound' } },
       { key: 'outbound', label: '办理出库', icon: ArrowUpCircleOutline, to: { name: 'outbound' } },
@@ -264,7 +278,7 @@ async function load(silent = false) {
         }),
     )
   }
-  if (fullWarehouse.value) {
+  if (showWarehouse.value) {
     tasks.push(
       inventoryApi
         .lowStock({ page_size: 6 })
@@ -389,7 +403,7 @@ onMounted(() => void load())
       </section>
     </div>
 
-    <div v-if="fullWarehouse" class="dashboard-panels">
+    <div v-if="showWarehouse" class="dashboard-panels">
       <n-card class="data-card">
         <template #header>
           <span class="card-title">低库存提醒</span>

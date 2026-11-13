@@ -48,6 +48,7 @@ const permissionLabel = computed(() => {
   if (perms.includes('system:admin')) return '系统管理'
   const modules: Array<[string, string]> = [
     ['warehouse', '二级库'],
+    ['lite', '精简库'],
     ['purchase', '申购'],
     ['huaxing', '华星'],
     ['codes', '编码库'],

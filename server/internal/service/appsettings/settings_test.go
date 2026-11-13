@@ -9,11 +9,8 @@ import (
 
 func TestFromDataDefaults(t *testing.T) {
 	c := fromData(map[string]any{}, 0, nil)
-	if !c.MiniProgramRegistrationEnabled || !c.MiniProgramNewUserEnabled {
-		t.Fatalf("defaults should keep registration/new-user enabled: %+v", c)
-	}
-	if c.SecondaryWarehouseMode != domain.SecondaryWarehouseFull {
-		t.Fatalf("default mode = %q", c.SecondaryWarehouseMode)
+	if !c.MiniProgramRegistrationEnabled {
+		t.Fatalf("defaults should keep registration enabled: %+v", c)
 	}
 	if c.DefaultPermissions != domain.DefaultRegistrationPermissions {
 		t.Fatalf("default permissions = %d", c.DefaultPermissions)
@@ -24,24 +21,18 @@ func TestFromDataParsesStoredValues(t *testing.T) {
 	updated := jtype.NowUTC()
 	c := fromData(map[string]any{
 		"mini_program_registration_enabled": false,
-		"mini_program_new_user_enabled":     false,
-		"secondary_warehouse_mode":          "lite",
-		"default_permissions":               float64(domain.PermWarehouseRead | domain.PermPurchaseRead),
+		"default_permissions":               float64(domain.PermLiteRead | domain.PermPurchaseRead),
+		// 旧库残留的模式 / 开关键：读取时直接忽略
+		"secondary_warehouse_mode":      "lite",
+		"mini_program_new_user_enabled": false,
 	}, 3, &updated)
-	if c.MiniProgramRegistrationEnabled || c.MiniProgramNewUserEnabled {
-		t.Fatalf("bool switches: %+v", c)
+	if c.MiniProgramRegistrationEnabled {
+		t.Fatalf("registration switch: %+v", c)
 	}
-	if c.SecondaryWarehouseMode != domain.SecondaryWarehouseLite || c.Version != 3 {
-		t.Fatalf("mode/version: %+v", c)
-	}
-	if c.DefaultPermissions != domain.PermWarehouseRead|domain.PermPurchaseRead {
+	if c.DefaultPermissions != domain.PermLiteRead|domain.PermPurchaseRead {
 		t.Fatalf("default permissions = %d", c.DefaultPermissions)
 	}
-}
-
-func TestFromDataIgnoresInvalidMode(t *testing.T) {
-	c := fromData(map[string]any{"secondary_warehouse_mode": "bogus"}, 1, nil)
-	if c.SecondaryWarehouseMode != domain.SecondaryWarehouseFull {
-		t.Fatalf("invalid mode must fall back to full: %q", c.SecondaryWarehouseMode)
+	if c.Version != 3 {
+		t.Fatalf("version = %d", c.Version)
 	}
 }

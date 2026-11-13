@@ -1,6 +1,6 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { extractMaterialUuid } = require('../../utils/material');
-const { canOutbound, entryEnabled, SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
+const { canOutbound, entryEnabled } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
@@ -28,8 +28,7 @@ Page({
       hazards: true,
       materialCodes: true,
     },
-    liteMode: false,
-    // 扫码出库入口：精简模式或没有二级库写权限时不渲染。
+    // 扫码出库入口：没有标准二级库写权限时不渲染。
     canScan: false,
     i18n: getMessages(),
   },
@@ -48,10 +47,7 @@ Page({
   async loadSession() {
     this.setData({ featureReady: false, loadFailed: false });
     try {
-      const [session, runtimeModes] = await Promise.all([
-        getApp().globalData.authPromise,
-        getApp().globalData.runtimeSettingsPromise,
-      ]);
+      const session = await getApp().globalData.authPromise;
       if (session.account_disabled) {
         wx.reLaunch({ url: '/pages/disabled/disabled' });
         return;
@@ -64,7 +60,6 @@ Page({
         wx.reLaunch({ url: '/pages/bind/bind' });
         return;
       }
-      const liteMode = runtimeModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
       this.setData({
         user: session.user,
         featureReady: true,
@@ -78,7 +73,6 @@ Page({
           hazards: entryEnabled('hazards'),
           materialCodes: entryEnabled('materialCodes'),
         },
-        liteMode,
         canScan: canOutbound(),
       });
     } catch (error) {

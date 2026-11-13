@@ -9,6 +9,7 @@ import {
   DocumentTextOutline,
   GridOutline,
   LibraryOutline,
+  ListOutline,
   SettingsOutline,
   WarningOutline,
 } from '@vicons/ionicons5'
@@ -26,8 +27,6 @@ import { visibleNavFeatureKeys, type NavFeatureKey } from '@/utils/navigation'
  * 系统管理按 `system:admin` 权限判断，保证高级设置本身能从侧栏进入。
  */
 export interface MainMenuContext {
-  /** 精简模式下二级库是单一一级项（Excel 导入 + 只读查询），与华星总库存同层级 */
-  isLiteMode: boolean
   can: (permission: Permission) => boolean
   /** 点击菜单项后收起移动端抽屉 */
   onNavigate?: () => void
@@ -55,22 +54,24 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
     { key: 'memos', build: () => link('备忘录', 'memos', DocumentTextOutline) },
     {
       key: 'warehouse',
-      build: () =>
-        context.isLiteMode
-          ? link('二级库', 'warehouse-lite', CubeOutline)
-          : {
-              label: '二级库',
-              key: 'warehouse-group',
-              icon: renderIcon(CubeOutline),
-              children: [
-                link('库存查询', 'stock'),
-                link('物资档案', 'stock-materials'),
-                link('操作记录', 'operations'),
-                ...(context.can('warehouse:write')
-                  ? [link('入库', 'inbound'), link('出库', 'outbound')]
-                  : []),
-              ],
-            },
+      build: () => ({
+        label: '二级库',
+        key: 'warehouse-group',
+        icon: renderIcon(CubeOutline),
+        children: [
+          link('库存查询', 'stock'),
+          link('物资档案', 'stock-materials'),
+          link('操作记录', 'operations'),
+          ...(context.can('warehouse:write')
+            ? [link('入库', 'inbound'), link('出库', 'outbound')]
+            : []),
+        ],
+      }),
+    },
+    {
+      // 精简二级库：独立权限位（lite:read），Excel 导入 + 只读查询，与标准二级库互不依赖。
+      key: 'warehouse_lite',
+      build: () => link('精简二级库', 'warehouse-lite', ListOutline),
     },
     {
       key: 'huaxing_inventory',

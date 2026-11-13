@@ -23,13 +23,12 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| 权限位 | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限 |
+| 权限位 | `system:admin`、`warehouse:read|write`、`lite:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限；标准二级库（warehouse）与精简二级库（lite）是两套独立权限 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
 | `MiniProgramCodeEnv` | `trial` / `release` | — | 小程序码环境 |
 | `MiniProgramStockStatus` | `normal` / `out_of_stock` / `low_stock` | 计算得出，不落库 | 小程序库存标签 |
-| `SecondaryWarehouseMode` | `full` / `lite` | `system_setting.setting_value` JSON | 二级库运行模式（管理端与小程序端共用） |
 | `WebhookPlatform` | `FEISHU` / `DINGTALK` | ENUM 同名 | 推送渠道 |
 | `WebhookEventType` | `stock.outbound.created` / `stock.inbound.created` / `mini_program.user.bound` | `webhook_delivery.event_type` 存枚举**名**（`STOCK_OUTBOUND_CREATED` 等） | `APP_*_WEBHOOK_EVENTS` 环境变量存**值**（点号形式，逗号分隔） |
 | `WebhookDeliveryStatus` / `ExcelImportJobStatus` / `ExcelExportJobStatus` | 前者 `PENDING` / `SENDING` / `SUCCEEDED` / `FAILED`，后两者 `PENDING` / `RUNNING` / `SUCCEEDED` / `FAILED` | ENUM 同名 | 投递队列 / 异步任务 |
@@ -394,16 +393,14 @@ stateDiagram-v2
     direction LR
     [*] --> 未绑定 : 静默登录，微信身份尚未建档
     未绑定 --> 未绑定 : 返回注册凭证（10 分钟有效）并要求补档案
-    未绑定 --> 待审核 : 提交姓名建档，且新用户默认关闭注册开关
-    未绑定 --> 已启用 : 提交姓名建档，且新用户默认开启注册开关
-    待审核 --> 已启用 : 管理端启用
+    未绑定 --> 已启用 : 提交姓名建档（注册开关开启时；新用户一律直接启用）
     已启用 --> 已停用 : 管理端停用
     已停用 --> 已启用 : 管理端启用
     已启用 --> 已合并 : 身份合并（身份转移到目标用户，源用户删除）
     已启用 --> [*] : 删除
-    note right of 待审核
-        待审核与已停用的小程序用户访问任何接口都被拒绝，重复建档同样被拒绝：ACCOUNT_DISABLED
-        重新静默登录也不会放行；注册开关关闭时新用户无法建档：MINI_PROGRAM_REGISTRATION_DISABLED
+    note right of 已启用
+        已停用的小程序用户访问任何接口都被拒绝，重复建档同样被拒绝：ACCOUNT_DISABLED
+        注册开关关闭时新用户无法建档：MINI_PROGRAM_REGISTRATION_DISABLED
     end note
     note left of 已启用
         每次静默登录刷新「最近使用时间」，不递增版本号
@@ -412,27 +409,9 @@ stateDiagram-v2
     end note
 ```
 
-### 权限位与运行模式
+### 权限位
 
-功能是否展示与可写不再有配置：管理端与小程序端统一按 `app_user.permissions` 位图判断。小程序首页入口按各模块 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；网页侧栏主 tab 同理。小程序启动时只拉取二级库运行模式（`full` / `lite`），拉取失败用完整模式兜底；后端数据接口按同一权限位鉴权。
-
-### 二级库运行模式
-
-```mermaid
-stateDiagram-v2
-    direction LR
-    [*] --> 完整模式 : 未配置时的兜底值
-    完整模式 --> 精简模式 : 系统管理员在高级设置保存
-    精简模式 --> 完整模式 : 系统管理员在高级设置保存
-    note right of 精简模式
-        完整模式写接口全部被拒绝：二级库为精简模式
-        小程序出库相关入口被拒绝：出库已关闭
-        精简库存列表 / 导入 / 最后导入时间仍然可用；完整模式下这些接口仍可访问，只是数据为空
-        拒绝码：完整模式写接口为 SECONDARY_WAREHOUSE_LITE_MODE，小程序出库相关为 OUTBOUND_DISABLED
-        工作台物资数取精简库存行数，低库存恒为 0
-        切换只校验版本号，没有流转校验；前端保存后强制刷新页面
-    end note
-```
+功能是否展示与可写不再有配置：管理端与小程序端统一按 `app_user.permissions` 位图判断。小程序首页入口按各模块 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；网页侧栏主 tab 同理。标准二级库与精简二级库没有运行模式：两者是独立权限位，可以单独或同时授予；后端数据接口按同一权限位鉴权。
 
 ### 物资小程序码
 

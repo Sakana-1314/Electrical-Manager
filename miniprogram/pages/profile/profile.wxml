@@ -55,7 +55,7 @@
     </view>
 
     <view
-      wx:if="{{!liteMode}}"
+      wx:if="{{recordsVisible}}"
       class="records-entry"
       hover-class="records-entry-active"
       aria-role="button"

@@ -19,8 +19,6 @@
 | `QR_SESSION_CONFLICT` | 409 | 扫码登录会话已被其他账号确认 | `service/qrlogin` |
 | `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `service/miniprogram` |
 | `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `service/miniprogram` |
-| `SECONDARY_WAREHOUSE_LITE_MODE` | 403 | 精简模式下二级库仅支持导入与查询 | `api/deps` |
-| `OUTBOUND_DISABLED` | 403 | 精简模式下不支持出入库 | `service/miniprogram` |
 | `ARCHIVED_PURCHASE_PLAN_FORBIDDEN` | 403 | 仅系统管理员可查询已归档申购计划 | `api/purchase` |
 
 ## 项目（多项目数据隔离）

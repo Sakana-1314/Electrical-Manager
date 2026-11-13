@@ -3,7 +3,7 @@ const { request } = require('../../utils/request');
 const { decorateStock } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
-const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
+const { hasLiteInventory, hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
@@ -17,6 +17,11 @@ const {
   sameFilters,
 } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
+
+/** 库存页数据源：两种二级库权限都在时优先标准库；只有 lite:read 才走精简接口。 */
+function inventoryUseLiteFlag() {
+  return !hasStandardInventory() && hasLiteInventory();
+}
 
 // 分享链接携带的搜索词与筛选（与页面 data 字段同名，便于直接回填）。
 const SHARE_PARAMS = ['keyword', 'stockStatus', 'name', 'modelSpec', 'stockQtyFrom', 'stockQtyTo'];
@@ -86,14 +91,11 @@ Page({
   },
 
   async onLoad(options = {}) {
-    // 分享链接带来的搜索词 / 筛选；精简模式下没有筛选，忽略对应参数。
+    // 分享链接带来的搜索词 / 筛选；精简数据源下没有筛选，忽略对应参数。
     const shared = readShareParams(options, SHARE_PARAMS);
     this.setData({ fieldDefs: toFieldDefs() });
     try {
-      const [session, runtimeModes] = await Promise.all([
-        getApp().globalData.authPromise,
-        getApp().globalData.runtimeSettingsPromise,
-      ]);
+      const session = await getApp().globalData.authPromise;
       if (session.account_disabled) {
         wx.reLaunch({ url: '/pages/disabled/disabled' });
         return;
@@ -108,8 +110,9 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      // 精简模式：二级库独立表 + 只读，调用精简接口且无库存状态/详情。
-      const liteMode = runtimeModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE;
+      // 精简二级库是独立权限位：只有 lite:read、没有 warehouse:read 的用户走精简数据源
+      //（独立表 + 只读，只按关键字搜索，展示最近导入时间）。
+      const liteMode = inventoryUseLiteFlag();
 
       const filters = {
         stockStatus:

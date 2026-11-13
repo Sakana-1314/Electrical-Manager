@@ -5,14 +5,12 @@ import { type MenuOption } from 'naive-ui'
 import { MenuOutline } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
-import { useSettingsStore } from '@/stores/settings'
 import { buildMainMenu } from '@/layouts/mainMenu'
 import UserMenu from '@/layouts/UserMenu.vue'
 import { LOGO_MARK_URL } from '@/constants/branding'
 
 const route = useRoute()
 const auth = useAuthStore()
-const settings = useSettingsStore()
 const collapsed = ref(false)
 // 移动端断点：≤768px 时侧边栏切换为抽屉导航
 const isMobile = useMediaQuery('(max-width: 768px)')
@@ -23,11 +21,10 @@ const closeDrawer = () => {
 
 /**
  * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
- * 一级项按权限位与二级库模式过滤，系统管理按 system:admin 权限显示。
+ * 一级项按权限位过滤，系统管理按 system:admin 权限显示。
  */
 const menuOptions = computed<MenuOption[]>(() =>
   buildMainMenu({
-    isLiteMode: settings.isLiteMode,
     can: (permission) => auth.can(permission),
     onNavigate: closeDrawer,
   }),

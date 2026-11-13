@@ -20,9 +20,7 @@ vi.mock('@/api/systemSettings', () => ({
 
 const settings = (overrides: Partial<AdvancedSettings> = {}): AdvancedSettings => ({
   mini_program_registration_enabled: true,
-  mini_program_new_user_enabled: true,
-  secondary_warehouse_mode: 'full',
-  default_permissions: ['warehouse:read', 'purchase:read', 'huaxing:read'],
+  default_permissions: ['lite:read', 'purchase:read', 'huaxing:read'],
   updated_at: '2026-09-13T10:30:00+08:00',
   version: 1,
   ...overrides,
@@ -95,39 +93,32 @@ afterEach(() => {
 })
 
 describe('AdvancedSettingsView（开关与默认权限）', () => {
-  it('页面只有三个开关，不再有模型 / 图片 / Webhook 配置', async () => {
+  it('页面只有新用户绑定开关，不再有审核 / 模式 / 模型 / 图片 / Webhook 配置', async () => {
     const view = await mountView()
 
     const labels = view
       .findAllComponents(NFormItem)
       .map((formItem) => String(formItem.props('label')))
-    expect(labels).toEqual(['新用户绑定', '新用户默认状态', '使用精简模式'])
+    expect(labels).toEqual(['新用户绑定'])
+    expect(view.text()).not.toContain('使用精简模式')
+    expect(view.text()).not.toContain('新用户默认状态')
     expect(view.text()).not.toContain('API Key')
     expect(view.text()).not.toContain('Webhook')
     expect(view.text()).not.toContain('图片加速')
   })
 
-  it('保存时提交三个开关与二级库运行模式', async () => {
+  it('保存时只提交注册开关与默认用户权限', async () => {
     const reloadTimer = stubReloadTimer()
     const view = await mountView()
     await toggle(view, '新用户绑定', false)
-    await toggle(view, '新用户默认状态', false)
-    await toggle(view, '使用精简模式', true)
     await clickSave(view)
 
     expect(systemSettingsApi.updateAdvancedSettings).toHaveBeenCalledTimes(1)
     expect(vi.mocked(systemSettingsApi.updateAdvancedSettings).mock.calls[0][0]).toEqual({
       mini_program_registration_enabled: false,
-      mini_program_new_user_enabled: false,
-      secondary_warehouse_mode: 'lite',
-      default_permissions: ['warehouse:read', 'purchase:read', 'huaxing:read'],
+      default_permissions: ['lite:read', 'purchase:read', 'huaxing:read'],
       version: 1,
     })
     reloadTimer.mockRestore()
-  })
-
-  it('精简模式读取时回显为开关打开', async () => {
-    const view = await mountView(settings({ secondary_warehouse_mode: 'lite' }))
-    expect(switchByLabel(view, '使用精简模式').props('value')).toBe(true)
   })
 })

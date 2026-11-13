@@ -1666,23 +1666,16 @@ def _build_schema_examples() -> dict[str, Any]:
         "Page_WorkOverviewRowRead_": _page(_WORK_OVERVIEW_ROWS),
         "AdvancedSettingsRead": {
             "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "full",
             "updated_at": _LATEST_STAMP,
             "version": 3,
         },
         "AdvancedSettingsUpdate": {
             "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": False,
-            "secondary_warehouse_mode": "lite",
             "version": 3,
         },
         "AiSearchStatusRead": {"available": True},
         "AiSearchExpandRequest": {"value": "电机|接触器"},
         "AiSearchExpandRead": {"original": "电机|接触器", "expanded": "电机|电动机|接触器"},
-        "MiniProgramFeaturesRead": {
-            "secondary_warehouse_mode": "full",
-        },
         # —— 导入导出任务与文件清理 ——
         "ExcelImportJobRead": {
             "id": 1,
@@ -2360,8 +2353,6 @@ _FIELD_EXAMPLES: dict[str, Any] = {
     "mini_program_code_app_id": _MINI_PROGRAM_APP_IDS[0],
     "mini_program_app_ids": _MINI_PROGRAM_APP_IDS,
     "mini_program_registration_enabled": True,
-    "mini_program_new_user_enabled": True,
-    "secondary_warehouse_mode": "full",
     "webhook_url": _FEISHU_HOOK,
     "secret": "hxni-feishu-2026Kx7Q",
     "webhook_configured": True,

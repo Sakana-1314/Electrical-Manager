@@ -180,23 +180,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/system-settings/mini-program-features": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 功能开关配置 */
-        get: operations["mini_program_features_api_v1_system_settings_mini_program_features_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/system-settings/advanced-settings": {
         parameters: {
             query?: never;
@@ -2613,15 +2596,13 @@ export interface components {
     schemas: {
         /**
          * AdvancedSettingsRead
-         * @description 管理端高级设置：小程序注册开关、新用户默认状态、二级库运行模式。模型 / Webhook 走服务端环境变量，图片加速已移除。
+         * @description 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；标准 / 精简二级库没有运行模式，可见性由权限位决定。
          * @example {
          *       "mini_program_registration_enabled": true,
-         *       "mini_program_new_user_enabled": true,
-         *       "secondary_warehouse_mode": "full",
          *       "updated_at": "2026-09-13T10:30:00+08:00",
          *       "version": 3,
          *       "default_permissions": [
-         *         "warehouse:read",
+         *         "lite:read",
          *         "purchase:read",
          *         "huaxing:read"
          *       ]
@@ -2630,9 +2611,6 @@ export interface components {
         AdvancedSettingsRead: {
             /** Mini Program Registration Enabled */
             mini_program_registration_enabled: boolean;
-            /** Mini Program New User Enabled */
-            mini_program_new_user_enabled: boolean;
-            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
             /** Updated At */
             updated_at?: string | null;
             /** Version */
@@ -2647,11 +2625,9 @@ export interface components {
          * AdvancedSettingsUpdate
          * @example {
          *       "mini_program_registration_enabled": true,
-         *       "mini_program_new_user_enabled": false,
-         *       "secondary_warehouse_mode": "lite",
          *       "version": 3,
          *       "default_permissions": [
-         *         "warehouse:read",
+         *         "lite:read",
          *         "purchase:read",
          *         "huaxing:read"
          *       ]
@@ -2660,9 +2636,6 @@ export interface components {
         AdvancedSettingsUpdate: {
             /** Mini Program Registration Enabled */
             mini_program_registration_enabled: boolean;
-            /** Mini Program New User Enabled */
-            mini_program_new_user_enabled: boolean;
-            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
             /** Version */
             version: number;
             /**
@@ -3025,9 +2998,10 @@ export interface components {
         };
         /**
          * DashboardSummaryRead
-         * @description 工作台概览计数；精简模式下物资数取精简库存行数、低库存计 0。
+         * @description 工作台概览计数；标准二级库与精简二级库同时计数，前端按用户权限位选择展示。
          * @example {
          *       "stock_material_count": 23,
+         *       "lite_inventory_count": 41,
          *       "low_stock_count": 9,
          *       "uncoded_purchase_material_count": 2,
          *       "purchase_record_count": 5,
@@ -3040,6 +3014,11 @@ export interface components {
         DashboardSummaryRead: {
             /** Stock Material Count */
             stock_material_count: number;
+            /**
+             * Lite Inventory Count
+             * @description 精简二级库（lite_inventory）行数；两种二级库并存，前端按用户权限位展示对应卡片。
+             */
+            lite_inventory_count: number;
             /** Low Stock Count */
             low_stock_count: number;
             /** Uncoded Purchase Material Count */
@@ -4250,6 +4229,8 @@ export interface components {
          *           "system:admin",
          *           "warehouse:read",
          *           "warehouse:write",
+         *           "lite:read",
+         *           "lite:write",
          *           "purchase:read",
          *           "purchase:write",
          *           "huaxing:read",
@@ -4392,16 +4373,6 @@ export interface components {
          * @enum {string}
          */
         MiniProgramCodeEnv: "trial" | "release";
-        /**
-         * MiniProgramFeaturesRead
-         * @description 公开运行模式：小程序与网页端共用的二级库完整 / 精简模式。功能是否展示与可写由 app_user.permissions 权限位决定，不再有功能开关配置。
-         * @example {
-         *       "secondary_warehouse_mode": "full"
-         *     }
-         */
-        MiniProgramFeaturesRead: {
-            secondary_warehouse_mode: components["schemas"]["SecondaryWarehouseMode"];
-        };
         /**
          * MiniProgramHazardCreate
          * @description 小程序登记隐患：在网页端请求体上增加幂等键，弱网重试不会重复登记。
@@ -4695,7 +4666,7 @@ export interface components {
          *         "last_used_at": "2026-09-13T09:12:00+08:00",
          *         "version": 2,
          *         "permissions": [
-         *           "warehouse:read",
+         *           "lite:read",
          *           "purchase:read",
          *           "huaxing:read",
          *           "ledger:read",
@@ -5436,7 +5407,7 @@ export interface components {
          *       "department_name": "检修维护部电气自动化车间",
          *       "enabled": true,
          *       "permissions": [
-         *         "warehouse:read"
+         *         "lite:read"
          *       ],
          *       "last_used_at": "2026-09-13T09:12:00+08:00",
          *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
@@ -7716,7 +7687,7 @@ export interface components {
          *           "last_used_at": "2026-09-13T09:12:00+08:00",
          *           "version": 2,
          *           "permissions": [
-         *             "warehouse:read",
+         *             "lite:read",
          *             "purchase:read",
          *             "huaxing:read",
          *             "ledger:read",
@@ -7735,7 +7706,7 @@ export interface components {
          *           "last_used_at": "2026-09-06T14:05:00+08:00",
          *           "version": 1,
          *           "permissions": [
-         *             "warehouse:read",
+         *             "lite:read",
          *             "purchase:read",
          *             "huaxing:read",
          *             "ledger:read",
@@ -7754,7 +7725,7 @@ export interface components {
          *           "last_used_at": "2026-08-15T08:12:00+08:00",
          *           "version": 2,
          *           "permissions": [
-         *             "warehouse:read",
+         *             "lite:read",
          *             "purchase:read",
          *             "huaxing:read",
          *             "ledger:read",
@@ -9685,6 +9656,8 @@ export interface components {
          *           "permissions": [
          *             "warehouse:read",
          *             "warehouse:write",
+         *             "lite:read",
+         *             "lite:write",
          *             "huaxing:read"
          *           ]
          *         }
@@ -11745,12 +11718,6 @@ export interface components {
             lines: components["schemas"]["OperationLineWrite"][];
         };
         /**
-         * SecondaryWarehouseMode
-         * @description 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
-         * @enum {string}
-         */
-        SecondaryWarehouseMode: "full" | "lite";
-        /**
          * ShareCreateRequest
          * @description 创建匿名分享链接：把勾选的申购计划/申购记录分享为无鉴权页面。
          * @example {
@@ -12311,6 +12278,8 @@ export interface components {
          *       "permissions": [
          *         "warehouse:read",
          *         "warehouse:write",
+         *         "lite:read",
+         *         "lite:write",
          *         "huaxing:read"
          *       ],
          *       "enabled": true,
@@ -12378,7 +12347,9 @@ export interface components {
          *       "enabled": true,
          *       "permissions": [
          *         "warehouse:read",
-         *         "warehouse:write"
+         *         "warehouse:write",
+         *         "lite:read",
+         *         "lite:write"
          *       ]
          *     }
          */
@@ -12415,6 +12386,8 @@ export interface components {
          *         "system:admin",
          *         "warehouse:read",
          *         "warehouse:write",
+         *         "lite:read",
+         *         "lite:write",
          *         "purchase:read",
          *         "purchase:write",
          *         "huaxing:read",
@@ -12491,6 +12464,8 @@ export interface components {
          *       "permissions": [
          *         "warehouse:read",
          *         "warehouse:write",
+         *         "lite:read",
+         *         "lite:write",
          *         "purchase:read",
          *         "huaxing:read",
          *         "ledger:read",
@@ -13020,6 +12995,8 @@ export interface operations {
                      *           "system:admin",
                      *           "warehouse:read",
                      *           "warehouse:write",
+                     *           "lite:read",
+                     *           "lite:write",
                      *           "purchase:read",
                      *           "purchase:write",
                      *           "huaxing:read",
@@ -13268,6 +13245,8 @@ export interface operations {
                      *         "system:admin",
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "purchase:read",
                      *         "purchase:write",
                      *         "huaxing:read",
@@ -13397,6 +13376,8 @@ export interface operations {
                      *         "system:admin",
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "purchase:read",
                      *         "purchase:write",
                      *         "huaxing:read",
@@ -13896,116 +13877,6 @@ export interface operations {
             };
         };
     };
-    mini_program_features_api_v1_system_settings_mini_program_features_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "secondary_warehouse_mode": "full"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["MiniProgramFeaturesRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
     get_advanced_settings_api_v1_system_settings_advanced_settings_get: {
         parameters: {
             query?: never;
@@ -14024,12 +13895,10 @@ export interface operations {
                     /**
                      * @example {
                      *       "mini_program_registration_enabled": true,
-                     *       "mini_program_new_user_enabled": true,
-                     *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3,
                      *       "default_permissions": [
-                     *         "warehouse:read",
+                     *         "lite:read",
                      *         "purchase:read",
                      *         "huaxing:read"
                      *       ]
@@ -14096,12 +13965,10 @@ export interface operations {
                     /**
                      * @example {
                      *       "mini_program_registration_enabled": true,
-                     *       "mini_program_new_user_enabled": true,
-                     *       "secondary_warehouse_mode": "full",
                      *       "updated_at": "2026-09-13T10:30:00+08:00",
                      *       "version": 3,
                      *       "default_permissions": [
-                     *         "warehouse:read",
+                     *         "lite:read",
                      *         "purchase:read",
                      *         "huaxing:read"
                      *       ]
@@ -18491,6 +18358,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "stock_material_count": 23,
+                     *       "lite_inventory_count": 41,
                      *       "low_stock_count": 9,
                      *       "uncoded_purchase_material_count": 2,
                      *       "purchase_record_count": 5,
@@ -21236,15 +21104,29 @@ export interface operations {
                      *         "key": "warehouse:read",
                      *         "module": "warehouse",
                      *         "action": "read",
-                     *         "label": "二级库与出入库查看",
+                     *         "label": "标准二级库与出入库查看",
                      *         "bit": 2
                      *       },
                      *       {
                      *         "key": "warehouse:write",
                      *         "module": "warehouse",
                      *         "action": "write",
-                     *         "label": "二级库出入库与库存调整",
+                     *         "label": "标准二级库出入库与库存调整",
                      *         "bit": 4
+                     *       },
+                     *       {
+                     *         "key": "lite:read",
+                     *         "module": "lite",
+                     *         "action": "read",
+                     *         "label": "精简二级库查看",
+                     *         "bit": 8192
+                     *       },
+                     *       {
+                     *         "key": "lite:write",
+                     *         "module": "lite",
+                     *         "action": "write",
+                     *         "label": "精简二级库导入",
+                     *         "bit": 16384
                      *       }
                      *     ]
                      */
@@ -21322,7 +21204,7 @@ export interface operations {
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2,
                      *         "permissions": [
-                     *           "warehouse:read",
+                     *           "lite:read",
                      *           "purchase:read",
                      *           "huaxing:read",
                      *           "ledger:read",
@@ -21450,7 +21332,7 @@ export interface operations {
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
                      *       "version": 2,
                      *       "permissions": [
-                     *         "warehouse:read",
+                     *         "lite:read",
                      *         "purchase:read",
                      *         "huaxing:read",
                      *         "ledger:read",
@@ -21817,7 +21699,7 @@ export interface operations {
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
                      *         "version": 2,
                      *         "permissions": [
-                     *           "warehouse:read",
+                     *           "lite:read",
                      *           "purchase:read",
                      *           "huaxing:read",
                      *           "ledger:read",
@@ -32398,6 +32280,8 @@ export interface operations {
                      *           "permissions": [
                      *             "warehouse:read",
                      *             "warehouse:write",
+                     *             "lite:read",
+                     *             "lite:write",
                      *             "huaxing:read"
                      *           ]
                      *         }
@@ -32530,6 +32414,8 @@ export interface operations {
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "huaxing:read"
                      *       ]
                      *     }
@@ -32764,6 +32650,8 @@ export interface operations {
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "huaxing:read"
                      *       ]
                      *     }
@@ -32890,6 +32778,8 @@ export interface operations {
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "hazard:read",
                      *         "hazard:write"
                      *       ],
@@ -33024,6 +32914,8 @@ export interface operations {
                      *       "permissions": [
                      *         "warehouse:read",
                      *         "warehouse:write",
+                     *         "lite:read",
+                     *         "lite:write",
                      *         "huaxing:read"
                      *       ]
                      *     }

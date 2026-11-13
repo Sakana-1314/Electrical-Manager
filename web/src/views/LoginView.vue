@@ -3,7 +3,6 @@ import { onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, type FormInst, type FormRules } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
-import { useSettingsStore } from '@/stores/settings'
 import { authApi } from '@/api/auth'
 import { resolveLandingRouteName } from '@/utils/navigation'
 import { LOGO_URL } from '@/constants/branding'
@@ -11,7 +10,6 @@ import { LOGO_URL } from '@/constants/branding'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
-const settings = useSettingsStore()
 const message = useMessage()
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
@@ -36,9 +34,7 @@ async function afterLogin() {
     route.query.redirect
       ? String(route.query.redirect)
       : {
-          name: resolveLandingRouteName((permission) => auth.can(permission), {
-            isLiteMode: settings.isLiteMode,
-          }),
+          name: resolveLandingRouteName((permission) => auth.can(permission)),
         },
   )
 }

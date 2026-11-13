@@ -19,6 +19,8 @@ PERMISSION_BITS: dict[str, int] = {
     "hazard:write": 1 << 10,
     "work:read": 1 << 11,
     "work:write": 1 << 12,
+    "lite:read": 1 << 13,
+    "lite:write": 1 << 14,
 }
 
 
@@ -37,9 +39,9 @@ for _bit in PERMISSION_BITS.values():
     ALL_PERMISSIONS |= _bit
 
 
-# 小程序新用户默认权限：各功能只读
+# 小程序新用户默认权限：精简二级库 / 申购 / 华星只读
 DEFAULT_PERMISSION_KEYS: tuple[str, ...] = (
-    "warehouse:read",
+    "lite:read",
     "purchase:read",
     "huaxing:read",
 )
@@ -48,13 +50,20 @@ DEFAULT_REGISTRATION_PERMISSIONS = permission_bits(*DEFAULT_PERMISSION_KEYS)
 # 种子账号权限位（与 init.sql 种子一致）
 SEED_USER_PERMISSIONS: dict[str, int] = {
     "admin": ALL_PERMISSIONS,
-    "warehouse": permission_bits("warehouse:read", "warehouse:write"),
+    # 仓库管理员同时持标准 / 精简两套二级库权限（测试两种数据源都要用到）
+    "warehouse": permission_bits("warehouse:read", "warehouse:write", "lite:read", "lite:write"),
     "purchase": permission_bits("purchase:read", "purchase:write"),
     "hazard": permission_bits("hazard:read", "hazard:write"),
     "ledger": permission_bits("ledger:read", "ledger:write"),
     "work": permission_bits("work:read", "work:write"),
     "readonly": permission_bits(
-        "warehouse:read", "purchase:read", "huaxing:read", "ledger:read", "hazard:read", "work:read"
+        "warehouse:read",
+        "lite:read",
+        "purchase:read",
+        "huaxing:read",
+        "ledger:read",
+        "hazard:read",
+        "work:read",
     ),
 }
 

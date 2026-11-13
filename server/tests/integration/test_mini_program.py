@@ -1376,8 +1376,6 @@ async def test_advanced_setting_can_close_new_mini_program_bindings(
         headers=admin,
         json={
             "mini_program_registration_enabled": False,
-            "mini_program_new_user_enabled": current.json()["mini_program_new_user_enabled"],
-            "secondary_warehouse_mode": current.json()["secondary_warehouse_mode"],
             "version": current.json()["version"],
         },
     )
@@ -1408,91 +1406,29 @@ async def test_advanced_setting_can_close_new_mini_program_bindings(
 
 
 @pytest.mark.asyncio
-async def test_advanced_setting_controls_new_mini_program_user_status(
+async def test_new_mini_program_user_is_enabled_with_default_permissions(
     client: AsyncClient, go_wechat: StartWechat
 ) -> None:
+    """新用户默认状态不再是开关：注册直接启用，能做什么由默认权限位决定。"""
+
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
     ) -> tuple[str, str]:
         return app_id or "wx-test-primary", f"status-{code}"
 
     await go_wechat(exchange=fake_exchange_wechat_code)
-    admin = await auth_headers(client, "admin")
 
-    pending_settings = await client.put(
-        "/api/v1/system-settings/advanced-settings",
-        headers=admin,
-        json={
-            "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": False,
-            "secondary_warehouse_mode": "full",
-            "version": 0,
-        },
-    )
-    assert pending_settings.status_code == 200, pending_settings.text
-
-    pending_login = await client.post(
-        "/api/v1/mini-program/auth/wx-login", json={"code": "pending"}
-    )
-    assert pending_login.status_code == 200, pending_login.text
-    pending_profile = await client.post(
+    login = await client.post("/api/v1/mini-program/auth/wx-login", json={"code": "status"})
+    profile = await client.post(
         "/api/v1/mini-program/profile",
-        headers={
-            "Authorization": f"Bearer {pending_login.json()['registration_token']}"
-        },
-        json={
-            "display_name": "待审核用户",
-            "department_name": "华星检修维护部电气车间",
-        },
+        headers={"Authorization": f"Bearer {login.json()['registration_token']}"},
+        json={"display_name": "默认启用用户", "department_name": "华星检修维护部电气车间"},
     )
-    assert pending_profile.status_code == 200, pending_profile.text
-    assert pending_profile.json()["access_token"] is None
-    assert pending_profile.json()["requires_profile"] is False
-    assert pending_profile.json()["user"]["enabled"] is False
-
-    users = await client.get(
-        "/api/v1/users", params={"keyword": "待审核用户"}, headers=admin
-    )
-    assert users.status_code == 200, users.text
-    assert users.json()["total"] == 1
-    assert users.json()["items"][0]["display_name"] == "待审核用户"
-    assert users.json()["items"][0]["enabled"] is False
-
-    pending_again = await client.post(
-        "/api/v1/mini-program/auth/wx-login", json={"code": "pending"}
-    )
-    assert pending_again.status_code == 403
-    assert pending_again.json()["code"] == "ACCOUNT_DISABLED"
-    assert pending_again.json()["message"] == "您的账号待审核，请联系管理员"
-
-    enabled_settings = await client.put(
-        "/api/v1/system-settings/advanced-settings",
-        headers=admin,
-        json={
-            "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "full",
-            "version": pending_settings.json()["version"],
-        },
-    )
-    assert enabled_settings.status_code == 200, enabled_settings.text
-
-    enabled_login = await client.post(
-        "/api/v1/mini-program/auth/wx-login", json={"code": "enabled"}
-    )
-    enabled_profile = await client.post(
-        "/api/v1/mini-program/profile",
-        headers={
-            "Authorization": f"Bearer {enabled_login.json()['registration_token']}"
-        },
-        json={
-            "display_name": "默认启用用户",
-            "department_name": "华星检修维护部电气车间",
-        },
-    )
-    assert enabled_profile.status_code == 200, enabled_profile.text
-    assert enabled_profile.json()["access_token"]
-    assert enabled_profile.json()["user"]["enabled"] is True
+    assert profile.status_code == 200, profile.text
+    user = profile.json()["user"]
+    assert user["enabled"] is True
+    # 默认权限来自高级设置（测试库种子 = 精简二级库 / 申购 / 华星只读）
+    assert user["permissions"] == ["lite:read", "purchase:read", "huaxing:read"]
 
 
 @pytest.mark.asyncio

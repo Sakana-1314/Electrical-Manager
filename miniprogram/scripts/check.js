@@ -219,7 +219,6 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'onProjectPickerConfirm',
     'onProjectPickerVisibleChange',
     'getApp().globalData.authPromise',
-    'getApp().globalData.runtimeModes',
   ]) {
     if (!profileScript.includes(snippet)) {
       throw new Error(`pages/profile/profile.js must wire the current project picker: ${snippet}`);

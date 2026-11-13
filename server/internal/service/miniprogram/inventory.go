@@ -11,7 +11,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/model"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/appsettings"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/inventory"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
@@ -219,23 +218,8 @@ func outboundRead(op *inventory.Operation, materialID int64, materialUUID string
 	}, nil
 }
 
-// ensureNotLiteSecondaryWarehouse 对应 _ensure_not_lite_secondary_warehouse：精简模式下二级库仅支持查看。
-func ensureNotLiteSecondaryWarehouse(s *db.Session) error {
-	lite, err := appsettings.IsLiteSecondaryWarehouse(s)
-	if err != nil {
-		return err
-	}
-	if lite {
-		return apperr.New("OUTBOUND_DISABLED", "二级库精简模式下不支持出入库").WithStatus(403)
-	}
-	return nil
-}
-
 // RecentOutboundReasons 对应 recent_outbound_reasons：当前用户与全员各自最近使用的 3 个（子项号, 用途）。
 func RecentOutboundReasons(s *db.Session, user *model.User) ([]schema.MiniProgramOutboundReason, []schema.MiniProgramOutboundReason, error) {
-	if err := ensureNotLiteSecondaryWarehouse(s); err != nil {
-		return nil, nil, err
-	}
 	list := func(userName *string) ([]schema.MiniProgramOutboundReason, error) {
 		w := &common.Where{}
 		w.Add("operation_type = ?", domain.OperationOutbound)
@@ -275,9 +259,6 @@ func RecentOutboundReasons(s *db.Session, user *model.User) ([]schema.MiniProgra
 // CreateOutbound 对应 create_outbound：扫码出库（同 client_request_id 幂等返回既有流水）。
 // data.MaterialUUID / data.OccurredAtTime 必须已填（请求校验或调用方赋值）。
 func CreateOutbound(s *db.Session, data schema.MiniProgramOutboundCreate, user *model.User) (schema.MiniProgramOutboundRead, error) {
-	if err := ensureNotLiteSecondaryWarehouse(s); err != nil {
-		return schema.MiniProgramOutboundRead{}, err
-	}
 	m, err := findMaterial(s, "uuid = ?", true, data.MaterialUUID)
 	if err != nil {
 		return schema.MiniProgramOutboundRead{}, err
