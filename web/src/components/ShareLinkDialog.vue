@@ -111,7 +111,7 @@ async function copyLink() {
         <b>无需登录即可访问的公开页面</b
         >。任何获得链接的人都能查看这些数据，请确认内容不涉及敏感信息。
       </n-alert>
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <n-form-item label="链接失效时间">
           <n-radio-group v-model:value="expiry" name="share-expiry">
             <n-space wrap>

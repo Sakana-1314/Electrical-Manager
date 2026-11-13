@@ -1145,7 +1145,7 @@ onMounted(() => {
         条记录。仅勾选的字段会被统一修改；单据共享字段会同步影响同一申购单下的其他物资。
       </n-alert>
       <n-scrollbar style="max-height: 65vh" content-style="padding-right: 12px">
-        <n-form label-placement="top">
+        <n-form label-placement="top" size="small" :show-feedback="false">
           <div class="form-grid batch-edit-grid">
             <n-form-item>
               <template #label>

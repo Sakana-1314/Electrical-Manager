@@ -376,7 +376,7 @@ async function saveEditRecord() {
       <span class="card-header-time">{{ formatShanghaiTime(editing.updated_at) }}</span>
     </template>
     <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
-      <n-form label-placement="top" :disabled="!canWrite">
+      <n-form label-placement="top" size="small" :show-feedback="false" :disabled="!canWrite">
         <div class="form-grid">
           <n-form-item label="需求日期" required>
             <n-date-picker v-model:value="editPlanDate" type="date" class="full-width" />
@@ -591,7 +591,7 @@ async function saveEditRecord() {
     :mask-closable="false"
   >
     <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="需求日期" required>
             <n-date-picker v-model:value="reapplyPlanDate" type="date" class="full-width" />

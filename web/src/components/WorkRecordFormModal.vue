@@ -329,6 +329,7 @@ const summary = computed(() => {
       :model="form"
       :rules="rules"
       label-placement="top"
+      size="small"
       :disabled="loading || readonly"
     >
       <n-grid :cols="2" :x-gap="20">

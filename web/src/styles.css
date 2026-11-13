@@ -221,19 +221,26 @@ a {
 .n-card.n-modal .n-card-content {
   padding: 14px 22px 18px;
 }
-/* 用户详情弹窗：标题下加分隔线，表单行之间留 14px（scoped :deep 作用不到 teleport 出来的弹窗根，写在全局） */
+/* 弹窗表单行距：默认 24px 压到 14px（末行归零）。
+ * scoped :deep 作用不到 teleport 出来的弹窗根，所以必须写在全局；
+ * 口径与用户详情弹窗（#439-#442）一致，对所有弹窗统一生效。 */
+.n-card.n-modal .n-form-item {
+  margin-bottom: 14px;
+}
+.n-card.n-modal .n-form-item:last-child {
+  margin-bottom: 0;
+}
+/* 弹窗页脚按钮统一小尺寸（28px / 12px，与移动端断点、用户详情弹窗 footer 同口径）。 */
+.n-card.n-modal .n-card__footer .n-button,
+.n-card.n-modal .n-card__action .n-button {
+  height: 28px;
+  font-size: 12px;
+  padding: 0 10px;
+}
+/* 用户详情弹窗：标题下加分隔线。 */
 .n-card.n-modal.user-edit-modal .n-card-header {
   padding: 16px 22px 12px;
   border-bottom: 1px solid var(--color-border-subtle);
-}
-.n-card.n-modal.user-edit-modal .n-card-content {
-  padding: 14px 22px 18px;
-}
-.n-card.n-modal.user-edit-modal .n-form-item {
-  margin-bottom: 14px;
-}
-.n-card.n-modal.user-edit-modal .n-form-item:last-child {
-  margin-bottom: 0;
 }
 /* 侧栏菜单密度：默认 42px 菜单项压到 34px（!important 压过 Naive 写在根上的内联变量） */
 .n-menu {

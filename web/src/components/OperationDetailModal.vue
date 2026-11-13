@@ -351,7 +351,7 @@ watch(
       </n-alert>
 
       <n-divider title-placement="left">单据信息</n-divider>
-      <n-form v-if="editing" label-placement="top">
+      <n-form v-if="editing" label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="业务类型">
             <n-select

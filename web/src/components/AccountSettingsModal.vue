@@ -112,7 +112,7 @@ watch(
     title="用户设置"
     style="width: min(540px, calc(100vw - 32px))"
   >
-    <n-form label-placement="top">
+    <n-form label-placement="top" size="small" :show-feedback="false">
       <n-form-item label="账号">
         <div class="account-summary">
           <span class="account-name">{{ user?.display_name || user?.username || '—' }}</span>

@@ -168,7 +168,7 @@ function remove(row: Project) {
       :title="editing ? '编辑项目' : '新建项目'"
       style="width: min(560px, calc(100vw - 32px))"
     >
-      <n-form label-placement="top">
+      <n-form label-placement="top" size="small" :show-feedback="false">
         <n-form-item label="名称" required>
           <n-input v-model:value="form.name" placeholder="如 华星现有项目" />
         </n-form-item>

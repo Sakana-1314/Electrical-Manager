@@ -226,7 +226,7 @@ function confirmDelete(): void {
       style="width: min(560px, calc(100vw - 24px))"
       :mask-closable="false"
     >
-      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+      <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" size="small">
         <n-form-item label="单位名称" path="name">
           <n-input v-model:value="form.name" placeholder="如：电气车间" />
         </n-form-item>

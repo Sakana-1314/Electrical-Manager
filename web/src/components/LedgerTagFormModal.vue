@@ -178,7 +178,7 @@ function confirmDelete(): void {
     :mask-closable="false"
     @update:show="close"
   >
-    <n-form ref="formRef" :model="form" :rules="rules" label-placement="top">
+    <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" size="small">
       <n-form-item label="名称" path="name">
         <n-input v-model:value="form.name" placeholder="如：低压柜" />
       </n-form-item>
