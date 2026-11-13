@@ -6,6 +6,7 @@ const can = (perms: string[]) => (permission: Permission) => perms.includes(perm
 
 const ALL_READ = [
   'warehouse:read',
+  'lite:read',
   'purchase:read',
   'huaxing:read',
   'ledger:read',
@@ -14,11 +15,12 @@ const ALL_READ = [
 ]
 
 describe('主 tab 可见性（utils/navigation）', () => {
-  it('有全部读权限时包含 8 个主 tab 且不含系统管理', () => {
+  it('有全部读权限时包含 9 个主 tab 且不含系统管理', () => {
     expect(visibleNavFeatureKeys(can(ALL_READ))).toEqual([
       'dashboard',
       'memos',
       'warehouse',
+      'warehouse_lite',
       'huaxing_inventory',
       'procurement',
       'hazards',
@@ -33,6 +35,14 @@ describe('主 tab 可见性（utils/navigation）', () => {
     expect(keys).not.toContain('work')
   })
 
+  it('只有精简二级库权限时落到精简二级库 tab', () => {
+    expect(visibleNavFeatureKeys(can(['lite:read']))).toEqual([
+      'dashboard',
+      'memos',
+      'warehouse_lite',
+    ])
+  })
+
   it('工作台 / 备忘录不设门禁：无任何权限也可见', () => {
     expect(visibleNavFeatureKeys(can([]))).toEqual(['dashboard', 'memos'])
   })
@@ -45,20 +55,19 @@ describe('主 tab 可见性（utils/navigation）', () => {
     expect(visibleNavFeatureKeys(can(['warehouse:write']))).toEqual(['dashboard', 'memos'])
   })
 
-  it('NAV_FEATURES 数量保持 8 个主 tab', () => {
-    expect(NAV_FEATURES).toHaveLength(8)
+  it('NAV_FEATURES 数量保持 9 个主 tab', () => {
+    expect(NAV_FEATURES).toHaveLength(9)
   })
 })
 
 describe('落地页推导（utils/navigation）', () => {
-  const full = { isLiteMode: false }
-
   it('默认落工作台', () => {
-    expect(resolveLandingRouteName(can(ALL_READ), full)).toBe('dashboard')
+    expect(resolveLandingRouteName(can(ALL_READ))).toBe('dashboard')
   })
 
   it('工作台不设权限门禁，任何权限组合都落工作台', () => {
-    expect(resolveLandingRouteName(can([]), full)).toBe('dashboard')
-    expect(resolveLandingRouteName(can(['system:admin']), { isLiteMode: true })).toBe('dashboard')
+    expect(resolveLandingRouteName(can([]))).toBe('dashboard')
+    expect(resolveLandingRouteName(can(['system:admin']))).toBe('dashboard')
+    expect(resolveLandingRouteName(can(['lite:read']))).toBe('dashboard')
   })
 })

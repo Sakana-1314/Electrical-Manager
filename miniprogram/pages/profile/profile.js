@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { SECONDARY_WAREHOUSE_LITE } = require('../../utils/features');
+const { hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const {
   ensureProject,
@@ -24,8 +24,8 @@ Page({
     loading: true,
     failed: false,
     user: null,
-    // 精简模式（二级库精简版）下不展示「查看出入库记录」入口：与原首页弹窗同一开关。
-    liteMode: false,
+    // 没有标准二级库读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
+    recordsVisible: false,
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
     projectPickerVisible: false,
@@ -79,15 +79,13 @@ Page({
       }
       // 权限位数量展示在账号信息里（管理端与小程序端共用同一套权限位）。
       const permissionCountLabel = t('permissionCount', { count: (user.permissions || []).length });
-      const runtimeModes =
-        getApp().globalData.runtimeModes || (await getApp().globalData.runtimeSettingsPromise);
       this.setData({
         user: {
           ...user,
           registered_at: formatDateTime(user.created_at),
         },
         permissionCountLabel,
-        liteMode: runtimeModes.secondary_warehouse_mode === SECONDARY_WAREHOUSE_LITE,
+        recordsVisible: hasStandardInventory(),
         loading: false,
       });
     } catch (_error) {

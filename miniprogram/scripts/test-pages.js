@@ -102,15 +102,13 @@ global.getApp = () => ({
       registration_disabled: false,
       requires_profile: false,
     }),
-    runtimeSettingsPromise: Promise.resolve({
-      secondary_warehouse_mode: 'full',
-    }),
     user: {
       display_name: '张三',
       created_at: '2026-01-01T00:00:00Z',
       permissions: [
         'warehouse:read',
         'warehouse:write',
+        'lite:read',
         'purchase:read',
         'huaxing:read',
         'ledger:read',
@@ -706,7 +704,10 @@ async function run() {
     page.data.user && page.data.user.display_name === '张三',
     'profile must read the user from globalData session',
   );
-  assert(page.data.liteMode === false, 'full secondary warehouse mode must keep the records entry');
+  assert(
+    page.data.recordsVisible === true,
+    'standard warehouse read permission must keep the records entry',
+  );
   assert(page.data.currentProjectLabel === i18n.t('projectNotSelected'), 'project label falls back to 未选择');
   // 没有可选项目时打开选择器只提示，不弹空选择器
   page.openProjectPicker();

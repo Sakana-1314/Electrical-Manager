@@ -39,6 +39,8 @@ paths:
                   - system:admin
                   - warehouse:read
                   - warehouse:write
+                  - lite:read
+                  - lite:write
                   - purchase:read
                   - purchase:write
                   - huaxing:read
@@ -207,6 +209,8 @@ paths:
                 - system:admin
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - purchase:read
                 - purchase:write
                 - huaxing:read
@@ -299,6 +303,8 @@ paths:
                 - system:admin
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - purchase:read
                 - purchase:write
                 - huaxing:read
@@ -652,76 +658,6 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
-  /api/v1/system-settings/mini-program-features:
-    get:
-      tags:
-      - 系统设置
-      summary: 功能开关配置
-      operationId: mini_program_features_api_v1_system_settings_mini_program_features_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MiniProgramFeaturesRead'
-              example:
-                secondary_warehouse_mode: full
-        '400':
-          description: 业务校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: NOT_FOUND
-                message: 二级库物资不存在
-                details: {}
-                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
-        '401':
-          description: 未认证或凭证无效
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: UNAUTHORIZED
-                message: 请先登录
-                details: {}
-                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
-        '403':
-          description: 权限不足
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: FORBIDDEN
-                message: 没有执行此操作的权限
-                details: {}
-                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
-        '409':
-          description: 版本、状态或业务数据冲突
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VERSION_CONFLICT
-                message: 数据已被其他用户修改，请刷新后重试
-                details: {}
-                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
-        '422':
-          description: 请求参数校验失败
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiError'
-              example:
-                code: VALIDATION_ERROR
-                message: 请求字段或筛选参数不合法
-                details: {}
-                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/system-settings/advanced-settings:
     get:
       tags:
@@ -740,12 +676,10 @@ paths:
                 $ref: '#/components/schemas/AdvancedSettingsRead'
               example:
                 mini_program_registration_enabled: true
-                mini_program_new_user_enabled: true
-                secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
                 default_permissions:
-                - warehouse:read
+                - lite:read
                 - purchase:read
                 - huaxing:read
         '401':
@@ -793,12 +727,10 @@ paths:
                 $ref: '#/components/schemas/AdvancedSettingsRead'
               example:
                 mini_program_registration_enabled: true
-                mini_program_new_user_enabled: true
-                secondary_warehouse_mode: full
                 updated_at: '2026-09-13T10:30:00+08:00'
                 version: 3
                 default_permissions:
-                - warehouse:read
+                - lite:read
                 - purchase:read
                 - huaxing:read
         '400':
@@ -4468,6 +4400,7 @@ paths:
                 $ref: '#/components/schemas/DashboardSummaryRead'
               example:
                 stock_material_count: 23
+                lite_inventory_count: 41
                 low_stock_count: 9
                 uncoded_purchase_material_count: 2
                 purchase_record_count: 5
@@ -6703,13 +6636,23 @@ paths:
               - key: warehouse:read
                 module: warehouse
                 action: read
-                label: 二级库与出入库查看
+                label: 标准二级库与出入库查看
                 bit: 2
               - key: warehouse:write
                 module: warehouse
                 action: write
-                label: 二级库出入库与库存调整
+                label: 标准二级库出入库与库存调整
                 bit: 4
+              - key: lite:read
+                module: lite
+                action: read
+                label: 精简二级库查看
+                bit: 8192
+              - key: lite:write
+                module: lite
+                action: write
+                label: 精简二级库导入
+                bit: 16384
         '401':
           description: 未认证或凭证无效
           content:
@@ -6766,7 +6709,7 @@ paths:
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                   permissions:
-                  - warehouse:read
+                  - lite:read
                   - purchase:read
                   - huaxing:read
                   - ledger:read
@@ -6852,7 +6795,7 @@ paths:
                 last_used_at: '2026-09-13T09:12:00+08:00'
                 version: 2
                 permissions:
-                - warehouse:read
+                - lite:read
                 - purchase:read
                 - huaxing:read
                 - ledger:read
@@ -7112,7 +7055,7 @@ paths:
                   last_used_at: '2026-09-13T09:12:00+08:00'
                   version: 2
                   permissions:
-                  - warehouse:read
+                  - lite:read
                   - purchase:read
                   - huaxing:read
                   - ledger:read
@@ -16464,6 +16407,8 @@ paths:
                   permissions:
                   - warehouse:read
                   - warehouse:write
+                  - lite:read
+                  - lite:write
                   - huaxing:read
                 page: 1
                 page_size: 20
@@ -16557,6 +16502,8 @@ paths:
                 permissions:
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - huaxing:read
         '400':
           description: 业务校验失败
@@ -16655,6 +16602,8 @@ paths:
                 permissions:
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - huaxing:read
         '400':
           description: 业务校验失败
@@ -16823,6 +16772,8 @@ paths:
                 permissions:
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - hazard:read
                 - hazard:write
                 wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
@@ -16926,6 +16877,8 @@ paths:
                 permissions:
                 - warehouse:read
                 - warehouse:write
+                - lite:read
+                - lite:write
                 - huaxing:read
         '400':
           description: 业务校验失败
@@ -23329,11 +23282,6 @@ components:
         mini_program_registration_enabled:
           type: boolean
           title: Mini Program Registration Enabled
-        mini_program_new_user_enabled:
-          type: boolean
-          title: Mini Program New User Enabled
-        secondary_warehouse_mode:
-          $ref: '#/components/schemas/SecondaryWarehouseMode'
         updated_at:
           anyOf:
           - type: string
@@ -23352,20 +23300,16 @@ components:
       type: object
       required:
       - mini_program_registration_enabled
-      - mini_program_new_user_enabled
-      - secondary_warehouse_mode
       - default_permissions
       - version
       title: AdvancedSettingsRead
-      description: 管理端高级设置：小程序注册开关、新用户默认状态、二级库运行模式。模型 / Webhook 走服务端环境变量，图片加速已移除。
+      description: 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；标准 / 精简二级库没有运行模式，可见性由权限位决定。
       examples:
       - mini_program_registration_enabled: true
-        mini_program_new_user_enabled: true
-        secondary_warehouse_mode: full
         updated_at: '2026-09-13T10:30:00+08:00'
         version: 3
         default_permissions:
-        - warehouse:read
+        - lite:read
         - purchase:read
         - huaxing:read
     AdvancedSettingsUpdate:
@@ -23373,11 +23317,6 @@ components:
         mini_program_registration_enabled:
           type: boolean
           title: Mini Program Registration Enabled
-        mini_program_new_user_enabled:
-          type: boolean
-          title: Mini Program New User Enabled
-        secondary_warehouse_mode:
-          $ref: '#/components/schemas/SecondaryWarehouseMode'
         version:
           type: integer
           minimum: 0.0
@@ -23394,17 +23333,13 @@ components:
       type: object
       required:
       - mini_program_registration_enabled
-      - mini_program_new_user_enabled
-      - secondary_warehouse_mode
       - version
       title: AdvancedSettingsUpdate
       examples:
       - mini_program_registration_enabled: true
-        mini_program_new_user_enabled: false
-        secondary_warehouse_mode: lite
         version: 3
         default_permissions:
-        - warehouse:read
+        - lite:read
         - purchase:read
         - huaxing:read
     AiSearchExpandRead:
@@ -23966,6 +23901,10 @@ components:
         stock_material_count:
           type: integer
           title: Stock Material Count
+        lite_inventory_count:
+          type: integer
+          title: Lite Inventory Count
+          description: 精简二级库（lite_inventory）行数；两种二级库并存，前端按用户权限位展示对应卡片。
         low_stock_count:
           type: integer
           title: Low Stock Count
@@ -23994,6 +23933,7 @@ components:
       type: object
       required:
       - stock_material_count
+      - lite_inventory_count
       - low_stock_count
       - uncoded_purchase_material_count
       - purchase_record_count
@@ -24002,9 +23942,10 @@ components:
       - today_inbound_count
       - today_outbound_count
       title: DashboardSummaryRead
-      description: 工作台概览计数；精简模式下物资数取精简库存行数、低库存计 0。
+      description: 工作台概览计数；标准二级库与精简二级库同时计数，前端按用户权限位选择展示。
       examples:
       - stock_material_count: 23
+        lite_inventory_count: 41
         low_stock_count: 9
         uncoded_purchase_material_count: 2
         purchase_record_count: 5
@@ -25764,6 +25705,8 @@ components:
           - system:admin
           - warehouse:read
           - warehouse:write
+          - lite:read
+          - lite:write
           - purchase:read
           - purchase:write
           - huaxing:read
@@ -25926,17 +25869,6 @@ components:
       - trial
       - release
       title: MiniProgramCodeEnv
-    MiniProgramFeaturesRead:
-      properties:
-        secondary_warehouse_mode:
-          $ref: '#/components/schemas/SecondaryWarehouseMode'
-      type: object
-      required:
-      - secondary_warehouse_mode
-      title: MiniProgramFeaturesRead
-      description: 公开运行模式：小程序与网页端共用的二级库完整 / 精简模式。功能是否展示与可写由 app_user.permissions 权限位决定，不再有功能开关配置。
-      examples:
-      - secondary_warehouse_mode: full
     MiniProgramHazardCreate:
       properties:
         inspection_area:
@@ -26419,7 +26351,7 @@ components:
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
           permissions:
-          - warehouse:read
+          - lite:read
           - purchase:read
           - huaxing:read
           - ledger:read
@@ -27497,7 +27429,7 @@ components:
         department_name: 检修维护部电气自动化车间
         enabled: true
         permissions:
-        - warehouse:read
+        - lite:read
         last_used_at: '2026-09-13T09:12:00+08:00'
         wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
         created_at: '2026-08-14T10:20:00+08:00'
@@ -29688,7 +29620,7 @@ components:
           last_used_at: '2026-09-13T09:12:00+08:00'
           version: 2
           permissions:
-          - warehouse:read
+          - lite:read
           - purchase:read
           - huaxing:read
           - ledger:read
@@ -29704,7 +29636,7 @@ components:
           last_used_at: '2026-09-06T14:05:00+08:00'
           version: 1
           permissions:
-          - warehouse:read
+          - lite:read
           - purchase:read
           - huaxing:read
           - ledger:read
@@ -29720,7 +29652,7 @@ components:
           last_used_at: '2026-08-15T08:12:00+08:00'
           version: 2
           permissions:
-          - warehouse:read
+          - lite:read
           - purchase:read
           - huaxing:read
           - ledger:read
@@ -31479,6 +31411,8 @@ components:
           permissions:
           - warehouse:read
           - warehouse:write
+          - lite:read
+          - lite:write
           - huaxing:read
         page: 1
         page_size: 20
@@ -34372,13 +34306,6 @@ components:
         lines:
         - stock_material_id: 1
           quantity: '1'
-    SecondaryWarehouseMode:
-      type: string
-      enum:
-      - full
-      - lite
-      title: SecondaryWarehouseMode
-      description: 二级库运行模式：完整模式（物资/出入库/流水）与精简模式（Excel 导入 + 只读查询）。
     ShareCreateRequest:
       properties:
         share_type:
@@ -35200,6 +35127,8 @@ components:
         permissions:
         - warehouse:read
         - warehouse:write
+        - lite:read
+        - lite:write
         - huaxing:read
         enabled: true
         version: 1
@@ -35263,6 +35192,8 @@ components:
         permissions:
         - warehouse:read
         - warehouse:write
+        - lite:read
+        - lite:write
     UserRead:
       properties:
         id:
@@ -35329,6 +35260,8 @@ components:
         - system:admin
         - warehouse:read
         - warehouse:write
+        - lite:read
+        - lite:write
         - purchase:read
         - purchase:write
         - huaxing:read
@@ -35421,6 +35354,8 @@ components:
         permissions:
         - warehouse:read
         - warehouse:write
+        - lite:read
+        - lite:write
         - purchase:read
         - huaxing:read
         - ledger:read

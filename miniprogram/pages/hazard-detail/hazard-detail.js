@@ -45,7 +45,6 @@ Page({
         this.showError(new Error(t('invalidHazard')));
         return;
       }
-      await app.globalData.runtimeSettingsPromise;
       this.setData({ canWrite: canWriteHazards() });
       await this.loadHazard();
     } catch (error) {

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { Permission } from '@/types/navigation'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
-import { useSettingsStore } from '@/stores/settings'
 import { resolveLandingRouteName } from '@/utils/navigation'
 
 declare module 'vue-router' {
@@ -21,26 +20,14 @@ declare module 'vue-router' {
   }
 }
 
-/** 完整模式二级库的路由：精简模式下统一重定向到精简视图 */
-const FULL_WAREHOUSE_ROUTES = new Set([
-  'stock-materials',
-  'inbound',
-  'outbound',
-  'stock',
-  'operations',
-])
-
 /**
  * 落地页：当前权限下可见的第一个主 tab。
  * 没有模块读权限的用户落到工作台（工作台不设门禁）；权限只影响渲染，不做路由拦截。
  */
 function landingRoute() {
-  const settings = useSettingsStore()
   const auth = useAuthStore()
   return {
-    name: resolveLandingRouteName((permission) => auth.can(permission), {
-      isLiteMode: settings.isLiteMode,
-    }),
+    name: resolveLandingRouteName((permission) => auth.can(permission)),
   }
 }
 
@@ -76,7 +63,7 @@ const router = createRouter({
           path: 'warehouse/materials',
           name: 'stock-materials',
           component: () => import('@/views/warehouse/StockMaterialsView.vue'),
-          meta: { title: '物资档案', parent: '二级库' },
+          meta: { title: '物资档案', parent: '二级库', permission: 'warehouse:read' },
         },
         {
           // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
@@ -104,7 +91,7 @@ const router = createRouter({
           path: 'warehouse/stock',
           name: 'stock',
           component: () => import('@/views/warehouse/StockView.vue'),
-          meta: { title: '库存查询', parent: '二级库' },
+          meta: { title: '库存查询', parent: '二级库', permission: 'warehouse:read' },
         },
         {
           path: 'warehouse/hua-xing-stock',
@@ -113,16 +100,17 @@ const router = createRouter({
           meta: { title: '华星总库存' },
         },
         {
+          // 精简二级库（lite_inventory）：独立权限位，Excel 导入 + 只读查询
           path: 'warehouse/lite',
           name: 'warehouse-lite',
           component: () => import('@/views/warehouse/SecondaryWarehouseLiteView.vue'),
-          meta: { title: '二级库' },
+          meta: { title: '精简二级库', permission: 'lite:read' },
         },
         {
           path: 'warehouse/operations',
           name: 'operations',
           component: () => import('@/views/warehouse/OperationsView.vue'),
-          meta: { title: '操作记录', parent: '二级库' },
+          meta: { title: '操作记录', parent: '二级库', permission: 'warehouse:read' },
         },
         {
           // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
@@ -296,10 +284,6 @@ router.beforeEach(async (to) => {
   // （拉取失败保持未加载，不拦导航，本次由后端按 PROJECT_REQUIRED / PROJECT_NOT_FOUND 提示）
   if (!to.meta.public) await useProjectStore().ensureLoaded()
   if (to.meta.permission && !auth.can(to.meta.permission)) return landingRoute()
-  // 二级库精简模式下，完整模式仓库路由不可访问，统一重定向到精简视图。
-  if (useSettingsStore().isLiteMode && to.name && FULL_WAREHOUSE_ROUTES.has(String(to.name))) {
-    return { name: 'warehouse-lite' }
-  }
 })
 
 export default router

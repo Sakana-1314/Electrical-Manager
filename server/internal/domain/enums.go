@@ -101,14 +101,6 @@ const (
 var MiniProgramCodeEnv = newEnum("TRIAL", "trial", "RELEASE", "release")
 var MiniProgramStockStatus = newEnum("NORMAL", "normal", "OUT_OF_STOCK", "out_of_stock", "LOW_STOCK", "low_stock")
 
-// ---- 二级库模式 ----
-const (
-	SecondaryWarehouseFull = "full"
-	SecondaryWarehouseLite = "lite"
-)
-
-var SecondaryWarehouseMode = newEnum("FULL", "full", "LITE", "lite")
-
 // ---- 申购计划状态 ----
 const (
 	PlanStatusNormal   = "正常"

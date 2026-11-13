@@ -1,7 +1,8 @@
 // Package settings 是系统设置接口（对应原 api/v1/system_settings.py）。
 //
-// 管理端只保留「高级设置」里的开关（小程序注册 / 新用户默认状态 / 二级库精简模式）；
-// 模型服务与 Webhook 走服务端环境变量，图片加速能力已移除。
+// 管理端只保留「高级设置」：小程序注册开关与默认用户权限；
+// 模型服务与 Webhook 走服务端环境变量，图片加速能力已移除；
+// 标准二级库与精简二级库没有运行模式，可见性由权限位决定。
 package settings
 
 import (
@@ -19,8 +20,6 @@ import (
 
 func Register(r *web.Router) {
 	g := r.Group("/system-settings")
-	// 公开配置端点：同时服务管理端与小程序（两种鉴权体系不同），故保持匿名。
-	g.GET("/mini-program-features", miniProgramFeatures)
 	g.GET("/advanced-settings", getAdvancedSettings, auth.SystemAdmin)
 	g.PUT("/advanced-settings", updateAdvancedSettings, auth.SystemAdmin)
 
@@ -31,14 +30,6 @@ func Register(r *web.Router) {
 		r.Raw().POST("/../../__test__/webhook/deliver-once", deliverOnce)
 		r.Raw().POST("/../../__test__/webhook/settings", setWebhookSettings)
 	}
-}
-
-func miniProgramFeatures(c *web.Ctx) error {
-	features, err := appsettings.GetMiniProgramFeatures(c.DB)
-	if err != nil {
-		return err
-	}
-	return c.OK(features)
 }
 
 func getAdvancedSettings(c *web.Ctx) error {

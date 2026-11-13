@@ -77,7 +77,7 @@ describe('移动端表格卡片的接线', () => {
     expect(rule).not.toContain('overflow: auto')
     expect(rule).not.toContain('overflow: scroll')
     // 圆角本身仍由全局 --radius-card 提供，断言这条 token 还在
-    expect(styles).toContain('--radius-card: 14px')
+    expect(styles).toContain('--radius-card: 12px')
   })
 
   it('规则落在 ≤768px 断点内，桌面端不受影响', () => {

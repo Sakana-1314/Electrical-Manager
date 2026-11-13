@@ -14,8 +14,14 @@ import type { Permission } from '@/types/navigation'
 export const NAV_FEATURES = [
   { key: 'dashboard', label: '工作台', route: 'dashboard', permission: null },
   { key: 'memos', label: '备忘录', route: 'memos', permission: null },
-  // 二级库在精简模式下是单一一级项（warehouse-lite），代表路由随模式切换（见 resolveLandingRouteName）
+  // 标准二级库（物资 / 出入库）与精简二级库（Excel 导入台账）是两套独立权限，可单独授予
   { key: 'warehouse', label: '二级库', route: 'stock', permission: 'warehouse:read' },
+  {
+    key: 'warehouse_lite',
+    label: '精简二级库',
+    route: 'warehouse-lite',
+    permission: 'lite:read',
+  },
   {
     key: 'huaxing_inventory',
     label: '华星总库存',
@@ -44,13 +50,9 @@ export function visibleNavFeatureKeys(can: (permission: Permission) => boolean):
 
 /**
  * 落地页路由名：当前权限下可见的第一个主 tab。
- * 二级库在精简模式下落到 `warehouse-lite`；异常情况回落工作台（工作台不设门禁，始终可见）。
+ * 异常情况回落工作台（工作台不设门禁，始终可见）。
  */
-export function resolveLandingRouteName(
-  can: (permission: Permission) => boolean,
-  options: { isLiteMode: boolean },
-): string {
+export function resolveLandingRouteName(can: (permission: Permission) => boolean): string {
   const [first] = visibleNavFeatureKeys(can)
-  if (first === 'warehouse' && options.isLiteMode) return 'warehouse-lite'
   return NAV_FEATURES.find((feature) => feature.key === first)?.route ?? 'dashboard'
 }

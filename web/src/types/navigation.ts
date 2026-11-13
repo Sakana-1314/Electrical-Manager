@@ -10,6 +10,8 @@ export type Permission =
   | 'system:admin'
   | 'warehouse:read'
   | 'warehouse:write'
+  | 'lite:read'
+  | 'lite:write'
   | 'purchase:read'
   | 'purchase:write'
   | 'huaxing:read'

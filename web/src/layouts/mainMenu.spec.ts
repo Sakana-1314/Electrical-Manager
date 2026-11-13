@@ -7,6 +7,8 @@ const ALL_PERMISSIONS: Permission[] = [
   'system:admin',
   'warehouse:read',
   'warehouse:write',
+  'lite:read',
+  'lite:write',
   'purchase:read',
   'purchase:write',
   'huaxing:read',
@@ -19,7 +21,6 @@ const ALL_PERMISSIONS: Permission[] = [
 ]
 
 const context = (overrides: Partial<MainMenuContext> = {}): MainMenuContext => ({
-  isLiteMode: false,
   can: (permission) => ALL_PERMISSIONS.includes(permission),
   ...overrides,
 })
@@ -40,6 +41,7 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
       'dashboard',
       'memos',
       'warehouse-group',
+      'warehouse-lite',
       'hua-xing-stock',
       'procurement-group',
       'hazard-group',
@@ -52,7 +54,8 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
   it('没有读权限的主 tab 连同分组整体不渲染，其余顺序不变', () => {
     const options = buildMainMenu(
       context({
-        can: (permission) => permission !== 'work:read' && permission !== 'huaxing:read',
+        can: (permission) =>
+          permission !== 'work:read' && permission !== 'huaxing:read' && permission !== 'lite:read',
       }),
     )
     expect(topKeys(options)).toEqual([
@@ -77,8 +80,11 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
     expect(topKeys(options)).not.toContain('settings-group')
   })
 
-  it('精简模式下二级库降为一级项，完整模式为分组', () => {
-    expect(topKeys(buildMainMenu(context({ isLiteMode: true })))).toContain('warehouse-lite')
+  it('精简二级库是独立一级项：持有 lite:read 才渲染，标准二级库始终是分组', () => {
+    expect(topKeys(buildMainMenu(context()))).toContain('warehouse-lite')
+    expect(
+      topKeys(buildMainMenu(context({ can: (permission) => permission !== 'lite:read' }))),
+    ).not.toContain('warehouse-lite')
     expect(childKeys(buildMainMenu(context()), 'warehouse-group')).toEqual([
       'stock',
       'stock-materials',

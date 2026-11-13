@@ -18,6 +18,7 @@ const defaultPermissions = ref<string[]>([])
 const MODULE_LABELS: Record<string, string> = {
   system: '系统管理',
   warehouse: '二级库',
+  lite: '精简二级库',
   purchase: '申购',
   huaxing: '华星总库存',
   codes: '物料编码库',

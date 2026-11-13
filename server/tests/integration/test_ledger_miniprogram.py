@@ -182,13 +182,8 @@ async def test_ledger_endpoints_require_ledger_read_permission(
     client: AsyncClient,
 ) -> None:
     """台账读取由权限位决定：没有 ledger:read 返回 403，补上权限位后立即可读。
-
-    功能是否展示不再由「台账档位」配置决定——公开运行模式端点只剩二级库完整 / 精简模式。
+    功能是否展示由权限位决定，不再有公开运行模式端点。
     """
-    features = await client.get("/api/v1/system-settings/mini-program-features")
-    assert features.status_code == 200, features.text
-    assert features.json() == {"secondary_warehouse_mode": "full"}
-
     async with project_session() as session:
         user_id = await create_mini_program_user(session, "无台账权限", permissions=())
     headers = {"Authorization": f"Bearer {create_mini_program_access_token(user_id)}"}

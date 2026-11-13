@@ -29,9 +29,8 @@ flowchart LR
 | 术语 | 代码标识 | 定义 |
 | --- | --- | --- |
 | 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
-| 默认用户权限 | `runtime_settings.default_permissions` | 新建用户 / 小程序新注册用户的默认权限位（BIGINT）：在高级设置里勾选，写权限自动带同模块读权限；未配置时默认二级库只读 + 申购只读 + 华星总库存只读（42） |
-| 二级库精简模式 | `SecondaryWarehouseMode.LITE` | 二级库运行模式：完整模式 `full`（物资/出入库/流水）与精简模式 `lite`（Excel 全量导入 + 只读查询）；落在 `system_setting` 的 `runtime_settings.secondary_warehouse_mode`，影响路由、菜单与写接口 |
-| 精简库存表 | `lite_inventory` | 精简模式下的独立库存表：物资名称/型号规格/单位/数量/备注，全量替换导入 |
+| 默认用户权限 | `runtime_settings.default_permissions` | 新建用户 / 小程序新注册用户的默认权限位（BIGINT）：在高级设置里勾选，写权限自动带同模块读权限；未配置时默认精简二级库只读 + 申购只读 + 华星总库存只读（8232） |
+| 精简库存表 | `lite_inventory` | 精简二级库的独立库存表（`lite:read` / `lite:write` 权限位）：物资名称/型号规格/单位/数量/备注，全量替换导入，与标准二级库并存、互不依赖 |
 | 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放（`service/inventory` 的 `replayMaterials`）；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
 | 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
 | 冲销 | `SourceType.REVERSAL` + `reversal_of_id` | 以反向类型的新流水抵消原流水，按行记录 `remaining_qty`（剩余可冲数量），累计冲销不得超过原数量 |
@@ -157,7 +156,7 @@ erDiagram
 | --- | --- |
 | `project` | 项目自身就是隔离维度 |
 | `app_user` | 用户与权限位属用户管理 |
-| `system_setting` | 系统配置类（高级设置开关：小程序注册、新用户默认状态、二级库精简模式） |
+| `system_setting` | 系统配置类（高级设置：小程序注册开关、默认用户权限位） |
 | `webhook_delivery` | 集成投递队列（无查询接口；渠道配置在环境变量，投递内容里带 `project_id` / `project_name` 供接收方区分） |
 | `business_event_log` | 审计基础设施（同时承载系统配置事件与业务事件，无对外查询接口） |
 | `file_object` | 全局附件池：按 `sha256` 全局去重、引用计数跨项目统计 |
@@ -369,7 +368,7 @@ erDiagram
 | `app_user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
 | `app_user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
 | `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（任意账号都可绑定；非空时唯一，一个小程序一个 openid） |
-| `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
+| `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（含标准二级库 warehouse 与精简二级库 lite 两套位，见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
 | `app_user` | `enabled` | BOOLEAN | 否 | TRUE | 账号是否启用 |
 | `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 最近登录时间（网页密码登录与小程序登录均刷新，不自增 version） |
 | `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
@@ -817,8 +816,8 @@ flowchart LR
     U["用户启用开关"] --> U1["决定能否登录"]
     W["Webhook 环境变量开关"] --> W1["默认关闭；启用时必须配置地址，事件为空则不推送"]
     P["补库策略开关"] --> P1["默认开启；关闭后不计入低库存判定"]
-    M["小程序注册开关 / 新用户默认状态"] --> M1["决定能否新绑定、注册后是否待审核"]
-    L["二级库精简模式开关"] --> L1["开启后只提供 Excel 导入与只读查询，小程序禁用出库"]
+    M["小程序注册开关"] --> M1["决定能否新绑定；新注册用户直接启用，权限取默认权限位"]
+    L["标准 / 精简二级库权限位"] --> L1["各自独立控制入口与写接口，两种库存可并存"]
 ```
 
 ### 凭证加密与回显
@@ -878,7 +877,7 @@ flowchart LR
 
 | `username` | `display_name` | 权限位（十进制） | `enabled` | `api_token_hash` |
 | --- | --- | --- | --- | --- |
-| `admin` | 系统管理员 | 8127（系统管理 + 全部功能读写） | 1 | `sha256(gen_random_uuid())` |
+| `admin` | 系统管理员 | 32703（系统管理 + 全部功能读写） | 1 | `sha256(gen_random_uuid())` |
 | `warehouse` | 仓库管理员 | 6（二级库读写） | 1 | `sha256(gen_random_uuid())` |
 | `purchase` | 申购管理员 | 24（申购读写） | 1 | `sha256(gen_random_uuid())` |
 | `hazard` | 隐患管理员 | 1536（隐患读写） | 1 | `sha256(gen_random_uuid())` |

@@ -25,9 +25,7 @@ async def test_advanced_settings_permissions_and_round_trip(client: AsyncClient)
     assert initial.status_code == 200, initial.text
     assert initial.json() == {
         "mini_program_registration_enabled": True,
-        "mini_program_new_user_enabled": True,
-        "secondary_warehouse_mode": "full",
-        "default_permissions": ["warehouse:read", "purchase:read", "huaxing:read"],
+        "default_permissions": ["lite:read", "purchase:read", "huaxing:read"],
         "updated_at": None,
         "version": 0,
     }
@@ -37,41 +35,29 @@ async def test_advanced_settings_permissions_and_round_trip(client: AsyncClient)
         headers=admin,
         json={
             "mini_program_registration_enabled": False,
-            "mini_program_new_user_enabled": False,
-            "secondary_warehouse_mode": "lite",
             "version": 0,
         },
     )
     assert saved.status_code == 200, saved.text
-    body = saved.json()
-    assert body["mini_program_registration_enabled"] is False
-    assert body["mini_program_new_user_enabled"] is False
-    assert body["secondary_warehouse_mode"] == "lite"
-    assert body["version"] == 1
-    assert body["updated_at"] is not None
-
-    public_features = await client.get(
-        "/api/v1/system-settings/mini-program-features"
-    )
-    assert public_features.json() == {"secondary_warehouse_mode": "lite"}
+    assert saved.json()["mini_program_registration_enabled"] is False
+    # 未显式提交 default_permissions 时保持现状
+    assert saved.json()["default_permissions"] == ["lite:read", "purchase:read", "huaxing:read"]
+    assert saved.json()["version"] == 1
+    assert saved.json()["updated_at"] is not None
 
     invalid = await client.put(
         "/api/v1/system-settings/advanced-settings",
         headers=admin,
-        json={
-            "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "bogus",
-            "version": 1,
-        },
+        json={"mini_program_registration_enabled": True},
     )
     assert invalid.status_code == 422
+    # version 是必填的乐观锁字段
     assert invalid.json()["code"] == "VALIDATION_ERROR"
 
 
 @pytest.mark.asyncio
 async def test_advanced_settings_reads_legacy_ai_search_config(client: AsyncClient) -> None:
-    """旧库升级前三个字段仍能读到；首次保存写入新的 runtime_settings。"""
+    """旧库升级前的字段仍能读到；首次保存写入新的 runtime_settings。"""
     admin = await auth_headers(client, "admin")
     async with project_session() as session:
         session.add(
@@ -79,8 +65,6 @@ async def test_advanced_settings_reads_legacy_ai_search_config(client: AsyncClie
                 setting_key="ai_search_config",
                 setting_value={
                     "mini_program_registration_enabled": False,
-                    "mini_program_new_user_enabled": False,
-                    "secondary_warehouse_mode": "lite",
                     "endpoint": "https://legacy.test/v1",
                     "web_features": {"work": False},
                 },
@@ -94,8 +78,6 @@ async def test_advanced_settings_reads_legacy_ai_search_config(client: AsyncClie
     )
     assert loaded.status_code == 200, loaded.text
     assert loaded.json()["mini_program_registration_enabled"] is False
-    assert loaded.json()["mini_program_new_user_enabled"] is False
-    assert loaded.json()["secondary_warehouse_mode"] == "lite"
     assert loaded.json()["version"] == 4
 
     saved = await client.put(
@@ -103,8 +85,6 @@ async def test_advanced_settings_reads_legacy_ai_search_config(client: AsyncClie
         headers=admin,
         json={
             "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "full",
             "version": 4,
         },
     )
@@ -114,7 +94,7 @@ async def test_advanced_settings_reads_legacy_ai_search_config(client: AsyncClie
     async with project_session() as session:
         row = await session.get(SystemSetting, "runtime_settings")
         assert row is not None
-        assert row.setting_value["secondary_warehouse_mode"] == "full"
+        assert row.setting_value["mini_program_registration_enabled"] is True
         assert row.version == 5
 
 
@@ -132,8 +112,6 @@ async def test_default_permissions_apply_to_new_users_and_validate_keys(
         headers=admin,
         json={
             "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "full",
             "default_permissions": ["warehouse:read", "purchase:read"],
             "version": current.json()["version"],
         },
@@ -159,11 +137,27 @@ async def test_default_permissions_apply_to_new_users_and_validate_keys(
         headers=admin,
         json={
             "mini_program_registration_enabled": True,
-            "mini_program_new_user_enabled": True,
-            "secondary_warehouse_mode": "full",
             "default_permissions": ["bogus:read"],
             "version": saved.json()["version"],
         },
     )
     assert invalid.status_code == 422
     assert invalid.json()["code"] == "INVALID_PERMISSIONS"
+
+
+@pytest.mark.asyncio
+async def test_default_permissions_accept_lite_keys(client: AsyncClient) -> None:
+    """精简二级库是独立权限位：默认权限矩阵可以只勾精简库。"""
+    admin = await auth_headers(client, "admin")
+    saved = await client.put(
+        "/api/v1/system-settings/advanced-settings",
+        headers=admin,
+        json={
+            "mini_program_registration_enabled": True,
+            "default_permissions": ["lite:read", "lite:write"],
+            "version": 0,
+        },
+    )
+    assert saved.status_code == 200, saved.text
+    # 写权限自动包含同模块读权限
+    assert saved.json()["default_permissions"] == ["lite:read", "lite:write"]

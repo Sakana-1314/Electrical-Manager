@@ -1,6 +1,4 @@
 const { loginSilently } = require('./utils/auth');
-const { request } = require('./utils/request');
-const { DEFAULT_MODES } = require('./utils/features');
 const { getMessages, initializeI18n } = require('./utils/i18n');
 
 App({
@@ -9,8 +7,6 @@ App({
     pendingMaterialUuid: '',
     user: null,
     accountDisabled: false,
-    runtimeModes: null,
-    runtimeSettingsPromise: null,
     locale: 'zh-CN',
     messages: getMessages(),
   },
@@ -18,18 +14,6 @@ App({
   onLaunch() {
     this.globalData.locale = initializeI18n();
     this.globalData.messages = getMessages();
-    this.globalData.runtimeSettingsPromise = request({
-      url: '/system-settings/mini-program-features',
-      auth: false,
-    })
-      .then((modes) => {
-        this.globalData.runtimeModes = modes || DEFAULT_MODES;
-        return this.globalData.runtimeModes;
-      })
-      .catch(() => {
-        this.globalData.runtimeModes = DEFAULT_MODES;
-        return DEFAULT_MODES;
-      });
     this.installAuthPromise();
     this.globalData.authPromise = this.startLogin();
   },

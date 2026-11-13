@@ -234,7 +234,9 @@ type ReplenishmentDraftRead struct {
 }
 
 type DashboardSummaryRead struct {
-	StockMaterialCount           int64 `json:"stock_material_count"`
+	StockMaterialCount int64 `json:"stock_material_count"`
+	// 精简二级库（lite_inventory）行数：两种二级库并存，工作台按用户权限展示对应卡片。
+	LiteInventoryCount           int64 `json:"lite_inventory_count"`
 	LowStockCount                int64 `json:"low_stock_count"`
 	UncodedPurchaseMaterialCount int64 `json:"uncoded_purchase_material_count"`
 	PurchaseRecordCount          int64 `json:"purchase_record_count"`

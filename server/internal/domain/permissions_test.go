@@ -16,6 +16,13 @@ func TestPermissionBitsNormalizesWriteAndRejectsUnknown(t *testing.T) {
 	if bits.Has(PermSystemAdmin) {
 		t.Fatalf("system admin unexpectedly set: %b", bits)
 	}
+	lite, unknownLite := PermissionBits([]string{"lite:write"})
+	if len(unknownLite) != 0 {
+		t.Fatalf("unknown = %v", unknownLite)
+	}
+	if !lite.Has(PermLiteWrite) || !lite.Has(PermLiteRead) {
+		t.Fatalf("lite write must imply lite read: %b", lite)
+	}
 }
 
 func TestPermissionKeysFollowCatalogOrder(t *testing.T) {
@@ -44,8 +51,8 @@ func TestPermissionCatalogBitsAreUniqueAndCoverAllPermissions(t *testing.T) {
 		t.Fatalf("AllPermissions = %d，目录并集 = %d", AllPermissions, all)
 	}
 	// 位值已经写进生产库（app_user.permissions），改位序会导致存量用户权限错位。
-	// 位 6 已退役（原 codes:read），保留空位后全开值为 8127。
-	if AllPermissions != 8127 {
+	// 位 6 已退役（原 codes:read），保留空位；精简二级库使用新增的位 13/14，全开值为 32703。
+	if AllPermissions != 32703 {
 		t.Fatalf("权限位总数变化会破坏已有库的位图语义：AllPermissions = %d", AllPermissions)
 	}
 }
@@ -57,7 +64,7 @@ func TestRetiredCodesBitIsDropped(t *testing.T) {
 }
 
 func TestDefaultRegistrationPermissions(t *testing.T) {
-	want := PermWarehouseRead | PermPurchaseRead | PermHuaxingRead
+	want := PermLiteRead | PermPurchaseRead | PermHuaxingRead
 	if DefaultRegistrationPermissions != want {
 		t.Fatalf("默认权限 = %d，want %d", DefaultRegistrationPermissions, want)
 	}

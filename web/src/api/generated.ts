@@ -18,7 +18,6 @@ export type SourceType = components['schemas']['SourceType']
 export type PurchasePlanStatus = components['schemas']['PurchasePlanStatus']
 export type MiniProgramCodeEnv = components['schemas']['MiniProgramCodeEnv']
 export type MiniProgramStockStatus = components['schemas']['MiniProgramStockStatus']
-export type SecondaryWarehouseMode = components['schemas']['SecondaryWarehouseMode']
 
 /* ===== 接口类型（映射自 openapi schema） ===== */
 export type ApiError = components['schemas']['ApiError']
@@ -40,7 +39,6 @@ export type MiniProgramLoginResponse = components['schemas']['MiniProgramLoginRe
 export type AiSearchStatus = components['schemas']['AiSearchStatusRead']
 export type AdvancedSettings = components['schemas']['AdvancedSettingsRead']
 export type AdvancedSettingsWrite = components['schemas']['AdvancedSettingsUpdate']
-export type MiniProgramFeatures = components['schemas']['MiniProgramFeaturesRead']
 /* 项目（多项目数据隔离）：业务数据都挂在项目下，右上角切换当前项目。 */
 export type Project = components['schemas']['ProjectRead']
 export type ProjectCreate = components['schemas']['ProjectCreate']

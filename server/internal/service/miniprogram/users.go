@@ -114,8 +114,8 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	return user, effectiveAppID, openid, nil
 }
 
-// RegisterUser 对应 register_user：按注册凭证里的 openid 建统一用户档案，默认权限位 = 各功能只读。
-// 新用户是否默认启用由系统设置决定（默认启用 = 直接可读；默认禁用 = 待管理员审核启用）。
+// RegisterUser 对应 register_user：按注册凭证里的 openid 建统一用户档案，
+// 默认权限位 = 高级设置里的默认用户权限，新用户一律直接启用（能做什么由权限位决定）。
 // 已存在时按一次登录处理且不覆盖姓名 / 部门。
 func RegisterUser(s *db.Session, appID, openid, displayName, departmentName string) (*User, error) {
 	existing, err := findUserByOpenid(s, openid)
@@ -139,10 +139,6 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 	if !registrationEnabled {
 		return nil, registrationDisabled()
 	}
-	newUserEnabled, err := appsettings.IsMiniProgramNewUserEnabled(s)
-	if err != nil {
-		return nil, err
-	}
 	defaultPermissions, err := appsettings.GetDefaultPermissions(s)
 	if err != nil {
 		return nil, err
@@ -152,7 +148,7 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		Username: miniProgramUsername(openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
 		DisplayName: displayName, DepartmentName: departmentName,
 		WechatOpenid: &openid, Permissions: int64(defaultPermissions),
-		Enabled: newUserEnabled, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
+		Enabled: true, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	conflict := func(err error) error {
 		if db.IsIntegrity(err) {

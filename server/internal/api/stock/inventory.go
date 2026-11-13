@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/deps"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/apperr"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
@@ -22,13 +21,13 @@ func registerInventory(g *web.Router) {
 	g.GET("/inventory/balances", balances, auth.WarehouseReader)
 	g.GET("/inventory/low-stock", lowStock, auth.WarehouseReader)
 	g.GET("/inventory/balances/{material_id}", balanceDetail, auth.WarehouseReader)
-	g.POST("/inventory/inbounds", inbound, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	g.POST("/inventory/outbounds", outbound, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
+	g.POST("/inventory/inbounds", inbound, auth.WarehouseWriter)
+	g.POST("/inventory/outbounds", outbound, auth.WarehouseWriter)
 	g.GET("/inventory/operations", operations, auth.WarehouseReader)
 	g.GET("/inventory/operations/{operation_id}", operationDetail, auth.WarehouseReader)
-	g.PATCH("/inventory/operations/{operation_id}", editOperation, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	g.POST("/inventory/operations/{operation_id}/reverse", reverseOperation, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	g.POST("/inventory/low-stock/{material_id}/create-replenishment-draft", replenish, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
+	g.PATCH("/inventory/operations/{operation_id}", editOperation, auth.WarehouseWriter)
+	g.POST("/inventory/operations/{operation_id}/reverse", reverseOperation, auth.WarehouseWriter)
+	g.POST("/inventory/low-stock/{material_id}/create-replenishment-draft", replenish, auth.WarehouseWriter)
 	g.GET("/dashboard/summary", summary, auth.CurrentUser)
 }
 

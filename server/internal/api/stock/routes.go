@@ -2,7 +2,6 @@
 package stock
 
 import (
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/deps"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/material"
@@ -14,13 +13,13 @@ import (
 func Register(r *web.Router) {
 	m := r.Group("/stock-materials", auth.RequireProject)
 	m.GET("", listMaterials, auth.WarehouseReader)
-	m.POST("", createMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
+	m.POST("", createMaterial, auth.WarehouseWriter)
 	m.GET("/{material_id}", materialDetail, auth.WarehouseReader)
 	m.GET("/mini-program-codes/{material_uuid}", materialMiniProgramCode, auth.WarehouseReader)
 	m.GET("/{material_id}/mini-program-code", materialMiniProgramCodeRedirect, auth.WarehouseReader)
-	m.PATCH("/{material_id}", updateMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	m.DELETE("/{material_id}", deleteMaterial, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
-	m.PUT("/{material_id}/replenishment-policy", savePolicy, auth.WarehouseWriter, deps.RequireFullSecondaryWarehouse)
+	m.PATCH("/{material_id}", updateMaterial, auth.WarehouseWriter)
+	m.DELETE("/{material_id}", deleteMaterial, auth.WarehouseWriter)
+	m.PUT("/{material_id}/replenishment-policy", savePolicy, auth.WarehouseWriter)
 
 	registerInventory(r.Group("", auth.RequireProject))
 }
