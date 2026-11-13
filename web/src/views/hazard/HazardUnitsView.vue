@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /** 责任单位：单位与责任人一一对应，行内开关启停，整行点击编辑。 */
 import { computed, h, ref } from 'vue'
 import {
   NButton,
   NCard,
-  NDataTable,
   NForm,
   NFormItem,
   NInput,
@@ -206,7 +206,8 @@ function confirmDelete(): void {
     </div>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="hazard/hazard-units"
         :columns="columns"
         :data="items"
         :loading="loading"

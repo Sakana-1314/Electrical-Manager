@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { h, reactive, ref, watch } from 'vue'
 import { NButton, NTag, useMessage } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
@@ -322,7 +323,8 @@ async function confirmReplenishment() {
       </div>
     </n-card>
     <n-card class="data-card" :bordered="false"
-      ><n-data-table
+      ><PersistentDataTable
+        storage-key="warehouse/stock"
         :bordered="false"
         :columns="columns"
         :data="items"

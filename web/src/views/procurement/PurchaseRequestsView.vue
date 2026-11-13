@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import { NTag, useMessage, type DataTableBaseColumn, type DataTableColumns } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
@@ -1106,8 +1107,9 @@ onMounted(() => {
     </n-card>
     <div ref="tableAreaRef">
       <n-card class="records-card data-card" :bordered="false">
-        <n-data-table
+        <PersistentDataTable
           v-model:checked-row-keys="checkedRowKeys"
+          storage-key="procurement/purchase-requests"
           :bordered="false"
           :columns="columns"
           :data="items"

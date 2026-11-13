@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   type DataTableBaseColumn,
@@ -647,7 +648,8 @@ onBeforeUnmount(() => {
         @click="toggleTableFullscreen"
       />
       <n-card class="data-card">
-        <n-data-table
+        <PersistentDataTable
+          storage-key="procurement/purchase-plan-templates"
           :bordered="false"
           :columns="columns"
           :data="items"

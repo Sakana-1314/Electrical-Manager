@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /**
  * 台账总览：台账记录列表（子项号 / 名称 + 型号（合并一列两行展示）/ 标签 / 数量 / 用途 / 备注 / 图片）。
  *
@@ -11,7 +12,6 @@ import { computed, h, onMounted, ref } from 'vue'
 import {
   NButton,
   NCard,
-  NDataTable,
   NInput,
   NPagination,
   NTag,
@@ -304,7 +304,8 @@ onMounted(loadTags)
     </n-card>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="ledger/ledger-items"
         remote
         :bordered="false"
         :columns="columns"

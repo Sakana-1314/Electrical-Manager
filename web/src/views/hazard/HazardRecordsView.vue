@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /** 隐患台账：筛选 + 分页 + 列显隐，整行点击进入编辑弹窗，删除在弹窗内。 */
 import { computed, h, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   NButton,
   NCard,
-  NDataTable,
   NDatePicker,
   NInput,
   NPagination,
@@ -442,7 +442,8 @@ onMounted(async () => {
     </n-card>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="hazard/hazard-records"
         remote
         :bordered="false"
         :columns="columns"

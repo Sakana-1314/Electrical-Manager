@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onMounted, reactive, ref } from 'vue'
 import { NButton, NTag, NTooltip, useDialog, useMessage } from 'naive-ui'
 import type { ManagedUser, PermissionRead } from '@/api/generated'
@@ -383,7 +384,8 @@ function remove(row: ManagedUser) {
       </div>
     </div>
     <n-card class="data-card"
-      ><n-data-table
+      ><PersistentDataTable
+        storage-key="settings/users"
         class="compact-table"
         size="small"
         :bordered="false"

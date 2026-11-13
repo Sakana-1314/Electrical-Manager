@@ -250,7 +250,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 29 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 30 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -267,6 +267,7 @@ web/src/
 | `RouteProgress.vue` | 路由切换顶部进度条（无渲染输出，须放在 `n-loading-bar-provider` 内）：导航开始启动、结束收起、代码块加载失败标红；同路由只改 query 不触发 | 无 props / emits |
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
+| `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
 | `PurchaseRecordDetailModal.vue` | 申购记录详情 / 编辑弹窗（单据、物资、人员、备注、采购与发运、图片；转为计划 / 再次申购 / 新页面打开；申购记录页与华星总库存页共用） | props：`show: boolean`、`record: PurchaseRecord \| null`；emits：`update:show`、`saved`、`restored: [planId: number]`、`reapplyCreated: [planId: number]` |
 | `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按物料编码 / 名称 / 型号检索；点击行 emit `select`，由父页面决定打开详情弹窗或跳转） | props：`show: boolean`、`initialName?`、`initialMaterialCode?`、`initialModelSpec?`、`reloadToken?`；emits：`update:show`、`select`、`search` |

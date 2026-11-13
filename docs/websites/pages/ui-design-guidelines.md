@@ -55,7 +55,7 @@
 | 卡片内边距 | 由 Naive UI 主题控制，通常 `20px 22px` |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
 | 字号档位 | 页面标题 `24px`；区块标题 `16px`；正文与数据 `14px`；控件与次要说明 `13px`；微字说明 `12px` |
-| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格、描述列表在各自组件覆盖里显式保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。次要说明文字（`.muted`，如开关说明、表格里的型号副行）同为 `13px`；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
+| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `13px`（紧凑化后由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。次要说明文字（`.muted`，如开关说明、表格里的型号副行）同为 `13px`；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
 `--color-surface-muted`，不用蓝色系底色。
@@ -188,6 +188,7 @@
 | 列宽 | 统一引用 `web/src/constants/table.ts`，见下表 |
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
 | 压缩控制 | 每列同时设 `width` 与相同 `minWidth`；`scroll-x` 按实际列宽计算，超宽时横向滚动，不靠等比压缩牺牲名称/型号列 |
+| 列宽调整 | 列表页统一用 `components/PersistentDataTable.vue` 包裹（`storage-key` 取 `模块/页面`）：有宽度的列自动可拖动，拖动结果按页面写入 localStorage，刷新 / 再次进入仍生效；页面不再手写 resize 逻辑 |
 | 移动端占满卡片 | 移动端（≤768px）**含表格**的数据卡片内容区 `padding: 0`，让表格四边直接占满卡片；屏幕留白（`.app-content` 左右 14px）保持不变，桌面端维持原样。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 12px 内边距。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
 | 普通表格 | `n-table` 必须放进 `table-scroll` 容器，并设符合字段数量的最小宽度 |
 

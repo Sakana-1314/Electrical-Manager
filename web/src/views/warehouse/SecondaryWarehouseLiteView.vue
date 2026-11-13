@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onMounted, ref } from 'vue'
 import type { DataTableColumns } from 'naive-ui'
 import { useDialog, useMessage } from 'naive-ui'
@@ -208,7 +209,8 @@ function onFileChange(event: Event) {
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />
-      <n-data-table
+      <PersistentDataTable
+        storage-key="warehouse/secondary-warehouse-lite"
         remote
         :columns="columns"
         :data="items"
