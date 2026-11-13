@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, ref } from 'vue'
 import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
 import type { ShareExpiryOption, ShareListRead, ShareType } from '@/api/generated'
@@ -234,7 +235,8 @@ const tableScrollX = getTableScrollX(columns)
       </div>
     </div>
     <n-card class="data-card"
-      ><n-data-table
+      ><PersistentDataTable
+        storage-key="settings/share-links"
         :bordered="false"
         :columns="columns"
         :data="items"

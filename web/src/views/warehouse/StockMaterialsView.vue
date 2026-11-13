@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { h, ref, watch } from 'vue'
 import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
@@ -241,7 +242,8 @@ function rowProps(row: StockMaterial) {
     </n-card>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="warehouse/stock-materials"
         :bordered="false"
         :columns="columns"
         :data="items"

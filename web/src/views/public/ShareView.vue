@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onMounted, ref, type VNodeChild } from 'vue'
 import { useRoute } from 'vue-router'
 import { NTag, type DataTableColumns } from 'naive-ui'
@@ -307,8 +308,9 @@ onMounted(async () => {
             </template>
           </n-result>
         </div>
-        <n-data-table
+        <PersistentDataTable
           v-else-if="data"
+          storage-key="public/share"
           :bordered="false"
           :columns="columns"
           :data="rows"

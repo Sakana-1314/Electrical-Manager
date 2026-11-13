@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /**
  * 任务视图：管理每个任务，看它的全周期时间线（哪一段时间哪些人在干这个活）。
  *
@@ -13,7 +14,6 @@ import { computed, h, ref } from 'vue'
 import {
   NButton,
   NCard,
-  NDataTable,
   NIcon,
   NInput,
   NPagination,
@@ -335,7 +335,8 @@ function selectTask(key: string): void {
           <n-button size="small" quaternary @click="selectedTaskId = null">收起</n-button>
         </div>
       </div>
-      <n-data-table
+      <PersistentDataTable
+        storage-key="work/work-tasks"
         :bordered="false"
         :columns="detailColumns"
         :data="selectedRow.records"

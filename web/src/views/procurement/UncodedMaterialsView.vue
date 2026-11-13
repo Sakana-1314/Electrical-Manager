@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, ref } from 'vue'
 import { type DataTableBaseColumn, type DataTableColumns, useDialog, useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
@@ -169,7 +170,8 @@ function handleExport(key: string) {
       </div>
     </div>
     <n-card class="data-card">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="procurement/uncoded-materials"
         :bordered="false"
         :columns="columns"
         :data="items"

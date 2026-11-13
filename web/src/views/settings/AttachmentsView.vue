@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { h, ref, computed } from 'vue'
 import { NButton, NImage, NTag, useDialog, useMessage } from 'naive-ui'
 import type { Attachment } from '@/api/generated'
@@ -358,7 +359,8 @@ const activeFilterCount = computed(
     </n-card>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="settings/attachments"
         :bordered="false"
         :columns="columns"
         :data="items"

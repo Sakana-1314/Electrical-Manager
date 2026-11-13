@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { h, reactive, ref } from 'vue'
 import { NButton, NTag, useDialog, useMessage } from 'naive-ui'
 import type { Project } from '@/api/generated'
@@ -150,7 +151,8 @@ function remove(row: Project) {
       </div>
     </div>
     <n-card class="data-card">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="settings/projects"
         :bordered="false"
         :columns="columns"
         :data="items"

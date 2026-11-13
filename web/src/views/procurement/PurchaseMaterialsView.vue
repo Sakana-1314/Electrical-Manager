@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   useDialog,
@@ -1426,8 +1427,9 @@ onBeforeUnmount(() => {
         @click="toggleTableFullscreen"
       />
       <n-card class="data-card">
-        <n-data-table
+        <PersistentDataTable
           v-model:checked-row-keys="checkedRowKeys"
+          storage-key="procurement/purchase-materials"
           :bordered="false"
           :columns="columns"
           :data="items"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /**
  * 工作总览：每天每个活由哪几个人在干。
  *
@@ -12,7 +13,6 @@ import { computed, h, onMounted, ref } from 'vue'
 import {
   NButton,
   NCard,
-  NDataTable,
   NInput,
   NPagination,
   NSelect,
@@ -286,7 +286,8 @@ onMounted(loadOptions)
     </n-card>
 
     <n-card class="data-card" :bordered="false">
-      <n-data-table
+      <PersistentDataTable
+        storage-key="work/work-overview"
         remote
         :bordered="false"
         :columns="columns"
