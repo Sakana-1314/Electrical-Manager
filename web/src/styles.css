@@ -230,6 +230,21 @@ a {
 .n-card.n-modal .n-form-item:last-child {
   margin-bottom: 0;
 }
+/* 弹窗行距的真正来源：Naive 给每个表单项预留一整行 24px 的校验反馈区
+ * （feedbackHeightSmall，空态也占位），top 标签行还有 24px min-height
+ * （网格行 minmax(24px, auto) + 元素自身 min-height）与 6px 下内边距——
+ * 空态时行与行之间约有 38px 纯空白。这里只压掉空态预留：
+ * 校验报错出现时反馈区按内容自然撑开，报错仍然可见（top 布局为弹窗表单主力，左置标签不受影响）。 */
+.n-card.n-modal .n-form-item .n-form-item-feedback-wrapper {
+  min-height: 0;
+}
+.n-card.n-modal .n-form-item--top-labelled {
+  grid-template-rows: minmax(0, auto) 1fr;
+}
+.n-card.n-modal .n-form-item--top-labelled .n-form-item-label {
+  min-height: 0;
+  padding-bottom: 2px;
+}
 /* 弹窗页脚按钮统一小尺寸（28px / 12px，与移动端断点、用户详情弹窗 footer 同口径）。 */
 .n-card.n-modal .n-card__footer .n-button,
 .n-card.n-modal .n-card__action .n-button {

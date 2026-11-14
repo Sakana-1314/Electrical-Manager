@@ -258,6 +258,7 @@
 | --- | --- |
 | 表单尺寸 | 弹窗内的 `n-form` 一律 `size="small"`（输入控件 28px 高）；带 `:rules` 内联校验的表单保留反馈区，纯展示编辑 / 无校验表单再加 `:show-feedback="false"` |
 | 表单行距 | `styles.css` 全局把 `.n-card.n-modal .n-form-item` 行距压到 `14px`（末行归零）——scoped `:deep` 作用不到 teleport 出去的弹窗根，不要往页面里写 |
+| 空态占位 | Naive 表单项默认给每行**预留 24px 校验反馈区**（空态也占位）、top 标签行另有 24px min-height（网格行 + 元素）与 6px 下内边距，行与行之间空态约 38px 纯空白。`styles.css` 已把这些空态预留压除（`.n-form-item-feedback-wrapper` min-height 0、`--top-labelled` 网格行 minmax(0, auto) + 标签 min-height 0 / 下内边距 2px）：校验报错出现时反馈区按内容自然撑开，报错仍可见。不要为省行距把弹窗表单改成无校验——压的是空态占位，不是报错能力 |
 | 页脚按钮 | `styles.css` 全局把弹窗页脚按钮统一为 `28px` 高 / `12px` 字 / 左右内边距 `10px`（`.n-card__footer` / `.n-card__action` 内的 `.n-button`），与移动端断点、用户详情弹窗 footer 同口径 |
 | 弹窗外框 | header `16px 22px 10px`、content `14px 22px 18px`（同样全局声明）；宽度仍用 `width: min(标准宽, calc(100vw - 24px/32px))` 按弹窗信息量定 |
 | 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），只统一尺寸与行距 |
