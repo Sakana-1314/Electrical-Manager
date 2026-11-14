@@ -1,0 +1,1 @@
+import{t as i,b1 as r}from"./index-DdpJiXO9.js";import{i as n}from"./vendor-vue-vqiuIG17.js";function a(){const o=n(r,null);return o===null&&i("use-dialog","No outer <n-dialog-provider /> founded."),o}export{a as u};
