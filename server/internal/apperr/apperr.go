@@ -27,8 +27,6 @@ var defaultStatusByCode = map[string]int{
 	"INVALID_WORK_TASK_ID":        400,
 	"INVALID_TOKEN":               401,
 	"UNAUTHORIZED":                401,
-	"USER_DISABLED":               401,
-	"ACCOUNT_DISABLED":            403,
 	"FORBIDDEN":                   403,
 	"VALIDATION_ERROR":            422,
 	"PROJECT_REQUIRED":            400,

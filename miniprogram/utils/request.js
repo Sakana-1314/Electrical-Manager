@@ -3,12 +3,10 @@ const { getLocale, t } = require('./i18n');
 const { buildRedirectQuery, getCurrentPageUrl } = require('./navigation');
 
 const errorMessageKeys = {
-  ACCOUNT_DISABLED: 'accountDisabled',
   FORBIDDEN: 'forbidden',
   INVALID_TOKEN: 'invalidToken',
   MINI_PROGRAM_REGISTRATION_DISABLED: 'registrationClosed',
   UNAUTHORIZED: 'loginRequired',
-  USER_DISABLED: 'invalidToken',
 };
 
 // 模块级单例：并发的 401 只触发一次静默重登。
@@ -85,17 +83,9 @@ function refreshSessionAndRetry() {
       })
       .catch((error) => {
         refreshPromise = null;
-        if (
-          error.code === 'ACCOUNT_DISABLED' ||
-          error.code === 'MINI_PROGRAM_REGISTRATION_DISABLED'
-        ) {
+        if (error.code === 'MINI_PROGRAM_REGISTRATION_DISABLED') {
           clearAuthStorage();
-          wx.reLaunch({
-            url:
-              error.code === 'ACCOUNT_DISABLED'
-                ? '/pages/disabled/disabled'
-                : '/pages/registration-closed/registration-closed',
-          });
+          wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         }
         throw error;
       });
@@ -174,11 +164,8 @@ function requestOnce(options) {
 
           const code = response.data?.code;
 
-          // 账号禁用 / 注册关闭：全局处理，清空凭证并跳转。
-          if (code === 'ACCOUNT_DISABLED') {
-            clearAuthStorage();
-            wx.reLaunch({ url: '/pages/disabled/disabled' });
-          } else if (code === 'MINI_PROGRAM_REGISTRATION_DISABLED') {
+          // 注册关闭：全局处理，清空凭证并跳转。
+          if (code === 'MINI_PROGRAM_REGISTRATION_DISABLED') {
             clearAuthStorage();
             wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
           }

@@ -17,11 +17,11 @@ func Register(r *web.Router) {
 	g := r.Group("/huaxing-inventory", auth.RequireProject)
 	g.GET("", list, auth.HuaxingReader)
 	g.GET("/filter-options", filterOptions, auth.HuaxingReader)
-	// 导入由 warehouse:write 发起（无 huaxing:read 也可导入），导入状态对导入者同步可见。
-	g.GET("/last-import", lastImport, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermWarehouseWrite))
-	g.POST("/import", importInventory, auth.WarehouseWriter)
-	// 导入由 warehouse:write 发起（无 huaxing:read 也可导入），任务轮询需同时放行导入者。
-	g.GET("/import-jobs/{job_id}", getImportJob, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermWarehouseWrite))
+	// 导入由 huaxing:write 发起；导入任务状态对导入者与查看者都可见。
+	g.GET("/last-import", lastImport, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermHuaxingWrite))
+	g.POST("/import", importInventory, auth.HuaxingWriter)
+	// 任务轮询需同时放行查看者与导入者。
+	g.GET("/import-jobs/{job_id}", getImportJob, auth.RequireAnyPermission(domain.PermHuaxingRead, domain.PermHuaxingWrite))
 }
 
 func list(c *web.Ctx) error {

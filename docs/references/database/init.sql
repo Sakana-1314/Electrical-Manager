@@ -127,7 +127,6 @@ CREATE TABLE IF NOT EXISTS app_user (
   department_name VARCHAR(128) NOT NULL DEFAULT '',
   wechat_openid VARCHAR(128) NULL,
   permissions BIGINT NOT NULL DEFAULT 0,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
   last_used_at TIMESTAMP WITHOUT TIME ZONE NULL,
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
@@ -1153,22 +1152,22 @@ WHERE p.is_default = TRUE
 ON CONFLICT (project_id, major, minor) DO NOTHING;
 
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码与权限位。
--- 权限位（BIGINT）：bit0 系统管理、bit1-2 二级库读写、bit3-4 申购读写、bit5 华星只读、bit6 编码库只读、
--- bit6 退役（原编码库只读，已并入申购）、bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写；全开 = 8127。
+-- 权限位（BIGINT）：bit0 系统管理、bit1-2 二级库读写、bit3-4 申购读写、bit5 华星只读、
+-- bit6 退役（原编码库只读，已并入申购）、bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写、
+-- bit13-14 精简二级库读写、bit15 华星导入；全开 = 65471。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
-INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, permissions, enabled)
+INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, permissions)
 VALUES
-  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 32703, TRUE),
-  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 24582, TRUE),
-  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 24, TRUE),
-  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 1536, TRUE),
-  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 384, TRUE),
-  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 6144, TRUE),
-  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 10922, TRUE)
+  ('admin', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '系统管理员', '华星检修维护部电气车间', 65471),
+  ('warehouse', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '仓库管理员', '华星检修维护部电气车间', 57382),
+  ('purchase', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '申购管理员', '华星检修维护部电气车间', 24),
+  ('hazard', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '隐患管理员', '华星检修维护部电气车间', 1536),
+  ('ledger', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '台账管理员', '华星检修维护部电气车间', 384),
+  ('work', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '工作管理员', '华星检修维护部电气车间', 6144),
+  ('readonly', '$argon2id$v=19$m=65536,t=3,p=4$VNlqfY9XSeszkV1Ry0SIiQ$/ll+8yljB5zZ/oCnO9cj+dzh4p05nebxSdxy1icYrKg', encode(sha256(convert_to(gen_random_uuid()::text, 'UTF8')), 'hex'), '只读用户', '华星检修维护部电气车间', 10922)
 ON CONFLICT (username) DO UPDATE
 SET display_name = EXCLUDED.display_name,
-    department_name = EXCLUDED.department_name,
-    enabled = EXCLUDED.enabled;
+    department_name = EXCLUDED.department_name;
 
 -- ============================================================================
 -- 表注释与字段注释：结构变更后同步维护（COMMENT ON 幂等，可重复执行）。
@@ -1194,7 +1193,6 @@ COMMENT ON COLUMN app_user."display_name" IS '显示名称';
 COMMENT ON COLUMN app_user."department_name" IS '部门单位';
 COMMENT ON COLUMN app_user."wechat_openid" IS '微信 OpenID（仅小程序来源用户；非空时唯一，一个小程序一个 openid）';
 COMMENT ON COLUMN app_user."permissions" IS '权限位图（BIGINT，按位判断）；bit0 系统管理、各功能读写位见 domain.PermissionCatalog';
-COMMENT ON COLUMN app_user."enabled" IS '账号是否启用';
 COMMENT ON COLUMN app_user."last_used_at" IS '最近登录时间（网页密码登录与小程序登录均刷新，不自增 version）';
 COMMENT ON COLUMN app_user."created_at" IS '创建时间';
 COMMENT ON COLUMN app_user."updated_at" IS '更新时间';

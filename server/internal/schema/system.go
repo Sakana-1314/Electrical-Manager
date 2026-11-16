@@ -34,7 +34,6 @@ type UserRead struct {
 	WechatOpenid   *string        `json:"wechat_openid"`
 	CreatedAt      jtype.UTCTime  `json:"created_at"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`
-	Enabled        bool           `json:"enabled"`
 	Version        int64          `json:"version"`
 }
 
@@ -45,7 +44,7 @@ func NewUserRead(u *model.User) UserRead {
 	}
 	return UserRead{ID: u.ID, Username: u.Username, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
 		Permissions: domain.Permission(u.Permissions).Normalize().Keys(), WechatOpenid: u.WechatOpenid,
-		CreatedAt: jtype.NewUTC(u.CreatedAt), LastUsedAt: lastUsed, Enabled: u.Enabled, Version: u.Version}
+		CreatedAt: jtype.NewUTC(u.CreatedAt), LastUsedAt: lastUsed, Version: u.Version}
 }
 
 func ptr[T any](v T) *T { return &v }
@@ -83,7 +82,6 @@ type UserCreate struct {
 	DisplayName    string    `json:"display_name" v:"required,min=1,max=128"`
 	DepartmentName string    `json:"department_name" v:"max=128"`
 	Permissions    *[]string `json:"permissions"`
-	Enabled        bool      `json:"enabled"`
 }
 
 type UserUpdate struct {
@@ -92,7 +90,6 @@ type UserUpdate struct {
 	DepartmentName *string   `json:"department_name" v:"max=128"`
 	Password       *string   `json:"password" v:"min=6,max=128"`
 	Permissions    *[]string `json:"permissions"`
-	Enabled        *bool     `json:"enabled"`
 	Version        int64     `json:"version" v:"required"`
 }
 

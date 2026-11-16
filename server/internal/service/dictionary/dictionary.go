@@ -131,12 +131,12 @@ func CreateUser(s *db.Session, data schema.UserCreate) (*UserWithToken, error) {
 	u := &UserWithToken{User: model.User{
 		Username: data.Username, PasswordHash: security.HashPassword(data.Password), DisplayName: data.DisplayName,
 		DepartmentName: data.DepartmentName, Permissions: int64(bits),
-		Enabled: data.Enabled, CreatedAt: now, UpdatedAt: now, Version: 1,
+		CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	issueAPIToken(u)
-	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, permissions, enabled, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, permissions, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		u.Username, u.PasswordHash, u.APITokenHash, u.APITokenEnc, u.DisplayName, u.DepartmentName,
-		u.Permissions, u.Enabled, u.CreatedAt, u.UpdatedAt, u.Version)
+		u.Permissions, u.CreatedAt, u.UpdatedAt, u.Version)
 	if err != nil {
 		if db.IsIntegrity(err) {
 			return nil, duplicateUsername()
@@ -178,9 +178,6 @@ func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken
 	if data.DepartmentName != nil {
 		u.DepartmentName = *data.DepartmentName
 	}
-	if data.Enabled != nil {
-		u.Enabled = *data.Enabled
-	}
 	if data.Password != nil && *data.Password != "" {
 		u.PasswordHash = security.HashPassword(*data.Password)
 	}
@@ -193,8 +190,8 @@ func UpdateUser(s *db.Session, id int64, data schema.UserUpdate) (*UserWithToken
 	}
 	u.Version++
 	u.UpdatedAt = common.UTCNow()
-	_, err = s.Exec("UPDATE app_user SET username = ?, display_name = ?, department_name = ?, enabled = ?, password_hash = ?, permissions = ?, version = ?, updated_at = ? WHERE id = ?",
-		u.Username, u.DisplayName, u.DepartmentName, u.Enabled, u.PasswordHash, u.Permissions, u.Version, u.UpdatedAt, u.ID)
+	_, err = s.Exec("UPDATE app_user SET username = ?, display_name = ?, department_name = ?, password_hash = ?, permissions = ?, version = ?, updated_at = ? WHERE id = ?",
+		u.Username, u.DisplayName, u.DepartmentName, u.PasswordHash, u.Permissions, u.Version, u.UpdatedAt, u.ID)
 	if err != nil {
 		if db.IsIntegrity(err) {
 			return nil, duplicateUsername()

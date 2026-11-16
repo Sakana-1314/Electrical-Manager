@@ -11,8 +11,6 @@
 | `INVALID_REFRESH_TOKEN` | 401 | 续期凭证无效或已过期 | `api/system` |
 | `INVALID_TOKEN` | 401 | 接口令牌无效 | `auth` |
 | `UNAUTHORIZED` | 401 | 请先登录 | `auth` |
-| `USER_DISABLED` | 401 | 用户不存在或已停用 | `auth` |
-| `ACCOUNT_DISABLED` | 403 | 账号待审核或已停用，请联系管理员 | `auth`、`service/miniprogram` |
 | `FORBIDDEN` | 403 | 没有执行此操作的权限（非权限位门禁的属主校验，如撤回分享链接） | `service/share` |
 | `PERMISSION_DENIED` | 403 | 没有执行此操作的权限（权限位图不包含所需权限） | `auth`（`RequirePermission`） |
 | `QR_SESSION_EXPIRED` | 400 | 登录二维码已过期或已被消费，请刷新后重新扫码 | `service/qrlogin` |

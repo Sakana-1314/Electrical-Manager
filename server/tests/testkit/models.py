@@ -81,7 +81,6 @@ class User(AuditColumns, Base):
     department_name: Mapped[str] = mapped_column(String(128), server_default="")
     wechat_openid: Mapped[str | None] = mapped_column(String(128))
     permissions: Mapped[int] = mapped_column(BigInteger, server_default="0")
-    enabled: Mapped[bool] = mapped_column(server_default="true")
     last_used_at: Mapped[datetime | None]
 
 

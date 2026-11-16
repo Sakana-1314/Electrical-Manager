@@ -327,28 +327,9 @@ async def test_wechat_profile_registration_scan_and_outbound_flow(
     assert repeated_login.json()["user"]["id"] == created_user["id"]
     assert repeated_login.json()["user"]["display_name"] == "管理员修改"
 
-    disabled = await client.patch(
-        f"/api/v1/users/{created_user['id']}",
-        headers=admin,
-        json={"enabled": False, "version": rename.json()["version"]},
-    )
-    assert disabled.status_code == 200, disabled.text
-    disabled_login = await client.post(
-        "/api/v1/mini-program/auth/wx-login",
-        json={"code": "temporary-login-code"},
-    )
-    assert disabled_login.status_code == 403
-    assert disabled_login.json()["code"] == "ACCOUNT_DISABLED"
-    assert disabled_login.json()["message"] == "您的账号待审核，请联系管理员"
-    disabled_request = await client.get(
-        "/api/v1/mini-program/outbound-reasons", headers=mini_headers
-    )
-    assert disabled_request.status_code == 403
-    assert disabled_request.json()["code"] == "ACCOUNT_DISABLED"
-
     deleted = await client.delete(
         f"/api/v1/users/{created_user['id']}",
-        headers={**admin, "If-Match": str(disabled.json()["version"])},
+        headers={**admin, "If-Match": str(rename.json()["version"])},
     )
     assert deleted.status_code == 204, deleted.text
     historical_operation = await client.get(
@@ -1411,10 +1392,10 @@ async def test_advanced_setting_can_close_new_mini_program_bindings(
 
 
 @pytest.mark.asyncio
-async def test_new_mini_program_user_is_enabled_with_default_permissions(
+async def test_new_mini_program_user_gets_default_permissions(
     client: AsyncClient, go_wechat: StartWechat
 ) -> None:
-    """新用户默认状态不再是开关：注册直接启用，能做什么由默认权限位决定。"""
+    """新用户注册后能做什么由默认权限位决定（没有账号状态开关）。"""
 
     async def fake_exchange_wechat_code(
         code: str, app_id: str | None = None
@@ -1431,7 +1412,6 @@ async def test_new_mini_program_user_is_enabled_with_default_permissions(
     )
     assert profile.status_code == 200, profile.text
     user = profile.json()["user"]
-    assert user["enabled"] is True
     # 默认权限来自高级设置（测试库种子 = 精简二级库 / 申购 / 华星只读）
     assert user["permissions"] == ["lite:read", "purchase:read", "huaxing:read"]
 

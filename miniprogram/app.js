@@ -6,7 +6,6 @@ App({
     authPromise: null,
     pendingMaterialUuid: '',
     user: null,
-    accountDisabled: false,
     locale: 'zh-CN',
     messages: getMessages(),
   },
@@ -58,17 +57,12 @@ App({
         return session;
       })
       .catch((error) => {
-        if (!['ACCOUNT_DISABLED', 'MINI_PROGRAM_REGISTRATION_DISABLED'].includes(error.code)) {
+        if (error.code !== 'MINI_PROGRAM_REGISTRATION_DISABLED') {
           throw error;
         }
         wx.removeStorageSync('miniProgramAccessToken');
         wx.removeStorageSync('miniProgramRegistrationToken');
         wx.removeStorageSync('miniProgramUser');
-        if (error.code === 'ACCOUNT_DISABLED') {
-          this.globalData.accountDisabled = true;
-          wx.reLaunch({ url: '/pages/disabled/disabled' });
-          return { account_disabled: true, user: null, requires_profile: false };
-        }
         wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         return { registration_disabled: true, user: null, requires_profile: false };
       });

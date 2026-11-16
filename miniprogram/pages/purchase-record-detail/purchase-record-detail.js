@@ -35,7 +35,6 @@ Page({
     this.recordId = Number(options.line_id || 0);
     try {
       const session = await getApp().globalData.authPromise;
-      if (session.account_disabled) return;
       if (session.registration_disabled) return;
       if (session.requires_profile) {
         const redirect = buildRedirectQuery(

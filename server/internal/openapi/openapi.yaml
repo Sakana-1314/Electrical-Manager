@@ -32,7 +32,6 @@ paths:
                   display_name: 系统管理员
                   created_at: '2026-08-14T10:20:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
-                  enabled: true
                   version: 1
                   department_name: 华星检修维护部电气车间
                   permissions:
@@ -44,6 +43,7 @@ paths:
                   - purchase:read
                   - purchase:write
                   - huaxing:read
+                  - huaxing:write
                   - ledger:read
                   - ledger:write
                   - hazard:read
@@ -202,7 +202,6 @@ paths:
                 display_name: 系统管理员
                 created_at: '2026-08-14T10:20:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
-                enabled: true
                 version: 1
                 department_name: 华星检修维护部电气车间
                 permissions:
@@ -214,6 +213,7 @@ paths:
                 - purchase:read
                 - purchase:write
                 - huaxing:read
+                - huaxing:write
                 - ledger:read
                 - ledger:write
                 - hazard:read
@@ -308,13 +308,13 @@ paths:
                 - purchase:read
                 - purchase:write
                 - huaxing:read
+                - huaxing:write
                 - ledger:read
                 - ledger:write
                 - hazard:read
                 - hazard:write
                 - work:read
                 - work:write
-                enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
         '400':
@@ -6702,7 +6702,6 @@ paths:
                   id: 1
                   display_name: 孙浩宇
                   department_name: 检修维护部电气自动化车间
-                  enabled: true
                   wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
@@ -6788,7 +6787,6 @@ paths:
                 id: 1
                 display_name: 孙浩宇
                 department_name: 检修维护部电气自动化车间
-                enabled: true
                 wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                 created_at: '2026-08-14T10:20:00+08:00'
                 updated_at: '2026-09-02T09:35:00+08:00'
@@ -7048,7 +7046,6 @@ paths:
                   id: 1
                   display_name: 孙浩宇
                   department_name: 检修维护部电气自动化车间
-                  enabled: true
                   wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
                   created_at: '2026-08-14T10:20:00+08:00'
                   updated_at: '2026-09-02T09:35:00+08:00'
@@ -16400,7 +16397,6 @@ paths:
                   display_name: 仓库管理员
                   created_at: '2026-08-14T10:20:00+08:00'
                   last_used_at: '2026-09-13T09:12:00+08:00'
-                  enabled: true
                   version: 1
                   api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                   department_name: 华星检修维护部电气车间
@@ -16495,7 +16491,6 @@ paths:
                 display_name: 仓库管理员
                 created_at: '2026-08-14T10:20:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
-                enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
@@ -16595,7 +16590,6 @@ paths:
                 display_name: 仓库管理员
                 created_at: '2026-08-14T10:20:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
-                enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
@@ -16777,7 +16771,6 @@ paths:
                 - hazard:read
                 - hazard:write
                 wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
-                enabled: true
                 version: 5
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
         '400':
@@ -16870,7 +16863,6 @@ paths:
                 display_name: 仓库管理员
                 created_at: '2026-08-14T10:20:00+08:00'
                 last_used_at: '2026-09-13T09:12:00+08:00'
-                enabled: true
                 version: 1
                 api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
                 department_name: 华星检修维护部电气车间
@@ -25698,7 +25690,6 @@ components:
           display_name: 系统管理员
           created_at: '2026-08-14T10:20:00+08:00'
           last_used_at: '2026-09-13T09:12:00+08:00'
-          enabled: true
           version: 1
           department_name: 华星检修维护部电气车间
           permissions:
@@ -25710,6 +25701,7 @@ components:
           - purchase:read
           - purchase:write
           - huaxing:read
+          - huaxing:write
           - ledger:read
           - ledger:write
           - hazard:read
@@ -26344,7 +26336,6 @@ components:
           id: 1
           display_name: 孙浩宇
           department_name: 检修维护部电气自动化车间
-          enabled: true
           wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
@@ -27379,9 +27370,6 @@ components:
         department_name:
           type: string
           title: Department Name
-        enabled:
-          type: boolean
-          title: Enabled
         permissions:
           items:
             type: string
@@ -27416,7 +27404,6 @@ components:
       - id
       - display_name
       - department_name
-      - enabled
       - permissions
       - wechat_openid
       - created_at
@@ -27427,7 +27414,6 @@ components:
       - id: 1
         display_name: 孙浩宇
         department_name: 检修维护部电气自动化车间
-        enabled: true
         permissions:
         - lite:read
         last_used_at: '2026-09-13T09:12:00+08:00'
@@ -29613,7 +29599,6 @@ components:
         - id: 1
           display_name: 孙浩宇
           department_name: 检修维护部电气自动化车间
-          enabled: true
           wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
           created_at: '2026-08-14T10:20:00+08:00'
           updated_at: '2026-09-02T09:35:00+08:00'
@@ -35093,9 +35078,6 @@ components:
           type: array
           title: Permissions
           description: 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
-        enabled:
-          type: boolean
-          title: Enabled
         version:
           type: integer
           title: Version
@@ -35114,7 +35096,6 @@ components:
       - department_name
       - created_at
       - permissions
-      - enabled
       - version
       title: UserApiTokenRead
       examples:
@@ -35130,7 +35111,7 @@ components:
         - lite:read
         - lite:write
         - huaxing:read
-        enabled: true
+        - huaxing:write
         version: 1
         api_token: 2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7
     UserApiTokenRegenerate:
@@ -35166,10 +35147,6 @@ components:
           type: string
           maxLength: 128
           title: Department Name
-        enabled:
-          type: boolean
-          title: Enabled
-          default: true
         permissions:
           items:
             type: string
@@ -35188,7 +35165,6 @@ components:
         password: '123456'
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
-        enabled: true
         permissions:
         - warehouse:read
         - warehouse:write
@@ -35232,9 +35208,6 @@ components:
           type: array
           title: Permissions
           description: 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
-        enabled:
-          type: boolean
-          title: Enabled
         version:
           type: integer
           title: Version
@@ -35246,7 +35219,6 @@ components:
       - department_name
       - created_at
       - permissions
-      - enabled
       - version
       title: UserRead
       examples:
@@ -35265,13 +35237,13 @@ components:
         - purchase:read
         - purchase:write
         - huaxing:read
+        - huaxing:write
         - ledger:read
         - ledger:write
         - hazard:read
         - hazard:write
         - work:read
         - work:write
-        enabled: true
         version: 1
     PasswordChangeRequest:
       properties:
@@ -35324,11 +35296,6 @@ components:
             minLength: 6
           - type: 'null'
           title: Password
-        enabled:
-          anyOf:
-          - type: boolean
-          - type: 'null'
-          title: Enabled
         version:
           type: integer
           title: Version
@@ -35349,7 +35316,6 @@ components:
       - username: warehouse
         display_name: 仓库管理员
         department_name: 华星检修维护部电气车间
-        enabled: true
         version: 2
         permissions:
         - warehouse:read
@@ -35358,6 +35324,7 @@ components:
         - lite:write
         - purchase:read
         - huaxing:read
+        - huaxing:write
         - ledger:read
         - hazard:read
         - work:read

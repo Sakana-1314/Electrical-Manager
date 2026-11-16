@@ -61,10 +61,6 @@ Page({
       } catch (_error) {
         // 静默登录失败：退回 globalData.user 渲染，失败态由下方 user 判空兜底。
       }
-      if (session && session.account_disabled) {
-        wx.reLaunch({ url: '/pages/disabled/disabled' });
-        return;
-      }
       if (session && session.registration_disabled) {
         wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         return;
@@ -110,10 +106,10 @@ Page({
     } catch (_error) {
       // 静默登录失败由 loadProfile 的既有分支处理，这里继续用本机缓存渲染。
     }
-    // 账号待审核 / 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
+    // 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
     if (
       session &&
-      (session.account_disabled || session.registration_disabled || session.requires_profile)
+      (session.registration_disabled || session.requires_profile)
     ) {
       return;
     }

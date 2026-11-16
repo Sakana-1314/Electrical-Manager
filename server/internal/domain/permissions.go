@@ -26,11 +26,12 @@ const (
 	PermWorkWrite      Permission = 1 << 12 // 工单编辑
 	PermLiteRead       Permission = 1 << 13 // 精简二级库查看
 	PermLiteWrite      Permission = 1 << 14 // 精简二级库导入
+	PermHuaxingWrite   Permission = 1 << 15 // 华星总库存导入
 )
 
 // AllPermissions 全部权限位（系统管理 + 各功能读写；不包含退役的位 6）。
 const AllPermissions = PermSystemAdmin | PermWarehouseRead | PermWarehouseWrite |
-	PermPurchaseRead | PermPurchaseWrite | PermHuaxingRead |
+	PermPurchaseRead | PermPurchaseWrite | PermHuaxingRead | PermHuaxingWrite |
 	PermLedgerRead | PermLedgerWrite | PermHazardRead | PermHazardWrite |
 	PermWorkRead | PermWorkWrite | PermLiteRead | PermLiteWrite
 
@@ -57,6 +58,7 @@ var PermissionCatalog = []PermissionDef{
 	{"purchase:read", "purchase", "read", "申购计划 / 申购记录 / 物料编码库查看", PermPurchaseRead},
 	{"purchase:write", "purchase", "write", "申购计划 / 申购记录 / 物料编码库编辑", PermPurchaseWrite},
 	{"huaxing:read", "huaxing", "read", "华星总库存查看", PermHuaxingRead},
+	{"huaxing:write", "huaxing", "write", "华星总库存导入", PermHuaxingWrite},
 	{"ledger:read", "ledger", "read", "台账查看", PermLedgerRead},
 	{"ledger:write", "ledger", "write", "台账编辑", PermLedgerWrite},
 	{"hazard:read", "hazard", "read", "隐患查看", PermHazardRead},

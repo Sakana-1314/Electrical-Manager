@@ -35,10 +35,6 @@ Page({
     const operationNo = String(options.operation_no || '').trim();
     try {
       const session = await app.globalData.authPromise;
-      if (session.account_disabled) {
-        wx.reLaunch({ url: '/pages/disabled/disabled' });
-        return;
-      }
       if (session.registration_disabled) {
         wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         return;

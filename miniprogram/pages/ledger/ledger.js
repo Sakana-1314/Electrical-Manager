@@ -51,7 +51,6 @@ Page({
     const shared = readShareParams(options, SHARE_PARAMS);
     try {
       const session = await getApp().globalData.authPromise;
-      if (session.account_disabled) return;
       if (session.registration_disabled) return;
       if (session.requires_profile) {
         // 带上分享参数回跳，未注册用户绑定后仍落在同一份搜索结果上。

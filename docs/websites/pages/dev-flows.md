@@ -38,7 +38,7 @@ sequenceDiagram
     API->>DB: 按用户名查账号
     API->>API: 用 Argon2 校验口令哈希
     API-->>U: 访问令牌 + 续期令牌 + 用户信息
-    note over API,U: 用户不存在、账号停用、密码错误返回同一条「凭证无效」提示
+    note over API,U: 用户不存在与密码错误返回同一条「凭证无效」提示
 ```
 
 ```mermaid
@@ -78,7 +78,7 @@ sequenceDiagram
     note over P,DB: 哈希列只用于查找，密文列用于界面回显<br/>管理端每次读取用户都解密回显明文令牌
 ```
 
-有效令牌也可放进 Bearer 头（长度 36 位以内时先按接口令牌尝试）。令牌无效或用户停用分别返回凭证无效 / 账号停用。
+有效令牌也可放进 Bearer 头（长度 36 位以内时先按接口令牌尝试）。令牌无效时返回「凭证无效」。
 
 ```mermaid
 flowchart LR

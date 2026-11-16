@@ -47,7 +47,6 @@ async def test_change_my_password_checks_current_and_updates_login(client: Async
             "password": "123456",
             "display_name": "自助改密用户",
             "permissions": ["warehouse:read"],
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text

@@ -35,7 +35,6 @@ async def create_mini_program_user(
     display_name: str,
     *,
     permissions: tuple[str, ...] = DEFAULT_PERMISSION_KEYS,
-    enabled: bool = True,
 ) -> int:
     """直接造一个小程序来源的统一用户（跳过微信登录链路）并写权限位，返回用户 id。"""
     user = User(
@@ -46,7 +45,6 @@ async def create_mini_program_user(
         department_name="华星检修维护部电气车间",
         wechat_openid=f"openid-test-{uuid4().hex[:12]}",
         permissions=permission_bits(*permissions),
-        enabled=enabled,
     )
     session.add(user)
     await session.flush()

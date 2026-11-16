@@ -39,7 +39,7 @@ func pollQrSession(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if u == nil || !u.Enabled {
+	if u == nil {
 		return c.OK(schema.QrLoginPollRead{Status: string(qrlogin.StatusExpired)})
 	}
 	access := security.CreateAccessToken(u.ID)

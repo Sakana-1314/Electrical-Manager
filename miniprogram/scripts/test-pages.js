@@ -99,7 +99,6 @@ const appGlobalData = {
         'hazard:write',
       ],
     },
-    account_disabled: false,
     registration_disabled: false,
     requires_profile: false,
   }),

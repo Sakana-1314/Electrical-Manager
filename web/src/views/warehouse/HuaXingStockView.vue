@@ -478,7 +478,7 @@ function onFileChange(event: Event) {
       <h1 class="page-title">华星总库存</h1>
       <div class="page-actions">
         <n-button
-          v-if="auth.can('warehouse:write')"
+          v-if="auth.can('huaxing:write')"
           type="primary"
           :loading="importing"
           :disabled="importing"
