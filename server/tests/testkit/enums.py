@@ -21,6 +21,7 @@ PERMISSION_BITS: dict[str, int] = {
     "work:write": 1 << 12,
     "lite:read": 1 << 13,
     "lite:write": 1 << 14,
+    "huaxing:write": 1 << 15,
 }
 
 

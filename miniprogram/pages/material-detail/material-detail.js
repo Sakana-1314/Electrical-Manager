@@ -18,10 +18,6 @@ Page({
     this.materialUuid = options.uuid || '';
     try {
       const session = await getApp().globalData.authPromise;
-      if (session.account_disabled) {
-        wx.reLaunch({ url: '/pages/disabled/disabled' });
-        return;
-      }
       if (session.registration_disabled) {
         wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         return;

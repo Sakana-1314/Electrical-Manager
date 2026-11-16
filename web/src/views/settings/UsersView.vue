@@ -27,9 +27,10 @@ const MODULE_LABELS: Record<string, string> = {
   hazard: '隐患',
   work: '工单',
 }
-/** 权限勾选项文案：精简二级库的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
+/** 权限勾选项文案：精简二级库与华星总库存的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
 function permissionItemLabel(item: PermissionRead): string {
-  if (item.module === 'lite' && item.action === 'write') return '导入'
+  if ((item.module === 'lite' || item.module === 'huaxing') && item.action === 'write')
+    return '导入'
   return item.action === 'write' ? '读写' : item.action === 'read' ? '查看' : '可管理'
 }
 const permissionGroups = computed(() => {
@@ -53,7 +54,11 @@ function permissionTags(perms: string[] | undefined) {
   for (const group of permissionGroups.value) {
     if (group.module === 'system') continue
     const prefix = `${group.module}:`
-    if (list.includes(`${prefix}write`)) tags.push({ label: `${group.label}读写`, type: 'info' })
+    if (list.includes(`${prefix}write`))
+      tags.push({
+        label: group.module === 'huaxing' ? `${group.label}导入` : `${group.label}读写`,
+        type: 'info',
+      })
     else if (list.includes(`${prefix}read`))
       tags.push({ label: `${group.label}只读`, type: 'default' })
   }
@@ -93,7 +98,6 @@ const form = reactive({
   display_name: '',
   department_name: '',
   permissions: [] as string[],
-  enabled: true,
   password: '',
   version: 0,
 })
@@ -186,17 +190,6 @@ const columns = preventTableColumnCompression<ManagedUser>([
       )
     },
   },
-  {
-    title: '状态',
-    key: 'enabled',
-    width: 80,
-    render: (r) =>
-      h(
-        NTag,
-        { size: 'small', type: r.enabled ? 'success' : 'default' },
-        { default: () => (r.enabled ? '启用' : '停用') },
-      ),
-  },
 ])
 const tableScrollX = getTableScrollX(columns)
 // 表格不再有操作列：整行可点，点开即编辑弹窗（删除 / 合并也在这个弹窗里）。
@@ -216,7 +209,6 @@ function open(row?: ManagedUser): void {
           display_name: row.display_name,
           department_name: row.department_name,
           permissions: [...(row.permissions ?? [])],
-          enabled: row.enabled,
           password: '',
           version: row.version,
         }
@@ -225,7 +217,6 @@ function open(row?: ManagedUser): void {
           display_name: '',
           department_name: '',
           permissions: [...defaultPermissions.value],
-          enabled: true,
           password: '',
           version: 0,
         },
@@ -243,7 +234,6 @@ async function save() {
       display_name: form.display_name,
       department_name: form.department_name,
       permissions: form.permissions,
-      enabled: form.enabled,
       ...(form.password ? { password: form.password } : {}),
     }
     if (editing.value) {
@@ -410,16 +400,7 @@ function remove(row: ManagedUser) {
             ><n-input v-model:value="form.display_name"
           /></n-form-item>
         </div>
-        <div class="form-grid-2">
-          <n-form-item label="部门单位"
-            ><n-input v-model:value="form.department_name" /></n-form-item
-          ><n-form-item label="账号状态">
-            <div class="status-control">
-              <n-switch v-model:value="form.enabled" size="small" />
-              <span>{{ form.enabled ? '启用' : '停用' }}</span>
-            </div></n-form-item
-          >
-        </div>
+        <n-form-item label="部门单位"><n-input v-model:value="form.department_name" /></n-form-item>
         <n-form-item v-if="!editing" label="初始密码" required
           ><n-input v-model:value="form.password" type="password" show-password-on="click"
         /></n-form-item>
@@ -617,13 +598,6 @@ function remove(row: ManagedUser) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 18px;
-}
-.status-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-text);
-  font-size: 13px;
 }
 /* 登录信息：浅底三列，避免一行小字挤在输入框下面 */
 .login-strip {

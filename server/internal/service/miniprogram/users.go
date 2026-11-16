@@ -22,10 +22,6 @@ type User struct {
 	model.User
 }
 
-func accountDisabled() error {
-	return apperr.New("ACCOUNT_DISABLED", "您的账号待审核，请联系管理员").WithStatus(403)
-}
-
 func registrationDisabled() error {
 	return apperr.New("MINI_PROGRAM_REGISTRATION_DISABLED", "当前暂未开放新用户绑定，请联系管理员").WithStatus(403)
 }
@@ -33,7 +29,7 @@ func registrationDisabled() error {
 // UserRead 对应 MiniProgramUserRead.model_validate(user)：permissions（权限位展开的键）供小程序端门禁。
 func UserRead(s *db.Session, u *User) schema.MiniProgramUserRead {
 	return schema.MiniProgramUserRead{
-		ID: u.ID, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName, Enabled: u.Enabled,
+		ID: u.ID, DisplayName: u.DisplayName, DepartmentName: u.DepartmentName,
 		WechatOpenid: u.WechatOpenid, Permissions: domain.Permission(u.Permissions).Normalize().Keys(),
 		LastUsedAt: common.UTCPtr(u.LastUsedAt),
 		CreatedAt:  jtype.NewUTC(u.CreatedAt), UpdatedAt: jtype.NewUTC(u.UpdatedAt), Version: u.Version,
@@ -93,9 +89,6 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 	if err != nil {
 		return nil, "", "", err
 	}
-	if user != nil && !user.Enabled {
-		return nil, "", "", accountDisabled()
-	}
 	if user == nil {
 		enabled, err := appsettings.IsMiniProgramRegistrationEnabled(s)
 		if err != nil {
@@ -106,7 +99,6 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 		}
 	}
 	if user != nil {
-		// 待审核 / 已停用账号在上面的分支被拒，不会走到这里。
 		if err := auth.MarkLastUsed(s, &user.User); err != nil {
 			return nil, "", "", err
 		}
@@ -115,7 +107,7 @@ func LoginWithWechat(s *db.Session, code string, appID *string) (*User, string, 
 }
 
 // RegisterUser 对应 register_user：按注册凭证里的 openid 建统一用户档案，
-// 默认权限位 = 高级设置里的默认用户权限，新用户一律直接启用（能做什么由权限位决定）。
+// 默认权限位 = 高级设置里的默认用户权限（能做什么由权限位决定）。
 // 已存在时按一次登录处理且不覆盖姓名 / 部门。
 func RegisterUser(s *db.Session, appID, openid, displayName, departmentName string) (*User, error) {
 	existing, err := findUserByOpenid(s, openid)
@@ -123,9 +115,6 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		return nil, err
 	}
 	if existing != nil {
-		if !existing.Enabled {
-			return nil, accountDisabled()
-		}
 		// 重复建档（registration_token 重放）同样按一次登录记录，但不覆盖姓名 / 部门。
 		if err := auth.MarkLastUsed(s, &existing.User); err != nil {
 			return nil, err
@@ -148,7 +137,7 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		Username: miniProgramUsername(openid), PasswordHash: "", APITokenHash: "", APITokenEnc: "",
 		DisplayName: displayName, DepartmentName: departmentName,
 		WechatOpenid: &openid, Permissions: int64(defaultPermissions),
-		Enabled: true, LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
+		LastUsedAt: &now, CreatedAt: now, UpdatedAt: now, Version: 1,
 	}}
 	conflict := func(err error) error {
 		if db.IsIntegrity(err) {
@@ -156,9 +145,9 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		}
 		return err
 	}
-	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, wechat_openid, permissions, enabled, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	id, err := s.Insert("INSERT INTO app_user (username, password_hash, api_token_hash, api_token_enc, display_name, department_name, wechat_openid, permissions, last_used_at, created_at, updated_at, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		user.Username, user.PasswordHash, user.APITokenHash, user.APITokenEnc, user.DisplayName, user.DepartmentName,
-		user.WechatOpenid, user.Permissions, user.Enabled, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
+		user.WechatOpenid, user.Permissions, user.LastUsedAt, user.CreatedAt, user.UpdatedAt, user.Version)
 	if err != nil {
 		return nil, conflict(err)
 	}
@@ -167,7 +156,6 @@ func RegisterUser(s *db.Session, appID, openid, displayName, departmentName stri
 		"display_name":    user.DisplayName,
 		"department_name": user.DepartmentName,
 		"app_id":          appID,
-		"enabled":         user.Enabled,
 		"permissions":     domain.Permission(user.Permissions).Keys(),
 		"bound_at":        user.CreatedAt.Format(time.DateOnly+"T15:04:05") + "Z",
 	}); err != nil {

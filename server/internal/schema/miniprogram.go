@@ -19,7 +19,6 @@ type MiniProgramUserRead struct {
 	ID             int64          `json:"id"`
 	DisplayName    string         `json:"display_name"`
 	DepartmentName string         `json:"department_name"`
-	Enabled        bool           `json:"enabled"`
 	WechatOpenid   *string        `json:"wechat_openid"`
 	Permissions    []string       `json:"permissions"`
 	LastUsedAt     *jtype.UTCTime `json:"last_used_at"`

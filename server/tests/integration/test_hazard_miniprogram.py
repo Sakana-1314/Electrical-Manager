@@ -286,18 +286,6 @@ async def test_mini_program_hazard_identity_isolation(client: AsyncClient) -> No
     mini_on_management = await client.get("/api/v1/hazards", headers=headers)
     assert mini_on_management.status_code == 401, mini_on_management.text
 
-    # 未启用的小程序用户被拒（账号待审核）
-    async with project_session() as session:
-        disabled_id = await create_mini_program_user(
-            session, "待审核用户", permissions=(), enabled=False
-        )
-    disabled_headers = {
-        "Authorization": f"Bearer {create_mini_program_access_token(disabled_id)}"
-    }
-    blocked = await client.get("/api/v1/mini-program/hazards", headers=disabled_headers)
-    assert blocked.status_code == 403, blocked.text
-    assert blocked.json()["code"] == "ACCOUNT_DISABLED"
-
 
 async def test_web_hazard_rectify_person_filter_and_options(client: AsyncClient) -> None:
     admin = await auth_headers(client, "admin")

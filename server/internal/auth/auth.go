@@ -87,9 +87,6 @@ func authenticateAPIToken(c *web.Ctx, token string) (*model.User, error) {
 	if u == nil {
 		return nil, apperr.New("INVALID_TOKEN", "接口令牌无效").WithStatus(401)
 	}
-	if !u.Enabled {
-		return nil, apperr.New("USER_DISABLED", "用户不存在或已停用").WithStatus(401)
-	}
 	return u, nil
 }
 
@@ -108,7 +105,8 @@ func AuthenticateManagementUser(c *web.Ctx) (*model.User, error) {
 		if err == nil {
 			return u, nil
 		}
-		if ae, ok := err.(*apperr.Error); !ok || ae.Code == "USER_DISABLED" {
+		// 长度像接口令牌但查不到：交给下面的 JWT 解析再试一次；其它错误（数据库等）直接返回。
+		if ae, ok := err.(*apperr.Error); !ok || ae.Code != "INVALID_TOKEN" {
 			return nil, err
 		}
 	}
@@ -131,8 +129,8 @@ func AuthenticateManagementUser(c *web.Ctx) (*model.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u == nil || !u.Enabled {
-		return nil, apperr.New("USER_DISABLED", "用户不存在或已停用").WithStatus(401)
+	if u == nil {
+		return nil, apperr.New("INVALID_TOKEN", "登录凭证或接口令牌无效").WithStatus(401)
 	}
 	return u, nil
 }
@@ -228,12 +226,14 @@ var (
 	PurchaseReader = RequirePermission(domain.PermPurchaseRead)
 	PurchaseWriter = RequirePermission(domain.PermPurchaseWrite)
 	HuaxingReader  = RequirePermission(domain.PermHuaxingRead)
-	HazardReader   = RequirePermission(domain.PermHazardRead)
-	HazardWriter   = RequirePermission(domain.PermHazardWrite)
-	LedgerReader   = RequirePermission(domain.PermLedgerRead)
-	LedgerWriter   = RequirePermission(domain.PermLedgerWrite)
-	WorkReader     = RequirePermission(domain.PermWorkRead)
-	WorkWriter     = RequirePermission(domain.PermWorkWrite)
+	// HuaxingWriter 华星总库存 Excel 导入：与「华星总库存查看」是独立权限位。
+	HuaxingWriter = RequirePermission(domain.PermHuaxingWrite)
+	HazardReader  = RequirePermission(domain.PermHazardRead)
+	HazardWriter  = RequirePermission(domain.PermHazardWrite)
+	LedgerReader  = RequirePermission(domain.PermLedgerRead)
+	LedgerWriter  = RequirePermission(domain.PermLedgerWrite)
+	WorkReader    = RequirePermission(domain.PermWorkRead)
+	WorkWriter    = RequirePermission(domain.PermWorkWrite)
 	// LinkAnyWriter 跨模块写操作（如申购物资关联二级库物资）：命中任一模块写权限即可。
 	LinkAnyWriter = RequireAnyPermission(domain.PermPurchaseWrite, domain.PermWarehouseWrite)
 	// FileWriter 各业务模块的写权限都能上传图片：图片是上传后拿 file_id 随整表提交的通用能力。
@@ -391,9 +391,6 @@ func MiniProgramUser(c *web.Ctx) error {
 	}
 	if u == nil {
 		return invalid
-	}
-	if !u.Enabled {
-		return apperr.New("ACCOUNT_DISABLED", "您的账号待审核，请联系管理员").WithStatus(403)
 	}
 	if _, err := ResolveMiniProgramProject(c); err != nil {
 		return err

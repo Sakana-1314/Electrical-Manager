@@ -141,13 +141,9 @@ func createProfile(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	var token *string
-	if u.Enabled {
-		t := security.CreateMiniProgramAccessToken(u.ID)
-		token = &t
-	}
+	t := security.CreateMiniProgramAccessToken(u.ID)
 	read := svc.UserRead(c.DB, u)
-	return c.OK(schema.MiniProgramLoginResponse{AccessToken: token, TokenType: "bearer", User: &read, RequiresProfile: false})
+	return c.OK(schema.MiniProgramLoginResponse{AccessToken: &t, TokenType: "bearer", User: &read, RequiresProfile: false})
 }
 
 // ---------------- 二级库 ----------------

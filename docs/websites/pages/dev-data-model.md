@@ -369,7 +369,6 @@ erDiagram
 | `app_user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
 | `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（任意账号都可绑定；非空时唯一，一个小程序一个 openid） |
 | `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（含标准二级库 warehouse 与精简二级库 lite 两套位，见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
-| `app_user` | `enabled` | BOOLEAN | 否 | TRUE | 账号是否启用 |
 | `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 最近登录时间（网页密码登录与小程序登录均刷新，不自增 version） |
 | `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
@@ -873,17 +872,17 @@ flowchart LR
 
 #### 初始账号
 
-`app_user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码，语句带 `ON CONFLICT (username) DO UPDATE display_name/department_name/enabled`）：
+`app_user` 表插入 7 个初始账号（口令哈希相同，默认密码 123456，重复导入不会重置已有账号密码与权限位，语句带 `ON CONFLICT (username) DO UPDATE display_name/department_name`）：
 
-| `username` | `display_name` | 权限位（十进制） | `enabled` | `api_token_hash` |
-| --- | --- | --- | --- | --- |
-| `admin` | 系统管理员 | 32703（系统管理 + 全部功能读写） | 1 | `sha256(gen_random_uuid())` |
-| `warehouse` | 仓库管理员 | 6（二级库读写） | 1 | `sha256(gen_random_uuid())` |
-| `purchase` | 申购管理员 | 24（申购读写） | 1 | `sha256(gen_random_uuid())` |
-| `hazard` | 隐患管理员 | 1536（隐患读写） | 1 | `sha256(gen_random_uuid())` |
-| `ledger` | 台账管理员 | 384（台账读写） | 1 | `sha256(gen_random_uuid())` |
-| `work` | 工作管理员 | 6144（工单读写） | 1 | `sha256(gen_random_uuid())` |
-| `readonly` | 只读用户 | 2730（各功能只读） | 1 | `sha256(gen_random_uuid())` |
+| `username` | `display_name` | 权限位（十进制） | `api_token_hash` |
+| --- | --- | --- | --- |
+| `admin` | 系统管理员 | 65471（系统管理 + 全部功能读写） | `sha256(gen_random_uuid())` |
+| `warehouse` | 仓库管理员 | 57382（标准 / 精简二级库读写 + 华星总库存查看与导入） | `sha256(gen_random_uuid())` |
+| `purchase` | 申购管理员 | 24（申购读写） | `sha256(gen_random_uuid())` |
+| `hazard` | 隐患管理员 | 1536（隐患读写） | `sha256(gen_random_uuid())` |
+| `ledger` | 台账管理员 | 384（台账读写） | `sha256(gen_random_uuid())` |
+| `work` | 工作管理员 | 6144（工单读写） | `sha256(gen_random_uuid())` |
+| `readonly` | 只读用户 | 10922（各功能只读，含标准二级库查看） | `sha256(gen_random_uuid())` |
 
 七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `app_user` 三表外，其余 37 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 

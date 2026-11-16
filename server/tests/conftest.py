@@ -70,7 +70,6 @@ async def _seed() -> None:
                     display_name=display_name,
                     department_name="华星检修维护部电气车间",
                     permissions=SEED_USER_PERMISSIONS[username],
-                    enabled=True,
                 )
             )
         await session.commit()

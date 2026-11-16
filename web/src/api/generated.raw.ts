@@ -4222,7 +4222,6 @@ export interface components {
          *         "display_name": "系统管理员",
          *         "created_at": "2026-08-14T10:20:00+08:00",
          *         "last_used_at": "2026-09-13T09:12:00+08:00",
-         *         "enabled": true,
          *         "version": 1,
          *         "department_name": "华星检修维护部电气车间",
          *         "permissions": [
@@ -4234,6 +4233,7 @@ export interface components {
          *           "purchase:read",
          *           "purchase:write",
          *           "huaxing:read",
+         *           "huaxing:write",
          *           "ledger:read",
          *           "ledger:write",
          *           "hazard:read",
@@ -4659,7 +4659,6 @@ export interface components {
          *         "id": 1,
          *         "display_name": "孙浩宇",
          *         "department_name": "检修维护部电气自动化车间",
-         *         "enabled": true,
          *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *         "created_at": "2026-08-14T10:20:00+08:00",
          *         "updated_at": "2026-09-02T09:35:00+08:00",
@@ -5405,7 +5404,6 @@ export interface components {
          *       "id": 1,
          *       "display_name": "孙浩宇",
          *       "department_name": "检修维护部电气自动化车间",
-         *       "enabled": true,
          *       "permissions": [
          *         "lite:read"
          *       ],
@@ -5423,8 +5421,6 @@ export interface components {
             display_name: string;
             /** Department Name */
             department_name: string;
-            /** Enabled */
-            enabled: boolean;
             /**
              * Permissions
              * @description 权限位展开后的权限键，小程序端按它门禁功能入口与写操作
@@ -7680,7 +7676,6 @@ export interface components {
          *           "id": 1,
          *           "display_name": "孙浩宇",
          *           "department_name": "检修维护部电气自动化车间",
-         *           "enabled": true,
          *           "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *           "created_at": "2026-08-14T10:20:00+08:00",
          *           "updated_at": "2026-09-02T09:35:00+08:00",
@@ -12280,9 +12275,9 @@ export interface components {
          *         "warehouse:write",
          *         "lite:read",
          *         "lite:write",
-         *         "huaxing:read"
+         *         "huaxing:read",
+         *         "huaxing:write"
          *       ],
-         *       "enabled": true,
          *       "version": 1,
          *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
          *     }
@@ -12317,8 +12312,6 @@ export interface components {
              * @description 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
              */
             permissions: string[];
-            /** Enabled */
-            enabled: boolean;
             /** Version */
             version: number;
             /**
@@ -12344,7 +12337,6 @@ export interface components {
          *       "password": "123456",
          *       "display_name": "仓库管理员",
          *       "department_name": "华星检修维护部电气车间",
-         *       "enabled": true,
          *       "permissions": [
          *         "warehouse:read",
          *         "warehouse:write",
@@ -12362,11 +12354,6 @@ export interface components {
             display_name: string;
             /** Department Name */
             department_name?: string;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
             /**
              * Permissions
              * @description 权限键列表（写权限自动带上同模块读权限；省略表示无权限）
@@ -12391,6 +12378,7 @@ export interface components {
          *         "purchase:read",
          *         "purchase:write",
          *         "huaxing:read",
+         *         "huaxing:write",
          *         "ledger:read",
          *         "ledger:write",
          *         "hazard:read",
@@ -12398,7 +12386,6 @@ export interface components {
          *         "work:read",
          *         "work:write"
          *       ],
-         *       "enabled": true,
          *       "version": 1
          *     }
          */
@@ -12432,8 +12419,6 @@ export interface components {
              * @description 权限位展开后的权限键（按目录顺序；写权限自动带上同模块读权限）
              */
             permissions: string[];
-            /** Enabled */
-            enabled: boolean;
             /** Version */
             version: number;
         };
@@ -12459,7 +12444,6 @@ export interface components {
          *       "username": "warehouse",
          *       "display_name": "仓库管理员",
          *       "department_name": "华星检修维护部电气车间",
-         *       "enabled": true,
          *       "version": 2,
          *       "permissions": [
          *         "warehouse:read",
@@ -12468,6 +12452,7 @@ export interface components {
          *         "lite:write",
          *         "purchase:read",
          *         "huaxing:read",
+         *         "huaxing:write",
          *         "ledger:read",
          *         "hazard:read",
          *         "work:read"
@@ -12483,8 +12468,6 @@ export interface components {
             department_name?: string | null;
             /** Password */
             password?: string | null;
-            /** Enabled */
-            enabled?: boolean | null;
             /** Version */
             version: number;
             /**
@@ -12988,7 +12971,6 @@ export interface operations {
                      *         "display_name": "系统管理员",
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *         "enabled": true,
                      *         "version": 1,
                      *         "department_name": "华星检修维护部电气车间",
                      *         "permissions": [
@@ -13000,6 +12982,7 @@ export interface operations {
                      *           "purchase:read",
                      *           "purchase:write",
                      *           "huaxing:read",
+                     *           "huaxing:write",
                      *           "ledger:read",
                      *           "ledger:write",
                      *           "hazard:read",
@@ -13238,7 +13221,6 @@ export interface operations {
                      *       "display_name": "系统管理员",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "enabled": true,
                      *       "version": 1,
                      *       "department_name": "华星检修维护部电气车间",
                      *       "permissions": [
@@ -13250,6 +13232,7 @@ export interface operations {
                      *         "purchase:read",
                      *         "purchase:write",
                      *         "huaxing:read",
+                     *         "huaxing:write",
                      *         "ledger:read",
                      *         "ledger:write",
                      *         "hazard:read",
@@ -13381,6 +13364,7 @@ export interface operations {
                      *         "purchase:read",
                      *         "purchase:write",
                      *         "huaxing:read",
+                     *         "huaxing:write",
                      *         "ledger:read",
                      *         "ledger:write",
                      *         "hazard:read",
@@ -13388,7 +13372,6 @@ export interface operations {
                      *         "work:read",
                      *         "work:write"
                      *       ],
-                     *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
                      *     }
@@ -21197,7 +21180,6 @@ export interface operations {
                      *         "id": 1,
                      *         "display_name": "孙浩宇",
                      *         "department_name": "检修维护部电气自动化车间",
-                     *         "enabled": true,
                      *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
@@ -21325,7 +21307,6 @@ export interface operations {
                      *       "id": 1,
                      *       "display_name": "孙浩宇",
                      *       "department_name": "检修维护部电气自动化车间",
-                     *       "enabled": true,
                      *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "updated_at": "2026-09-02T09:35:00+08:00",
@@ -21692,7 +21673,6 @@ export interface operations {
                      *         "id": 1,
                      *         "display_name": "孙浩宇",
                      *         "department_name": "检修维护部电气自动化车间",
-                     *         "enabled": true,
                      *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
                      *         "created_at": "2026-08-14T10:20:00+08:00",
                      *         "updated_at": "2026-09-02T09:35:00+08:00",
@@ -32273,7 +32253,6 @@ export interface operations {
                      *           "display_name": "仓库管理员",
                      *           "created_at": "2026-08-14T10:20:00+08:00",
                      *           "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *           "enabled": true,
                      *           "version": 1,
                      *           "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *           "department_name": "华星检修维护部电气车间",
@@ -32407,7 +32386,6 @@ export interface operations {
                      *       "display_name": "仓库管理员",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",
@@ -32643,7 +32621,6 @@ export interface operations {
                      *       "display_name": "仓库管理员",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",
@@ -32784,7 +32761,6 @@ export interface operations {
                      *         "hazard:write"
                      *       ],
                      *       "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
-                     *       "enabled": true,
                      *       "version": 5,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7"
                      *     }
@@ -32907,7 +32883,6 @@ export interface operations {
                      *       "display_name": "仓库管理员",
                      *       "created_at": "2026-08-14T10:20:00+08:00",
                      *       "last_used_at": "2026-09-13T09:12:00+08:00",
-                     *       "enabled": true,
                      *       "version": 1,
                      *       "api_token": "2b7e9d10-3f4a-4c8b-9e12-6a5d3f1c08b7",
                      *       "department_name": "华星检修维护部电气车间",

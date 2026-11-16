@@ -603,7 +603,6 @@ type User struct {
 	DepartmentName string     `db:"department_name" json:"department_name"`
 	WechatOpenid   *string    `db:"wechat_openid" json:"wechat_openid"`
 	Permissions    int64      `db:"permissions" json:"permissions"`
-	Enabled        bool       `db:"enabled" json:"enabled"`
 	LastUsedAt     *time.Time `db:"last_used_at" json:"last_used_at"`
 	CreatedAt      time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt      time.Time  `db:"updated_at" json:"updated_at"`
@@ -611,7 +610,7 @@ type User struct {
 }
 
 const TableUser = "app_user"
-const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "wechat_openid", "permissions", "enabled", "last_used_at", "created_at", "updated_at", "version"`
+const ColsUser = `"id", "username", "password_hash", "api_token_hash", "api_token_enc", "display_name", "department_name", "wechat_openid", "permissions", "last_used_at", "created_at", "updated_at", "version"`
 
 // WebhookDelivery ↔ 表 `webhook_delivery`。渠道地址 / 密钥 / 订阅事件由服务端环境变量提供，
 // 本表只记录投递队列与重试状态。

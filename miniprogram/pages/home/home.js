@@ -50,10 +50,6 @@ Page({
     this.setData({ featureReady: false, loadFailed: false });
     try {
       const session = await getApp().globalData.authPromise;
-      if (session.account_disabled) {
-        wx.reLaunch({ url: '/pages/disabled/disabled' });
-        return;
-      }
       if (session.registration_disabled) {
         wx.reLaunch({ url: '/pages/registration-closed/registration-closed' });
         return;
@@ -108,10 +104,10 @@ Page({
     } catch (_error) {
       // 静默登录失败由 onLoad 的既有分支提示，这里继续走本机缓存的解析。
     }
-    // 账号待审核 / 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
+    // 注册关闭 / 未绑定：页面正在跳转，不再额外请求项目。
     if (
       session &&
-      (session.account_disabled || session.registration_disabled || session.requires_profile)
+      (session.registration_disabled || session.requires_profile)
     ) {
       return;
     }

@@ -126,8 +126,8 @@ func authenticate(c *gin.Context) (*identity, bool) {
 		web.WriteError(c, err)
 		return nil, false
 	}
-	if user == nil || !user.Enabled {
-		sendAuthError(c, "MCP 接口令牌无效或用户已停用")
+	if user == nil {
+		sendAuthError(c, "MCP 接口令牌无效")
 		return nil, false
 	}
 	return &identity{Token: token, ID: user.ID, Username: user.Username, DisplayName: user.DisplayName,

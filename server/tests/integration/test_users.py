@@ -29,7 +29,6 @@ async def test_username_can_change_without_changing_hidden_user_id(client: Async
             "password": "123456",
             "display_name": "临时用户",
             "permissions": ["warehouse:read", "warehouse:write"],
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text
@@ -65,7 +64,6 @@ async def test_user_without_references_can_be_deleted(client: AsyncClient) -> No
             "password": "123456",
             "display_name": "未使用用户",
             "permissions": ["warehouse:read", "warehouse:write"],
-            "enabled": True,
         },
     )
     user_id = created.json()["id"]
@@ -87,7 +85,6 @@ async def test_api_token_is_unique_and_can_be_regenerated(client: AsyncClient) -
             "password": "123456",
             "display_name": "接口用户",
             "permissions": ["warehouse:read", "warehouse:write"],
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text
@@ -154,7 +151,6 @@ async def test_api_token_is_echoed_on_every_read(client: AsyncClient) -> None:
             "password": "123456",
             "display_name": "回显用户",
             "permissions": ["warehouse:read", "warehouse:write"],
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text
@@ -193,7 +189,6 @@ async def test_legacy_hash_only_token_backfilled_and_echoed_after_use(client: As
             "password": "123456",
             "display_name": "旧数据用户",
             "permissions": ["warehouse:read", "warehouse:write"],
-            "enabled": True,
         },
     )
     user = created.json()
@@ -234,7 +229,6 @@ async def test_user_read_echoes_wechat_openid(client: AsyncClient) -> None:
             department_name="华星检修维护部电气车间",
             wechat_openid="openid-bound-display",
             permissions=0,
-            enabled=True,
         )
         session.add(item)
         await session.commit()
@@ -258,7 +252,6 @@ async def test_default_read_permissions_gate_module_reads(client: AsyncClient) -
             "password": "123456",
             "display_name": "默认只读用户",
             "permissions": ["lite:read", "purchase:read", "huaxing:read"],
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text

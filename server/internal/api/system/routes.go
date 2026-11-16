@@ -67,7 +67,7 @@ func login(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if !ok || !u.Enabled || !security.VerifyPassword(data.Password, u.PasswordHash) {
+	if !ok || !security.VerifyPassword(data.Password, u.PasswordHash) {
 		return apperr.New("INVALID_CREDENTIALS", "用户名或密码错误").WithStatus(401)
 	}
 	if err := auth.MarkLastUsed(c.DB, &u); err != nil {
@@ -106,7 +106,7 @@ func refresh(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if u == nil || !u.Enabled || u.Version != tokenVersion {
+	if u == nil || u.Version != tokenVersion {
 		return invalid
 	}
 	return c.OK(schema.TokenPairResponse{
@@ -171,7 +171,7 @@ func listUsers(c *web.Ctx) error {
 
 func addUser(c *web.Ctx) error {
 	p := c.Params()
-	data := schema.UserCreate{Enabled: true}
+	var data schema.UserCreate
 	p.Body(&data)
 	if err := p.Err(); err != nil {
 		return err

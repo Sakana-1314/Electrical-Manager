@@ -58,7 +58,7 @@ Page({
     try {
       const app = getApp();
       const session = await app.globalData.authPromise;
-      if (session.account_disabled || session.registration_disabled) {
+      if (session.registration_disabled) {
         return;
       }
       if (session.requires_profile) {

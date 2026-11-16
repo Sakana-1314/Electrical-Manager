@@ -126,7 +126,6 @@ async def test_default_permissions_apply_to_new_users_and_validate_keys(
             "username": "default-perm-user",
             "password": "123456",
             "display_name": "默认权限用户",
-            "enabled": True,
         },
     )
     assert created.status_code == 201, created.text

@@ -467,7 +467,7 @@ server/
 | `api/settings` | `/system-settings` | `advanced-settings` 读写均需系统管理位（公开运行模式端点已移除） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse`；仪表盘汇总只要求登录 |
 | `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
-| `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.HuaxingReader`、`auth.WarehouseWriter` |
+| `api/huaxing` | `/huaxing-inventory` | `auth.RequireProject`、`auth.HuaxingReader`、`auth.HuaxingWriter` |
 | `api/secondary` | `/secondary-warehouse` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter` |
 | `api/miniprogram` | `/mini-program-users`（管理端）、`/mini-program/*`（小程序） | `auth.SystemAdmin`；`auth.MiniProgramUser`、`auth.MiniProgramRegistration` |
 | `api/purchase` | `/purchase-materials`、`/purchase-plan-templates`、`/purchase-record-sync/*`、`/purchase-records*` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
@@ -533,7 +533,7 @@ sequenceDiagram
 | 名称 | 定义 | 说明 |
 | --- | --- | --- |
 | 权限位 | `app_user.permissions`（BIGINT 位图） | 每一位对应一个权限点；管理端与小程序端共用同一套权限，功能可见性与接口放行都按位判断，不再有角色表 |
-| 权限目录 | `domain.PermissionCatalog` | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write`，每项带键、位值与标签 |
+| 权限目录 | `domain.PermissionCatalog` | `system:admin`、`warehouse:read|write`、`purchase:read|write`、`huaxing:read|write`、`ledger:read|write`、`hazard:read|write`、`work:read|write`，每项带键、位值与标签 |
 | 位运算 | `domain.Permission.Has / Normalize / Keys`、`domain.PermissionBits` | `Has` 按位与判断；`Normalize` 丢掉未知位并让写权限自动带上同模块读权限；`Keys` 按目录顺序展开成接口里的权限键数组，`PermissionBits` 反向校验未知键 |
 | `auth.RequirePermission(perm)` | 依赖工厂（参数是 `domain.Permission` 位） | 先确保 `CurrentUser`，登录用户位图不含该位返回 `PERMISSION_DENIED`（403） |
 | `auth.CurrentUser` | 依赖 | 管理端用户（Bearer JWT、`X-API-Token` 或 Bearer 接口令牌）；同一请求只解析一次，并把用户名写进访问日志 |
@@ -544,6 +544,7 @@ sequenceDiagram
 | `auth.PurchaseReader` | `RequirePermission(PermPurchaseRead)` | 申购计划 / 记录 / 物料编码库读取与导出 |
 | `auth.PurchaseWriter` | `RequirePermission(PermPurchaseWrite)` | 申购写操作 |
 | `auth.HuaxingReader` | `RequirePermission(PermHuaxingRead)` | 华星总库存读取 |
+| `auth.HuaxingWriter` | `RequirePermission(PermHuaxingWrite)` | 华星总库存 Excel 导入 |
 | `auth.HazardReader` | `RequirePermission(PermHazardRead)` | 隐患台账与两张字典表读取 |
 | `auth.HazardWriter` | `RequirePermission(PermHazardWrite)` | 隐患管理写操作（台账与两张字典表） |
 | `auth.LedgerReader` | `RequirePermission(PermLedgerRead)` | 台账记录与标签读取 |
@@ -552,7 +553,7 @@ sequenceDiagram
 | `auth.WorkWriter` | `RequirePermission(PermWorkWrite)` | 工作管理写操作（任务、工作记录与任务图片） |
 | `auth.SystemAdmin` | `RequirePermission(PermSystemAdmin)` | 系统配置、用户、文件治理；没有独立「超级管理员角色」 |
 | 图片上传 | `auth.FileWriter`（任一业务写权限位） | 图片上传与上传前查重 |
-| `auth.MiniProgramUser` | 依赖 | 小程序用户；未审核（`enabled=false`）返回 `ACCOUNT_DISABLED`（403）；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
+| `auth.MiniProgramUser` | 依赖 | 小程序用户；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
 | `auth.MiniProgramRegistration` | 依赖 | 校验注册凭证，`auth.Registration(c)` 返回 `(app_id, openid)`，供注册 / 绑定用 |
 | `auth.RequireProject` | 依赖 | 校验 `X-Project-Id` 并设为本请求会话的项目上下文（见「项目隔离与数据库」） |
 | `auth.SystemScope` | 依赖 | 把整个请求切到系统（跨项目）上下文，用于全局附件池接口 |
@@ -562,7 +563,7 @@ sequenceDiagram
 #### 接口令牌（`X-API-Token`）与双列存储
 | 项 | 规则 |
 | --- | --- |
-| 取用顺序 | `auth.AuthenticateManagementUser` 依次尝试 `X-API-Token` → Bearer 值（长度 ≤ 36 时先按接口令牌试，命中停用用户直接报 `USER_DISABLED`）→ 按 JWT 解析 |
+| 取用顺序 | `auth.AuthenticateManagementUser` 依次尝试 `X-API-Token` → Bearer 值（长度 ≤ 36 时先按接口令牌试）→ 按 JWT 解析 |
 | 查找 | 令牌为 36 位；`auth.FindUserByAPIToken` 先用长度 ≠ 36 快速排除，再按 SHA-256 命中 `app_user.api_token_hash` |
 | 懒迁移回写 | 命中且 `app_user.api_token_enc` 为空时，用该明文令牌 `security.EncryptSecret()` 回写密文（随请求事务提交），使管理界面之后可解密回显（`api_token_hash` 认证 + `api_token_enc` 可逆回显双列） |
 | MCP 入口 | MCP 认证同样走 `auth.FindUserByAPIToken`，取令牌顺序 `?token=` → `X-API-Token` → `Authorization: Bearer`，并立即提交懒迁移结果 |
@@ -621,13 +622,14 @@ sequenceDiagram
 | `purchase:read` | 8 | 申购计划 / 记录 / 物料编码库查看 |
 | `purchase:write` | 16 | 申购计划与记录编辑、转入 / 恢复、采购跟踪回写、编码库导入 |
 | `huaxing:read` | 32 | 华星总库存查看 |
+| `huaxing:write` | 32768 | 华星总库存 Excel 全量导入 |
 | `ledger:read` | 128 | 台账与标签查看 |
 | `ledger:write` | 256 | 台账记录与标签维护 |
 | `hazard:read` | 512 | 隐患台账查看 |
 | `hazard:write` | 1024 | 隐患登记 / 整改、隐患类型与责任单位维护 |
 | `work:read` | 2048 | 工作管理三个视图查看 |
 | `work:write` | 4096 | 任务 / 工作记录维护与任务图片上传 |
-| 全开 | 32703 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位（位 6 已退役保留空位） |
+| 全开 | 65471 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位（位 6 已退役保留空位） |
 
 管理端与小程序端共用同一套判断：网页侧栏主 tab 按读权限位显示（工作台 / 备忘录不设门禁），小程序首页入口按读权限位显示，写操作按写权限位；分享链接与导出任务的属主校验允许 `system:admin` 查看全部。新建用户 / 小程序新注册用户的默认权限取自高级设置的 `runtime_settings.default_permissions`，代码兜底为精简二级库只读 + 申购只读 + 华星总库存只读（8232）。
 
@@ -650,11 +652,11 @@ sequenceDiagram
 
 | code | 默认 HTTP | code | 默认 HTTP |
 | --- | --- | --- | --- |
-| `NOT_FOUND` | 400 | `ACCOUNT_DISABLED` | 403 |
+| `NOT_FOUND` | 400 | `PERMISSION_DENIED` | 403 |
 | `VERSION_CONFLICT` | 409 | `FORBIDDEN` | 403 |
 | `INVALID_STATUS_TRANSITION` | 409 | `INVALID_TOKEN` | 401 |
 | `DATA_CONFLICT` | 409 | `UNAUTHORIZED` | 401 |
-| `VALIDATION_ERROR` | 422 | `USER_DISABLED` | 401 |
+| `VALIDATION_ERROR` | 422 | `INVALID_CREDENTIALS` | 401 |
 | `DUPLICATE_HAZARD_UNIT` | 409 | `DUPLICATE_HAZARD_TYPE` | 409 |
 | `HAZARD_UNIT_IN_USE` | 409 | `HAZARD_TYPE_IN_USE` | 409 |
 | `HAZARD_UNIT_PERSON_REQUIRED` | 400 | `DUPLICATE_LEDGER_TAG` | 409 |
@@ -1048,7 +1050,7 @@ sequenceDiagram
     App->>API: 静默登录（auth=false，不参与重登重试）
     API->>API: 按 AppID 选择对应小程序的 AppSecret，换取 OpenID
     API->>DB: 查 OpenID 绑定关系
-    alt 已绑定且账号启用
+    alt 已绑定
         API-->>App: access_token + 用户档案（每次刷新最近使用时间）
     else 未绑定
         API-->>App: registration_token（10 分钟有效）+ requires_profile
@@ -1057,9 +1059,9 @@ sequenceDiagram
         App->>API: 用 registration_token 完成注册绑定
         API->>DB: 新建用户档案与 OpenID 映射
         API-->>App: access_token，回到原页面
-    else 账号未启用 / 注册已关闭
-        API-->>App: ACCOUNT_DISABLED / MINI_PROGRAM_REGISTRATION_DISABLED
-        App->>U: 跳「停用」页 / 「注册已关闭」页
+    else 注册已关闭
+        API-->>App: MINI_PROGRAM_REGISTRATION_DISABLED
+        App->>U: 跳「注册已关闭」页
     end
 ```
 
@@ -1130,7 +1132,7 @@ flowchart TD
     E --> G
     F --> G{"重登结果"}
     G -- "需要补档案" --> H["跳绑定页，绑定后回跳原页面"]
-    G -- "账号停用 / 注册关闭" --> I["清空本地凭证<br/>跳「停用」页 / 「注册已关闭」页"]
+    G -- "注册关闭" --> I["清空本地凭证<br/>跳「注册已关闭」页"]
     G -- "成功" --> J["用新凭证重放原请求"]
 ```
 
