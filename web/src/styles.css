@@ -252,14 +252,30 @@ a {
   font-size: 12px;
   padding: 0 10px;
 }
-/* 详情弹窗内的字段分组 tab（`detail-form-tabs`）：标签字号与控件同档 13px，
- * 标签间距 36px → 24px，保证 4 个中文标签在手机宽度下也能横向排开。
+/* 详情弹窗内的字段分组 tab（`detail-form-tabs`）：字号与控件同档 13px，
+ * 但留白比全局弹窗密度松一档——分组后每屏字段变少，需要呼吸感：
+ * 标签间距 36px（手机 18px，保证 4 个中文标签一行放得下）、tab 与内容之间 14px、
+ * 面板内表单项行距 14px → 20px、标签到输入框 2px → 4px。
  * 只命中弹窗内的分组 tab，页面内 / 登录页的 tab 不受影响。 */
 .n-card.n-modal .detail-form-tabs .n-tabs-tab {
   font-size: 13px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 .n-card.n-modal .detail-form-tabs .n-tabs-tab-pad {
-  width: 24px;
+  width: 36px;
+}
+.n-card.n-modal .detail-form-tabs .n-tab-pane {
+  padding-top: 14px;
+}
+.n-card.n-modal .detail-form-tabs .n-form-item {
+  margin-bottom: 20px;
+}
+.n-card.n-modal .detail-form-tabs .n-form-item:last-child {
+  margin-bottom: 0;
+}
+.n-card.n-modal .detail-form-tabs .n-form-item--top-labelled .n-form-item-label {
+  padding-bottom: 4px;
 }
 /* 用户详情弹窗：标题下加分隔线。 */
 .n-card.n-modal.user-edit-modal .n-card-header {
@@ -571,6 +587,14 @@ a {
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* 详情弹窗内字段分组 tab：手机端标签间距收紧到 18px（4 个中文标签仍占一行），
+     表单行距比桌面再小一档；桌面端沿用弹窗密度那节的 36px / 20px */
+  .n-card.n-modal .detail-form-tabs .n-tabs-tab-pad {
+    width: 18px;
+  }
+  .n-card.n-modal .detail-form-tabs .n-form-item {
+    margin-bottom: 16px;
   }
   /* 筛选操作按钮组窄屏纵向铺满，与各页面已有的局部规则一致 */
   .filter-actions {
