@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import PersistentDataTable from '@/components/PersistentDataTable.vue'
 import { computed, h, ref } from 'vue'
-import { type DataTableBaseColumn, type DataTableColumns, useDialog, useMessage } from 'naive-ui'
+import { type DataTableBaseColumn, type DataTableColumns, useMessage } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import type { PurchaseMaterial } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
 import ExportButton from '@/components/ExportButton.vue'
+import PurchasePlanDetailModal from '@/components/PurchasePlanDetailModal.vue'
 import type { ExportOption } from '@/types/export'
 import {
   getTableScrollX,
@@ -20,10 +21,9 @@ import { defaultPurchasePlanStatus } from '@/constants/purchase'
 import { usePagedTable } from '@/composables/usePagedTable'
 
 const router = useRouter()
-const dialog = useDialog()
 const message = useMessage()
 const rowClickGuard = createTableRowClickGuard()
-const { items, total, page, pageSize, loading, changePage, changePageSize } = usePagedTable<
+const { items, total, page, pageSize, loading, load, changePage, changePageSize } = usePagedTable<
   PurchaseMaterial,
   Record<string, never>
 >({
@@ -108,21 +108,37 @@ function setVisibleColumnKeys(value: string[]) {
   visibleColumnKeys.value = value as UncodedColumnKey[]
 }
 
+// 详情弹窗（原点击行跳转申购计划列表再打开，现改为本页直接弹出）
+const showDetail = ref(false)
+const detailPlan = ref<PurchaseMaterial | null>(null)
+
+function openDetail(row: PurchaseMaterial) {
+  detailPlan.value = row
+  showDetail.value = true
+}
+
+async function handleSaved() {
+  await load()
+}
+
+async function handleDeleted() {
+  // 防空页：删除的是当前页最后一条且非第一页时回退一页
+  if (items.value.length === 1 && page.value > 1) page.value -= 1
+  await load()
+}
+
+/** 转入申购记录只在计划已有编码时可用（未编码物资进不来），保持与申购计划列表一致。 */
+function handleMoved(recordLineId: number) {
+  void router.push({ name: 'purchase-records', query: { detail: String(recordLineId) } })
+}
+
 function rowProps(row: PurchaseMaterial) {
   return {
     style: 'cursor: pointer',
     onMousedown: rowClickGuard.onMouseDown,
     onClick: (event: MouseEvent) => {
       if (rowClickGuard.shouldIgnore(event)) return
-      dialog.warning({
-        draggable: true,
-        title: '打开申购计划详情',
-        content: `确认打开“${row.name}”对应的申购计划详情吗？`,
-        positiveText: '打开',
-        negativeText: '取消',
-        onPositiveClick: () =>
-          router.push({ name: 'purchase-materials', query: { detail: String(row.id) } }),
-      })
+      openDetail(row)
     },
   }
 }
@@ -192,5 +208,13 @@ function handleExport(key: string) {
         />
       </div>
     </n-card>
+    <PurchasePlanDetailModal
+      :show="showDetail"
+      :plan="detailPlan"
+      @update:show="showDetail = $event"
+      @saved="handleSaved"
+      @deleted="handleDeleted"
+      @moved="handleMoved"
+    />
   </div>
 </template>
