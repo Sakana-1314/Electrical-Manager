@@ -275,7 +275,7 @@
 | 项 | 要求 |
 | --- | --- |
 | 形态 | `n-modal preset="card"`，宽度与同类弹窗一致；移动端自动获得「移动端弹窗」一节的全局规则，页面不写断点 |
-| 分组 | 内容多时用 `n-divider` 分节（“单据信息”“物资明细”），标题用业务名词，不用“基本信息 1” |
+| 分组 | 字段多时优先按业务域拆成**弹窗内 tab**（申购计划 3 个：物资信息 / 申购信息 / 备注与附件；申购记录 4 个，多一个「采购进度」），用 `n-tabs type="line" size="small"` + `display-directive="show"`（切 tab 不丢输入，表单校验覆盖全部字段）。保存前先定位缺必填项的 tab 并自动切过去，报错不能留在隐藏 tab 里。字段较少的弹窗用 `n-divider` 分节（“单据信息”“物资明细”），标题用业务名词，不用“基本信息 1” |
 | 布局 | 两列用 `form-grid` |
 | 页脚 | 左侧放页级操作（删除、转入申购记录、恢复为计划、反向冲销、在新页面打开）与只读摘要（最后更新时间、状态标签）；右侧放「取消 / 保存修改」，只保留一个主按钮 |
 | 互转跳转 | 单条「申购计划 → 申购记录」与「申购记录 → 申购计划」都从详情弹窗发起，成功后跳对方列表并带上 `?detail=<新记录 / 新计划的 id>`，由对方列表自动打开详情弹窗（不再跳详情页） |
@@ -285,7 +285,7 @@
 | 直达链接 | 打开时把 id 写进列表页 URL 的 `?detail=<id>`，刷新 / 收藏 / Ctrl+点击新标签都能直接回到该弹窗；关闭时清掉该参数。列表页需在 `usePagedTable` 的 `urlSync.preservedQueryKeys` 里声明 `'detail'`，否则翻页 / 筛选会把它冲掉 |
 | keepAlive 隔离 | URL → 弹窗的 watcher 必须判 `route.name` 是不是自己这条路由再处理：`keepAlive` 列表页跳走时只是被停用、watcher 仍会跑，否则会拿对方的 id 查自己的数据，并把对方刚写进的 `?detail=` 改写成自己的 id（申购计划 ⇄ 申购记录这两页最容易踩） |
 | 旧链接兼容 | 原来的 4 条详情路径保留为 `redirect` 到对应列表页 + `?detail=<id>`，老链接不会 404 |
-| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「详情弹窗清单与 `data-detail-modal` 标记一一对应」「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；**新增详情弹窗必须同步接线并把文件加进该 spec 的清单**，否则漏接会静默失效。申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住；工作记录详情弹窗的关闭行为由 `web/src/components/WorkRecordFormModal.spec.ts` 守住 |
+| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「详情弹窗清单与 `data-detail-modal` 标记一一对应」「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；**新增详情弹窗必须同步接线并把文件加进该 spec 的清单**，否则漏接会静默失效。申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住；申购类详情弹窗的字段分组 tab 与「缺必填项时自动切 tab」由 `web/src/views/procurement/detailModalTabs.spec.ts` 守住；工作记录详情弹窗的关闭行为由 `web/src/components/WorkRecordFormModal.spec.ts` 守住 |
 
 > 历史：详情页曾用 `detail-toolbar`（返回入口）与 `detail-grid`（主信息 + 侧栏）两个全局类，
 > 现已随详情页一并删除；不要在新代码里引用这两个类名。

@@ -252,6 +252,15 @@ a {
   font-size: 12px;
   padding: 0 10px;
 }
+/* 详情弹窗内的字段分组 tab（`detail-form-tabs`）：标签字号与控件同档 13px，
+ * 标签间距 36px → 24px，保证 4 个中文标签在手机宽度下也能横向排开。
+ * 只命中弹窗内的分组 tab，页面内 / 登录页的 tab 不受影响。 */
+.n-card.n-modal .detail-form-tabs .n-tabs-tab {
+  font-size: 13px;
+}
+.n-card.n-modal .detail-form-tabs .n-tabs-tab-pad {
+  width: 24px;
+}
 /* 用户详情弹窗：标题下加分隔线。 */
 .n-card.n-modal.user-edit-modal .n-card-header {
   padding: 16px 22px 12px;
