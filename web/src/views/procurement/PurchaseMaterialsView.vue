@@ -245,7 +245,13 @@ const images = ref<FileObject[]>([])
 const imagesUploading = ref(false)
 // 打开新建/编辑时由 openCreate（默认今天）/openEdit（取记录值）赋值，避免组件挂载即固定日期。
 const createPlanDate = ref<number | null>(null)
-const createAdvancedSections = ref<string[]>([])
+/**
+ * 详情弹窗内的字段分组：字段多、一屏铺开会显拥挤，按业务域拆成 3 个 tab。
+ * 保存校验失败时自动切到缺必填项的 tab（见 `firstIncompleteDetailTab`），
+ * 否则隐藏 tab 上的报错用户看不到。
+ */
+type PlanDetailTab = 'material' | 'info' | 'notes'
+const detailTab = ref<PlanDetailTab>('material')
 const filterOptions = ref<PurchaseFilterOptions>({
   actual_demand_persons: [],
   purchase_responsibles: [],
@@ -808,7 +814,8 @@ function openCreate() {
   })
   images.value = []
   createPlanDate.value = Date.now()
-  createAdvancedSections.value = []
+  // 新建从第一个 tab 开始填
+  detailTab.value = 'material'
   // 新建也要刷新脏基准：否则会拿上一条计划的基准去比，刚打开就判成「有未保存修改」
   editBaseline.value = editSnapshot()
   show.value = true
@@ -838,7 +845,8 @@ function openEdit(row: PurchaseMaterial) {
   })
   images.value = [...row.images]
   createPlanDate.value = dateToTimestamp(row.plan_date)
-  createAdvancedSections.value = []
+  // 每次打开都回到第一个 tab：上次停在「备注与附件」不该让这次也先看到它
+  detailTab.value = 'material'
   editBaseline.value = editSnapshot()
   show.value = true
 }
@@ -904,13 +912,45 @@ function applyMaterialCode(item: MaterialCodeLibrary) {
   if (item.model_spec?.trim()) form.model_spec = item.model_spec
   form.unit_name = item.unit_name
 }
+/** 缺必填项时返回所在 tab（含提示文案）：保存前先切过去，避免报错藏在别的 tab 里看不见。 */
+function firstIncompleteDetailTab(): { tab: PlanDetailTab; message: string } | null {
+  if (
+    !form.name.trim() ||
+    !form.model_spec.trim() ||
+    !form.planned_qty ||
+    !form.unit_name.trim() ||
+    !form.usage.trim()
+  ) {
+    return {
+      tab: 'material',
+      message: '请完整填写物资信息：名称、型号规格、计划数量、计量单位、用途',
+    }
+  }
+  if (!(form.actual_demand_person ?? '').trim() || !(form.purchase_responsible ?? '').trim()) {
+    return { tab: 'info', message: '请完整填写申购信息：需求日期、提报员工、实际需求人' }
+  }
+  return null
+}
+
 async function save() {
   const planDate = createPlanDate.value
   if (!planDate) {
+    detailTab.value = 'info'
     message.error('请选择需求日期')
     return
   }
-  await formRef.value?.validate()
+  const incomplete = firstIncompleteDetailTab()
+  if (incomplete) {
+    detailTab.value = incomplete.tab
+    message.error(incomplete.message)
+    return
+  }
+  // 必填项已逐 tab 检查过；保留表单校验兜住规则变化（如数量格式），内联报错仍可见
+  try {
+    await formRef.value?.validate()
+  } catch {
+    return
+  }
   saving.value = true
   try {
     form.image_ids = images.value.map((x) => x.id)
@@ -1690,98 +1730,44 @@ onBeforeUnmount(() => {
         size="small"
         :disabled="!canWrite"
       >
-        <div class="form-grid">
-          <n-form-item label="需求日期" required>
-            <n-date-picker v-model:value="createPlanDate" type="date" class="full-width" />
-          </n-form-item>
-          <n-form-item label="物料编码">
-            <div class="material-code-field">
-              <MaterialCodeSelector
-                :model-value="form.material_code || ''"
-                :default-name="form.name"
-                :default-model-spec="form.model_spec"
-                :disabled="!canWrite"
-                @update:model-value="form.material_code = $event"
-                @select="applyMaterialCode"
-              />
-              <n-tag
-                v-if="materialCodeKnown === true"
-                type="success"
-                :bordered="false"
-                size="small"
-              >
-                已在编码库
-              </n-tag>
-              <n-tag
-                v-else-if="materialCodeKnown === false"
-                type="warning"
-                :bordered="false"
-                size="small"
-              >
-                编码未收录
-              </n-tag>
-            </div>
-          </n-form-item>
-          <n-form-item label="名称" path="name">
-            <n-input v-model:value="form.name" maxlength="128">
-              <template #suffix>
-                <n-button text type="primary" size="tiny" @click="showHistory = true"
-                  >查历史</n-button
-                >
-              </template>
-            </n-input>
-          </n-form-item>
-          <n-form-item label="型号规格" path="model_spec">
-            <n-input v-model:value="form.model_spec" maxlength="255" />
-          </n-form-item>
-          <n-form-item label="紧急程度">
-            <n-select v-model:value="form.urgency" :options="purchaseUrgencyOptions" />
-          </n-form-item>
-          <n-form-item label="计划数量 / 计量单位" path="planned_qty">
-            <n-input-group>
-              <QuantityInput
-                v-model:value="form.planned_qty"
-                :decimal-places="1"
-                :disabled="!canWrite"
-                class="quantity-input"
-              />
-              <n-input
-                v-model:value="form.unit_name"
-                maxlength="32"
-                placeholder="计量单位"
-                class="quantity-unit-select"
-              />
-            </n-input-group>
-          </n-form-item>
-          <n-form-item label="提报员工" path="actual_demand_person">
-            <n-input
-              v-model:value="form.actual_demand_person"
-              maxlength="128"
-              placeholder="填写提出需求的员工"
-            />
-          </n-form-item>
-          <n-form-item label="实际需求人" path="purchase_responsible">
-            <n-input
-              v-model:value="form.purchase_responsible"
-              maxlength="128"
-              placeholder="填写作为实际需求人的车间负责人"
-            />
-          </n-form-item>
-          <n-form-item label="子项号">
-            <n-input v-model:value="form.subitem_no" maxlength="64" placeholder="选填" />
-          </n-form-item>
-          <n-form-item label="用途" path="usage">
-            <n-input v-model:value="form.usage" maxlength="500" />
-          </n-form-item>
-        </div>
-        <n-collapse v-model:expanded-names="createAdvancedSections" class="create-advanced-fields">
-          <n-collapse-item name="advanced">
-            <template #header>
-              <span class="advanced-header">更多设置</span>
-            </template>
+        <!-- 字段按业务域分 tab：一屏铺开会显拥挤；display-directive="show" 让未激活的
+             tab 也保持挂载，切回来时输入内容 / 上传进度不会丢，表单校验也能覆盖全部字段 -->
+        <n-tabs
+          v-model:value="detailTab"
+          type="line"
+          size="small"
+          display-directive="show"
+          class="detail-form-tabs"
+        >
+          <n-tab-pane name="material" tab="物资信息">
             <div class="form-grid">
-              <n-form-item label="状态" required>
-                <n-select v-model:value="form.status" :options="purchasePlanStatusOptions" />
+              <n-form-item label="物料编码">
+                <div class="material-code-field">
+                  <MaterialCodeSelector
+                    :model-value="form.material_code || ''"
+                    :default-name="form.name"
+                    :default-model-spec="form.model_spec"
+                    :disabled="!canWrite"
+                    @update:model-value="form.material_code = $event"
+                    @select="applyMaterialCode"
+                  />
+                  <n-tag
+                    v-if="materialCodeKnown === true"
+                    type="success"
+                    :bordered="false"
+                    size="small"
+                  >
+                    已在编码库
+                  </n-tag>
+                  <n-tag
+                    v-else-if="materialCodeKnown === false"
+                    type="warning"
+                    :bordered="false"
+                    size="small"
+                  >
+                    编码未收录
+                  </n-tag>
+                </div>
               </n-form-item>
               <n-form-item label="类别">
                 <n-select
@@ -1790,6 +1776,67 @@ onBeforeUnmount(() => {
                   filterable
                   clearable
                   placeholder="选择类别"
+                />
+              </n-form-item>
+              <n-form-item label="名称" path="name">
+                <n-input v-model:value="form.name" maxlength="128">
+                  <template #suffix>
+                    <n-button text type="primary" size="tiny" @click="showHistory = true"
+                      >查历史</n-button
+                    >
+                  </template>
+                </n-input>
+              </n-form-item>
+              <n-form-item label="型号规格" path="model_spec">
+                <n-input v-model:value="form.model_spec" maxlength="255" />
+              </n-form-item>
+              <n-form-item label="计划数量 / 计量单位" path="planned_qty">
+                <n-input-group>
+                  <QuantityInput
+                    v-model:value="form.planned_qty"
+                    :decimal-places="1"
+                    :disabled="!canWrite"
+                    class="quantity-input"
+                  />
+                  <n-input
+                    v-model:value="form.unit_name"
+                    maxlength="32"
+                    placeholder="计量单位"
+                    class="quantity-unit-select"
+                  />
+                </n-input-group>
+              </n-form-item>
+              <n-form-item label="用途" path="usage">
+                <n-input v-model:value="form.usage" maxlength="500" />
+              </n-form-item>
+              <n-form-item label="子项号">
+                <n-input v-model:value="form.subitem_no" maxlength="64" placeholder="选填" />
+              </n-form-item>
+            </div>
+          </n-tab-pane>
+          <n-tab-pane name="info" tab="申购信息">
+            <div class="form-grid">
+              <n-form-item label="需求日期" required>
+                <n-date-picker v-model:value="createPlanDate" type="date" class="full-width" />
+              </n-form-item>
+              <n-form-item label="紧急程度">
+                <n-select v-model:value="form.urgency" :options="purchaseUrgencyOptions" />
+              </n-form-item>
+              <n-form-item label="状态" required>
+                <n-select v-model:value="form.status" :options="purchasePlanStatusOptions" />
+              </n-form-item>
+              <n-form-item label="提报员工" path="actual_demand_person">
+                <n-input
+                  v-model:value="form.actual_demand_person"
+                  maxlength="128"
+                  placeholder="填写提出需求的员工"
+                />
+              </n-form-item>
+              <n-form-item label="实际需求人" path="purchase_responsible">
+                <n-input
+                  v-model:value="form.purchase_responsible"
+                  maxlength="128"
+                  placeholder="填写作为实际需求人的车间负责人"
                 />
               </n-form-item>
               <n-form-item label="需求部门">
@@ -1803,17 +1850,22 @@ onBeforeUnmount(() => {
                 />
               </n-form-item>
             </div>
-          </n-collapse-item>
-        </n-collapse>
-        <n-form-item label="备注"
-          ><n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count
-        /></n-form-item>
-        <n-form-item label="图片附件"
-          ><ImageUploader
-            v-model:files="images"
-            v-model:busy="imagesUploading"
-            :disabled="!canWrite" /></n-form-item></n-form
-      ><template #footer
+          </n-tab-pane>
+          <n-tab-pane name="notes" tab="备注与附件">
+            <n-form-item label="备注">
+              <n-input v-model:value="form.remark" type="textarea" maxlength="1000" show-count />
+            </n-form-item>
+            <n-form-item label="图片附件">
+              <ImageUploader
+                v-model:files="images"
+                v-model:busy="imagesUploading"
+                :disabled="!canWrite"
+              />
+            </n-form-item>
+          </n-tab-pane>
+        </n-tabs>
+      </n-form>
+      <template #footer
         ><n-space justify="space-between"
           ><template v-if="editing"
             ><n-space justify="start" align="center"
@@ -1997,38 +2049,6 @@ onBeforeUnmount(() => {
 
 .status-filter-select :deep(.n-base-selection-placeholder) {
   padding: 0 30px 0 10px;
-}
-
-.create-advanced-fields {
-  margin-bottom: 18px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: var(--color-panel);
-}
-
-.create-advanced-fields :deep(.n-collapse-item) {
-  border-radius: 8px;
-}
-
-.create-advanced-fields :deep(.n-collapse-item__header) {
-  padding: 10px 12px;
-  transition: background-color 0.2s ease;
-}
-
-.create-advanced-fields :deep(.n-collapse-item__header:hover) {
-  background: var(--color-panel-hover);
-}
-
-.create-advanced-fields :deep(.n-collapse-item__content-inner) {
-  padding: 12px;
-}
-
-.advanced-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  color: var(--color-text);
 }
 
 .open-new-page-btn {

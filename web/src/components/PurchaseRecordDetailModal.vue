@@ -29,9 +29,16 @@ const message = useMessage()
 const dialog = useDialog()
 const canWrite = computed(() => auth.can('purchase:write'))
 
+/**
+ * 详情弹窗内的字段分组：字段多、一屏铺开会显得拥挤，按业务域拆成 4 个 tab。
+ * 保存校验失败时自动切到缺必填项的 tab（见 `firstIncompleteTab`），
+ * 否则隐藏 tab 上的报错用户看不到。
+ */
+type RecordDetailTab = 'material' | 'info' | 'progress' | 'notes'
+const activeTab = ref<RecordDetailTab>('material')
+
 const editing = ref<PurchaseRecord | null>(null)
 const editSaving = ref(false)
-const editAdvancedSections = ref<string[]>([])
 const editPlanDate = ref<number | null>(null)
 const editPurchaseDate = ref<number | null>(null)
 const editConsolidationDate = ref<number | null>(null)
@@ -164,7 +171,8 @@ function isEditDirty(): boolean {
 function openRecord(value: PurchaseRecord) {
   editing.value = value
   syncEditForm(value)
-  editAdvancedSections.value = []
+  // 每次打开都回到第一个 tab：上次停在「备注与附件」不该让这次也先看到它
+  activeTab.value = 'material'
   editBaseline.value = editSnapshot()
 }
 
@@ -301,29 +309,54 @@ async function submitReapply() {
   }
 }
 
-async function saveEditRecord() {
+/** 缺必填项时返回所在 tab（含提示文案）：保存前先切过去，避免报错藏在别的 tab 里看不见。 */
+function firstIncompleteTab(): { tab: RecordDetailTab; message: string } | null {
   if (
-    !editing.value ||
-    !editPlanDate.value ||
-    !editPurchaseDate.value ||
     !editForm.material_name.trim() ||
     !editForm.model_spec.trim() ||
     !editForm.unit_name.trim() ||
+    !editForm.purchase_qty ||
+    !editForm.usage.trim()
+  ) {
+    return {
+      tab: 'material',
+      message: '请完整填写物资信息：名称、型号规格、申购数量、计量单位、用途',
+    }
+  }
+  if (
     !editForm.actual_demand_person.trim() ||
     !editForm.purchase_responsible.trim() ||
-    !editForm.purchase_qty ||
-    !editForm.usage.trim() ||
     !editForm.status.trim()
   ) {
-    message.error('请完整填写日期、物资、申购数量、用途、人员和状态')
+    return {
+      tab: 'info',
+      message: '请完整填写申购信息：需求日期、申购日期、提报员工、实际需求人、状态',
+    }
+  }
+  return null
+}
+
+async function saveEditRecord() {
+  if (!editing.value) return
+  const planDate = editPlanDate.value
+  const purchaseDate = editPurchaseDate.value
+  if (!planDate || !purchaseDate) {
+    activeTab.value = 'info'
+    message.error('请选择需求日期与申购日期')
+    return
+  }
+  const incomplete = firstIncompleteTab()
+  if (incomplete) {
+    activeTab.value = incomplete.tab
+    message.error(incomplete.message)
     return
   }
   editSaving.value = true
   try {
     await procurementApi.updateRecord(editing.value.line_id, {
       ...editForm,
-      plan_date: toShanghaiDate(editPlanDate.value),
-      purchase_date: toShanghaiDate(editPurchaseDate.value),
+      plan_date: toShanghaiDate(planDate),
+      purchase_date: toShanghaiDate(purchaseDate),
       consolidation_date: editConsolidationDate.value
         ? toShanghaiDate(editConsolidationDate.value)
         : undefined,
@@ -377,78 +410,110 @@ async function saveEditRecord() {
     </template>
     <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
       <n-form label-placement="top" size="small" :show-feedback="false" :disabled="!canWrite">
-        <div class="form-grid">
-          <n-form-item label="需求日期" required>
-            <n-date-picker v-model:value="editPlanDate" type="date" class="full-width" />
-          </n-form-item>
-          <n-form-item label="申购日期" required>
-            <n-date-picker v-model:value="editPurchaseDate" type="date" class="full-width" />
-          </n-form-item>
-          <n-form-item label="申购单号">
-            <n-input
-              v-model:value="editForm.purchase_order_no"
-              maxlength="128"
-              placeholder="可留空"
-            />
-          </n-form-item>
-          <n-form-item label="追溯号">
-            <n-input v-model:value="editForm.trace_no" maxlength="128" placeholder="可留空" />
-          </n-form-item>
-          <n-form-item label="类别">
-            <n-select
-              v-model:value="editForm.category"
-              :options="purchaseCategoryOptions"
-              filterable
-              clearable
-              placeholder="选择类别"
-            />
-          </n-form-item>
-          <n-form-item label="状态" required>
-            <n-input v-model:value="editForm.status" maxlength="128" placeholder="可填写任意状态" />
-          </n-form-item>
-          <n-form-item label="名称" required>
-            <n-input v-model:value="editForm.material_name" maxlength="128" />
-          </n-form-item>
-          <n-form-item label="型号规格" required>
-            <n-input v-model:value="editForm.model_spec" maxlength="255" />
-          </n-form-item>
-          <n-form-item label="申购数量 / 计量单位" required>
-            <n-input-group>
-              <QuantityInput
-                v-model:value="editForm.purchase_qty"
-                :decimal-places="1"
-                :disabled="!canWrite"
-                class="quantity-input"
-              />
-              <n-input
-                v-model:value="editForm.unit_name"
-                maxlength="32"
-                placeholder="计量单位"
-                class="quantity-unit-select"
-              />
-            </n-input-group>
-          </n-form-item>
-          <n-form-item label="提报员工" required>
-            <n-input v-model:value="editForm.actual_demand_person" maxlength="128" />
-          </n-form-item>
-          <n-form-item label="实际需求人" required>
-            <n-input v-model:value="editForm.purchase_responsible" maxlength="128" />
-          </n-form-item>
-          <n-form-item label="业务员">
-            <n-input v-model:value="editForm.salesperson" maxlength="128" />
-          </n-form-item>
-          <n-form-item label="子项号">
-            <n-input v-model:value="editForm.subitem_no" maxlength="64" placeholder="选填" />
-          </n-form-item>
-          <n-form-item label="用途" required>
-            <n-input v-model:value="editForm.usage" maxlength="500" />
-          </n-form-item>
-        </div>
-        <n-collapse v-model:expanded-names="editAdvancedSections" class="edit-advanced-fields">
-          <n-collapse-item name="advanced">
-            <template #header>
-              <span class="advanced-header">更多设置</span>
-            </template>
+        <!-- 字段按业务域分 tab：一屏铺开会显拥挤；display-directive="show" 让未激活的
+             tab 也保持挂载，切回来时输入内容 / 上传进度不会丢 -->
+        <n-tabs
+          v-model:value="activeTab"
+          type="line"
+          size="small"
+          display-directive="show"
+          class="detail-form-tabs"
+        >
+          <n-tab-pane name="material" tab="物资信息">
+            <div class="form-grid">
+              <n-form-item label="物料编码">
+                <n-input
+                  v-model:value="editForm.material_code"
+                  maxlength="64"
+                  placeholder="可留空"
+                />
+              </n-form-item>
+              <n-form-item label="类别">
+                <n-select
+                  v-model:value="editForm.category"
+                  :options="purchaseCategoryOptions"
+                  filterable
+                  clearable
+                  placeholder="选择类别"
+                />
+              </n-form-item>
+              <n-form-item label="名称" required>
+                <n-input v-model:value="editForm.material_name" maxlength="128" />
+              </n-form-item>
+              <n-form-item label="型号规格" required>
+                <n-input v-model:value="editForm.model_spec" maxlength="255" />
+              </n-form-item>
+              <n-form-item label="申购数量 / 计量单位" required>
+                <n-input-group>
+                  <QuantityInput
+                    v-model:value="editForm.purchase_qty"
+                    :decimal-places="1"
+                    :disabled="!canWrite"
+                    class="quantity-input"
+                  />
+                  <n-input
+                    v-model:value="editForm.unit_name"
+                    maxlength="32"
+                    placeholder="计量单位"
+                    class="quantity-unit-select"
+                  />
+                </n-input-group>
+              </n-form-item>
+              <n-form-item label="用途" required>
+                <n-input v-model:value="editForm.usage" maxlength="500" />
+              </n-form-item>
+              <n-form-item label="子项号">
+                <n-input v-model:value="editForm.subitem_no" maxlength="64" placeholder="选填" />
+              </n-form-item>
+              <n-form-item label="关联二级库物资">
+                <MaterialSelector
+                  :value="editForm.stock_material_id ?? null"
+                  :disabled="!canWrite"
+                  @update:value="editForm.stock_material_id = $event ?? undefined"
+                />
+              </n-form-item>
+            </div>
+          </n-tab-pane>
+          <n-tab-pane name="info" tab="申购信息">
+            <div class="form-grid">
+              <n-form-item label="需求日期" required>
+                <n-date-picker v-model:value="editPlanDate" type="date" class="full-width" />
+              </n-form-item>
+              <n-form-item label="申购日期" required>
+                <n-date-picker v-model:value="editPurchaseDate" type="date" class="full-width" />
+              </n-form-item>
+              <n-form-item label="申购单号">
+                <n-input
+                  v-model:value="editForm.purchase_order_no"
+                  maxlength="128"
+                  placeholder="可留空"
+                />
+              </n-form-item>
+              <n-form-item label="追溯号">
+                <n-input v-model:value="editForm.trace_no" maxlength="128" placeholder="可留空" />
+              </n-form-item>
+              <n-form-item label="状态" required>
+                <n-input
+                  v-model:value="editForm.status"
+                  maxlength="128"
+                  placeholder="可填写任意状态"
+                />
+              </n-form-item>
+              <n-form-item label="业务员">
+                <n-input v-model:value="editForm.salesperson" maxlength="128" />
+              </n-form-item>
+              <n-form-item label="提报员工" required>
+                <n-input v-model:value="editForm.actual_demand_person" maxlength="128" />
+              </n-form-item>
+              <n-form-item label="实际需求人" required>
+                <n-input v-model:value="editForm.purchase_responsible" maxlength="128" />
+              </n-form-item>
+              <n-form-item label="需求部门" required>
+                <n-input v-model:value="editForm.demand_department" maxlength="128" />
+              </n-form-item>
+            </div>
+          </n-tab-pane>
+          <n-tab-pane name="progress" tab="采购进度">
             <div class="form-grid">
               <n-form-item label="合同号">
                 <n-input
@@ -459,6 +524,14 @@ async function saveEditRecord() {
               </n-form-item>
               <n-form-item label="船号">
                 <n-input v-model:value="editForm.vessel_no" maxlength="128" placeholder="可留空" />
+              </n-form-item>
+              <n-form-item label="合同签订日期">
+                <n-date-picker
+                  v-model:value="editContractSignDate"
+                  type="date"
+                  class="full-width"
+                  clearable
+                />
               </n-form-item>
               <n-form-item label="集港日期">
                 <n-date-picker
@@ -483,14 +556,6 @@ async function saveEditRecord() {
                   clearable
                 />
               </n-form-item>
-              <n-form-item label="合同签订日期">
-                <n-date-picker
-                  v-model:value="editContractSignDate"
-                  type="date"
-                  class="full-width"
-                  clearable
-                />
-              </n-form-item>
               <n-form-item label="单价">
                 <n-input-number
                   v-model:value="editUnitPrice"
@@ -501,51 +566,36 @@ async function saveEditRecord() {
                   :disabled="!canWrite"
                 />
               </n-form-item>
-              <n-form-item label="物料编码">
+            </div>
+          </n-tab-pane>
+          <n-tab-pane name="notes" tab="备注与附件">
+            <div class="form-grid">
+              <n-form-item label="申购计划备注">
                 <n-input
-                  v-model:value="editForm.material_code"
-                  maxlength="64"
-                  placeholder="可留空"
+                  v-model:value="editForm.plan_remark"
+                  type="textarea"
+                  maxlength="1000"
+                  show-count
                 />
               </n-form-item>
-              <n-form-item label="需求部门" required>
-                <n-input v-model:value="editForm.demand_department" maxlength="128" />
-              </n-form-item>
-              <n-form-item label="关联二级库物资">
-                <MaterialSelector
-                  :value="editForm.stock_material_id ?? null"
-                  :disabled="!canWrite"
-                  @update:value="editForm.stock_material_id = $event ?? undefined"
+              <n-form-item label="申购记录备注">
+                <n-input
+                  v-model:value="editForm.record_remark"
+                  type="textarea"
+                  maxlength="1000"
+                  show-count
                 />
               </n-form-item>
             </div>
-          </n-collapse-item>
-        </n-collapse>
-        <div class="form-grid">
-          <n-form-item label="申购计划备注">
-            <n-input
-              v-model:value="editForm.plan_remark"
-              type="textarea"
-              maxlength="1000"
-              show-count
-            />
-          </n-form-item>
-          <n-form-item label="申购记录备注">
-            <n-input
-              v-model:value="editForm.record_remark"
-              type="textarea"
-              maxlength="1000"
-              show-count
-            />
-          </n-form-item>
-        </div>
-        <n-form-item label="图片附件">
-          <ImageUploader
-            v-model:files="editImages"
-            v-model:busy="editImagesUploading"
-            :disabled="!canWrite"
-          />
-        </n-form-item>
+            <n-form-item label="图片附件">
+              <ImageUploader
+                v-model:files="editImages"
+                v-model:busy="editImagesUploading"
+                :disabled="!canWrite"
+              />
+            </n-form-item>
+          </n-tab-pane>
+        </n-tabs>
       </n-form>
     </n-scrollbar>
     <template #footer>
@@ -673,38 +723,6 @@ async function saveEditRecord() {
 
 .quantity-unit-select {
   width: 160px;
-}
-
-.edit-advanced-fields {
-  margin-bottom: 18px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: var(--color-panel);
-}
-
-.edit-advanced-fields :deep(.n-collapse-item) {
-  border-radius: 8px;
-}
-
-.edit-advanced-fields :deep(.n-collapse-item__header) {
-  padding: 10px 12px;
-  transition: background-color 0.2s ease;
-}
-
-.edit-advanced-fields :deep(.n-collapse-item__header:hover) {
-  background: var(--color-panel-hover);
-}
-
-.edit-advanced-fields :deep(.n-collapse-item__content-inner) {
-  padding: 12px;
-}
-
-.advanced-header {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 500;
-  color: var(--color-text);
 }
 
 .open-new-page-btn {
