@@ -20,7 +20,7 @@ const rule = styles.match(/\.card-header-time \{[^}]*\}/)?.[0] ?? ''
 const HEADER_TIME_FILES = [
   'components/StockMaterialFormModal.vue',
   'components/PurchaseRecordDetailModal.vue',
-  'views/procurement/PurchaseMaterialsView.vue',
+  'components/PurchasePlanDetailModal.vue',
 ]
 
 describe('详情弹窗标题右侧的更新时间', () => {
