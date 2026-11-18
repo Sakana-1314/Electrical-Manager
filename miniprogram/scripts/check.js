@@ -283,16 +283,23 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     }
   }
   // 扫一扫与入口网格共用同一段 featureReady 守卫（block），否则加载中仍会先渲染一遍；
-  // 扫一扫必须在品牌头图之外（独立小 cell），作为页面级的快捷入口。
+  // 扫一扫是功能入口的第一项、整行占满，排在所有功能卡之前。
   const featureGuard = '<block wx:if="{{featureReady}}">';
   if (homeMarkup.split(featureGuard).length - 1 !== 1) {
-    throw new Error('The home scan cell and entries must share one featureReady guard.');
+    throw new Error('The home scan card and entries must share one featureReady guard.');
   }
   const featureStart = homeMarkup.indexOf(featureGuard);
-  for (const snippet of ['class="scan-cell"', 'class="action-grid"']) {
+  for (const snippet of ['class="action-card scan-card"', 'class="action-grid"']) {
     if (homeMarkup.indexOf(snippet) < featureStart) {
-      throw new Error(`The home scan cell / entries must stay inside the featureReady block: ${snippet}`);
+      throw new Error(`The home scan card / entries must stay inside the featureReady block: ${snippet}`);
     }
+  }
+  if (homeMarkup.indexOf('class="action-card scan-card"') > homeMarkup.indexOf('entryVisible.huaxing')) {
+    throw new Error('The home scan card must be the first entry in the action grid.');
+  }
+  // 华星总库存排在二级库库存之前；两列网格的显示顺序就是标记顺序。
+  if (homeMarkup.indexOf('entryVisible.huaxing') > homeMarkup.indexOf('entryVisible.inventory')) {
+    throw new Error('The huaxing inventory entry must come before the standard inventory entry.');
   }
   // 扫一扫是首页唯一的主动作，也是所有扫码类操作的统一入口（物资码 / 网页登录码）：
   // 整卡可点、不能再嵌套「开始扫码」按钮，且不能按权限隐藏（精简二级库用户也要用它确认网页登录）。
@@ -302,6 +309,9 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   }
   if (homeMarkup.includes('class="scan-action"')) {
     throw new Error('The home scan card must not nest a separate start-scan button.');
+  }
+  if (homeMarkup.includes('scan-arrow')) {
+    throw new Error('The home scan card must use a plain chevron, not a circled arrow.');
   }
   if (homeMarkup.includes('wx:if="{{canScan}}"')) {
     throw new Error('The home scan card must stay visible for every bound user.');
