@@ -19,9 +19,9 @@
 
   <!-- 扫一扫与功能入口：登录态与权限位返回后一次性渲染。 -->
   <block wx:if="{{featureReady}}">
-    <!-- 扫一扫：品牌头图之外的独立小 cell，也是所有扫码类操作的统一入口（物资码、网页登录码），
-         整块可点、不按权限隐藏。扫到物资码后再按权限分流：有出库写权限进入出库确认，
-         只有标准二级库读权限查看物资详情，都没有时提示。 -->
+    <!-- 扫一扫：品牌头图之外的独立一行 cell（与头图同一套深色渐变），也是所有扫码类操作的
+         统一入口（物资码、网页登录码），整块可点、不按权限隐藏。扫到物资码后再按权限分流：
+         有出库写权限进入出库确认，只有标准二级库读权限查看物资详情，都没有时提示。 -->
     <view
       class="scan-cell"
       hover-class="scan-cell-active"
@@ -30,14 +30,14 @@
       bind:tap="startScan"
     >
       <view class="scan-icon">
-        <t-icon class="{{scanning ? 'scan-spinner' : ''}}" name="{{scanning ? 'loading' : 'scan'}}" size="40rpx" />
+        <t-icon class="{{scanning ? 'scan-spinner' : ''}}" name="{{scanning ? 'loading' : 'scan'}}" size="52rpx" />
       </view>
       <view class="scan-content">
         <view class="scan-title">{{i18n.scanTitle}}</view>
         <view class="scan-description">{{scanDescription}}</view>
       </view>
       <view class="scan-arrow">
-        <t-icon name="chevron-right" size="28rpx" />
+        <t-icon name="chevron-right" size="32rpx" />
       </view>
     </view>
 
