@@ -139,35 +139,38 @@
   gap: 24rpx;
 }
 
-/* 扫一扫：品牌头图之外的独立小 cell（一行），整块可点，是首页唯一的主动作。
- * 浅品牌底把主操作与下方白色功能卡区分开；图标用表面底方片，箭头收在圆形描边里。 */
+/* 扫一扫：品牌头图之外的独立一行 cell，整块可点，是首页唯一的主动作。
+ * 与头图同一套深色渐变（亮度一致），中间留出间距独立成卡；图标用白色实底方片，箭头收在圆形描边里。 */
 .scan-cell {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 18rpx;
-  margin-top: 20rpx;
-  padding: 18rpx 22rpx;
-  border: 2rpx solid var(--app-brand-border);
-  border-radius: 24rpx;
-  background: var(--app-brand-soft);
-  box-shadow: 0 10rpx 24rpx var(--app-brand-shadow-color-soft);
+  gap: 22rpx;
+  margin-top: 24rpx;
+  padding: 30rpx 28rpx;
+  border: 2rpx solid var(--app-on-brand-line);
+  border-radius: 32rpx;
+  background:
+    radial-gradient(circle at 14% 12%, var(--app-on-brand-glow), transparent 25%),
+    var(--app-brand-strong-gradient);
+  box-shadow: 0 16rpx 40rpx var(--app-brand-strong-shadow-color);
+  color: var(--app-on-brand);
   transition: transform 120ms ease;
 }
 
 .scan-icon {
   display: flex;
   flex: none;
-  width: 64rpx;
-  height: 64rpx;
+  width: 96rpx;
+  height: 96rpx;
   align-items: center;
   justify-content: center;
-  border-radius: 18rpx;
-  background: var(--app-surface);
+  border-radius: 24rpx;
+  background: var(--app-on-brand);
   color: var(--app-brand);
 }
 
-/* 扫码中：图标原地旋转。 */
+/* 扫码中：图标原地旋转。图标是白色的实底方片，主色图标直接可见。 */
 .scan-spinner {
   animation: scan-spin 900ms linear infinite;
 }
@@ -184,17 +187,17 @@
 }
 
 .scan-title {
-  color: var(--app-text-title);
-  font-size: 28rpx;
+  color: var(--app-on-brand);
+  font-size: 34rpx;
   font-weight: 650;
   line-height: 1.35;
 }
 
 .scan-description {
   overflow: hidden;
-  margin-top: 4rpx;
-  color: var(--app-text-secondary);
-  font-size: 22rpx;
+  margin-top: 8rpx;
+  color: var(--app-on-brand-soft);
+  font-size: 24rpx;
   line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -203,13 +206,13 @@
 .scan-arrow {
   display: flex;
   flex: none;
-  width: 44rpx;
-  height: 44rpx;
+  width: 56rpx;
+  height: 56rpx;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid var(--app-brand-border);
+  border: 2rpx solid var(--app-on-brand-line);
   border-radius: 50%;
-  color: var(--app-text-secondary);
+  color: var(--app-on-brand);
 }
 
 /* 入口分组标题：小色条 + 一行字，把扫一扫与下方功能列表分开。 */
