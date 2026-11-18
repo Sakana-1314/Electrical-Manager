@@ -3,7 +3,7 @@
 }
 
 /* 品牌头图：与绑定页（pages/bind）同一套品牌面板语言，深色渐变 + 轨道装饰。
- * 标题、身份入口与扫码主操作都收进头图，首屏先立住品牌，再往下铺功能入口。 */
+ * 只承载标题与身份入口，首屏先立住品牌，再往下铺扫一扫与功能入口。 */
 .brand-panel {
   position: relative;
   box-sizing: border-box;
@@ -91,7 +91,7 @@
 
 .operator-badge-active,
 .action-card-active,
-.scan-card-active {
+.scan-cell-active {
   transform: scale(0.98);
 }
 
@@ -139,36 +139,35 @@
   gap: 24rpx;
 }
 
-/* 扫码出库：头图内的玻璃卡，整张可点，是首页唯一的主动作。
- * 图标用白色实底方片与深蓝渐变拉开对比，箭头收在圆形描边里。 */
-.scan-card {
-  position: relative;
-  z-index: 1;
+/* 扫一扫：品牌头图之外的独立小 cell（一行），整块可点，是首页唯一的主动作。
+ * 浅品牌底把主操作与下方白色功能卡区分开；图标用表面底方片，箭头收在圆形描边里。 */
+.scan-cell {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 22rpx;
-  margin-top: 32rpx;
-  padding: 24rpx;
-  border: 2rpx solid var(--app-on-brand-line);
+  gap: 18rpx;
+  margin-top: 20rpx;
+  padding: 18rpx 22rpx;
+  border: 2rpx solid var(--app-brand-border);
   border-radius: 24rpx;
-  background: var(--app-on-brand-glow);
+  background: var(--app-brand-soft);
+  box-shadow: 0 10rpx 24rpx var(--app-brand-shadow-color-soft);
   transition: transform 120ms ease;
 }
 
 .scan-icon {
   display: flex;
   flex: none;
-  width: 84rpx;
-  height: 84rpx;
+  width: 64rpx;
+  height: 64rpx;
   align-items: center;
   justify-content: center;
-  border-radius: 22rpx;
-  background: var(--app-on-brand);
+  border-radius: 18rpx;
+  background: var(--app-surface);
   color: var(--app-brand);
 }
 
-/* 扫码中：图标原地旋转。图标是白色的实底方片，主色图标直接可见。 */
+/* 扫码中：图标原地旋转。 */
 .scan-spinner {
   animation: scan-spin 900ms linear infinite;
 }
@@ -185,37 +184,40 @@
 }
 
 .scan-title {
-  color: var(--app-on-brand);
-  font-size: 32rpx;
+  color: var(--app-text-title);
+  font-size: 28rpx;
   font-weight: 650;
   line-height: 1.35;
 }
 
 .scan-description {
-  margin-top: 6rpx;
-  color: var(--app-on-brand-soft);
-  font-size: 23rpx;
+  overflow: hidden;
+  margin-top: 4rpx;
+  color: var(--app-text-secondary);
+  font-size: 22rpx;
   line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .scan-arrow {
   display: flex;
   flex: none;
-  width: 56rpx;
-  height: 56rpx;
+  width: 44rpx;
+  height: 44rpx;
   align-items: center;
   justify-content: center;
-  border: 2rpx solid var(--app-on-brand-line);
+  border: 2rpx solid var(--app-brand-border);
   border-radius: 50%;
-  color: var(--app-on-brand);
+  color: var(--app-text-secondary);
 }
 
-/* 入口分组标题：小色条 + 一行字，把品牌头图与下方功能列表分开。 */
+/* 入口分组标题：小色条 + 一行字，把扫一扫与下方功能列表分开。 */
 .section-label {
   display: flex;
   align-items: center;
   gap: 14rpx;
-  margin: 40rpx 4rpx 20rpx;
+  margin: 32rpx 4rpx 20rpx;
 }
 
 .section-label-bar {
