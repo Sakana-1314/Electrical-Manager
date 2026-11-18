@@ -291,19 +291,31 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
       throw new Error(`The home entries must stay inside the featureReady block: ${snippet}`);
     }
   }
-  // 扫码是首页唯一的主动作：整卡可点，不能再嵌套「开始扫码」按钮（版式与功能入口一致）。
+  // 扫一扫是首页唯一的主动作，也是所有扫码类操作的统一入口（物资码 / 网页登录码）：
+  // 整卡可点、不能再嵌套「开始扫码」按钮，且不能按权限隐藏（精简二级库用户也要用它确认网页登录）。
   if (!homeMarkup.includes('aria-label="{{i18n.scanTitle}}"') ||
-      !homeMarkup.includes('bind:tap="scanMaterial"')) {
+      !homeMarkup.includes('bind:tap="startScan"')) {
     throw new Error('The home scan card must be tappable as a whole.');
   }
   if (homeMarkup.includes('class="scan-action"')) {
     throw new Error('The home scan card must not nest a separate start-scan button.');
   }
-  if (!homeScript.includes('canScan: hasStandardInventory()')) {
-    throw new Error('The home scan card must only render when standard inventory is readable.');
+  if (homeMarkup.includes('wx:if="{{canScan}}"')) {
+    throw new Error('The home scan card must stay visible for every bound user.');
   }
-  if (!homeScript.includes("canOutbound() ? t('scanDescription') : t('scanDescriptionView')")) {
-    throw new Error('The home scan description must follow the outbound permission.');
+  if (!homeScript.includes("require('../../utils/scan')")) {
+    throw new Error('pages/home/home.js must parse scan results through utils/scan.js.');
+  }
+  for (const snippet of ["t('scanDescription')", "t('scanDescriptionView')", "t('scanDescriptionGeneric')"]) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`The home scan description must follow the user permissions: ${snippet}`);
+    }
+  }
+  const scanUtil = read('utils/scan.js');
+  for (const snippet of ['pages/web-login/web-login', 'extractMaterialUuid']) {
+    if (!scanUtil.includes(snippet)) {
+      throw new Error(`utils/scan.js must dispatch both login codes and material codes: ${snippet}`);
+    }
   }
   for (const snippet of ['!featureReady && !loadFailed', 'bind:tap="retryLoad"']) {
     if (!homeMarkup.includes(snippet)) {

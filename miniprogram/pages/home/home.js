@@ -1,5 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { extractMaterialUuid } = require('../../utils/material');
+const { parseScanResult } = require('../../utils/scan');
 const { canOutbound, entryEnabled, hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
@@ -12,7 +12,7 @@ Page({
   data: {
     user: null,
     scanning: false,
-    // 登录态与运行模式都返回后才置 true：加载期间只显示加载态，不渲染功能入口，
+    // 登录态与权限位都返回后才置 true：加载期间只显示加载态，不渲染功能入口，
     // 避免入口先全量冒出、拿到权限后再逐个收起。
     featureReady: false,
     // 首次加载失败：停在错误态给「重新加载」，而不是一直转圈。
@@ -28,9 +28,10 @@ Page({
       hazards: true,
       materialCodes: true,
     },
-    // 扫一扫入口：没有标准二级库读权限时不渲染（出库还需写权限，扫到物资后按权限分流）。
-    canScan: false,
-    // 扫一扫描述文案：随权限变化——有出库写权限时提示进入出库确认，只读时提示查看详情。
+    // 扫一扫是所有扫码类操作的统一入口（物资码、网页登录码），入口不按权限隐藏：
+    // 只操作精简二级库的用户同样要用它确认网页登录。扫到物资码后再按权限分流。
+    // 描述文案：有出库写权限提示进入出库确认，只有标准二级库读权限提示查看详情，
+    // 都没有时提示识别物资或网页登录码。
     scanDescription: '',
     i18n: getMessages(),
   },
@@ -40,9 +41,9 @@ Page({
   },
 
   /**
-   * 加载登录态与运行模式。
+   * 加载登录态，并按权限位算出首页入口。
    *
-   * 两者都到齐后才一次性写入 user / entryVisible / liteMode 并置 featureReady，
+   * 登录态到齐后一次性写入 user / entryVisible / scanDescription 并置 featureReady，
    * 让页面从「加载中」直接切到完整入口，不出现入口先渲染再隐藏的闪烁。
    * 失败时停在错误态（loadFailed），由用户点「重新加载」重试。
    */
@@ -71,8 +72,11 @@ Page({
           hazards: entryEnabled('hazards'),
           materialCodes: entryEnabled('materialCodes'),
         },
-        canScan: hasStandardInventory(),
-        scanDescription: canOutbound() ? t('scanDescription') : t('scanDescriptionView'),
+        scanDescription: canOutbound()
+          ? t('scanDescription')
+          : hasStandardInventory()
+            ? t('scanDescriptionView')
+            : t('scanDescriptionGeneric'),
       });
     } catch (error) {
       this.setData({ loadFailed: true });
@@ -165,26 +169,40 @@ Page({
     wx.navigateTo({ url: '/pages/profile/profile' });
   },
 
-  async scanMaterial() {
-    if (!hasStandardInventory()) {
-      this.showError(new Error(t('outboundNotOpen')));
-      return;
-    }
+  /**
+   * 扫一扫：所有扫码类操作的统一入口。
+   *
+   * 网页登录码 → 网页登录确认页；物资码 → 有出库写权限进出库确认，
+   * 只有标准二级库读权限时看物资详情，两种权限都没有时明确提示。
+   * 入口本身不按权限隐藏（精简二级库用户也要用它确认网页登录）。
+   */
+  async startScan() {
     this.setData({ scanning: true });
     try {
       const scanResult = await new Promise((resolve, reject) => {
         wx.scanCode({ success: resolve, fail: reject });
       });
-      const materialUuid = extractMaterialUuid(scanResult.path || scanResult.result);
-      if (!materialUuid) {
-        throw new Error(t('materialUuidMissing'));
+      const { webLoginScene, materialUuid } = parseScanResult(scanResult);
+      // 登录码与物资码的 scene 都是 32 位十六进制，parseScanResult 已先按页面路径区分。
+      if (webLoginScene) {
+        wx.navigateTo({
+          url: `/pages/web-login/web-login?scene=${encodeURIComponent(webLoginScene)}`,
+        });
+        return;
       }
-      // 扫一扫按权限分流：有出库写权限进出库确认，只读权限查看物资详情。
+      if (!materialUuid) {
+        this.showError(new Error(t('scanUnrecognized')));
+        return;
+      }
       if (canOutbound()) {
         wx.navigateTo({ url: `/pages/outbound/outbound?uuid=${materialUuid}` });
-      } else {
-        wx.navigateTo({ url: `/pages/material-detail/material-detail?uuid=${materialUuid}` });
+        return;
       }
+      if (hasStandardInventory()) {
+        wx.navigateTo({ url: `/pages/material-detail/material-detail?uuid=${materialUuid}` });
+        return;
+      }
+      this.showError(new Error(t('scanNoWarehousePermission')));
     } catch (error) {
       if (!String(error.errMsg || '').includes('cancel')) {
         this.showError(error);

@@ -691,46 +691,94 @@ async function run() {
   assert(page.data.optionsFailed === true, 'ledger option failure must set optionsFailed');
   delete global.__cachedFail;
 
-  // ===== 首页：扫码入口按标准二级库读权限显示，描述随出库写权限变化 =====
+  // ===== 首页：扫一扫是所有扫码类操作的统一入口，不按权限隐藏 =====
   const globalUser = global.getApp().globalData.user;
   const homePermissions = globalUser.permissions;
   const home = loadPage('pages/home/home.js');
   void home.onLoad();
   await waitFor(() => home.data.featureReady || home.data.loadFailed, 'home session');
-  assert(home.data.canScan === true, 'warehouse write permission allows scanning');
   assert(home.data.featureReady === true, 'home entries must be ready');
   assert(
     home.data.scanDescription === i18n.t('scanDescription'),
     'outbound permission must keep the outbound scan description',
   );
 
-  // 扫码分流：有出库写权限时进入出库确认页
   const originalScanCode = global.wx.scanCode;
   const originalHomeNavigate = global.wx.navigateTo;
   const navigatedTo = [];
-  global.wx.scanCode = ({ success }) => success({ path: '550e8400-e29b-41d4-a716-446655440000' });
   global.wx.navigateTo = (options) => navigatedTo.push(options.url);
-  await home.scanMaterial();
+
+  // 物资码：有出库写权限时进入出库确认页
+  global.wx.scanCode = ({ success }) =>
+    success({ path: 'pages/outbound/outbound?scene=550e8400e29b41d4a716446655440000' });
+  await home.startScan();
   assert(
     navigatedTo.pop() === '/pages/outbound/outbound?uuid=550e8400-e29b-41d4-a716-446655440000',
     'scanning with outbound permission must open the outbound page',
   );
 
-  // 只读权限：入口保留，描述换成查看详情，扫码直达物资详情页
+  // 网页登录码：scene 与物资 UUID 同为 32 位十六进制，也必须进登录确认页而不是物资页
+  global.wx.scanCode = ({ success }) =>
+    success({ path: 'pages/web-login/web-login?scene=550e8400e29b41d4a716446655440000' });
+  await home.startScan();
+  assert(
+    navigatedTo.pop() === '/pages/web-login/web-login?scene=550e8400e29b41d4a716446655440000',
+    'login codes must open the web login page before material parsing',
+  );
+
+  // 只读权限：入口保留，描述换成查看详情，物资码直达物资详情页
   globalUser.permissions = homePermissions.filter((key) => key !== 'warehouse:write');
   const readOnlyHome = loadPage('pages/home/home.js');
   void readOnlyHome.onLoad();
   await waitFor(() => readOnlyHome.data.featureReady || readOnlyHome.data.loadFailed, 'home session (read only)');
-  assert(readOnlyHome.data.canScan === true, 'warehouse read permission must keep the scan entry');
   assert(
     readOnlyHome.data.scanDescription === i18n.t('scanDescriptionView'),
     'read-only permission must switch the scan description to viewing details',
   );
-  await readOnlyHome.scanMaterial();
+  global.wx.scanCode = ({ success }) =>
+    success({ path: 'pages/outbound/outbound?scene=550e8400e29b41d4a716446655440000' });
+  await readOnlyHome.startScan();
   assert(
     navigatedTo.pop() === '/pages/material-detail/material-detail?uuid=550e8400-e29b-41d4-a716-446655440000',
     'scanning without outbound permission must open the material detail page',
   );
+
+  // 只有精简二级库权限：入口仍然展示（扫一扫也用于网页登录），物资码提示无标准二级库权限
+  globalUser.permissions = ['lite:read'];
+  const liteHome = loadPage('pages/home/home.js');
+  void liteHome.onLoad();
+  await waitFor(() => liteHome.data.featureReady || liteHome.data.loadFailed, 'home session (lite only)');
+  assert(
+    liteHome.data.scanDescription === i18n.t('scanDescriptionGeneric'),
+    'users without standard inventory must see the generic scan description',
+  );
+  global.wx.scanCode = ({ success }) =>
+    success({ path: 'pages/outbound/outbound?scene=550e8400e29b41d4a716446655440000' });
+  await liteHome.startScan();
+  assert(navigatedTo.length === 0, 'material codes must not navigate without warehouse read');
+  assert(
+    toasts.some((item) => item.message === i18n.t('scanNoWarehousePermission')),
+    'material codes without warehouse read must explain the missing permission',
+  );
+
+  // 精简二级库用户同样能用扫一扫确认网页登录
+  global.wx.scanCode = ({ success }) =>
+    success({ path: 'pages/web-login/web-login?scene=550e8400e29b41d4a716446655440000' });
+  await liteHome.startScan();
+  assert(
+    navigatedTo.pop() === '/pages/web-login/web-login?scene=550e8400e29b41d4a716446655440000',
+    'the scan entry must confirm web login for lite-only users',
+  );
+
+  // 无法识别的码：停在首页明确提示，不乱跳页面
+  global.wx.scanCode = ({ success }) => success({ result: 'https://example.com/unknown' });
+  await liteHome.startScan();
+  assert(navigatedTo.length === 0, 'unknown codes must not navigate');
+  assert(
+    toasts.some((item) => item.message === i18n.t('scanUnrecognized')),
+    'unknown codes must toast the unrecognized message',
+  );
+
   globalUser.permissions = homePermissions;
   global.wx.scanCode = originalScanCode;
   global.wx.navigateTo = originalHomeNavigate;
