@@ -282,13 +282,16 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
       throw new Error(`pages/home/home.js must gate the home entries behind loading: ${snippet}`);
     }
   }
-  // 扫码卡与入口网格都在同一段 featureReady 守卫里（block），否则加载中仍会先渲染一遍入口。
-  if (!homeMarkup.includes('<block wx:if="{{featureReady}}">')) {
-    throw new Error('The home entries must only render after the session and features load.');
+  // 扫一扫与入口网格共用同一段 featureReady 守卫（block），否则加载中仍会先渲染一遍；
+  // 扫一扫必须在品牌头图之外（独立小 cell），作为页面级的快捷入口。
+  const featureGuard = '<block wx:if="{{featureReady}}">';
+  if (homeMarkup.split(featureGuard).length - 1 !== 1) {
+    throw new Error('The home scan cell and entries must share one featureReady guard.');
   }
-  for (const snippet of ['class="scan-card"', 'class="action-grid"']) {
-    if (!homeMarkup.includes(snippet)) {
-      throw new Error(`The home entries must stay inside the featureReady block: ${snippet}`);
+  const featureStart = homeMarkup.indexOf(featureGuard);
+  for (const snippet of ['class="scan-cell"', 'class="action-grid"']) {
+    if (homeMarkup.indexOf(snippet) < featureStart) {
+      throw new Error(`The home scan cell / entries must stay inside the featureReady block: ${snippet}`);
     }
   }
   // 扫一扫是首页唯一的主动作，也是所有扫码类操作的统一入口（物资码 / 网页登录码）：
