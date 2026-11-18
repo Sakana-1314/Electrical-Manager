@@ -16,18 +16,18 @@
     <view class="brand-title">{{i18n.brandTitle}}</view>
     <view class="brand-subtitle">{{i18n.homeSubtitle}}</view>
 
-    <!-- 登录态与功能配置返回前不渲染扫码入口：canScan 依赖功能配置，先渲染再收起会闪。 -->
+    <!-- 登录态返回前不渲染扫码入口：确认网页登录需要已登录账号。 -->
     <block wx:if="{{featureReady}}">
-      <!-- 扫一扫：首页唯一的主动作，整张卡片可点（不再嵌套「开始扫码」按钮）；
-           放在头图内的玻璃卡里，与下方功能卡拉开层级。描述随权限变化：
-           有出库写权限时进入出库确认，只有读权限时查看物资详情。 -->
+      <!-- 扫一扫：首页唯一的主动作，也是所有扫码类操作的统一入口（物资码、网页登录码），
+           整张卡片可点（不嵌套「开始扫码」按钮）；放在头图内的玻璃卡里，与下方功能卡拉开层级。
+           入口不按权限隐藏，扫到物资码后再按权限分流：有出库写权限进入出库确认，
+           只有标准二级库读权限查看物资详情，都没有时提示。 -->
       <view
-        wx:if="{{canScan}}"
         class="scan-card"
         hover-class="scan-card-active"
         aria-role="button"
         aria-label="{{i18n.scanTitle}}"
-        bind:tap="scanMaterial"
+        bind:tap="startScan"
       >
         <view class="scan-icon">
           <t-icon class="{{scanning ? 'scan-spinner' : ''}}" name="{{scanning ? 'loading' : 'scan'}}" size="52rpx" />
@@ -43,7 +43,7 @@
     </block>
   </view>
 
-  <!-- 功能入口：全部入口平级展示，仅按功能开关隐藏；等登录态与功能配置都返回后一次性渲染。 -->
+  <!-- 功能入口：全部入口平级展示，仅按权限位隐藏；等登录态与权限位都返回后一次性渲染。 -->
   <block wx:if="{{featureReady}}">
     <view class="section-label">
       <view class="section-label-bar"></view>
