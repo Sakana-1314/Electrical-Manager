@@ -139,38 +139,7 @@
   gap: 24rpx;
 }
 
-/* 扫一扫：品牌头图之外的独立一行 cell，整块可点，是首页唯一的主动作。
- * 与头图同一套深色渐变（亮度一致），中间留出间距独立成卡；图标用白色实底方片，箭头收在圆形描边里。 */
-.scan-cell {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 22rpx;
-  margin-top: 24rpx;
-  padding: 30rpx 28rpx;
-  border: 2rpx solid var(--app-on-brand-line);
-  border-radius: 32rpx;
-  background:
-    radial-gradient(circle at 14% 12%, var(--app-on-brand-glow), transparent 25%),
-    var(--app-brand-strong-gradient);
-  box-shadow: 0 16rpx 40rpx var(--app-brand-strong-shadow-color);
-  color: var(--app-on-brand);
-  transition: transform 120ms ease;
-}
-
-.scan-icon {
-  display: flex;
-  flex: none;
-  width: 96rpx;
-  height: 96rpx;
-  align-items: center;
-  justify-content: center;
-  border-radius: 24rpx;
-  background: var(--app-on-brand);
-  color: var(--app-brand);
-}
-
-/* 扫码中：图标原地旋转。图标是白色的实底方片，主色图标直接可见。 */
+/* 扫码中：图标原地旋转（图标沿用功能卡的品牌软底方片）。 */
 .scan-spinner {
   animation: scan-spin 900ms linear infinite;
 }
@@ -181,41 +150,7 @@
   }
 }
 
-.scan-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.scan-title {
-  color: var(--app-on-brand);
-  font-size: 34rpx;
-  font-weight: 650;
-  line-height: 1.35;
-}
-
-.scan-description {
-  overflow: hidden;
-  margin-top: 8rpx;
-  color: var(--app-on-brand-soft);
-  font-size: 24rpx;
-  line-height: 1.4;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scan-arrow {
-  display: flex;
-  flex: none;
-  width: 56rpx;
-  height: 56rpx;
-  align-items: center;
-  justify-content: center;
-  border: 2rpx solid var(--app-on-brand-line);
-  border-radius: 50%;
-  color: var(--app-on-brand);
-}
-
-/* 入口分组标题：小色条 + 一行字，把扫一扫与下方功能列表分开。 */
+/* 入口分组标题：小色条 + 一行字，标出功能入口列表（首项是扫一扫）。 */
 .section-label {
   display: flex;
   align-items: center;
@@ -289,6 +224,16 @@
   color: var(--app-text-secondary);
   font-size: 22rpx;
   line-height: 1.5;
+}
+
+/* 扫一扫：功能入口的第一项，整行占满；配色沿用功能卡，右侧只留一个不带圈的箭头。 */
+.scan-card {
+  width: 100%;
+}
+
+.scan-chevron {
+  flex: none;
+  color: var(--app-text-muted);
 }
 
 /* 分享按钮固定在左下角，与列表页「返回顶部」FAB 同一位置与尺寸；
