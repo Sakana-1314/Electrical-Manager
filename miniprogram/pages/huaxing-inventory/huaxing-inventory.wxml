@@ -31,9 +31,10 @@
       bind:tap="openDetail"
       data-index="{{index}}"
     >
-      <view wx:if="{{item.purchaser}}" class="card-topline">
-        <view class="topline-right">
-          <t-tag theme="default" variant="light" size="small">{{item.purchaser}}</t-tag>
+      <view wx:if="{{item.first_inbound_date_label || item.material_code}}" class="card-topline">
+        <view wx:if="{{item.first_inbound_date_label}}" class="card-date">{{item.first_inbound_date_label}}</view>
+        <view wx:if="{{item.material_code}}" class="topline-right">
+          <t-tag class="topline-code" theme="default" variant="light" size="small">{{item.material_code}}</t-tag>
         </view>
       </view>
       <view class="card-heading">
@@ -46,9 +47,9 @@
           <view class="meta-label">{{i18n.stockQuantity}}</view>
           <view class="quantity-value">{{item.quantity}}<text wx:if="{{item.quantity_unit}}" class="quantity-unit">{{item.quantity_unit}}</text></view>
         </view>
-        <view class="meta-item code-item">
-          <view class="meta-label">{{i18n.materialCodeLabel}}</view>
-          <view class="meta-code">{{item.material_code}}</view>
+        <view class="meta-item purchaser-item">
+          <view class="meta-label">{{i18n.purchaserLabel}}</view>
+          <view class="meta-value">{{item.purchaser || i18n.notSet}}</view>
         </view>
         <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
       </view>

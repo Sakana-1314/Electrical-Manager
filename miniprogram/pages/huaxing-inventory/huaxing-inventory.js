@@ -58,6 +58,8 @@ function decorateItem(item) {
     // 数量与单位拆开存：卡片上数值用主色大字、单位做小字后缀（与其它列表页同一形态）。
     quantity: item.quantity != null ? String(item.quantity) : '',
     quantity_unit: item.unit_name || '',
+    // 首次入库日期：后端给 YYYY-MM-DD，卡片顶栏统一显示 YYYY/MM/DD（与申购日期等一致）。
+    first_inbound_date_label: String(item.first_inbound_date || '').replace(/-/g, '/'),
   };
 }
 
