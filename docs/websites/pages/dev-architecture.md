@@ -250,7 +250,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 30 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 31 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -269,6 +269,7 @@ web/src/
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
 | `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
+| `PurchasePlanDetailModal.vue` | 申购计划详情 / 编辑弹窗（申购计划页与未编码物资页共用：查看 / 编辑计划、图片附件、转入申购记录；无写权限时只读） | props：`show: boolean`、`plan: PurchaseMaterial \| null`（null 为新建）、`categories?: string[]`；emits：`update:show`、`saved`、`deleted`、`moved: [recordLineId: number]` |
 | `PurchaseRecordDetailModal.vue` | 申购记录详情 / 编辑弹窗（单据、物资、人员、备注、采购与发运、图片；转为计划 / 再次申购 / 新页面打开；申购记录页与华星总库存页共用） | props：`show: boolean`、`record: PurchaseRecord \| null`；emits：`update:show`、`saved`、`restored: [planId: number]`、`reapplyCreated: [planId: number]` |
 | `PurchaseRecordHistoryDialog.vue` | 申购记录历史弹窗（按物料编码 / 名称 / 型号检索；点击行 emit `select`，由父页面决定打开详情弹窗或跳转） | props：`show: boolean`、`initialName?`、`initialMaterialCode?`、`initialModelSpec?`、`reloadToken?`；emits：`update:show`、`select`、`search` |
 | `QuantityInput.vue` | 数量输入框：正则限制 1 位小数，用 `isDecimalString` / `compareDecimal` 校验并显示 error/success 状态 | props：`value: string`、`decimalPlaces?`（默认 1）、`max?`、`disabled?`、`placeholder?`；emit：`update:value` |
@@ -924,6 +925,7 @@ flowchart LR
 | 工具 | `system_whoami`（返回令牌对应用户、权限键、当前项目与项目来源）、`projects_list`（列出全部项目）、`operations_list`（按标签/关键字列出操作）、`operation_describe`（返回某操作的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`operation_call`（以 `X-API-Token` 调用业务接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
 | 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/` 与扫码登录会话前缀 `/api/v1/auth/qr-sessions`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、精简库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
 | 参数映射 | `operation_describe` 的 `call_arguments` 由契约派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号（String(version)）；不传则不校验版本」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。`headers` 只接受契约里该操作声明的请求头；令牌头与项目头（`ManagedHeaders`）由 MCP 层统一设置，不接受调用方传入 |
+| 字段中文名 | `operation_describe` 的 `parameters[].schema.title` 与 `schemas[].properties[].title` 按网页端 / 小程序端界面文案显示（`field_labels.go`），字段键名与 `operationId` 不变：默认按字段名取中文名，同名字段按接口标签与 schema 名消歧（`actual_demand_person` = 提报员工、`purchase_responsible` = 实际需求人；`name` 在二级库是物资名称、华星总库存是货品名称、工作任务是任务名称）。中文名只写入 MCP 的深拷贝目录，契约与 `/api/v1/openapi.json` / Swagger 的英文 title 保持原样；新增参数与请求体字段必须补中文名（Go 测试校验） |
 | 上限 | 请求体上限 16 MB（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
 | 调用方式 | `operation_call` 用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、权限位、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
 | 认证 | 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，经 `auth.FindUserByAPIToken` 命中启用用户后解析项目（`X-Project-Id` → `?project_id=` → 默认项目），失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |
