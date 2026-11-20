@@ -9,8 +9,14 @@
   min-width: 190rpx;
 }
 
-/* 编码列是本卡的长信息，吃掉剩余宽度（覆盖 .meta-item 的 min-width）。 */
-.code-item {
+/* 申购人列吃掉剩余宽度，把箭头推到卡片右侧（与其它列表页末列同一做法）。 */
+.purchaser-item {
   flex: 1;
   min-width: 0;
+}
+
+/* 顶栏物料编码标签：编码过长时裁切，避免撑破顶栏（完整编码见详情页）。 */
+.topline-code {
+  max-width: 420rpx;
+  overflow: hidden;
 }
