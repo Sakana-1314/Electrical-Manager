@@ -459,14 +459,16 @@ func Catalog() ([]*CatalogEntry, map[string]*CatalogEntry, error) {
 				Summary:     str(op.Raw["summary"]),
 				Description: str(op.Raw["description"]),
 				Tags:        list(op.Raw["tags"]),
-				Parameters:  list(op.Raw["parameters"]),
-				RequestBody: op.Raw["requestBody"],
-				Responses:   op.Raw["responses"],
+				// 深拷贝：字段中文名只改 MCP 展示，不能污染内嵌契约（Swagger / openapi.json）。
+				Parameters:  cloneJSONValue(list(op.Raw["parameters"])).([]any),
+				RequestBody: cloneJSONValue(op.Raw["requestBody"]),
+				Responses:   cloneJSONValue(op.Raw["responses"]),
 			}
 			if entry.Responses == nil {
 				entry.Responses = map[string]any{}
 			}
 			entry.Schemas = referencedSchemas([]any{entry.Parameters, entry.RequestBody, entry.Responses}, schemas)
+			applyFieldLabels(entry)
 			entry.CallArguments = callArguments(entry)
 			catalogList = append(catalogList, entry)
 			catalogByID[entry.OperationID] = entry
@@ -513,7 +515,8 @@ func referencedSchemas(value any, schemas map[string]any) map[string]any {
 	collect(value)
 	out := make(map[string]any, len(names))
 	for name := range names {
-		out[name] = schemas[name]
+		// 每个 entry 独享一份 schema 副本：字段中文名在各 entry 上就地覆盖 title。
+		out[name] = cloneJSONValue(schemas[name])
 	}
 	return out
 }
