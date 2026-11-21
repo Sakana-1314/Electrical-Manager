@@ -71,6 +71,9 @@
 
 .detail-card { margin-bottom: 18rpx; }
 .detail-card .section-heading, .image-card .section-heading { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 22rpx; }
+/* 申购信息标题可点：标题右侧小箭头表示折叠/展开，默认只收「申购单号 / 需求部门 / 备注」。 */
+.info-title { display: flex; align-items: center; gap: 8rpx; }
+.info-toggle-icon { flex: none; color: var(--app-text-placeholder); }
 .detail-card .section-divider, .image-card .section-divider { margin: 0 22rpx; }
 .detail-list { padding: 4rpx 22rpx 10rpx; }
 .detail-row { display: flex; align-items: flex-start; gap: 20rpx; padding: 17rpx 0; border-bottom: 2rpx solid var(--app-divider); }

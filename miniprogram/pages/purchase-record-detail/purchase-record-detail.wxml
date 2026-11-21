@@ -27,7 +27,12 @@
     </view>
 
     <view class="section-card detail-card">
-      <view class="section-heading"><view class="section-title">{{i18n.purchaseRecordInfo}}</view></view>
+      <view class="section-heading info-heading" bind:tap="toggleInfo">
+        <view class="section-title info-title">
+          <text>{{i18n.purchaseRecordInfo}}</text>
+          <t-icon class="info-toggle-icon" name="{{infoExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+        </view>
+      </view>
       <view class="section-divider"></view>
       <view class="detail-list">
         <view class="detail-row">
@@ -35,15 +40,15 @@
           <view wx:if="{{record.material_code_copyable}}" class="detail-value copy-value" data-code="{{record.material_code}}" bind:tap="copyMaterialCode"><text user-select="{{true}}">{{record.material_code_label}}</text></view>
           <view wx:else class="detail-value"><text user-select="{{true}}">{{record.material_code_label}}</text></view>
         </view>
-        <view class="detail-row"><view class="detail-label">{{i18n.purchaseDateLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_date_label || i18n.notSet}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.purchaseOrderNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_order_no_label}}</text></view></view>
+        <view class="detail-row"><view class="detail-label">{{i18n.purchaseDateLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_date_label}}</text></view></view>
+        <!-- 默认折叠的三项：申购单号 / 需求部门 / 备注，点标题右侧箭头展开。 -->
+        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.purchaseOrderNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_order_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.traceNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.trace_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.actualDemandPerson}}</view><view class="detail-value"><text user-select="{{true}}">{{record.actual_demand_person_label}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value"><text user-select="{{true}}">{{record.demand_department_label}}</text></view></view>
+        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value"><text user-select="{{true}}">{{record.demand_department_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.subitem_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value"><text user-select="{{true}}">{{record.usage_label}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.salespersonLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.salesperson_label}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{record.remark_label}}</text></view></view>
+        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{record.remark_label}}</text></view></view>
       </view>
     </view>
 
@@ -51,6 +56,7 @@
       <view class="section-heading"><view class="section-title">{{i18n.purchaseTrackingInfo}}</view></view>
       <view class="section-divider"></view>
       <view class="detail-list">
+        <view class="detail-row"><view class="detail-label">{{i18n.salespersonLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.salesperson_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.unitPrice}}</view><view class="detail-value"><text user-select="{{true}}">{{record.unit_price_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.contractNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.contract_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.contractSignDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.contract_sign_date_label}}</text></view></view>

@@ -6,21 +6,21 @@ const { getMessages, t } = require('../../utils/i18n');
 const { purchaseStatusTheme } = require('../../utils/purchase');
 const Toast = toastModule.default || toastModule;
 
-function present(value, fallback) {
+/** 详情字段未填写时留空（不显示「未填写」占位）。 */
+function present(value) {
   const text = String(value ?? '').trim();
-  return text && !['\\', '/', '-', '—'].includes(text) ? text : fallback;
+  return text && !['\\', '/', '-', '—'].includes(text) ? text : '';
 }
 
-/** 日期标签：后端给 YYYY-MM-DD，页面统一显示 YYYY/MM/DD（与申购日期一致）。 */
-function dateLabel(value, fallback) {
-  const text = String(value || '').trim();
-  return text ? text.replace(/-/g, '/') : fallback;
+/** 日期标签：后端给 YYYY-MM-DD，页面统一显示 YYYY/MM/DD（与申购日期一致）；空值留空。 */
+function dateLabel(value) {
+  return String(value || '').trim().replace(/-/g, '/');
 }
 
-/** 单价标签：后端是 DECIMAL(18,2) 字符串；空值 / 非数值统一显示「未填写」。 */
-function priceLabel(value, fallback) {
+/** 单价标签：后端是 DECIMAL(18,2) 字符串；空值 / 非数值留空。 */
+function priceLabel(value) {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? `${parsed.toFixed(2)} 元` : fallback;
+  return Number.isFinite(parsed) && parsed > 0 ? `${parsed.toFixed(2)} 元` : '';
 }
 
 Page({
@@ -28,6 +28,8 @@ Page({
     record: null,
     loading: true,
     failed: false,
+    // 申购信息默认折叠「申购单号 / 需求部门 / 备注」三项，点标题右侧箭头展开全部。
+    infoExpanded: false,
     i18n: getMessages(),
   },
 
@@ -61,27 +63,27 @@ Page({
       const result = await request({ url: `/mini-program/purchase-records/${id}` });
       const record = {
         ...result,
-        plan_date_label: String(result.plan_date || '').replace(/-/g, '/'),
-        purchase_date_label: String(result.purchase_date || '').replace(/-/g, '/'),
+        plan_date_label: dateLabel(result.plan_date),
+        purchase_date_label: dateLabel(result.purchase_date),
         quantity_label: `${result.purchase_qty} ${result.unit_name}`,
-        purchase_order_no_label: result.purchase_order_no || t('notSet'),
-        material_code_label: present(result.material_code, t('notSet')),
-        material_code_copyable: Boolean(present(result.material_code, '')),
-        demand_department_label: present(result.demand_department, t('notSet')),
-        actual_demand_person_label: present(result.actual_demand_person, t('notSet')),
-        usage_label: present(result.usage, t('notSet')),
-        salesperson_label: present(result.salesperson, t('notSet')),
-        remark_label: present(result.remark, t('noRemark')),
-        trace_no_label: present(result.trace_no, t('notSet')),
-        subitem_no_label: present(result.subitem_no, t('notSet')),
-        // 采购与发运（同步脚本回写）：空值统一显示「未填写」
-        unit_price_label: priceLabel(result.unit_price, t('notSet')),
-        contract_no_label: present(result.contract_no, t('notSet')),
-        contract_sign_date_label: dateLabel(result.contract_sign_date, t('notSet')),
-        vessel_no_label: present(result.vessel_no, t('notSet')),
-        consolidation_date_label: dateLabel(result.consolidation_date, t('notSet')),
-        consolidation_port_label: present(result.consolidation_port, t('notSet')),
-        sailing_date_label: dateLabel(result.sailing_date, t('notSet')),
+        purchase_order_no_label: present(result.purchase_order_no),
+        material_code_label: present(result.material_code),
+        material_code_copyable: Boolean(present(result.material_code)),
+        demand_department_label: present(result.demand_department),
+        actual_demand_person_label: present(result.actual_demand_person),
+        usage_label: present(result.usage),
+        salesperson_label: present(result.salesperson),
+        remark_label: present(result.remark),
+        trace_no_label: present(result.trace_no),
+        subitem_no_label: present(result.subitem_no),
+        // 采购与发运（同步脚本回写）：空值同样留空
+        unit_price_label: priceLabel(result.unit_price),
+        contract_no_label: present(result.contract_no),
+        contract_sign_date_label: dateLabel(result.contract_sign_date),
+        vessel_no_label: present(result.vessel_no),
+        consolidation_date_label: dateLabel(result.consolidation_date),
+        consolidation_port_label: present(result.consolidation_port),
+        sailing_date_label: dateLabel(result.sailing_date),
         image_count_label: t('imageCount', { count: (result.images || []).length }),
         status_theme: purchaseStatusTheme(result.status),
         images: (result.images || []).map((image) => ({
@@ -99,6 +101,11 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  /** 申购信息折叠/展开：默认收起申购单号、需求部门、备注三项。 */
+  toggleInfo() {
+    this.setData({ infoExpanded: !this.data.infoExpanded });
   },
 
   previewImage(event) {
