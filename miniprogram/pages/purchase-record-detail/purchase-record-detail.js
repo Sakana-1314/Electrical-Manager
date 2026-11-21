@@ -28,8 +28,9 @@ Page({
     record: null,
     loading: true,
     failed: false,
-    // 申购信息默认折叠「申购单号 / 需求部门 / 备注」三项，点标题右侧箭头展开全部。
+    // 两个详情区块默认折叠次要字段，点标题右侧箭头展开（见 wxml 的 infoExpanded / trackingExpanded）。
     infoExpanded: false,
+    trackingExpanded: false,
     i18n: getMessages(),
   },
 
@@ -103,9 +104,14 @@ Page({
     }
   },
 
-  /** 申购信息折叠/展开：默认收起申购单号、需求部门、备注三项。 */
+  /** 申购信息折叠/展开：默认收起申购单号、需求部门、备注。 */
   toggleInfo() {
     this.setData({ infoExpanded: !this.data.infoExpanded });
+  },
+
+  /** 采购与发运折叠/展开：默认收起单价、集港日期、集港港口、发船日期。 */
+  toggleTracking() {
+    this.setData({ trackingExpanded: !this.data.trackingExpanded });
   },
 
   previewImage(event) {
