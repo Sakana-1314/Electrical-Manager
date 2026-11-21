@@ -2,4 +2,18 @@
 .app-navbar {
   --td-navbar-background: var(--app-bg);
   --td-navbar-color: var(--app-text-strong);
+  /* 左侧「返回 + 标题」区域最多占满内容盒（t-navbar 已为右侧胶囊留出 95px），避免长标题顶到胶囊。 */
+  --td-navbar-left-max-width: 100%;
+}
+
+/* 左对齐标题（left 插槽）：字号 / 字重与 TDesign 居中标题一致，过长省略，靠返回箭头右侧一档间距。 */
+.app-navbar__title {
+  min-width: 0;
+  margin-left: 10rpx;
+  overflow: hidden;
+  font-size: 36rpx;
+  font-weight: 600;
+  line-height: 52rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

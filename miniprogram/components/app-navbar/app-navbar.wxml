@@ -1,10 +1,13 @@
 <t-navbar
   class="app-navbar"
-  title="{{title}}"
+  title="{{titleAlign === 'center' ? title : ''}}"
   left-arrow="{{back}}"
   delta="{{delta}}"
   fixed
   placeholder
   z-index="{{1000}}"
   bind:fail="onBackFail"
-/>
+>
+  <!-- 左对齐标题：走 left 插槽排在返回箭头右侧；居中标题（首页）仍用 t-navbar 自带 title。 -->
+  <view wx:if="{{titleAlign !== 'center' && title}}" slot="left" class="app-navbar__title">{{title}}</view>
+</t-navbar>

@@ -2,13 +2,16 @@
  * 全站统一导航栏：TDesign t-navbar 的薄封装。
  *
  * - 页面统一 `navigationStyle: custom`，由本组件承担状态栏、胶囊避让与标题渲染；
- * - 无历史可返回时（分享 / 直接打开）回首页，避免停在无法退出的死页面。
+ * - 无历史可返回时（分享 / 直接打开）回首页，避免停在无法退出的死页面；
+ * - 标题默认靠左（放进 t-navbar 的 left 插槽，紧挨返回箭头）；只有首页传
+ *   `title-align="center"` 走 TDesign 的居中标题盒。
  */
 Component({
   properties: {
     title: { type: String, value: '' },
     back: { type: Boolean, value: true },
     delta: { type: Number, value: 1 },
+    titleAlign: { type: String, value: 'left' },
   },
 
   methods: {
