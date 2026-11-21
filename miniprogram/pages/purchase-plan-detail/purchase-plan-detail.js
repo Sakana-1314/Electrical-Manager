@@ -5,9 +5,10 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
 const Toast = toastModule.default || toastModule;
 
-function present(value, fallback) {
+/** 详情字段未填写时留空（不显示「未填写 / 暂无备注」占位）。 */
+function present(value) {
   const text = String(value ?? '').trim();
-  return text && !['\\', '/', '-', '—'].includes(text) ? text : fallback;
+  return text && !['\\', '/', '-', '—'].includes(text) ? text : '';
 }
 
 Page({
@@ -51,10 +52,10 @@ Page({
         plan_date_label: String(result.plan_date || '').replace(/-/g, '/'),
         quantity_label: `${result.planned_qty} ${result.unit_name}`,
         urgency_theme: result.urgency === '紧急' ? 'warning' : 'default',
-        material_code_label: present(result.material_code, t('notSet')),
-        category_label: present(result.category, t('notSet')),
-        subitem_no_label: present(result.subitem_no, t('notSet')),
-        remark_label: present(result.remark, t('noRemark')),
+        material_code_label: present(result.material_code),
+        category_label: present(result.category),
+        subitem_no_label: present(result.subitem_no),
+        remark_label: present(result.remark),
         image_count_label: t('imageCount', { count: (result.images || []).length }),
         images: (result.images || []).map((image) => ({
           ...image,

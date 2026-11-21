@@ -4,17 +4,16 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
 const Toast = toastModule.default || toastModule;
 
-/** 数量 + 单位：数量为空时不拼出孤立单位。 */
+/** 数量 + 单位：数量为空时留空（不拼孤立单位，也不写占位文案）。 */
 function quantityLabel(item) {
   const quantity = item.quantity != null ? String(item.quantity) : '';
-  if (!quantity) return t('notSet');
+  if (!quantity) return '';
   return item.unit_name ? `${quantity} ${item.unit_name}` : quantity;
 }
 
-/** 首次入库日期：后端给 YYYY-MM-DD，页面统一显示 YYYY/MM/DD。 */
+/** 首次入库日期：后端给 YYYY-MM-DD，页面统一显示 YYYY/MM/DD；空值留空。 */
 function dateLabel(value) {
-  const text = String(value || '').trim();
-  return text ? text.replace(/-/g, '/') : t('notSet');
+  return String(value || '').trim().replace(/-/g, '/');
 }
 
 Page({
