@@ -1,4 +1,4 @@
-<app-navbar title="{{i18n.homeTitle}}" back="{{false}}" />
+<app-navbar title="{{i18n.homeTitle}}" back="{{false}}" title-align="center" />
 <view class="page-shell home-page">
   <!-- 品牌头图：渐变实底 + 轨道装饰，只承载品牌与身份入口。
        与绑定页的品牌面板同一套语言，首屏先立住品牌，再往下铺操作。 -->
