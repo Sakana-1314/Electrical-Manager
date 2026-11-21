@@ -1,5 +1,4 @@
 const { imageUrl } = require('./inventory');
-const { t } = require('./i18n');
 
 // 整改状态 → TDesign 标签主题（状态值本身是中文，直接展示不做翻译）。
 const STATUS_THEMES = {
@@ -39,12 +38,13 @@ function decorateHazard(item) {
     level_theme: item.level === '重大隐患' ? 'danger' : 'primary',
     date_label: String(item.inspection_date || '').replace(/-/g, '/'),
     due_label: String(item.due_date || '').replace(/-/g, '/'),
-    type_label: `${item.major} / ${item.minor}`,
+    type_label: [item.major, item.minor].filter(Boolean).join(' / '),
     overdue: isOverdue(item.due_date, item.status),
-    person_label: item.person || t('notSet'),
-    rectify_person_label: item.rectify_person || t('notSet'),
-    remark_label: item.remark || t('notSet'),
-    suggestion_label: item.suggestion || t('notSet'),
+    // 空值留空：详情页不写「未填写」占位，列表卡需要占位时在模板里自行兜底。
+    person_label: item.person || '',
+    rectify_person_label: item.rectify_person || '',
+    remark_label: item.remark || '',
+    suggestion_label: item.suggestion || '',
   };
 }
 

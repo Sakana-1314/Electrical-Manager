@@ -60,7 +60,7 @@
         </view>
         <view class="meta-item">
           <view class="meta-label">{{i18n.hazardRectifyPersonLabel}}</view>
-          <view class="meta-value">{{item.rectify_person_label}}</view>
+          <view class="meta-value">{{item.rectify_person_label || i18n.notSet}}</view>
         </view>
         <view class="meta-item">
           <view class="meta-label">{{i18n.hazardDueLabel}}</view>

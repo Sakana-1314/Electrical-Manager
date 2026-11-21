@@ -11,7 +11,7 @@
     <view class="plan-summary-card">
       <view class="summary-heading">
         <view class="plan-name"><text user-select="{{true}}">{{plan.name}}</text></view>
-        <t-tag theme="{{plan.urgency_theme}}" variant="light" size="small">{{plan.urgency}}</t-tag>
+        <t-tag wx:if="{{plan.urgency}}" theme="{{plan.urgency_theme}}" variant="light" size="small">{{plan.urgency}}</t-tag>
       </view>
       <view class="plan-spec"><text user-select="{{true}}">{{plan.model_spec}}</text></view>
       <view class="summary-footer">

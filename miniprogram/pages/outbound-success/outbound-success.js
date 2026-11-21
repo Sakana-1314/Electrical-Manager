@@ -17,8 +17,9 @@ function formatDateTime(value) {
 function decorate(result) {
   return {
     ...result,
-    subitem_no_label: result.subitem_no || t('notSet'),
-    receiver_name_label: result.receiver_name || t('notSet'),
+    // 详情字段为空时留空，不写「未填写」占位。
+    subitem_no_label: result.subitem_no || '',
+    receiver_name_label: result.receiver_name || '',
     occurred_at_label: formatDateTime(result.occurred_at),
   };
 }

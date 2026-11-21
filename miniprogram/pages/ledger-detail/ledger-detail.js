@@ -5,10 +5,10 @@ const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
 const Toast = toastModule.default || toastModule;
 
-/** 空值统一显示占位文案，避免详情页出现空白行。 */
-function present(value, fallback) {
+/** 详情字段未填写时留空（不显示「未填写 / 暂无备注」占位）。 */
+function present(value) {
   const text = String(value ?? '').trim();
-  return text && !['\\', '/', '-', '—'].includes(text) ? text : fallback;
+  return text && !['\\', '/', '-', '—'].includes(text) ? text : '';
 }
 
 Page({
@@ -53,9 +53,9 @@ Page({
         record: {
           ...result,
           quantity_label: `${result.quantity} ${result.unit_name}`,
-          subitem_no_label: present(result.subitem_no, t('notSet')),
-          usage: present(result.usage, t('notSet')),
-          remark_label: present(result.remark, t('noRemark')),
+          subitem_no_label: present(result.subitem_no),
+          usage: present(result.usage),
+          remark_label: present(result.remark),
           tags,
           tag_count_label: t('tagCount', { count: tags.length }),
           image_count_label: t('imageCount', { count: images.length }),
