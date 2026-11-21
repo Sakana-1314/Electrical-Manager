@@ -30,25 +30,29 @@
       <view class="section-heading" bind:tap="toggleInfo">
         <view class="section-title collapsible-title">
           <text>{{i18n.purchaseRecordInfo}}</text>
-          <t-icon class="collapsible-icon" name="{{infoExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+          <t-icon class="collapsible-icon {{infoExpanded ? 'is-open' : ''}}" name="chevron-down" size="28rpx" />
         </view>
       </view>
       <view class="section-divider"></view>
-      <view class="detail-list">
+      <view class="detail-list {{infoExpanded ? '' : 'is-collapsed'}}">
         <view class="detail-row">
           <view class="detail-label">{{i18n.materialCode}}</view>
           <view wx:if="{{record.material_code_copyable}}" class="detail-value copy-value" data-code="{{record.material_code}}" bind:tap="copyMaterialCode"><text user-select="{{true}}">{{record.material_code_label}}</text></view>
           <view wx:else class="detail-value"><text user-select="{{true}}">{{record.material_code_label}}</text></view>
         </view>
         <view class="detail-row"><view class="detail-label">{{i18n.purchaseDateLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_date_label}}</text></view></view>
-        <!-- 默认折叠的三项：申购单号 / 需求部门 / 备注，点标题右侧箭头展开。 -->
-        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.purchaseOrderNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_order_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.traceNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.trace_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.actualDemandPerson}}</view><view class="detail-value"><text user-select="{{true}}">{{record.actual_demand_person_label}}</text></view></view>
-        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value"><text user-select="{{true}}">{{record.demand_department_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.subitemNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.subitem_no_label}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value"><text user-select="{{true}}">{{record.usage_label}}</text></view></view>
-        <view wx:if="{{infoExpanded}}" class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{record.remark_label}}</text></view></view>
+        <view class="detail-row fold-anchor"><view class="detail-label">{{i18n.usage}}</view><view class="detail-value"><text user-select="{{true}}">{{record.usage_label}}</text></view></view>
+        <!-- 默认折叠的三项：申购单号 / 需求部门 / 备注。.fold-body 的 height 过渡做出高度渐变。 -->
+        <view class="fold-body" style="height: {{infoExpanded ? infoFoldHeight : '0px'}}">
+          <view class="fold-body-inner" id="info-fold-body">
+            <view class="detail-row"><view class="detail-label">{{i18n.purchaseOrderNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.purchase_order_no_label}}</text></view></view>
+            <view class="detail-row"><view class="detail-label">{{i18n.demandDepartment}}</view><view class="detail-value"><text user-select="{{true}}">{{record.demand_department_label}}</text></view></view>
+            <view class="detail-row"><view class="detail-label">{{i18n.remark}}</view><view class="detail-value"><text user-select="{{true}}">{{record.remark_label}}</text></view></view>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -56,20 +60,24 @@
       <view class="section-heading" bind:tap="toggleTracking">
         <view class="section-title collapsible-title">
           <text>{{i18n.purchaseTrackingInfo}}</text>
-          <t-icon class="collapsible-icon" name="{{trackingExpanded ? 'chevron-up' : 'chevron-down'}}" size="28rpx" />
+          <t-icon class="collapsible-icon {{trackingExpanded ? 'is-open' : ''}}" name="chevron-down" size="28rpx" />
         </view>
       </view>
       <view class="section-divider"></view>
-      <view class="detail-list">
+      <view class="detail-list {{trackingExpanded ? '' : 'is-collapsed'}}">
         <view class="detail-row"><view class="detail-label">{{i18n.salespersonLabel}}</view><view class="detail-value"><text user-select="{{true}}">{{record.salesperson_label}}</text></view></view>
-        <!-- 默认折叠的四项：单价 / 集港日期 / 集港港口 / 发船日期，点标题右侧箭头展开（展开后保持原字段顺序）。 -->
-        <view wx:if="{{trackingExpanded}}" class="detail-row"><view class="detail-label">{{i18n.unitPrice}}</view><view class="detail-value"><text user-select="{{true}}">{{record.unit_price_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.contractNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.contract_no_label}}</text></view></view>
         <view class="detail-row"><view class="detail-label">{{i18n.contractSignDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.contract_sign_date_label}}</text></view></view>
-        <view class="detail-row"><view class="detail-label">{{i18n.vesselNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.vessel_no_label}}</text></view></view>
-        <view wx:if="{{trackingExpanded}}" class="detail-row"><view class="detail-label">{{i18n.consolidationDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.consolidation_date_label}}</text></view></view>
-        <view wx:if="{{trackingExpanded}}" class="detail-row"><view class="detail-label">{{i18n.consolidationPort}}</view><view class="detail-value"><text user-select="{{true}}">{{record.consolidation_port_label}}</text></view></view>
-        <view wx:if="{{trackingExpanded}}" class="detail-row"><view class="detail-label">{{i18n.sailingDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.sailing_date_label}}</text></view></view>
+        <view class="detail-row fold-anchor"><view class="detail-label">{{i18n.vesselNo}}</view><view class="detail-value"><text user-select="{{true}}">{{record.vessel_no_label}}</text></view></view>
+        <!-- 默认折叠的四项：单价 / 集港日期 / 集港港口 / 发船日期。 -->
+        <view class="fold-body" style="height: {{trackingExpanded ? trackingFoldHeight : '0px'}}">
+          <view class="fold-body-inner" id="tracking-fold-body">
+            <view class="detail-row"><view class="detail-label">{{i18n.unitPrice}}</view><view class="detail-value"><text user-select="{{true}}">{{record.unit_price_label}}</text></view></view>
+            <view class="detail-row"><view class="detail-label">{{i18n.consolidationDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.consolidation_date_label}}</text></view></view>
+            <view class="detail-row"><view class="detail-label">{{i18n.consolidationPort}}</view><view class="detail-value"><text user-select="{{true}}">{{record.consolidation_port_label}}</text></view></view>
+            <view class="detail-row"><view class="detail-label">{{i18n.sailingDate}}</view><view class="detail-value"><text user-select="{{true}}">{{record.sailing_date_label}}</text></view></view>
+          </view>
+        </view>
       </view>
     </view>
 

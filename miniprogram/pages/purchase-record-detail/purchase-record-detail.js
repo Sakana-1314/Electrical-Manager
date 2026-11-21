@@ -31,6 +31,9 @@ Page({
     // 两个详情区块默认折叠次要字段，点标题右侧箭头展开（见 wxml 的 infoExpanded / trackingExpanded）。
     infoExpanded: false,
     trackingExpanded: false,
+    // 折叠内容的自然高度（px，渲染后测量写入），height 过渡靠它在 0 与内容高度之间渐变。
+    infoFoldHeight: '0px',
+    trackingFoldHeight: '0px',
     i18n: getMessages(),
   },
 
@@ -100,8 +103,23 @@ Page({
       this.setData({ failed: true });
       this.showError(error);
     } finally {
-      this.setData({ loading: false });
+      // 折叠区块始终渲染（只是被 height 裁剪），但要等 loading 收起、卡片真正渲染后才能测高度，
+      // 否则 wx:if 还没生成这些节点，量到 null 展开时会卡在 0 高度。
+      this.setData({ loading: false }, () => this.measureFoldBodies());
     }
+  },
+
+  /** 量出折叠内容的自然高度（px）：收起时外层被 height:0 裁剪，内层仍按自然高度布局，可直接测量。 */
+  measureFoldBodies() {
+    const query = wx.createSelectorQuery().in(this);
+    query.select('#info-fold-body').boundingClientRect();
+    query.select('#tracking-fold-body').boundingClientRect();
+    query.exec(([info, tracking]) => {
+      this.setData({
+        infoFoldHeight: info ? `${Math.ceil(info.height)}px` : '0px',
+        trackingFoldHeight: tracking ? `${Math.ceil(tracking.height)}px` : '0px',
+      });
+    });
   },
 
   /** 申购信息折叠/展开：默认收起申购单号、需求部门、备注。 */

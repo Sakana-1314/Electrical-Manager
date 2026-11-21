@@ -73,7 +73,13 @@
 .detail-card .section-heading, .image-card .section-heading { display: flex; align-items: center; justify-content: space-between; padding: 18rpx 22rpx; }
 /* 区块标题可点：标题右侧小箭头表示折叠/展开，默认收起各区块的次要字段。 */
 .collapsible-title { display: flex; align-items: center; gap: 8rpx; }
-.collapsible-icon { flex: none; color: var(--app-text-placeholder); }
+.collapsible-icon { flex: none; color: var(--app-text-placeholder); transition: transform 240ms ease; }
+.collapsible-icon.is-open { transform: rotate(180deg); }
+/* 折叠内容：外层高度在 0 与内容自然高度（JS 实测写入）之间过渡，内层始终按自然高度布局。 */
+.fold-body { overflow: hidden; transition: height 240ms ease; }
+/* 收起时最后一个常显行不留悬空分隔线；用颜色淡出而不是去掉边框，避免动画里布局跳动。 */
+.fold-anchor { transition: border-bottom-color 240ms ease; }
+.detail-list.is-collapsed .fold-anchor { border-bottom-color: transparent; }
 .detail-card .section-divider, .image-card .section-divider { margin: 0 22rpx; }
 .detail-list { padding: 4rpx 22rpx 10rpx; }
 .detail-row { display: flex; align-items: flex-start; gap: 20rpx; padding: 17rpx 0; border-bottom: 2rpx solid var(--app-divider); }
