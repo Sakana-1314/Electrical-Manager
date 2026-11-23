@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.7.0
+// @version      3.8.0
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
@@ -193,7 +193,7 @@
     "PROJECT_DISABLED",
   ];
   const PROJECT_ERROR_TEXT =
-    "项目未选择或已失效：请在悬浮窗的“连接与同步设置”里重新选择项目后重试";
+    "项目未选择或已失效：请在悬浮窗的“设置”里重新选择项目后重试";
   const projectError = (message) => {
     const code = PROJECT_ERROR_CODES.find((item) =>
       String(message ?? "").includes(item),
@@ -286,6 +286,33 @@
         transaction.oncomplete = () => resolve();
         transaction.onerror = () =>
           reject(transaction.error || new Error("写入本地更新记录失败"));
+      });
+    } finally {
+      db.close();
+    }
+  };
+  // 清除当前项目的 3 天冷却记录（只删本项目，别的项目的去重状态不受影响），返回删除条数。
+  const idbClearCooldown = async (projectId) => {
+    const db = await openIdb();
+    try {
+      return await new Promise((resolve, reject) => {
+        const transaction = db.transaction(IDB_STORE, "readwrite");
+        let removed = 0;
+        const request = transaction.objectStore(IDB_STORE).openCursor();
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) return;
+          if (Number(cursor.value?.projectId) === Number(projectId)) {
+            cursor.delete();
+            removed += 1;
+          }
+          cursor.continue();
+        };
+        request.onerror = () =>
+          reject(request.error || new Error("读取本地更新记录失败"));
+        transaction.oncomplete = () => resolve(removed);
+        transaction.onerror = () =>
+          reject(transaction.error || new Error("清除本地更新记录失败"));
       });
     } finally {
       db.close();
@@ -668,6 +695,18 @@
     return;
   }
 
+  // 印尼数据平台会把报表等页面嵌进 iframe，脚本在每个 frame 都会执行：
+  // 只在最外层窗口注入悬浮窗，避免同一页面出现多份重复悬浮窗。
+  // 后台 worker 标签页（带任务参数的新标签页）已在上面处理，不受此判断影响。
+  const isTopFrame = () => {
+    try {
+      return window.top === window.self;
+    } catch {
+      return false;
+    }
+  };
+  if (!isTopFrame()) return;
+
   let config = loadConfig();
   let running = false;
   let timer = null;
@@ -945,7 +984,7 @@
               } catch {}
               if (!config.platformPassword) {
                 throw new Error(
-                  "物资平台未登录，且未填写平台密码无法自动补登；请先在浏览器登录印尼数据平台，或在悬浮窗填写平台密码",
+                  "物资平台未登录，且未填写平台密码无法自动补登；请先在浏览器登录印尼数据平台，或在悬浮窗的“设置”里填写平台密码",
                 );
               }
               await loginPlatform();
@@ -1332,6 +1371,13 @@
     ui.dryRun.checked = config.dryRun;
     ui.auto.checked = config.autoEnabled;
   };
+  // 设置独立成弹窗（不再折叠在悬浮窗里）：打开时按已保存配置回填并刷新项目下拉框。
+  const setSettingsOpen = (open) => {
+    ui.modalMask.hidden = !open;
+    if (!open) return;
+    fillForm();
+    refreshProjects();
+  };
   const debounce = (fn, milliseconds = 500) => {
     let pending = null;
     return (...args) => {
@@ -1416,9 +1462,9 @@
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
 <style>
-:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#176b5b;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:4px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:4px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save{height:34px;border-radius:4px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#176b5b}.save{border:1px solid #cbd5e1;color:#334155;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#176b5b}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#475569;background:#f1f5f9;font-size:12px}details{border:1px solid #e2e8f0;border-radius:4px}summary{padding:9px 10px;font-size:12px;font-weight:650;cursor:pointer}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 10px 10px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=number],select{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#cbd5e1;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}
+:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#176b5b;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:4px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:4px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save,.settings-open,.clear-cooldown{height:34px;border-radius:4px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#176b5b}.save,.settings-open{border:1px solid #cbd5e1;color:#334155;background:#fff}.clear-cooldown{border:1px solid #fecaca;color:#b91c1c;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#176b5b}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#475569;background:#f1f5f9;font-size:12px}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=number],select{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px;background:#fff;color:#1f2937}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#cbd5e1;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}.modal-mask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#0f172a66}.modal-mask[hidden]{display:none}.modal{display:flex;flex-direction:column;width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 24px 60px #0f172a55}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700}.modal-close{width:28px;height:28px;border:0;border-radius:4px;color:#475569;background:#f1f5f9;font-size:18px;line-height:1;cursor:pointer}.modal-body{padding:12px 14px}.modal-hint{padding:0 14px 12px;color:#92400e;font-size:11px;line-height:1.5}.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:0 14px 14px}
 </style>
-<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label></div><div class="stats">项目：未选择 · 申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><details><summary>连接与同步设置</summary><div class="settings"><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>接口令牌<input class="api-token" type="text" autocomplete="off" placeholder="管理端 API Token"></label><label class="full">项目<select class="project"></select></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label>申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label><button class="save full">保存设置</button></div></details><div class="logs"></div></div></section>`;
+<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label><button class="settings-open" title="连接与同步设置">设置</button></div><div class="stats">项目：未选择 · 申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><div class="logs"></div></div></section><div class="modal-mask" hidden><section class="modal" role="dialog" aria-modal="true" aria-label="连接与同步设置"><header class="modal-head"><span>连接与同步设置</span><button class="modal-close" title="关闭">×</button></header><div class="modal-body"><div class="settings"><label>项目<select class="project"></select></label><label>接口令牌<input class="api-token" type="text" autocomplete="off" placeholder="管理端 API Token"></label><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label class="full">申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label></div></div><div class="modal-hint">「清除冷却」会删除当前项目的 3 天去重记录并重置批次游标，下次同步会重新查询平台。</div><div class="modal-foot"><button class="clear-cooldown">清除冷却</button><button class="save">保存设置</button></div></section></div>`;
     document.documentElement.append(host);
     ui = {
       status: shadow.querySelector(".status"),
@@ -1427,6 +1473,10 @@
       auto: shadow.querySelector(".auto"),
       stats: shadow.querySelector(".stats"),
       logs: shadow.querySelector(".logs"),
+      settingsOpen: shadow.querySelector(".settings-open"),
+      modalMask: shadow.querySelector(".modal-mask"),
+      modalClose: shadow.querySelector(".modal-close"),
+      clearCooldown: shadow.querySelector(".clear-cooldown"),
       platformUsername: shadow.querySelector(".platform-user"),
       platformPassword: shadow.querySelector(".platform-pass"),
       apiToken: shadow.querySelector(".api-token"),
@@ -1441,16 +1491,42 @@
     bindAutosave();
     minimize(Boolean(config.minimized));
     drag(shadow.querySelector(".head"));
-    // 打开“连接与同步设置”面板时刷新项目下拉框（令牌可能刚改过）
-    shadow.querySelector("details").addEventListener("toggle", (event) => {
-      if (event.target.open) refreshProjects();
-    });
     ui.minimize.addEventListener("click", () => minimize());
     ui.run.addEventListener("click", () => run());
+    ui.settingsOpen.addEventListener("click", () => setSettingsOpen(true));
+    ui.modalClose.addEventListener("click", () => setSettingsOpen(false));
+    ui.modalMask.addEventListener("click", (event) => {
+      if (event.target === ui.modalMask) setSettingsOpen(false);
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !ui.modalMask.hidden) setSettingsOpen(false);
+    });
+    ui.clearCooldown.addEventListener("click", async () => {
+      const project = activeProject();
+      if (!projectStateId() || !project) {
+        log("请先在设置弹窗的“项目”下拉框选择项目，再清除该项目的冷却记录", "warn");
+        return;
+      }
+      ui.clearCooldown.disabled = true;
+      try {
+        const removed = await idbClearCooldown(projectStateId());
+        // 冷却记录清掉后游标也一并重置：否则上次因冷却被跳过的整批不会重新处理。
+        writeCursor(0);
+        log(
+          `已清除项目「${projectOptionLabel(project)}」的 ${removed} 条 3 天冷却记录，批次游标已重置；下次同步会重新查询平台`,
+          "success",
+        );
+      } catch (error) {
+        log(`清除冷却记录失败：${error.message}`, "error");
+      } finally {
+        ui.clearCooldown.disabled = false;
+      }
+    });
     ui.save.addEventListener("click", () => {
       saveConfig(formConfig());
       fillForm();
       log("设置已保存", "success");
+      setSettingsOpen(false);
       refreshProjects();
       if (config.autoEnabled) schedule(1500);
       else {
