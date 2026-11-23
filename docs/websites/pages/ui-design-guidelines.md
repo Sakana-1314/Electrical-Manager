@@ -252,13 +252,14 @@
 
 ### 弹窗密度
 
-所有 `preset="card"` 弹窗共用一套紧凑密度（与用户详情弹窗同口径），由全局规则与表单 props 统一，**不要逐弹窗再写间距覆盖**：
+所有 `preset="card"` 弹窗共用一套紧凑密度（与用户详情弹窗同口径），由全局规则与表单 props 统一，**不要逐弹窗再写间距覆盖**；
+例外是带 `data-detail-modal` 标记的详情弹窗（见「详情弹窗」一节）：以阅读为主，保留 Naive 默认的标签行高与校验反馈区，不与表单弹窗一起压空态占位。
 
 | 项 | 要求 |
 | --- | --- |
 | 表单尺寸 | 弹窗内的 `n-form` 一律 `size="small"`（输入控件 28px 高）；带 `:rules` 内联校验的表单保留反馈区，纯展示编辑 / 无校验表单再加 `:show-feedback="false"` |
 | 表单行距 | `styles.css` 全局把 `.n-card.n-modal .n-form-item` 行距压到 `14px`（末行归零）——scoped `:deep` 作用不到 teleport 出去的弹窗根，不要往页面里写 |
-| 空态占位 | Naive 表单项默认给每行**预留 24px 校验反馈区**（空态也占位）、top 标签行另有 24px min-height（网格行 + 元素）与 6px 下内边距，行与行之间空态约 38px 纯空白。`styles.css` 已把这些空态预留压除（`.n-form-item-feedback-wrapper` min-height 0、`--top-labelled` 网格行 minmax(0, auto) + 标签 min-height 0 / 下内边距 2px）：校验报错出现时反馈区按内容自然撑开，报错仍可见。不要为省行距把弹窗表单改成无校验——压的是空态占位，不是报错能力 |
+| 空态占位 | 表单类弹窗：Naive 表单项默认给每行**预留 24px 校验反馈区**（空态也占位）、top 标签行另有 24px min-height（网格行 + 元素）与 6px 下内边距，行与行之间空态约 38px 纯空白。`styles.css` 用 `.n-card.n-modal:not([data-detail-modal])` 把这些空态预留压除（`.n-form-item-feedback-wrapper` min-height 0、`--top-labelled` 网格行 minmax(0, auto) + 标签 min-height 0 / 下内边距 2px）：校验报错出现时反馈区按内容自然撑开，报错仍可见。**详情弹窗不压**（`data-detail-modal` 排除）：压掉后行高 / 行距过挤（2026-11-23 用户反馈「页面拥挤不协调」），保留 Naive 默认。不要为省行距把弹窗表单改成无校验——压的是空态占位，不是报错能力 |
 | 页脚按钮 | `styles.css` 全局把弹窗页脚按钮统一为 `28px` 高 / `12px` 字 / 左右内边距 `10px`（`.n-card__footer` / `.n-card__action` 内的 `.n-button`），与移动端断点、用户详情弹窗 footer 同口径 |
 | 弹窗外框 | header `16px 22px 10px`、content `14px 22px 18px`（同样全局声明）；宽度仍用 `width: min(标准宽, calc(100vw - 24px/32px))` 按弹窗信息量定 |
 | 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），只统一尺寸与行距 |
@@ -276,6 +277,7 @@
 | --- | --- |
 | 形态 | `n-modal preset="card"`，宽度与同类弹窗一致；移动端自动获得「移动端弹窗」一节的全局规则，页面不写断点 |
 | 分组 | 字段多时优先按业务域拆成**弹窗内 tab**（申购计划 3 个：物资信息 / 申购信息 / 备注与附件；申购记录 4 个，多一个「采购进度」），用 `n-tabs type="line" size="small"` + `display-directive="show"`（切 tab 不丢输入，表单校验覆盖全部字段）。保存前先定位缺必填项的 tab 并自动切过去，报错不能留在隐藏 tab 里。tab 字号 13px，标签间距桌面 36px / 手机 18px，内容区表单项行距 20px（手机 16px）——比弹窗全局的 14px 松一档，分组后每屏字段少、要保留呼吸感。字段较少的弹窗用 `n-divider` 分节（“单据信息”“物资明细”），标题用业务名词，不用“基本信息 1” |
+| 行距 | 详情弹窗保留 Naive 默认的宽松行高（top 标签行 24px min-height、校验反馈区 24px 空态占位），**不套用表单类弹窗「压除空态占位」的紧凑口径**：`styles.css` 用 `.n-card.n-modal:not([data-detail-modal])` 排除。字段分组 tab 内表单项行距 20px（手机 16px），比弹窗全局的 14px 松一档 |
 | 布局 | 两列用 `form-grid` |
 | 页脚 | 左侧放页级操作（删除、转入申购记录、恢复为计划、反向冲销、在新页面打开）与只读摘要（最后更新时间、状态标签）；右侧放「取消 / 保存修改」，只保留一个主按钮 |
 | 互转跳转 | 单条「申购计划 → 申购记录」与「申购记录 → 申购计划」都从详情弹窗发起，成功后跳对方列表并带上 `?detail=<新记录 / 新计划的 id>`，由对方列表自动打开详情弹窗（不再跳详情页） |
