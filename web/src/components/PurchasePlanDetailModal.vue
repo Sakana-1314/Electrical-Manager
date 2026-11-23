@@ -512,15 +512,6 @@ function openHistoryRecord(record: PurchaseRecord) {
                 </n-tag>
               </div>
             </n-form-item>
-            <n-form-item label="类别">
-              <n-select
-                v-model:value="form.category"
-                :options="categoryOptions"
-                filterable
-                clearable
-                placeholder="选择类别"
-              />
-            </n-form-item>
             <n-form-item label="名称" path="name">
               <n-input v-model:value="form.name" maxlength="128">
                 <template #suffix>
@@ -549,11 +540,21 @@ function openHistoryRecord(record: PurchaseRecord) {
                 />
               </n-input-group>
             </n-form-item>
+            <!-- 用途与子项号成对占一行（两列网格里相邻即同排） -->
             <n-form-item label="用途" path="usage">
               <n-input v-model:value="form.usage" maxlength="500" />
             </n-form-item>
             <n-form-item label="子项号">
               <n-input v-model:value="form.subitem_no" maxlength="64" placeholder="选填" />
+            </n-form-item>
+            <n-form-item label="类别">
+              <n-select
+                v-model:value="form.category"
+                :options="categoryOptions"
+                filterable
+                clearable
+                placeholder="选择类别"
+              />
             </n-form-item>
           </div>
         </n-tab-pane>
@@ -608,8 +609,8 @@ function openHistoryRecord(record: PurchaseRecord) {
         </n-tab-pane>
       </n-tabs>
     </n-form>
-    ><template #footer
-      ><n-space justify="space-between"
+    <template #footer>
+      <n-space justify="space-between"
         ><template v-if="editing"
           ><n-space justify="start" align="center"
             ><n-button

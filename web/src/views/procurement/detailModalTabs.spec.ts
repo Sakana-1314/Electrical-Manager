@@ -216,6 +216,31 @@ function tabLabels(): string[] {
   )
 }
 
+/** 当前激活 tab 面板里各字段的表单标签（按 DOM 顺序）。 */
+function activePaneFieldLabels(): string[] {
+  const panes = Array.from(
+    document.body.querySelectorAll<HTMLElement>('.n-card.n-modal .n-tab-pane'),
+  )
+  const pane = panes.find((item) => item.style.display !== 'none')
+  if (!pane) return []
+  return Array.from(pane.querySelectorAll('.n-form-item-label__text')).map(
+    (item) => item.textContent?.trim() ?? '',
+  )
+}
+
+/** 弹窗里被渲染成独立文本节点的尖括号（模板里写坏 `<` / `>` 会漏到界面上）。 */
+function strayAngleBrackets(): string[] {
+  const root = document.body.querySelector('.n-card.n-modal')
+  if (!root) return []
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const found: string[] = []
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.textContent?.trim() ?? ''
+    if (text === '<' || text === '>') found.push(text)
+  }
+  return found
+}
+
 async function clickTab(label: string) {
   const tab = Array.from(document.body.querySelectorAll<HTMLElement>('.n-tabs-tab')).find(
     (item) => item.textContent?.trim() === label,
@@ -255,6 +280,38 @@ describe('申购计划详情弹窗的字段分组', () => {
 
     expect(tabLabels()).toEqual(['物资信息', '申购信息', '备注与附件'])
     expect(activeTabLabel()).toBe('物资信息')
+  })
+
+  it('物资信息字段顺序：类别排在最后，用途与子项号相邻同排', async () => {
+    api.materials.mockResolvedValue({ items: [plan()], page: 1, page_size: 20, total: 1 } as never)
+    api.materialFilterOptions.mockResolvedValue(PLAN_FILTER_OPTIONS as never)
+    api.material.mockResolvedValue(plan() as never)
+    api.materialCodeExists.mockResolvedValue({ exists: true } as never)
+    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1')
+
+    const labels = activePaneFieldLabels()
+    expect(labels).toEqual([
+      '物料编码',
+      '名称',
+      '型号规格',
+      '计划数量 / 计量单位',
+      '用途',
+      '子项号',
+      '类别',
+    ])
+    // 两列网格里相邻即同排：用途、子项号必须挨着，且类别在最后一位
+    expect(labels.indexOf('子项号')).toBe(labels.indexOf('用途') + 1)
+    expect(labels[labels.length - 1]).toBe('类别')
+  })
+
+  it('弹窗里不渲染多余的尖括号文本', async () => {
+    api.materials.mockResolvedValue({ items: [plan()], page: 1, page_size: 20, total: 1 } as never)
+    api.materialFilterOptions.mockResolvedValue(PLAN_FILTER_OPTIONS as never)
+    api.material.mockResolvedValue(plan() as never)
+    api.materialCodeExists.mockResolvedValue({ exists: true } as never)
+    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1')
+
+    expect(strayAngleBrackets()).toEqual([])
   })
 
   it('缺必填项时自动切回「物资信息」并提示，不调保存接口', async () => {
