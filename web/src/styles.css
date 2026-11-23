@@ -230,18 +230,22 @@ a {
 .n-card.n-modal .n-form-item:last-child {
   margin-bottom: 0;
 }
-/* 弹窗行距的真正来源：Naive 给每个表单项预留一整行 24px 的校验反馈区
+/* 表单类弹窗压除空态占位：Naive 给每个表单项预留一整行 24px 的校验反馈区
  * （feedbackHeightSmall，空态也占位），top 标签行还有 24px min-height
  * （网格行 minmax(24px, auto) + 元素自身 min-height）与 6px 下内边距——
  * 空态时行与行之间约有 38px 纯空白。这里只压掉空态预留：
- * 校验报错出现时反馈区按内容自然撑开，报错仍然可见（top 布局为弹窗表单主力，左置标签不受影响）。 */
-.n-card.n-modal .n-form-item .n-form-item-feedback-wrapper {
+ * 校验报错出现时反馈区按内容自然撑开，报错仍然可见（top 布局为弹窗表单主力，左置标签不受影响）。
+ *
+ * 详情弹窗（`data-detail-modal`，清单由 detailModalClose.spec.ts 守住）排除在外：
+ * 这类弹窗以阅读为主，压掉占位后行高 / 行距过挤（2026-11-23 用户反馈「页面拥挤不协调」），
+ * 保留 Naive 默认的 24px 标签行高与 24px 反馈区，回到宽松口径。 */
+.n-card.n-modal:not([data-detail-modal]) .n-form-item .n-form-item-feedback-wrapper {
   min-height: 0;
 }
-.n-card.n-modal .n-form-item--top-labelled {
+.n-card.n-modal:not([data-detail-modal]) .n-form-item--top-labelled {
   grid-template-rows: minmax(0, auto) 1fr;
 }
-.n-card.n-modal .n-form-item--top-labelled .n-form-item-label {
+.n-card.n-modal:not([data-detail-modal]) .n-form-item--top-labelled .n-form-item-label {
   min-height: 0;
   padding-bottom: 2px;
 }

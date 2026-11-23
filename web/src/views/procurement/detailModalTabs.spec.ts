@@ -314,6 +314,19 @@ describe('申购计划详情弹窗的字段分组', () => {
     expect(strayAngleBrackets()).toEqual([])
   })
 
+  it('详情弹窗标记落在卡片根元素上（恢复宽松行距的全局 CSS 依赖它）', async () => {
+    api.materials.mockResolvedValue({ items: [plan()], page: 1, page_size: 20, total: 1 } as never)
+    api.materialFilterOptions.mockResolvedValue(PLAN_FILTER_OPTIONS as never)
+    api.material.mockResolvedValue(plan() as never)
+    api.materialCodeExists.mockResolvedValue({ exists: true } as never)
+    await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1')
+
+    // styles.css 用 `.n-card.n-modal:not([data-detail-modal])` 排除详情弹窗；
+    // 组件库改版把 attrs 挪走时这里会先失败，不至于静默变挤。
+    const card = document.body.querySelector('.n-card.n-modal')
+    expect(card?.hasAttribute('data-detail-modal')).toBe(true)
+  })
+
   it('缺必填项时自动切回「物资信息」并提示，不调保存接口', async () => {
     const incomplete = plan({ name: '' })
     api.materials.mockResolvedValue({
