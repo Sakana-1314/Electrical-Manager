@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.8.0
+// @version      3.8.1
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
@@ -47,11 +47,16 @@
   // 对应本系统申购单头的 `consolidation_date` / `consolidation_port`（单据级，只补空值）。
   const CONSOLIDATION_DATE_COLUMNS = ["国内集港日期", "集港日期", "到港日期"];
   const CONSOLIDATION_PORT_COLUMNS = ["国内港口", "集港港口", "集港口岸"];
+  // 平台报表里的入库时间列。只有该列有有效日期才认为实际发生了入库：
+  // 平台可能只登记了「入库数量」而没写入库时间（物资可能仍在发运途中），
+  // 这种行不能据此判定为已入库 / 部分入库。
+  const INBOUND_TIME_COLUMNS = ["入库时间", "入库日期"];
   // 报表解析（worker 页内）命中的列名；空表示该报表没有对应列。
   let contractSignDateColumn = "";
   let unitPriceColumn = "";
   let consolidationDateColumn = "";
   let consolidationPortColumn = "";
+  let inboundTimeColumn = "";
   // 服务端是否支持新增同步字段：被拒（旧后端）时各自置 false，自动降级为旧字段列表。
   let signDateSyncSupported = true;
   let unitPriceSyncSupported = true;
@@ -179,6 +184,7 @@
     unitPrice: matchColumn(headers, UNIT_PRICE_COLUMNS),
     consolidationDate: matchColumn(headers, CONSOLIDATION_DATE_COLUMNS),
     consolidationPort: matchColumn(headers, CONSOLIDATION_PORT_COLUMNS),
+    inboundTime: matchColumn(headers, INBOUND_TIME_COLUMNS),
   });
   const sleep = (milliseconds) =>
     new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -455,8 +461,11 @@
       const requested = quantity(quantities?.["申购数量"]);
       const purchased = quantity(quantities?.["采购数量"]);
       const inbound = quantity(quantities?.["入库数量"]);
-      if (inbound > 0 && requested > 0 && inbound >= requested) rank = Math.max(rank, 3);
-      else if (inbound > 0) rank = Math.max(rank, 2);
+      // 只有「入库时间」有有效日期才算实际入库：平台可能只登记了入库数量、
+      // 入库时间为空（例如物资仍在发运途中），这种数据最多按采购状态记。
+      const inboundConfirmed = Boolean(toIsoDate(quantities?.[inboundTimeColumn]));
+      if (inboundConfirmed && inbound > 0 && requested > 0 && inbound >= requested) rank = Math.max(rank, 3);
+      else if (inboundConfirmed && inbound > 0) rank = Math.max(rank, 2);
       else if (purchased > 0 || tracking["采购合同号"]) rank = Math.max(rank, 1);
     }
     return ["已申购", "已采购", "部分入库", "已入库"][rank];
@@ -489,6 +498,7 @@
     unitPriceColumn = columns.unitPrice;
     consolidationDateColumn = columns.consolidationDate;
     consolidationPortColumn = columns.consolidationPort;
+    inboundTimeColumn = columns.inboundTime;
     const trackingRows = [];
     const quantityRows = [];
     for (const section of sections) {
@@ -1190,13 +1200,14 @@
               ["采购单价", UNIT_PRICE_COLUMNS, syncColumns.unitPrice],
               ["集港日期", CONSOLIDATION_DATE_COLUMNS, syncColumns.consolidationDate],
               ["集港港口", CONSOLIDATION_PORT_COLUMNS, syncColumns.consolidationPort],
+              ["入库时间（状态判定）", INBOUND_TIME_COLUMNS, syncColumns.inboundTime],
             ].filter(([, , matched]) => !matched);
             if (missing.length) {
               missingColumnsWarned = true;
               log(
                 `平台报表未包含：${missing
                   .map(([label, candidates]) => `${label}（候选：${candidates.join("、")}）`)
-                  .join("；")}，本次不同步这些字段，其余字段照常同步`,
+                  .join("；")}，缺失项本次不写入或不作为入库判定依据，其余字段照常同步`,
                 "warn",
               );
             }
