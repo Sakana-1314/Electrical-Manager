@@ -1,7 +1,7 @@
 // Package recordsync 对应原 services/purchase_record_sync_service.py：申购记录同步（外部物资平台数据回写）。
 //
 // 只暴露「待同步目标列表」与「按追溯号 / 整单回写」几个窄操作，不允许任意 SQL。语义：文本字段仅当空才填、
-// 日期仅当 NULL 才填、状态只进不退，且只在实际变更时自增 version（updated_at 同步更新）。
+// 日期仅当 NULL 才填、状态由平台数据推导并可双向更新，且只在实际变更时自增 version（updated_at 同步更新）。
 package recordsync
 
 import (
@@ -16,11 +16,16 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/purchaserequest"
 )
 
-// statusProgression 状态只进不退：目标状态 → 允许的当前状态集合（不在集合里的目标值不生效）。
-var statusProgression = map[string]map[string]bool{
-	"已入库":  {"已申购": true, "已采购": true, "部分入库": true, "已入库": true},
-	"部分入库": {"已申购": true, "已采购": true, "部分入库": true},
-	"已采购":  {"已申购": true, "已采购": true},
+// syncableStatuses 是外部平台同步可写回的状态集合。状态由平台报表推导，脚本侧是权威来源，
+// 因此允许双向变更：平台补充/撤销入库时间或修正采购数据后，已入库可以退回部分入库、已采购。
+// 本地状态（已取消、已领用等）不在集合内，同步不会覆盖。
+var syncableStatuses = map[string]bool{
+	"已申购": true, "已采购": true, "部分入库": true, "已入库": true,
+}
+
+// canSyncStatus 判断是否允许把当前状态改成目标状态：两端都必须是平台同步状态。
+func canSyncStatus(current, target string) bool {
+	return syncableStatuses[current] && syncableStatuses[target]
 }
 
 var syncFields = map[string]bool{
@@ -92,7 +97,7 @@ func targetConditions(active map[string]bool) string {
 		}
 	}
 	if active == nil || active["status"] {
-		parts = append(parts, "l.status IN ('已申购', '已采购', '部分入库')")
+		parts = append(parts, "l.status IN ('已申购', '已采购', '部分入库', '已入库')")
 	}
 	if len(parts) == 0 {
 		return ""
@@ -324,7 +329,7 @@ func applyMutation(s *db.Session, data schema.PurchaseRecordSyncTraceUpdate, req
 		}
 		if data.Status != nil && !isBlank(data.Status) {
 			target := pyStrip(*data.Status)
-			if line.Status != target && statusProgression[target][line.Status] {
+			if line.Status != target && canSyncStatus(line.Status, target) {
 				line.Status = target
 				changed = true
 			}

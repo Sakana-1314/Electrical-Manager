@@ -1,6 +1,6 @@
 """申购记录同步专用接口测试：/purchase-record-sync/*。
 
-覆盖：目标列表与游标分页、按追溯号回写（空才填/状态只进不退/version 自增）、
+覆盖：目标列表与游标分页、按追溯号回写（空才填/状态可双向更新/version 自增）、
 权限校验、NOT_FOUND。
 """
 
@@ -90,7 +90,7 @@ async def test_sync_targets_apply_and_version(client) -> None:
     assert rec["version"] == 2
 
 
-async def test_sync_only_fills_empty_and_advances_status(client) -> None:
+async def test_sync_only_fills_empty_and_allows_status_rollback(client) -> None:
     headers = await auth_headers(client, "purchase")
     motor = await create_purchase_plan(client, headers, "同步电机B", code="SYNC-B")
     record = await _move_plan(client, headers, int(motor["id"]), "SYNC-002")
@@ -107,23 +107,22 @@ async def test_sync_only_fills_empty_and_advances_status(client) -> None:
         },
     )
 
-    # 已填字段不被覆盖、状态不回退
+    # 已填字段不被覆盖；状态以平台数据为准，允许从已采购回退到已申购
     result = await _apply_trace(
         client, headers, "SYNC-002", {"salesperson": "新业务员", "status": "已申购"}
     )
-    assert result == {"affected_headers": 0, "affected_lines": 0}
+    assert result == {"affected_headers": 0, "affected_lines": 1}
     rec = await _record(client, headers, record["line_id"])
     assert rec["salesperson"] == "赵经理"
-    assert rec["status"] == "已采购"
+    assert rec["status"] == "已申购"
 
-    # 前进到已入库后，若按新脚本关心的字段（不含集港/发运）筛选，该追溯号不再是目标
+    # 已入库仍在同步目标内：平台修正后可以继续回退，不会因“已完成”退出目标列表
     result = await _apply_trace(client, headers, "SYNC-002", {"status": "已入库"})
     assert result == {"affected_headers": 0, "affected_lines": 1}
     targets = await _targets(
         client, headers, fields="contract_no,vessel_no,salesperson,status"
     )
-    assert all(item["trace_no"] != "SYNC-002" for item in targets["items"])
-    # 但按全部字段（含集港/发运）筛选时，因集港/发运仍为空，仍视为目标
+    assert any(item["trace_no"] == "SYNC-002" for item in targets["items"])
     targets_all = await _targets(client, headers)
     assert any(item["trace_no"] == "SYNC-002" for item in targets_all["items"])
 
@@ -385,7 +384,7 @@ async def test_sync_order_apply_writes_whole_order_in_one_call(client) -> None:
     assert rec_b["salesperson"] == "李经理"
     assert rec_b["status"] == "已采购"
 
-    # 规则不变：已填不覆盖、状态不回退
+    # 规则：已填字段不覆盖，状态以平台数据为准、允许回退
     again = await _apply_order(
         client,
         headers,
@@ -403,12 +402,12 @@ async def test_sync_order_apply_writes_whole_order_in_one_call(client) -> None:
         "applied": 1,
         "not_found": 0,
         "affected_headers": 0,
-        "affected_lines": 0,
+        "affected_lines": 1,
     }
     rec_a = await _record(client, headers, record_a["line_id"])
     assert rec_a["contract_no"] == "HT-WRITE"
     assert rec_a["salesperson"] == "王经理"
-    assert rec_a["status"] == "已采购"
+    assert rec_a["status"] == "已申购"
 
 
 async def test_sync_contract_sign_date_is_line_level_and_only_fills_empty(client) -> None:

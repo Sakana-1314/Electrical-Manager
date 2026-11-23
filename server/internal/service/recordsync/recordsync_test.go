@@ -45,7 +45,7 @@ func TestTargetConditions(t *testing.T) {
 	if !strings.Contains(all, "l.unit_price IS NULL") || !strings.Contains(all, "l.status IN") {
 		t.Fatalf("all conditions = %s", all)
 	}
-	if only := targetConditions(map[string]bool{"status": true}); only != "(l.status IN ('已申购', '已采购', '部分入库'))" {
+	if only := targetConditions(map[string]bool{"status": true}); only != "(l.status IN ('已申购', '已采购', '部分入库', '已入库'))" {
 		t.Fatalf("status only = %s", only)
 	}
 	if targetConditions(map[string]bool{}) != "" {
@@ -53,8 +53,29 @@ func TestTargetConditions(t *testing.T) {
 	}
 }
 
-func TestStatusProgression(t *testing.T) {
-	if !statusProgression["已入库"]["部分入库"] || statusProgression["已采购"]["已入库"] {
-		t.Fatal("status progression mismatch")
+func TestCanSyncStatus(t *testing.T) {
+	// 平台状态之间允许双向更新：入库时间被撤销后可以从已入库退回已采购/部分入库。
+	for _, pair := range [][2]string{
+		{"已采购", "已入库"},
+		{"已入库", "已采购"},
+		{"已入库", "部分入库"},
+		{"部分入库", "已采购"},
+		{"已申购", "已入库"},
+		{"已入库", "已申购"},
+	} {
+		if !canSyncStatus(pair[0], pair[1]) {
+			t.Fatalf("sync %s -> %s should be allowed", pair[0], pair[1])
+		}
+	}
+	// 本地状态（已取消 / 已领用）不在同步白名单：既不能被写成平台状态，也不能接收平台状态。
+	for _, pair := range [][2]string{
+		{"已取消", "已采购"},
+		{"已采购", "已取消"},
+		{"已领用", "已入库"},
+		{"已入库", "已领用"},
+	} {
+		if canSyncStatus(pair[0], pair[1]) {
+			t.Fatalf("sync %s -> %s must be rejected", pair[0], pair[1])
+		}
 	}
 }
