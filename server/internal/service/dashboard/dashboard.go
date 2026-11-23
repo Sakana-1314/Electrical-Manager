@@ -10,7 +10,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 )
 
-// 已入库是申购记录状态的终点（状态只进不退），其余状态都算在途。
+// 已入库视为申购记录已完成，其余状态都算在途（同步状态可随平台数据回退，因此并非终点）。
 const purchaseLineDone = "已入库"
 
 // todayRange 上海时区「今天」对应的 UTC 区间 [start, end)：stock_operation.occurred_at 按 UTC 无时区存储。

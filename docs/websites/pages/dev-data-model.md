@@ -43,7 +43,7 @@ flowchart LR
 | 申购记录 | `purchase_request` + `purchase_request_line` | 一条记录行对应一个计划快照 + 采购跟踪字段；转入时把计划字段全部快照到行上 |
 | 申购单号 / 追溯号 | `purchase_request.purchase_order_no` / `purchase_request_line.trace_no` | 申购单号是公司系统单据号，默认「申购 2026/7/17」，可编辑，整单同步按它分组；追溯号是外部平台查询键，同一追溯号可命中多行 |
 | 子项号 | `subitem_no` | 自由文本，用于标识设备/系统子项，非唯一键 |
-| 申购状态 | `purchase_request_line.status` | `VARCHAR(128)`，默认「已申购」；取值由数据决定（筛选项由 `purchase_status_options` 从库中 distinct 得出），同步时「只进不退」 |
+| 申购状态 | `purchase_request_line.status` | `VARCHAR(128)`，默认「已申购」；取值由数据决定（筛选项由 `purchase_status_options` 从库中 distinct 得出），同步时以平台数据为准、可进可退 |
 | 计划状态 | `PurchasePlanStatus` | `NORMAL`（正常）/ `DEFERRED`（暂不申购）/ `ARCHIVED`（已归档）；仅系统管理员（`system:admin` 权限位）可查询/打开已归档计划 |
 | 周期性计划 | `purchase_plan_template` | 计划模板，`generate` 时复制为当天的一条申购计划，模板本身不改动 |
 | 编码库 / 物料价格 / 华星总库存 | `material_code_library` / `material_price` / `huaxing_inventory` | 均为 Excel 全量替换导入：编码库是公司编码参照表（用于编码存在性校验），物料价格按「货品编码 = 物料编码」挂单价、只在物料编码库页面展示，华星总库存是上游总库库存快照（仅查询） |
