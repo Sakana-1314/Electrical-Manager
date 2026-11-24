@@ -145,6 +145,11 @@
   --control-width-medium: 220px;
   --control-width-unit: 160px;
   --control-width-unit-small: 104px;
+  /* 多选下拉已选值标签：比控件字号再小一档，多个值挤在 34px 框内也不显拥挤 */
+  --control-tag-height: 20px;
+  --control-tag-font-size: 11px;
+  --control-tag-padding-x: 6px;
+  --control-tag-gap: 4px;
   /* 浮动标签：未输入时在框内，聚焦 / 有值时缩到框线上并断开框线 */
   --floating-label-size: 11px;
   --floating-label-line-height: 14px;
@@ -393,6 +398,22 @@ a {
 .n-input-group .n-button {
   height: var(--control-height);
   flex: none;
+}
+/* 多选下拉已选值标签：Naive 默认 14px / 24px，几个值就把 34px 框撑得满满当当。
+ * 高度与字号统一收一档，标签之间与上下留白也收紧，多选状态下仍能看清每个值。 */
+.n-base-selection-tags {
+  padding: 3px 6px;
+}
+.n-base-selection-tag-wrapper {
+  padding: 0 var(--control-tag-gap) 2px 0;
+}
+.n-base-selection-tag-wrapper .n-tag {
+  --n-height: var(--control-tag-height) !important;
+  --n-font-size: var(--control-tag-font-size) !important;
+  --n-padding: 0 var(--control-tag-padding-x) !important;
+  --n-border-radius: 4px;
+  --n-close-size: 12px;
+  --n-close-margin: 0 0 0 2px;
 }
 /* 含表格的数据卡片：内容区不再做内边距，表格与分页条直接贴着卡片边。
  * 只命中「卡片里确实有 n-data-table」的情况：`.data-card` 也被树、甘特时间线等复用，

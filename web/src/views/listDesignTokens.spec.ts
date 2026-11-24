@@ -92,6 +92,10 @@ const REQUIRED_TOKENS = [
   '--control-width-medium',
   '--control-width-unit',
   '--control-width-unit-small',
+  '--control-tag-height',
+  '--control-tag-font-size',
+  '--control-tag-padding-x',
+  '--control-tag-gap',
 ]
 
 describe('列表页 / 控件令牌', () => {
@@ -203,6 +207,12 @@ describe('列表页 / 控件令牌', () => {
       /\.n-input:not\(\.n-input--textarea\),\s*\n\.n-base-selection \{[^}]*--n-height: var\(--control-height\) !important;[^}]*--n-font-size: var\(--control-font-size\) !important;/,
     )
     expect(styles).toMatch(/\.n-input-group \.n-button \{[^}]*height: var\(--control-height\);/)
+    // 多选下拉的值标签同样走控件令牌：默认 14px / 24px 挤在 34px 框内太满
+    expect(styles).toMatch(
+      /\.n-base-selection-tag-wrapper \.n-tag \{[^}]*--n-height: var\(--control-tag-height\) !important;[^}]*--n-font-size: var\(--control-tag-font-size\) !important;/,
+    )
+    expect(tokens).toContain('--control-tag-height: 20px;')
+    expect(tokens).toContain('--control-tag-font-size: 11px;')
   })
 
   it('分页条只引用列表令牌', () => {
