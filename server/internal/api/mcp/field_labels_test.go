@@ -7,7 +7,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/openapi"
 )
 
-// describe 取 operation_describe 的返回，找不到时直接失败。
+// describe 取 describe_api_operation 的返回，找不到时直接失败。
 func describe(t *testing.T, operationID string) map[string]any {
 	t.Helper()
 	described, err := operationDescribe(operationID)

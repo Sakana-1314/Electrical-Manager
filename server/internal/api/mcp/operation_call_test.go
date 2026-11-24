@@ -1,7 +1,7 @@
 package mcp
 
 // 补齐原 Python tests/unit/test_mcp_server.py 中 mcp_test.go 未覆盖的用例：
-// operation_describe 引用的 schema 都随结果返回、MCP 挂载点不在业务契约里、operation_call 转发已声明的请求头。
+// describe_api_operation 引用的 schema 都随结果返回、MCP 挂载点不在业务契约里、call_api_operation 转发已声明的请求头。
 
 import (
 	"net/http"
@@ -70,7 +70,7 @@ func TestMCPMountIsNotPartOfBusinessOpenAPI(t *testing.T) {
 	}
 }
 
-// operation_call 把 If-Match 之类的已声明请求头（大小写不敏感，转发时用契约声明的名字）转发给业务接口；
+// call_api_operation 把 If-Match 之类的已声明请求头（大小写不敏感，转发时用契约声明的名字）转发给业务接口；
 // 托管头（X-API-Token / X-Project-Id）由 MCP 层设置，调用方不能覆盖。
 func TestOperationCallForwardsDeclaredHeaders(t *testing.T) {
 	var captured *http.Request
