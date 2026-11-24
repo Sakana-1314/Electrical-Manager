@@ -143,6 +143,8 @@
   /* 浮动标签：未输入时在框内，聚焦 / 有值时缩到框线上并断开框线 */
   --floating-label-size: 11px;
   --floating-label-line-height: 14px;
+  --floating-label-color: var(--color-text-strong);
+  --floating-label-weight: 600;
   --floating-label-inset-x: 12px;
   --floating-label-top: 0px;
   --floating-label-bg: var(--color-surface);
@@ -573,7 +575,8 @@ a {
   )
   .n-form-item-label {
   position: absolute;
-  z-index: 1;
+  /* 高于 Naive 输入框自身的框线层（.n-input__state-border 是 z-index: 1） */
+  z-index: 3;
   top: calc(var(--floating-field-height) / 2);
   left: var(--floating-label-inset-x);
   max-width: calc(100% - var(--floating-label-inset-x) * 2);
@@ -626,9 +629,9 @@ a {
   top: var(--floating-label-top);
   padding: 0 var(--floating-label-padding-x);
   background: var(--floating-label-bg);
-  color: var(--color-text-muted);
+  color: var(--floating-label-color);
   font-size: var(--floating-label-size);
-  font-weight: 500;
+  font-weight: var(--floating-label-weight);
   line-height: var(--floating-label-line-height);
   transform: translateY(-50%);
 }
@@ -644,25 +647,13 @@ a {
   top: calc(var(--floating-label-inset-x) - 2px);
   transform: none;
 }
-/* 空态时隐藏控件自带占位层：标签已在框内，两者叠加会重影 */
+/* 有浮动标签的字段始终隐藏控件自带占位层：标签本身承担标签与空态提示。
+ * 聚焦后标签浮到框线上，占位文字也不回来，避免与标签重复。 */
 .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
     :has(.n-form-item-label .n-checkbox)
-  ):not(:focus-within):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(
-    :has(
-      .n-input__input-el:not(:placeholder-shown),
-      .n-input__textarea-el:not(:placeholder-shown),
-      .n-base-selection--selected
-    )
   )
   :is(.n-input__placeholder, .n-base-selection-placeholder),
-.filter-field:not(:focus-within):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(
-    :has(
-      .n-input__input-el:not(:placeholder-shown),
-      .n-input__textarea-el:not(:placeholder-shown),
-      .n-base-selection--selected
-    )
-  )
-  :is(.n-input__placeholder, .n-base-selection-placeholder) {
+.filter-field :is(.n-input__placeholder, .n-base-selection-placeholder) {
   opacity: 0;
 }
 /* 弹窗内控件是小尺寸：框内标签的垂直中心与左内边距跟 28px 档位对齐 */
@@ -903,7 +894,8 @@ a {
 }
 .filter-field > span {
   position: absolute;
-  z-index: 1;
+  /* 高于 Naive 输入框 / 选择器自身的框线层，标签底色才能真正盖断框线 */
+  z-index: 3;
   top: calc(var(--floating-field-height) / 2);
   left: var(--floating-label-inset-x);
   max-width: calc(100% - var(--floating-label-inset-x) * 2);
