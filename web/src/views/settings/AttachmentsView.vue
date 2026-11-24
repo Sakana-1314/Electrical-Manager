@@ -328,33 +328,41 @@ const activeFilterCount = computed(
       <template #header-extra>
         <span v-if="activeFilterCount" class="muted">已启用 {{ activeFilterCount }} 项</span>
       </template>
-      <div class="filter-bar">
-        <n-input
-          v-model:value="filters.keyword"
-          placeholder="文件名"
-          clearable
-          style="width: var(--control-width-medium)"
-          @keyup.enter="query"
-        />
+      <div class="filter-grid">
+        <label class="filter-field">
+          <span>文件名</span>
+          <n-input
+            v-model:value="filters.keyword"
+            placeholder="输入文件名"
+            clearable
+            @keyup.enter="query"
+          />
+        </label>
         <!-- 不设「全部」选项：清空选择即为不限 -->
-        <n-select
-          v-model:value="filters.status"
-          :options="statusOptions"
-          placeholder="删除状态"
-          clearable
-          style="width: var(--control-width-short)"
-          aria-label="删除状态"
-        />
-        <n-select
-          v-model:value="filters.referenced"
-          :options="referencedOptions"
-          placeholder="引用情况"
-          clearable
-          style="width: var(--control-width-short)"
-          aria-label="引用情况"
-        />
-        <n-button type="primary" @click="query">查询</n-button>
-        <n-button secondary @click="resetFilters">重置</n-button>
+        <label class="filter-field">
+          <span>删除状态</span>
+          <n-select
+            v-model:value="filters.status"
+            :options="statusOptions"
+            placeholder="选择删除状态"
+            clearable
+          />
+        </label>
+        <label class="filter-field">
+          <span>引用情况</span>
+          <n-select
+            v-model:value="filters.referenced"
+            :options="referencedOptions"
+            placeholder="选择引用情况"
+            clearable
+          />
+        </label>
+      </div>
+      <div class="filter-actions">
+        <div class="filter-action-buttons">
+          <n-button secondary @click="resetFilters">重置</n-button>
+          <n-button type="primary" @click="query">查询</n-button>
+        </div>
       </div>
     </n-card>
 

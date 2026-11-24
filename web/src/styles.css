@@ -132,6 +132,7 @@
   /* 控件：列表页与筛选区默认高度 / 字号 / 宽度 */
   --control-height: 34px;
   --control-height-small: 28px;
+  --control-height-large: 40px;
   --control-font-size: 13px;
   --control-padding-x: 12px;
   --control-width: 100%;
@@ -139,6 +140,15 @@
   --control-width-medium: 220px;
   --control-width-unit: 160px;
   --control-width-unit-small: 104px;
+  /* 浮动标签：未输入时在框内，聚焦 / 有值时缩到框线上并断开框线 */
+  --floating-label-size: 11px;
+  --floating-label-line-height: 14px;
+  --floating-label-inset-x: 12px;
+  --floating-label-top: 0px;
+  --floating-label-bg: var(--color-surface);
+  --floating-label-padding-x: 4px;
+  --floating-label-inside-size: 13px;
+  --floating-label-inside-line-height: 20px;
   /* 旧筛选令牌保留为别名，弹窗内的筛选（历史记录 / 物料编码选择器）继续可用 */
   --filter-col-min-width: var(--list-filter-col-min-width);
   --filter-grid-gap: var(--list-filter-grid-gap);
@@ -542,6 +552,139 @@ a {
   font-size: var(--dialog-caption-size);
   line-height: var(--dialog-caption-line-height);
 }
+/* ============ 浮动标签（输入框 / 下拉 / 多选 / 日期 / 文本域） ============
+ * 未输入且未聚焦时：标签显示在控件框内（隐藏控件自带占位层，避免重叠）；
+ * 聚焦或有值后：标签缩小并移到控件上方，一直显示。
+ *
+ * 值判定不依赖 placeholder 属性：Naive UI 的空输入会渲染 `.n-input__placeholder`，
+ * 空选择器会渲染 `.n-base-selection-placeholder`；两者消失即代表有值。
+ * 多控件表单（如数量 + 单位）只要任一控件有值就浮起，避免标签压住已有内容。
+ * 非输入类表单项（开关、复选标签、纯展示）不参与，保持原来的标签行。 */
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ) {
+  position: relative;
+  --floating-field-height: var(--control-height);
+  /* 标签绝对定位后不再占网格行，行高只剩控件本身 */
+  grid-template-rows: 1fr;
+}
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  )
+  .n-form-item-label {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--floating-field-height) / 2);
+  left: var(--floating-label-inset-x);
+  max-width: calc(100% - var(--floating-label-inset-x) * 2);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--floating-label-inside-size);
+  font-weight: 400;
+  line-height: var(--floating-label-inside-line-height);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    top 0.16s ease,
+    transform 0.16s ease,
+    padding 0.16s ease,
+    background-color 0.16s ease,
+    font-size 0.16s ease,
+    line-height 0.16s ease,
+    color 0.16s ease;
+}
+/* 聚焦或已有值时：缩小并移到框上方 */
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ):focus-within
+  .n-form-item-label,
+.n-form-item--top-labelled:has(.n-base-selection--focus, .n-base-selection--active):not(
+    :has(.n-form-item-label .n-checkbox)
+  )
+  .n-form-item-label,
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ):has(
+    .n-input__input-el:not(:placeholder-shown),
+    .n-input__textarea-el:not(:placeholder-shown),
+    .n-base-selection--selected
+  )
+  .n-form-item-label,
+.filter-field:focus-within > span,
+.filter-field:has(.n-base-selection--focus, .n-base-selection--active) > span,
+.filter-field:has(
+    .n-input__input-el:not(:placeholder-shown),
+    .n-input__textarea-el:not(:placeholder-shown),
+    .n-base-selection--selected
+  )
+  > span {
+  top: var(--floating-label-top);
+  padding: 0 var(--floating-label-padding-x);
+  background: var(--floating-label-bg);
+  color: var(--color-text-muted);
+  font-size: var(--floating-label-size);
+  font-weight: 500;
+  line-height: var(--floating-label-line-height);
+  transform: translateY(-50%);
+}
+/* 空文本域：标签贴在文本域首行，不要垂直居中（有其他输入已填时不套用） */
+.n-form-item--top-labelled:has(.n-input__textarea-el:placeholder-shown):not(
+    :has(.n-input__input-el:not(:placeholder-shown), .n-base-selection--selected)
+  ):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(:focus-within)
+  .n-form-item-label,
+.filter-field:has(.n-input__textarea-el:placeholder-shown):not(
+    :has(.n-input__input-el:not(:placeholder-shown), .n-base-selection--selected)
+  ):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(:focus-within)
+  > span {
+  top: calc(var(--floating-label-inset-x) - 2px);
+  transform: none;
+}
+/* 空态时隐藏控件自带占位层：标签已在框内，两者叠加会重影 */
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ):not(:focus-within):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(
+    :has(
+      .n-input__input-el:not(:placeholder-shown),
+      .n-input__textarea-el:not(:placeholder-shown),
+      .n-base-selection--selected
+    )
+  )
+  :is(.n-input__placeholder, .n-base-selection-placeholder),
+.filter-field:not(:focus-within):not(:has(.n-base-selection--focus, .n-base-selection--active)):not(
+    :has(
+      .n-input__input-el:not(:placeholder-shown),
+      .n-input__textarea-el:not(:placeholder-shown),
+      .n-base-selection--selected
+    )
+  )
+  :is(.n-input__placeholder, .n-base-selection-placeholder) {
+  opacity: 0;
+}
+/* 弹窗内控件是小尺寸：框内标签的垂直中心与左内边距跟 28px 档位对齐 */
+.n-card.n-modal
+  .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ) {
+  --floating-field-height: var(--dialog-control-height);
+  --floating-label-inset-x: 10px;
+}
+.n-card.n-modal .filter-field {
+  --floating-field-height: var(--dialog-control-height);
+  --floating-label-inset-x: 10px;
+}
+/* 登录页控件是 large 档（40px），框内标签按同一高度居中 */
+.login-card
+  .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ) {
+  --floating-field-height: var(--control-height-large);
+  --floating-label-inset-x: 14px;
+}
 /* 侧栏菜单密度：默认 42px 菜单项压到 34px（!important 压过 Naive 写在根上的内联变量） */
 .n-menu {
   --n-item-height: 36px !important;
@@ -749,16 +892,41 @@ a {
   gap: var(--filter-grid-gap);
 }
 .filter-field {
+  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
   gap: var(--filter-field-label-gap);
+  --floating-field-height: var(--control-height);
+  /* 筛选格更密：浮起后同样压在框线上 */
+  --floating-label-line-height: 12px;
 }
 .filter-field > span {
-  color: var(--color-text);
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--floating-field-height) / 2);
+  left: var(--floating-label-inset-x);
+  max-width: calc(100% - var(--floating-label-inset-x) * 2);
+  overflow: hidden;
+  padding: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text-muted);
   font-size: var(--list-filter-label-size);
   font-weight: 500;
-  line-height: var(--list-body-line-height);
+  line-height: var(--floating-label-inside-line-height);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    top 0.16s ease,
+    transform 0.16s ease,
+    padding 0.16s ease,
+    background-color 0.16s ease,
+    font-size 0.16s ease,
+    line-height 0.16s ease,
+    color 0.16s ease;
 }
 /* 筛选区控件统一宽度与高度：居中栏宽由栅格决定（100%），高度 34px，字号 13px。 */
 .filter-field .n-input,

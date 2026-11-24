@@ -366,24 +366,30 @@ void loadMemos()
           </n-empty>
 
           <div v-else-if="activeDraft" class="memo-editor" @keydown="onEditorKeydown">
-            <n-input
-              v-model:value="activeDraft.title"
-              class="memo-title-input"
-              placeholder="备忘录标题"
-              maxlength="64"
-              show-count
-              @update:value="handleEdit"
-            />
-            <n-input
-              v-model:value="activeDraft.content"
-              type="textarea"
-              class="memo-content-input"
-              placeholder="在这里记录纯文本内容，点击「保存」后才会提交（Ctrl+S 亦可保存）…"
-              :autosize="{ minRows: 12, maxRows: 30 }"
-              maxlength="10000"
-              show-count
-              @update:value="handleEdit"
-            />
+            <label class="filter-field memo-field">
+              <span>标题</span>
+              <n-input
+                v-model:value="activeDraft.title"
+                class="memo-title-input"
+                placeholder="输入备忘录标题"
+                maxlength="64"
+                show-count
+                @update:value="handleEdit"
+              />
+            </label>
+            <label class="filter-field memo-field">
+              <span>正文</span>
+              <n-input
+                v-model:value="activeDraft.content"
+                type="textarea"
+                class="memo-content-input"
+                placeholder="在这里记录纯文本内容，点击「保存」后才会提交（Ctrl+S 亦可保存）…"
+                :autosize="{ minRows: 12, maxRows: 30 }"
+                maxlength="10000"
+                show-count
+                @update:value="handleEdit"
+              />
+            </label>
             <div class="memo-actions">
               <span class="memo-status" :class="`memo-status--${saveStatus.type}`">
                 {{ saveStatus.text }}
@@ -571,7 +577,7 @@ void loadMemos()
 
 .memo-editor {
   display: grid;
-  gap: 12px;
+  gap: var(--dialog-block-gap);
 }
 
 /* 字号由页头「字号」下拉控制（默认 16px）。这里只覆盖 Naive 输入框根元素的 font-size：
