@@ -61,11 +61,11 @@ describe('筛选折叠接线', () => {
     expect(grids.length).toBeGreaterThan(0)
 
     for (const file of grids) {
-      const blocks = [...file.source.matchAll(/<div class="filter-grid"[\s\S]*?\n {6}<\/div>/g)]
+      const blocks = [...file.source.matchAll(/<div class="filter-grid"[\s\S]*?\n {8}<\/div>/g)]
       expect(blocks.length, file.path).toBeGreaterThan(0)
 
       for (const block of blocks) {
-        const children = [...block[0].matchAll(/^ {8}<(\w[\w-]*)/gm)].map((match) => match[1])
+        const children = [...block[0].matchAll(/^ {10}<(\w[\w-]*)/gm)].map((match) => match[1])
         expect(children.length, file.path).toBeGreaterThan(0)
         expect(new Set(children), file.path).toEqual(new Set(['label']))
       }

@@ -43,6 +43,7 @@ const REQUIRED_TOKENS = [
   '--list-card-header-padding',
   '--list-card-content-padding',
   '--list-card-title-size',
+  '--list-filter-card-padding',
   '--list-body-size',
   '--list-body-line-height',
   '--list-caption-size',
@@ -139,8 +140,12 @@ describe('列表页 / 控件令牌', () => {
   })
 
   it('筛选区布局由全局类统一提供（无卡片容器 / 无标题行）', () => {
+    expect(styles).toMatch(/\.filter-card \{[^}]*background: linear-gradient\(/)
     expect(styles).toMatch(
-      /\.filter-panel \{[^}]*display: flex;[^}]*--floating-label-bg: var\(--color-bg\);/,
+      /\.page \.filter-card > \.n-card-content \{[^}]*padding: var\(--list-filter-card-padding\);/,
+    )
+    expect(styles).toMatch(
+      /\.filter-panel \{[^}]*display: flex;[^}]*--floating-label-bg: var\(--color-surface\);/,
     )
     expect(styles).toMatch(
       /\.filter-actions \{[^}]*margin-top: var\(--list-filter-actions-margin\);[^}]*padding-top: var\(--list-filter-actions-padding\);/,
@@ -158,7 +163,6 @@ describe('列表页 / 控件令牌', () => {
     expect(styles).toMatch(
       /\.filter-count \{[^}]*font-size: var\(--list-filter-count-size\);[^}]*line-height: var\(--list-filter-count-line-height\);/,
     )
-    expect(styles).not.toContain('.filter-card {')
     expect(styles).not.toContain('.filter-heading {')
     expect(styles).not.toContain('.filter-title {')
   })
@@ -180,9 +184,11 @@ describe('列表页 / 控件令牌', () => {
       )
       expect(source, `${path} 仍有筛选标题`).not.toContain('filter-title')
     }
-    for (const path of files) {
+    const filtered = files.filter((path) => readFileSync(path, 'utf8').includes('filter-panel'))
+    expect(filtered.length).toBeGreaterThan(5)
+    for (const path of filtered) {
       const source = readFileSync(path, 'utf8')
-      expect(source, `${path} 仍在使用 filter-card 容器`).not.toContain('class="filter-card"')
+      expect(source, `${path} 筛选区缺少紧凑 filter-card`).toContain('class="filter-card"')
       expect(source, `${path} 仍在使用 filter-heading`).not.toContain('class="filter-heading"')
     }
   })
@@ -206,7 +212,12 @@ describe('列表页 / 控件令牌', () => {
   })
 
   it('列表页不再各自复制筛选区布局样式', () => {
-    const selectors = ['.filter-panel {', '.filter-actions {', '.filter-action-buttons {']
+    const selectors = [
+      '.filter-card {',
+      '.filter-panel {',
+      '.filter-actions {',
+      '.filter-action-buttons {',
+    ]
     for (const path of vueFiles(`${WEB_ROOT}/src/views`)) {
       const source = readFileSync(path, 'utf8')
       const styleBlocks = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]

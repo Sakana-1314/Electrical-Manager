@@ -225,60 +225,62 @@ onMounted(loadOptions)
       </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field filter-field-wide">
-          <span>日期区间</span>
-          <WorkRangePicker v-model="filters.range" />
-        </label>
-        <label class="filter-field">
-          <span>任务</span>
-          <pinyin-select
-            v-model:value="filters.task_ids"
-            :options="taskOptions"
-            multiple
-            clearable
-            filterable
-            placeholder="可多选，清空即不限"
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field filter-field-wide">
+            <span>日期区间</span>
+            <WorkRangePicker v-model="filters.range" />
+          </label>
+          <label class="filter-field">
+            <span>任务</span>
+            <pinyin-select
+              v-model:value="filters.task_ids"
+              :options="taskOptions"
+              multiple
+              clearable
+              filterable
+              placeholder="可多选，清空即不限"
+            />
+          </label>
+          <label class="filter-field">
+            <span>参与人员</span>
+            <pinyin-select
+              v-model:value="filters.participants"
+              :options="participantOptions"
+              multiple
+              clearable
+              filterable
+              placeholder="按姓名精确匹配"
+            />
+          </label>
+          <label class="filter-field">
+            <span>关键字</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="任务名 / 参与人员 / 备注，可用 | 分隔多个关键词"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <ColumnVisibilityPicker
+            :value="visibleColumnKeys"
+            :options="fieldOptions"
+            storage-key="work.overview.visible-columns.v1"
+            @update:value="visibleColumnKeys = $event"
           />
-        </label>
-        <label class="filter-field">
-          <span>参与人员</span>
-          <pinyin-select
-            v-model:value="filters.participants"
-            :options="participantOptions"
-            multiple
-            clearable
-            filterable
-            placeholder="按姓名精确匹配"
-          />
-        </label>
-        <label class="filter-field">
-          <span>关键字</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="任务名 / 参与人员 / 备注，可用 | 分隔多个关键词"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span v-if="activeFilterCount" class="filter-count">
-          已启用 {{ activeFilterCount }} 项
-        </span>
-        <ColumnVisibilityPicker
-          :value="visibleColumnKeys"
-          :options="fieldOptions"
-          storage-key="work.overview.visible-columns.v1"
-          @update:value="visibleColumnKeys = $event"
-        />
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+          <div class="filter-action-buttons">
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

@@ -990,118 +990,123 @@ onBeforeUnmount(() => {
       <div>
         <h1 class="page-title">申购计划</h1>
       </div>
-      <div class="page-actions">
-        <n-space>
-          <ExportButton :options="exportOptions" :loading="exportLoading" @select="handleExport" />
-          <template v-if="canWrite">
-            <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
-              批量修改（{{ selectedPlans.length }}）
-            </n-button>
-            <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
-              批量转为申购记录（{{ selectedPlans.length }}）
-            </n-button>
-            <n-button type="primary" @click="openCreate">新建申购计划</n-button>
-          </template>
-        </n-space>
-      </div>
     </div>
-    <div class="filter-panel">
-      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
-        <label class="filter-field">
-          <span>物资名称</span>
-          <n-input
-            v-model:value="filters.name"
-            placeholder="输入物资名称"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>型号规格</span>
-          <n-input
-            v-model:value="filters.model_spec"
-            placeholder="输入型号规格"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>提报员工</span>
-          <pinyin-select
-            v-model:value="filters.actual_demand_person"
-            :options="actualDemandPersonOptions"
-            placeholder="选择或搜索提报员工"
-            filterable
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>子项号</span>
-          <pinyin-select
-            v-model:value="filters.subitem_no"
-            :options="subitemOptions"
-            placeholder="选择或搜索子项号"
-            filterable
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>类别</span>
-          <pinyin-select
-            v-model:value="filters.category"
-            :options="categoryOptions"
-            placeholder="选择类别"
-            filterable
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>申购状态</span>
-          <n-select
-            v-model:value="filters.status"
-            class="status-filter-select"
-            :options="statusFilterOptions"
-            multiple
-            clearable
-            placeholder="选择一个或多个状态"
-          />
-        </label>
-      </div>
-      <div class="filter-extras-actions">
-        <div class="filter-actions">
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-          <ColumnVisibilityPicker
-            :value="visibleColumnKeys"
-            :options="fieldOptions"
-            storage-key="procurement.purchase-materials.visible-columns.v4"
-            @update:value="setVisibleColumnKeys"
-          />
-          <div class="filter-action-buttons">
-            <n-button @click="resetFilters">重置</n-button>
-            <n-button
-              secondary
-              type="primary"
-              :loading="aiSearching"
-              :disabled="!aiAvailable || !filters.name.trim()"
-              :title="
-                aiAvailable
-                  ? filters.name.trim()
-                    ? '自动扩展物资名称同义词并立即查询'
-                    : '请先输入物资名称'
-                  : '请联系超级管理员配置大模型服务'
-              "
-              @click="aiQuery"
-            >
-              智能查询
-            </n-button>
-            <n-button type="primary" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
+          <label class="filter-field">
+            <span>物资名称</span>
+            <n-input
+              v-model:value="filters.name"
+              placeholder="输入物资名称"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>型号规格</span>
+            <n-input
+              v-model:value="filters.model_spec"
+              placeholder="输入型号规格"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>提报员工</span>
+            <pinyin-select
+              v-model:value="filters.actual_demand_person"
+              :options="actualDemandPersonOptions"
+              placeholder="选择或搜索提报员工"
+              filterable
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>子项号</span>
+            <pinyin-select
+              v-model:value="filters.subitem_no"
+              :options="subitemOptions"
+              placeholder="选择或搜索子项号"
+              filterable
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>类别</span>
+            <pinyin-select
+              v-model:value="filters.category"
+              :options="categoryOptions"
+              placeholder="选择类别"
+              filterable
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>申购状态</span>
+            <n-select
+              v-model:value="filters.status"
+              class="status-filter-select"
+              :options="statusFilterOptions"
+              multiple
+              clearable
+              placeholder="选择一个或多个状态"
+            />
+          </label>
+        </div>
+        <div class="filter-extras-actions">
+          <div class="filter-actions">
+            <span v-if="activeFilterCount" class="filter-count">
+              已启用 {{ activeFilterCount }} 项
+            </span>
+            <FilterExpandButton v-model:expanded="filterExpanded" />
+            <ColumnVisibilityPicker
+              :value="visibleColumnKeys"
+              :options="fieldOptions"
+              storage-key="procurement.purchase-materials.visible-columns.v4"
+              @update:value="setVisibleColumnKeys"
+            />
+            <div class="filter-action-buttons">
+              <n-space>
+                <ExportButton
+                  :options="exportOptions"
+                  :loading="exportLoading"
+                  @select="handleExport"
+                />
+                <template v-if="canWrite">
+                  <n-button :disabled="!selectedPlans.length" @click="openBatchEdit">
+                    批量修改（{{ selectedPlans.length }}）
+                  </n-button>
+                  <n-button :disabled="!selectedPlans.length" @click="openBatchMove">
+                    批量转为申购记录（{{ selectedPlans.length }}）
+                  </n-button>
+                  <n-button type="primary" @click="openCreate">新建申购计划</n-button>
+                </template>
+              </n-space>
+
+              <n-button @click="resetFilters">重置</n-button>
+              <n-button
+                secondary
+                type="primary"
+                :loading="aiSearching"
+                :disabled="!aiAvailable || !filters.name.trim()"
+                :title="
+                  aiAvailable
+                    ? filters.name.trim()
+                      ? '自动扩展物资名称同义词并立即查询'
+                      : '请先输入物资名称'
+                    : '请联系超级管理员配置大模型服务'
+                "
+                @click="aiQuery"
+              >
+                智能查询
+              </n-button>
+              <n-button type="primary" @click="query">查询</n-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </n-card>
     <div ref="tableAreaRef" class="purchase-plan-table-area">
       <n-button
         class="table-fullscreen-toggle"

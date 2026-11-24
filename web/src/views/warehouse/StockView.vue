@@ -277,48 +277,50 @@ async function confirmReplenishment() {
         <h1 class="page-title">库存查询</h1>
       </div>
     </div>
-    <div class="filter-panel">
-      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
-        <label class="filter-field">
-          <span>名称、别名或型号规格</span>
-          <n-input
-            v-model:value="filters.keyword"
-            clearable
-            placeholder="输入物资名称、别名或型号规格"
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>库存下限</span>
-          <n-input v-model:value="filters.min_qty" clearable placeholder="输入库存下限" />
-        </label>
-        <label class="filter-field">
-          <span>库存上限</span>
-          <n-input v-model:value="filters.max_qty" clearable placeholder="输入库存上限" />
-        </label>
-        <label class="filter-field">
-          <span>预警状态</span>
-          <n-select
-            v-model:value="filters.low_stock"
-            clearable
-            :options="[
-              { label: '仅低库存', value: true },
-              { label: '全部库存', value: false },
-            ]"
-            placeholder="选择预警状态"
-          />
-        </label>
-      </div>
-      <div class="filter-extras-actions">
-        <div class="filter-actions">
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-          <div class="filter-action-buttons">
-            <n-button @click="resetFilters">重置</n-button>
-            <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
+          <label class="filter-field">
+            <span>名称、别名或型号规格</span>
+            <n-input
+              v-model:value="filters.keyword"
+              clearable
+              placeholder="输入物资名称、别名或型号规格"
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>库存下限</span>
+            <n-input v-model:value="filters.min_qty" clearable placeholder="输入库存下限" />
+          </label>
+          <label class="filter-field">
+            <span>库存上限</span>
+            <n-input v-model:value="filters.max_qty" clearable placeholder="输入库存上限" />
+          </label>
+          <label class="filter-field">
+            <span>预警状态</span>
+            <n-select
+              v-model:value="filters.low_stock"
+              clearable
+              :options="[
+                { label: '仅低库存', value: true },
+                { label: '全部库存', value: false },
+              ]"
+              placeholder="选择预警状态"
+            />
+          </label>
+        </div>
+        <div class="filter-extras-actions">
+          <div class="filter-actions">
+            <FilterExpandButton v-model:expanded="filterExpanded" />
+            <div class="filter-action-buttons">
+              <n-button @click="resetFilters">重置</n-button>
+              <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </n-card>
     <n-card class="data-card" :bordered="false"
       ><PersistentDataTable
         storage-key="warehouse/stock"

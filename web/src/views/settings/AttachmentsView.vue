@@ -315,56 +315,57 @@ const activeFilterCount = computed(
       <div>
         <h1 class="page-title">附件管理</h1>
       </div>
-      <div class="page-actions">
-        <n-space>
-          <n-button secondary :loading="deletingUnreferenced" @click="deleteUnreferenced">
-            删除未引用
-          </n-button>
-        </n-space>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field">
-          <span>文件名</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="输入文件名"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <!-- 不设「全部」选项：清空选择即为不限 -->
-        <label class="filter-field">
-          <span>删除状态</span>
-          <n-select
-            v-model:value="filters.status"
-            :options="statusOptions"
-            placeholder="选择删除状态"
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>引用情况</span>
-          <n-select
-            v-model:value="filters.referenced"
-            :options="referencedOptions"
-            placeholder="选择引用情况"
-            clearable
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span v-if="activeFilterCount" class="filter-count">
-          已启用 {{ activeFilterCount }} 项
-        </span>
-        <div class="filter-action-buttons">
-          <n-button secondary @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field">
+            <span>文件名</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="输入文件名"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <!-- 不设「全部」选项：清空选择即为不限 -->
+          <label class="filter-field">
+            <span>删除状态</span>
+            <n-select
+              v-model:value="filters.status"
+              :options="statusOptions"
+              placeholder="选择删除状态"
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>引用情况</span>
+            <n-select
+              v-model:value="filters.referenced"
+              :options="referencedOptions"
+              placeholder="选择引用情况"
+              clearable
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <div class="filter-action-buttons">
+            <n-space>
+              <n-button secondary :loading="deletingUnreferenced" @click="deleteUnreferenced">
+                删除未引用
+              </n-button>
+            </n-space>
+
+            <n-button secondary @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

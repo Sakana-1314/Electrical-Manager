@@ -105,31 +105,33 @@ function openCreateRecord(name: string): void {
       </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field filter-field-wide">
-          <span>日期区间</span>
-          <WorkRangePicker v-model="filters.range" />
-        </label>
-        <label class="filter-field">
-          <span>人员</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="按姓名筛选，可用 | 分隔多个姓名"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span class="filter-count">区间内 {{ total }} 人</span>
-        <span class="filter-hint">人员来自工作记录里填过的姓名；点色块编辑那条记录</span>
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field filter-field-wide">
+            <span>日期区间</span>
+            <WorkRangePicker v-model="filters.range" />
+          </label>
+          <label class="filter-field">
+            <span>人员</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="按姓名筛选，可用 | 分隔多个姓名"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span class="filter-count">区间内 {{ total }} 人</span>
+          <span class="filter-hint">人员来自工作记录里填过的姓名；点色块编辑那条记录</span>
+          <div class="filter-action-buttons">
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <WorkTimelineGrid

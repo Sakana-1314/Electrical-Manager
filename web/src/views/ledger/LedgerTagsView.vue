@@ -136,24 +136,28 @@ function hasDetail(node: unknown): boolean {
       <div>
         <h1 class="page-title">标签管理</h1>
       </div>
-      <div class="page-actions">
-        <n-button v-if="canWrite" type="primary" @click="openCreate(null)">新增标签</n-button>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field">
-          <span>标签范围</span>
-          <n-select
-            v-model:value="scope"
-            :options="scopeOptions"
-            placeholder="不限（清空即全部）"
-            clearable
-          />
-        </label>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field">
+            <span>标签范围</span>
+            <n-select
+              v-model:value="scope"
+              :options="scopeOptions"
+              placeholder="不限（清空即全部）"
+              clearable
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <div class="filter-action-buttons">
+            <n-button v-if="canWrite" type="primary" @click="openCreate(null)">新增标签</n-button>
+          </div>
+        </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <n-spin :show="loading">
