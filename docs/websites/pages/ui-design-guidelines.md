@@ -171,7 +171,7 @@
 | 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
 | 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），保留一个“筛选条件”标题 |
 | 筛选标题 / 操作行 | 标题行 `.filter-heading`、操作行 `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距全部由 `styles.css` 统一提供（`--list-filter-heading-*` / `--list-filter-actions-*`），页面只写结构，不再各自复制一套；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
-| 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；标签到控件 `--filter-field-label-gap`（6px），标签字号 `--list-filter-label-size`（13px） |
+| 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；字段标签使用浮动标签（见「浮动标签」），不再占用独立标签行。标签字号 `--list-filter-label-size`（13px） |
 | 筛选卡片说明 | 标题下**不放小字描述**：筛选口径、选项含义、数据条数都不在筛选卡片里解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
 | 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由筛选卡片标题右侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
 | 文本搜索 | 多关键词用半角 `|` 表示“或”（兼容全角 `｜`）；同一输入框内按 OR，不同控件之间按 AND；不在占位文字里重复该规则 |
@@ -272,6 +272,23 @@
 | 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
 | 控件 | 列表页输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）；弹窗 `size="small"` 用 `--control-height-small`（28px）。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
 
+### 浮动标签
+
+所有输入框 / 下拉 / 多选 / 日期 / 数字输入 / 文本域统一使用浮动标签，**不再只用 placeholder 当标签**：
+
+- 未输入且未聚焦：标签显示在控件框内，充当原位标签；控件自带占位层隐藏，避免与标签重影。
+- 聚焦或有值时：标签缩小、压在控件上边框上，并用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；此时控件自身的 placeholder 才显示。
+- 值判定：输入 / 日期 / 数字 / 文本域看原生 `input:placeholder-shown` / `textarea:placeholder-shown`；选择器（含多选）看 Naive 的 `.n-base-selection--selected`。多控件表单项（数量 + 单位）任一有值即浮起。
+- 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；弹窗内控件按 28px、
+  登录页 large 控件按 40px、列表页控件按 34px 计算框内垂直中心。
+- 非输入类表单项保持原标签行：开关、纯展示、复选框作为 label 的批量修改字段（`:has(label .n-checkbox)` 排除）。
+- 令牌：`--floating-label-size`（浮起字号 11px）、`--floating-label-line-height`（14px）、
+  `--floating-label-top`（`0`，标签中心压在框线上）、`--floating-label-bg`（断开框线的底色）、
+  `--floating-label-padding-x`（浮起时左右留白 4px）、`--floating-label-inset-x`（12px / 弹窗 10px / 登录 14px）、
+  `--floating-label-inside-size`（13px）、`--floating-label-inside-line-height`（20px）。
+- 页面结构：用户详情表单改为 top 标签；附件筛选改为 `filter-grid` + `filter-field`；备忘录标题 / 正文包成
+  `filter-field`（`标题` / `正文` 标签），不再只靠 placeholder。由 `web/src/views/floatingLabels.spec.ts` 守住接线。
+
 ### 弹窗统一排版
 
 所有 `preset="card"` 弹窗（表单 / 详情 / 批量 / 设置）共用一套设计令牌，数值只定义在
@@ -283,7 +300,7 @@
 | --- | --- |
 | 字号层级 | 弹窗标题 `--dialog-title-size`（16px）；正文、表单标签、描述列表、表格、提示统一 `--dialog-body-size` / `--dialog-label-size`（13px）；辅助说明、更新时间、上传状态统一 `--dialog-caption-size`（12px）。不要再出现 11px / 14px / 15px 等弹窗内字号 |
 | 行高 | 标题 `--dialog-title-line-height`（1.4）；正文 `--dialog-body-line-height`（1.6）；标签 `--dialog-label-line-height`（20px）；辅助说明 `--dialog-caption-line-height`（1.5）；展示型大数字用 `--dialog-metric-*` |
-| 表单项与标签 | 标签到控件 `--dialog-label-gap`（4px），表单项之间 `--dialog-field-gap`（20px，窄屏 16px，末行归零）。标签行不再保留 Naive 默认的 24px 空态占位；反馈区 `min-height: 0`，校验报错出现时按内容自然撑开，报错仍然可见 |
+| 表单项与标签 | 输入 / 下拉 / 日期 / 文本域使用浮动标签（见「浮动标签」）：标签不占独立一行，未输入时在框内、聚焦或有值后缩到框线上并断开框线；表单项之间仍 `--dialog-field-gap`（20px，窄屏 16px，末行归零）。非输入项（开关 / 复选标签）保留原标签行，标签到控件 `--dialog-label-gap`（4px）。标签行不保留 Naive 默认的 24px 空态占位；反馈区 `min-height: 0`，校验报错出现时按内容自然撑开，报错仍然可见 |
 | 外框 | header `--dialog-header-padding`、content `--dialog-content-padding`、footer `--dialog-footer-padding`（桌面 `16px 22px 12px` / `14px 22px 18px` / `12px 22px 18px`）；嵌套卡片（如流水摘要块）用 `--dialog-block-radius` / `--dialog-block-padding` |
 | 分组与区块 | 弹窗内区块标题统一挂全局类 `dialog-section-title`（13px / 600 / 下间距 8px）；辅助说明挂 `dialog-hint`（12px / 弱色）。`n-alert` 的下间距、`n-divider` 的上下间距、`n-collapse` 头部字号分别走 `--dialog-block-gap` / `--dialog-section-gap` / 正文令牌 |
 | tabs | 弹窗内 tab 字号 `--dialog-tab-size`（13px）、标签间距 `--dialog-tab-gap`（桌面 32px / 窄屏 18px）、tab 与内容间距 `--dialog-tab-content-gap`（桌面 16px / 窄屏 12px）。详情字段分组的行距与普通弹窗相同，不再单独写一套 |
@@ -433,6 +450,7 @@
 - [ ] 卡片复用全局圆角、边框、阴影
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
+- [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线），没有只靠 placeholder 当标签的字段
 - [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-heading` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
 - [ ] 移动端页头/详情工具栏按钮排一排放不下时能横向滑动到每个按钮（不缩小、不换行）
 - [ ] 状态色符合语义，未用于普通装饰

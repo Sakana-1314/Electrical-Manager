@@ -391,7 +391,7 @@ function remove(row: ManagedUser) {
       class="user-edit-modal"
       :title="editing ? '用户详情' : '新建用户'"
       style="width: min(660px, calc(100vw - 32px))"
-      ><n-form label-placement="left" label-width="84" size="small" :show-feedback="false"
+      ><n-form size="small" :show-feedback="false"
         ><div class="form-grid">
           <n-form-item label="用户名" required
             ><n-input v-model:value="form.username" /></n-form-item
