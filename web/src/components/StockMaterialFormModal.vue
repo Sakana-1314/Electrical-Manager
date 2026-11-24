@@ -441,9 +441,9 @@ watch(
 
 .switch-field {
   display: flex;
-  min-height: 34px;
+  min-height: var(--dialog-control-height);
   align-items: center;
-  gap: 10px;
+  gap: var(--dialog-footer-gap);
 }
 
 .attachment-form-item {
@@ -454,10 +454,10 @@ watch(
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 24px;
-  padding: 20px;
+  gap: var(--dialog-block-gap);
+  padding: var(--dialog-block-padding);
   border: 1px solid var(--color-border);
-  border-radius: 10px;
+  border-radius: var(--dialog-block-radius);
   background: var(--color-surface-soft);
   box-sizing: border-box;
 }
@@ -478,12 +478,14 @@ watch(
   min-width: 0;
   align-items: flex-start;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--dialog-section-title-gap);
 }
 
 .mini-program-code-details strong {
   color: var(--color-text-strong);
-  font-size: 16px;
+  font-size: var(--dialog-section-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-section-title-line-height);
 }
 
 .mini-program-code-details code {
@@ -493,7 +495,8 @@ watch(
   border-radius: 6px;
   background: var(--color-primary-soft);
   color: var(--color-primary-strong-text);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

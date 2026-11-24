@@ -459,19 +459,7 @@ function confirmDelete(): void {
 
 <style scoped>
 .modal-body {
-  max-height: min(70vh, 660px);
+  max-height: var(--dialog-body-max-height);
   overflow-y: auto;
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
 }
 </style>

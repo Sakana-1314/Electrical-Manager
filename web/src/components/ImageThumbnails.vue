@@ -41,6 +41,7 @@ const extra = computed(() => Math.max(0, props.images.length - 3))
 .extra-count {
   flex: none;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 </style>

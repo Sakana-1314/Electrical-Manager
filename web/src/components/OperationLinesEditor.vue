@@ -128,7 +128,8 @@ function remove(index: number) {
 }
 .line-head {
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--dialog-label-size);
+  line-height: var(--dialog-label-line-height);
   padding: 0 4px;
 }
 .line-row {

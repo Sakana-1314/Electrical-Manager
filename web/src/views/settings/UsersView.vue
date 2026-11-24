@@ -393,7 +393,7 @@ function remove(row: ManagedUser) {
       :title="editing ? '用户详情' : '新建用户'"
       style="width: min(660px, calc(100vw - 32px))"
       ><n-form label-placement="left" label-width="84" size="small" :show-feedback="false"
-        ><div class="form-grid-2">
+        ><div class="form-grid">
           <n-form-item label="用户名" required
             ><n-input v-model:value="form.username" /></n-form-item
           ><n-form-item label="显示名称" required
@@ -423,7 +423,7 @@ function remove(row: ManagedUser) {
           </div>
         </div>
         <div class="form-section">
-          <div class="section-title">权限</div>
+          <div class="dialog-section-title">权限</div>
           <div class="permission-grid">
             <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
               <div class="permission-group-label">{{ group.label }}</div>
@@ -441,7 +441,7 @@ function remove(row: ManagedUser) {
           </div>
         </div>
         <div v-if="editing" class="form-section">
-          <div class="section-title">安全与接入</div>
+          <div class="dialog-section-title">安全与接入</div>
           <n-form-item label="重置密码"
             ><n-input
               v-model:value="form.password"
@@ -593,36 +593,33 @@ function remove(row: ManagedUser) {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* ===== 用户详情弹窗：左标签 + 双列 + 小控件，整体高度压到一屏内 ===== */
-.form-grid-2 {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 18px;
-}
+/* ===== 用户详情弹窗：左标签 + 双列 + 小控件，整体高度压到一屏内 =====
+ * 双列直接用全局 .form-grid（20px 列间距、768px 以下单列），不再维护第二套网格。 */
 /* 登录信息：浅底三列，避免一行小字挤在输入框下面 */
 .login-strip {
   display: grid;
   grid-template-columns: 1.5fr 1fr 1fr;
-  gap: 6px 14px;
+  gap: var(--dialog-label-gap) var(--dialog-block-gap);
   margin: 2px 0 0;
-  padding: 8px 12px;
-  border-radius: 10px;
+  padding: var(--dialog-section-title-gap) var(--dialog-block-gap);
+  border-radius: var(--dialog-block-radius);
   background: var(--color-panel);
 }
 .login-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--dialog-label-gap);
   min-width: 0;
 }
 .login-label {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 .login-value {
   color: var(--color-text);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
 .login-item--openid .login-value {
   overflow: hidden;
@@ -631,51 +628,42 @@ function remove(row: ManagedUser) {
 }
 .login-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--dialog-caption-size);
 }
 /* 分区：细分割线 + 小标题，给权限 / 安全区留出呼吸感 */
 .form-section {
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: var(--dialog-block-gap);
+  padding-top: var(--dialog-block-gap);
   border-top: 1px solid var(--color-border-subtle);
-}
-.section-title {
-  margin-bottom: 8px;
-  color: var(--color-text-strong);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
 }
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 8px;
+  gap: var(--dialog-label-gap) var(--dialog-footer-gap);
 }
 .permission-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--dialog-footer-gap);
   min-height: 30px;
-  padding: 4px 8px;
-  border-radius: 8px;
+  padding: var(--dialog-label-gap) var(--dialog-footer-gap);
+  border-radius: var(--dialog-block-radius);
   background: var(--color-panel);
 }
 .permission-group-label {
   flex: none;
   width: 64px;
   color: var(--color-text-strong);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--dialog-caption-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-caption-line-height);
 }
 .permission-group-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  gap: var(--dialog-label-gap) var(--dialog-block-gap);
 }
 @media (max-width: 560px) {
-  .form-grid-2 {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .permission-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -686,14 +674,14 @@ function remove(row: ManagedUser) {
 .merge-target {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--dialog-label-gap);
 }
 .merge-target-name {
-  font-weight: 600;
+  font-weight: var(--dialog-title-weight);
 }
 .merge-target-roles {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--dialog-label-gap);
 }
 </style>

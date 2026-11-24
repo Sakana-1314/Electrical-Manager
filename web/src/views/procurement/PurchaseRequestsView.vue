@@ -1140,11 +1140,14 @@ onMounted(() => {
       style="width: 760px; max-width: calc(100vw - 32px)"
       :mask-closable="false"
     >
-      <n-alert type="info" style="margin-bottom: 16px">
+      <n-alert type="info">
         已选择 {{ selectedRecords.length }}
         条记录。仅勾选的字段会被统一修改；单据共享字段会同步影响同一申购单下的其他物资。
       </n-alert>
-      <n-scrollbar style="max-height: 65vh" content-style="padding-right: 12px">
+      <n-scrollbar
+        style="max-height: var(--dialog-body-max-height)"
+        content-style="padding-right: var(--dialog-scroll-gutter)"
+      >
         <n-form label-placement="top" size="small" :show-feedback="false">
           <div class="form-grid batch-edit-grid">
             <n-form-item>

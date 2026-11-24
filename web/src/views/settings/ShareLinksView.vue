@@ -266,7 +266,7 @@ const tableScrollX = getTableScrollX(columns)
       :mask-closable="false"
     >
       <template v-if="editingShare">
-        <n-alert type="info" :bordered="false" style="margin-bottom: 16px">
+        <n-alert type="info" :bordered="false">
           该「{{ shareTypeLabels[editingShare.share_type] }}」分享链接当前
           <b>{{
             editingShare.columns == null
@@ -276,7 +276,7 @@ const tableScrollX = getTableScrollX(columns)
           >。取消勾选的列在公开页不再展示，且其数据不会随分享响应下发。
         </n-alert>
 
-        <h3 class="edit-section-title">展示列</h3>
+        <h3 class="dialog-section-title">展示列</h3>
         <div class="column-card-grid">
           <button
             v-for="option in columnOptions"
@@ -296,7 +296,7 @@ const tableScrollX = getTableScrollX(columns)
         </div>
         <p class="column-card-hint">至少保留 1 列</p>
 
-        <h3 class="edit-section-title edit-section-title--expiry">到期时间</h3>
+        <h3 class="dialog-section-title edit-section-title--expiry">到期时间</h3>
         <p class="expiry-current">当前到期：{{ currentExpiryLabel }}</p>
         <n-radio-group v-model:value="selectedExpiry" name="share-expiry-edit">
           <n-space wrap>
@@ -339,14 +339,15 @@ const tableScrollX = getTableScrollX(columns)
 .column-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--dialog-footer-gap);
   min-height: 46px;
   padding: 10px 12px;
   border: 1px solid var(--color-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--dialog-block-radius);
   background: var(--color-surface-soft);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
   cursor: pointer;
   text-align: left;
   transition:
@@ -411,26 +412,21 @@ const tableScrollX = getTableScrollX(columns)
 }
 
 .column-card-hint {
-  margin: 12px 0 0;
+  margin: var(--dialog-section-title-gap) 0 0;
   color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.edit-section-title {
-  margin: 0 0 12px;
-  color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 
 .edit-section-title--expiry {
-  margin-top: 20px;
+  margin-top: var(--dialog-section-gap);
 }
 
 .expiry-current {
-  margin: 0 0 10px;
+  margin: 0 0 var(--dialog-section-title-gap);
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
 
 @media (max-width: 640px) {

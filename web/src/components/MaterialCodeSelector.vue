@@ -229,34 +229,26 @@ function changePage(value: number) {
 
 <style scoped>
 .selector-search {
-  margin-bottom: 16px;
+  margin-bottom: var(--dialog-block-gap);
 }
 
 .filter-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: var(--dialog-block-gap);
+  margin-bottom: var(--dialog-field-gap);
 }
 
 .selector-search-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--filter-grid-gap);
 }
 
+/* 筛选项排版（纵向排列、标签 13px、标签到控件 6px）由 styles.css 的 .filter-field 统一提供。 */
 .filter-field {
-  display: flex;
   min-width: 0;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.filter-field > span {
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .filter-field :deep(.n-input) {
@@ -267,9 +259,9 @@ function changePage(value: number) {
 .selector-search-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 16px;
+  gap: var(--dialog-footer-gap);
+  margin-top: var(--dialog-field-gap);
+  padding-top: var(--dialog-block-gap);
   border-top: 1px solid var(--color-border-subtle);
 }
 

@@ -826,14 +826,14 @@ onBeforeUnmount(() => {
 }
 
 .create-advanced-fields {
-  margin-bottom: 18px;
+  margin-bottom: var(--dialog-field-gap);
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--dialog-block-radius);
   background: var(--color-panel);
 }
 
 .create-advanced-fields :deep(.n-collapse-item) {
-  border-radius: 8px;
+  border-radius: var(--dialog-block-radius);
 }
 
 .create-advanced-fields :deep(.n-collapse-item__header) {

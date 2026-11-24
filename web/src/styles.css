@@ -26,6 +26,51 @@
   --radius-card: 12px;
   --shadow-card: 0 8px 24px rgb(15 23 42 / 5%);
   --shadow-card-hover: 0 12px 30px rgb(15 23 42 / 8%);
+  /* ============ 弹窗设计令牌 ============
+   * 所有 `preset="card"` 弹窗（表单 / 详情 / 批量 / 设置）共用同一套排版：
+   * 标题 16 / 正文与标签 13 / 辅助说明 12 是固定字号层级，行高、字段间距、
+   * 分组间距、tabs 与页脚尺寸也都只在这里取值。弹窗相关样式一律引用
+   * `var(--dialog-*)`，不要再写字面字号、行高、间距。 */
+  --dialog-title-size: 16px;
+  --dialog-title-line-height: 1.4;
+  --dialog-title-weight: 600;
+  --dialog-body-size: 13px;
+  --dialog-body-line-height: 1.6;
+  --dialog-label-size: 13px;
+  --dialog-label-line-height: 20px;
+  /* 弹窗内小尺寸控件的统一高度（n-form 的 size="small"） */
+  --dialog-control-height: 28px;
+  /* 标签与控件之间、相邻表单项之间、表单分组之间 */
+  --dialog-label-gap: 4px;
+  --dialog-field-gap: 20px;
+  --dialog-section-gap: 20px;
+  --dialog-section-title-size: 13px;
+  --dialog-section-title-line-height: 1.4;
+  --dialog-section-title-gap: 8px;
+  --dialog-caption-size: 12px;
+  --dialog-caption-line-height: 1.5;
+  --dialog-block-gap: 16px;
+  --dialog-block-padding: 16px;
+  --dialog-block-radius: 10px;
+  /* 弹窗内 tabs（详情字段分组） */
+  --dialog-tab-size: 13px;
+  --dialog-tab-gap: 32px;
+  --dialog-tab-content-gap: 16px;
+  /* 弹窗页脚与按钮 */
+  --dialog-footer-gap: 8px;
+  --dialog-footer-button-height: 28px;
+  --dialog-footer-button-size: 12px;
+  --dialog-footer-button-padding: 0 10px;
+  /* 弹窗外框内边距 */
+  --dialog-header-padding: 16px 22px 12px;
+  --dialog-content-padding: 14px 22px 18px;
+  --dialog-footer-padding: 12px 22px 18px;
+  /* 弹窗内容区滚动上限（桌面上限，移动端由全局断点解除） */
+  --dialog-body-max-height: min(70vh, 660px);
+  --dialog-scroll-gutter: 12px;
+  /* 弹窗内唯一允许的展示型大数字（如流水明细项数） */
+  --dialog-metric-size: 24px;
+  --dialog-metric-line-height: 1;
   /* 筛选区：统一各页面筛选输入框宽度（桌面端常见宽度下一行 5 个，过窄自动降列） */
   --filter-col-min-width: 190px;
   --filter-grid-gap: 14px;
@@ -81,6 +126,32 @@
   /* 品牌装饰渐变（登录页左侧栏、分享页品牌点） */
   --gradient-brand: linear-gradient(145deg, #2947a6, #5579e7);
   --gradient-brand-dot: linear-gradient(135deg, #2f6fed, #5aa9ff);
+}
+
+/* 弹窗令牌的窄屏 / 矮视口档位：移动端只收紧间距与留白，字号层级保持不变。
+ * 用与「移动端 / 矮视口弹窗」同一组命中条件，保证手机横屏（宽 > 768px、高很小）也收紧。 */
+@media (max-width: 768px), (max-height: 560px) {
+  :root {
+    --dialog-field-gap: 16px;
+    --dialog-tab-gap: 18px;
+    --dialog-tab-content-gap: 12px;
+    --dialog-header-padding: 16px 16px 10px;
+    --dialog-content-padding: 14px 16px 16px;
+    --dialog-footer-padding: 14px 12px 8px;
+    --dialog-footer-gap: 6px;
+    --dialog-footer-button-padding: 0 6px;
+  }
+}
+
+/* 极窄屏再压一档页脚（只改页脚，不碰内容区字号与行距） */
+@media (max-width: 360px) {
+  :root {
+    --dialog-footer-padding: 14px 8px 8px;
+    --dialog-footer-gap: 4px;
+    --dialog-footer-button-height: 26px;
+    --dialog-footer-button-size: 11px;
+    --dialog-footer-button-padding: 0 4px;
+  }
 }
 
 /* ============ 深色外观令牌 ============
@@ -215,76 +286,163 @@ a {
 .page .n-card-content {
   padding: 14px 18px 18px;
 }
-.n-card.n-modal .n-card-header {
-  padding: 16px 22px 10px;
+/* ============ 弹窗统一排版 ============
+ * 所有 `preset="card"` 弹窗共用同一套外框、字号、行高与间距，数值全部来自 :root 的
+ * `--dialog-*` 令牌；页面与组件不要再写字面字号 / 行高 / 间距。
+ * 表单弹窗与详情弹窗也同口径（不再用 `data-detail-modal` 分叉出两套行距）：
+ * 两档都压除空态校验占位，行与行之间的呼吸感由 `--dialog-field-gap` 统一提供。 */
+.n-card.n-modal {
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
-.n-card.n-modal .n-card-content {
-  padding: 14px 22px 18px;
+.n-card.n-modal > .n-card-header {
+  padding: var(--dialog-header-padding);
 }
-/* 弹窗表单行距：默认 24px 压到 14px（末行归零）。
- * scoped :deep 作用不到 teleport 出来的弹窗根，所以必须写在全局；
- * 口径与用户详情弹窗（#439-#442）一致，对所有弹窗统一生效。 */
+.n-card.n-modal > .n-card-header .n-card-header__main {
+  color: var(--color-text-strong);
+  font-size: var(--dialog-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-title-line-height);
+}
+.n-card.n-modal > .n-card-content {
+  padding: var(--dialog-content-padding);
+}
+.n-card.n-modal > .n-card__footer {
+  padding: var(--dialog-footer-padding);
+}
+/* 弹窗里嵌套的卡片（如流水详情的摘要块）同样使用弹窗区块的圆角与内边距，
+ * 不与弹窗自身的外框密度分叉。 */
+.n-card.n-modal .n-card {
+  border-radius: var(--dialog-block-radius);
+}
+.n-card.n-modal .n-card > .n-card-content {
+  padding: var(--dialog-block-padding);
+}
+/* 表单行距：所有弹窗统一 20px（手机 16px），末行归零。 */
 .n-card.n-modal .n-form-item {
-  margin-bottom: 14px;
+  margin-bottom: var(--dialog-field-gap);
 }
 .n-card.n-modal .n-form-item:last-child {
   margin-bottom: 0;
 }
-/* 表单类弹窗压除空态占位：Naive 给每个表单项预留一整行 24px 的校验反馈区
- * （feedbackHeightSmall，空态也占位），top 标签行还有 24px min-height
- * （网格行 minmax(24px, auto) + 元素自身 min-height）与 6px 下内边距——
- * 空态时行与行之间约有 38px 纯空白。这里只压掉空态预留：
- * 校验报错出现时反馈区按内容自然撑开，报错仍然可见（top 布局为弹窗表单主力，左置标签不受影响）。
- *
- * 详情弹窗（`data-detail-modal`，清单由 detailModalClose.spec.ts 守住）排除在外：
- * 这类弹窗以阅读为主，压掉占位后行高 / 行距过挤（2026-11-23 用户反馈「页面拥挤不协调」），
- * 保留 Naive 默认的 24px 标签行高与 24px 反馈区，回到宽松口径。 */
-.n-card.n-modal:not([data-detail-modal]) .n-form-item .n-form-item-feedback-wrapper {
-  min-height: 0;
+/* 标签：与正文同档 13px / 20px 行高，标签到控件 4px。 */
+.n-card.n-modal .n-form-item-label {
+  font-size: var(--dialog-label-size);
+  line-height: var(--dialog-label-line-height);
 }
-.n-card.n-modal:not([data-detail-modal]) .n-form-item--top-labelled {
+.n-card.n-modal .n-form-item--top-labelled {
   grid-template-rows: minmax(0, auto) 1fr;
 }
-.n-card.n-modal:not([data-detail-modal]) .n-form-item--top-labelled .n-form-item-label {
+.n-card.n-modal .n-form-item--top-labelled .n-form-item-label {
   min-height: 0;
-  padding-bottom: 2px;
+  padding-bottom: var(--dialog-label-gap);
 }
-/* 弹窗页脚按钮统一小尺寸（28px / 12px，与移动端断点、用户详情弹窗 footer 同口径）。 */
-.n-card.n-modal .n-card__footer .n-button,
-.n-card.n-modal .n-card__action .n-button {
-  height: 28px;
-  font-size: 12px;
-  padding: 0 10px;
+/* 空态校验反馈区不占行：只在报错出现时按内容撑开，报错仍然可见。 */
+.n-card.n-modal .n-form-item .n-form-item-feedback-wrapper {
+  min-height: 0;
 }
-/* 详情弹窗内的字段分组 tab（`detail-form-tabs`）：字号与控件同档 13px，
- * 但留白比全局弹窗密度松一档——分组后每屏字段变少，需要呼吸感：
- * 标签间距 36px（手机 18px，保证 4 个中文标签一行放得下）、tab 与内容之间 14px、
- * 面板内表单项行距 14px → 20px、标签到输入框 2px → 4px。
- * 只命中弹窗内的分组 tab，页面内 / 登录页的 tab 不受影响。 */
-.n-card.n-modal .detail-form-tabs .n-tabs-tab {
-  font-size: 13px;
+/* 弹窗内 tabs（详情字段分组）：字号与正文同档，标签间距 / 内容间距走令牌。 */
+.n-card.n-modal .n-tabs-tab {
+  font-size: var(--dialog-tab-size);
   padding-top: 8px;
   padding-bottom: 8px;
 }
-.n-card.n-modal .detail-form-tabs .n-tabs-tab-pad {
-  width: 36px;
+.n-card.n-modal .n-tabs-tab-pad {
+  width: var(--dialog-tab-gap);
 }
-.n-card.n-modal .detail-form-tabs .n-tab-pane {
-  padding-top: 14px;
+.n-card.n-modal .n-tab-pane {
+  padding-top: var(--dialog-tab-content-gap);
 }
-.n-card.n-modal .detail-form-tabs .n-form-item {
-  margin-bottom: 20px;
+/* 弹窗内的数据展示（描述列表 / 表格 / 提示 / 折叠面板）与正文同档：
+ * 避免 n-descriptions 默认 14px 与表单 13px 并排时字号不一。 */
+.n-card.n-modal .n-descriptions-table-header,
+.n-card.n-modal .n-descriptions-table-content,
+.n-card.n-modal .n-descriptions-table-content__label,
+.n-card.n-modal .n-descriptions-table-content__content {
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
-.n-card.n-modal .detail-form-tabs .n-form-item:last-child {
-  margin-bottom: 0;
+.n-card.n-modal .n-descriptions-table-content__label,
+.n-card.n-modal .n-descriptions-table-header {
+  color: var(--color-text-muted);
 }
-.n-card.n-modal .detail-form-tabs .n-form-item--top-labelled .n-form-item-label {
-  padding-bottom: 4px;
+.n-card.n-modal .n-table th,
+.n-card.n-modal .n-table td,
+.n-card.n-modal .n-data-table-th,
+.n-card.n-modal .n-data-table-td {
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
-/* 用户详情弹窗：标题下加分隔线。 */
-.n-card.n-modal.user-edit-modal .n-card-header {
-  padding: 16px 22px 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
+.n-card.n-modal .n-alert {
+  margin-bottom: var(--dialog-block-gap);
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
+}
+.n-card.n-modal .n-alert-body__title {
+  font-size: var(--dialog-section-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-section-title-line-height);
+}
+.n-card.n-modal .n-alert-body__content {
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
+}
+.n-card.n-modal .n-divider {
+  margin-top: var(--dialog-section-gap);
+  margin-bottom: var(--dialog-section-gap);
+}
+.n-card.n-modal .n-divider__title {
+  font-size: var(--dialog-section-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-section-title-line-height);
+}
+.n-card.n-modal .n-collapse-item__header {
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
+}
+/* 辅助说明统一 12px；弹窗内的 .muted 也压到这一档。 */
+.n-card.n-modal .muted {
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
+}
+/* 页脚按钮统一 28px / 12px；按钮组间距与左 / 右分组走同一令牌。 */
+.n-card.n-modal .n-card__footer .n-button,
+.n-card.n-modal .n-card__action .n-button {
+  height: var(--dialog-footer-button-height);
+  flex: none;
+  padding: var(--dialog-footer-button-padding);
+  font-size: var(--dialog-footer-button-size);
+}
+.n-card.n-modal .n-card__footer .n-button .n-button__content {
+  font-size: var(--dialog-footer-button-size);
+}
+.n-card.n-modal > .n-card__footer .n-space {
+  gap: var(--dialog-footer-gap) !important;
+}
+/* 弹窗页脚左右分组：原先散在 6 个组件里的重复样式，统一在这里维护。 */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dialog-footer-gap);
+}
+.modal-footer-left,
+.modal-footer-right {
+  display: flex;
+  gap: var(--dialog-footer-gap);
+}
+/* 弹窗内区块标题 / 辅助说明的共用类：13px / 600 与 12px。 */
+.dialog-section-title {
+  margin: 0 0 var(--dialog-section-title-gap);
+  color: var(--color-text-strong);
+  font-size: var(--dialog-section-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-section-title-line-height);
+}
+.dialog-hint {
+  color: var(--color-text-muted);
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 /* 侧栏菜单密度：默认 42px 菜单项压到 34px（!important 压过 Naive 写在根上的内联变量） */
 .n-menu {
@@ -531,8 +689,9 @@ a {
 .card-header-time {
   margin-right: 8px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
   font-variant-numeric: tabular-nums;
+  line-height: var(--dialog-caption-line-height);
 }
 .danger-text {
   color: var(--color-danger);
@@ -591,14 +750,6 @@ a {
 @media (max-width: 768px) {
   .form-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  /* 详情弹窗内字段分组 tab：手机端标签间距收紧到 18px（4 个中文标签仍占一行），
-     表单行距比桌面再小一档；桌面端沿用弹窗密度那节的 36px / 20px */
-  .n-card.n-modal .detail-form-tabs .n-tabs-tab-pad {
-    width: 18px;
-  }
-  .n-card.n-modal .detail-form-tabs .n-form-item {
-    margin-bottom: 16px;
   }
   /* 筛选操作按钮组窄屏纵向铺满，与各页面已有的局部规则一致 */
   .filter-actions {
@@ -759,7 +910,6 @@ a {
     max-height: none;
   }
   .n-card.n-modal > .n-card__footer {
-    padding: 14px 12px 8px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -767,50 +917,23 @@ a {
   .n-card.n-modal > .n-card__footer::-webkit-scrollbar {
     display: none;
   }
-  /* n-space / .modal-footer 在组件里是行内 flex-flow: wrap，必须压下才能排成一行 */
+  /* n-space / .modal-footer 在组件里是行内 flex-flow: wrap，必须压下才能排成一行；
+     间距走 --dialog-footer-gap（窄屏档位在上方 :root 里收紧）。 */
   .n-card.n-modal > .n-card__footer .n-space,
   .n-card.n-modal > .n-card__footer .modal-footer {
     flex-wrap: nowrap !important;
     min-width: 0;
-    gap: 4px 6px !important;
+    gap: var(--dialog-footer-gap) !important;
   }
   .n-card.n-modal > .n-card__footer .n-space > *,
   .n-card.n-modal > .n-card__footer .modal-footer > * {
     flex: none;
     min-width: 0;
   }
-  /* 页脚按钮压小一档，让一排放得下（窄屏靠它腾出宽度，矮视口靠它腾出高度） */
-  .n-card.n-modal > .n-card__footer .n-button {
-    height: 28px;
-    flex: none;
-    padding: 0 6px;
-    font-size: 12px;
-  }
-  .n-card.n-modal > .n-card__footer .n-button .n-button__content {
-    font-size: 12px;
-  }
 }
 
-/* 小屏（≤360px）再压一档：五个按钮也能排成一行，不靠横向滑动。必须排在弹窗规则之后，
-   两个断点同时命中时由后者覆盖。 */
-@media (max-width: 360px) {
-  .n-card.n-modal > .n-card__footer {
-    /* 上边距必须与上一档一致（这里只收窄左右），否则极窄屏会把按钮上方的间距重置为 0 */
-    padding: 14px 8px 8px;
-  }
-  .n-card.n-modal > .n-card__footer .n-button {
-    height: 26px;
-    padding: 0 4px;
-    font-size: 11px;
-  }
-  .n-card.n-modal > .n-card__footer .n-button .n-button__content {
-    font-size: 11px;
-  }
-  .n-card.n-modal > .n-card__footer .n-space,
-  .n-card.n-modal > .n-card__footer .modal-footer {
-    gap: 3px 4px !important;
-  }
-}
+/* 小屏（≤360px）的页脚尺寸不再单独写规则：由顶部 :root 令牌覆盖
+ * （--dialog-footer-padding / --dialog-footer-gap / 按钮 26px / 11px）统一生效。 */
 
 @media (max-width: 480px) {
   .stat-grid {
