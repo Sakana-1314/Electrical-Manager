@@ -149,17 +149,7 @@ function onFileChange(event: Event) {
   <div class="page">
     <div class="page-header">
       <h1 class="page-title">二级库</h1>
-      <div class="page-actions">
-        <n-button
-          v-if="auth.can('lite:write')"
-          type="primary"
-          :loading="importing"
-          :disabled="importing"
-          @click="openFilePicker"
-        >
-          导入表格全量更新
-        </n-button>
-      </div>
+
       <input
         ref="fileInput"
         class="hidden-file-input"
@@ -169,40 +159,52 @@ function onFileChange(event: Event) {
       />
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field">
-          <span>物资名称</span>
-          <n-input
-            v-model:value="filters.name"
-            clearable
-            placeholder="输入物资名称"
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>型号规格</span>
-          <n-input
-            v-model:value="filters.modelSpec"
-            clearable
-            placeholder="输入型号规格"
-            @keyup.enter="query"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span v-if="activeFilterCount" class="filter-count">
-          已启用 {{ activeFilterCount }} 项
-        </span>
-        <span class="muted"
-          >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
-        >
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field">
+            <span>物资名称</span>
+            <n-input
+              v-model:value="filters.name"
+              clearable
+              placeholder="输入物资名称"
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>型号规格</span>
+            <n-input
+              v-model:value="filters.modelSpec"
+              clearable
+              placeholder="输入型号规格"
+              @keyup.enter="query"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <span class="muted"
+            >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
+          >
+          <div class="filter-action-buttons">
+            <n-button
+              v-if="auth.can('lite:write')"
+              type="primary"
+              :loading="importing"
+              :disabled="importing"
+              @click="openFilePicker"
+            >
+              导入表格全量更新
+            </n-button>
+
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />

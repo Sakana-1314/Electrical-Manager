@@ -477,17 +477,7 @@ function onFileChange(event: Event) {
   <div class="page">
     <div class="page-header">
       <h1 class="page-title">华星总库存</h1>
-      <div class="page-actions">
-        <n-button
-          v-if="auth.can('huaxing:write')"
-          type="primary"
-          :loading="importing"
-          :disabled="importing"
-          @click="openFilePicker"
-        >
-          导入表格全量更新
-        </n-button>
-      </div>
+
       <input
         ref="fileInput"
         class="hidden-file-input"
@@ -497,89 +487,101 @@ function onFileChange(event: Event) {
       />
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
-        <label class="filter-field">
-          <span>货品名称</span>
-          <n-input
-            v-model:value="filters.name"
-            clearable
-            placeholder="输入货品名称"
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>型号</span>
-          <n-input
-            v-model:value="filters.modelSpec"
-            clearable
-            placeholder="输入型号"
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>货品编码</span>
-          <n-input
-            v-model:value="filters.materialCode"
-            clearable
-            placeholder="输入货品编码"
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>申购部门</span>
-          <pinyin-select
-            v-model:value="filters.purchaseDepartment"
-            :options="departmentOptions"
-            multiple
-            filterable
-            clearable
-            placeholder="选择申购部门（可多选）"
-          />
-        </label>
-        <label class="filter-field">
-          <span>申购人</span>
-          <pinyin-select
-            v-model:value="filters.purchaser"
-            :options="purchaserOptions"
-            multiple
-            filterable
-            clearable
-            placeholder="选择申购人（可多选）"
-          />
-        </label>
-        <label class="filter-field filter-field-wide">
-          <span>首次入库日期</span>
-          <n-date-picker
-            v-model:value="filters.inboundDateRange"
-            type="daterange"
-            clearable
-            class="full-width"
-          />
-        </label>
-      </div>
-      <div class="filter-extras-actions">
-        <div class="filter-actions">
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-          <span class="muted"
-            >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
-          >
-          <div class="filter-action-buttons">
-            <ColumnVisibilityPicker
-              :value="visibleColumnKeys"
-              :options="fieldOptions"
-              storage-key="warehouse.hua-xing-stock.visible-columns.v1"
-              @update:value="setVisibleColumnKeys"
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
+          <label class="filter-field">
+            <span>货品名称</span>
+            <n-input
+              v-model:value="filters.name"
+              clearable
+              placeholder="输入货品名称"
+              @keyup.enter="query"
             />
-            <n-button @click="resetFilters">重置</n-button>
-            <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+          </label>
+          <label class="filter-field">
+            <span>型号</span>
+            <n-input
+              v-model:value="filters.modelSpec"
+              clearable
+              placeholder="输入型号"
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>货品编码</span>
+            <n-input
+              v-model:value="filters.materialCode"
+              clearable
+              placeholder="输入货品编码"
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>申购部门</span>
+            <pinyin-select
+              v-model:value="filters.purchaseDepartment"
+              :options="departmentOptions"
+              multiple
+              filterable
+              clearable
+              placeholder="选择申购部门（可多选）"
+            />
+          </label>
+          <label class="filter-field">
+            <span>申购人</span>
+            <pinyin-select
+              v-model:value="filters.purchaser"
+              :options="purchaserOptions"
+              multiple
+              filterable
+              clearable
+              placeholder="选择申购人（可多选）"
+            />
+          </label>
+          <label class="filter-field filter-field-wide">
+            <span>首次入库日期</span>
+            <n-date-picker
+              v-model:value="filters.inboundDateRange"
+              type="daterange"
+              clearable
+              class="full-width"
+            />
+          </label>
+        </div>
+        <div class="filter-extras-actions">
+          <div class="filter-actions">
+            <span v-if="activeFilterCount" class="filter-count">
+              已启用 {{ activeFilterCount }} 项
+            </span>
+            <FilterExpandButton v-model:expanded="filterExpanded" />
+            <span class="muted"
+              >共 {{ total.toLocaleString() }} 条 · 上次导入：{{ lastImportAt || '—' }}</span
+            >
+            <div class="filter-action-buttons">
+              <n-button
+                v-if="auth.can('huaxing:write')"
+                type="primary"
+                :loading="importing"
+                :disabled="importing"
+                @click="openFilePicker"
+              >
+                导入表格全量更新
+              </n-button>
+
+              <ColumnVisibilityPicker
+                :value="visibleColumnKeys"
+                :options="fieldOptions"
+                storage-key="warehouse.hua-xing-stock.visible-columns.v1"
+                @update:value="setVisibleColumnKeys"
+              />
+              <n-button @click="resetFilters">重置</n-button>
+              <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />

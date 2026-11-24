@@ -211,30 +211,32 @@ function rowProps(row: StockMaterial) {
       <div>
         <h1 class="page-title">物资档案</h1>
       </div>
-      <div class="page-actions">
-        <n-button v-if="auth.can('warehouse:write')" type="primary" @click="openCreate">
-          新建物资
-        </n-button>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field">
-          <span>名称、别名或型号规格</span>
-          <n-input
-            v-model:value="filters.keyword"
-            clearable
-            placeholder="输入物资名称、别名或型号规格"
-            @keyup.enter="query"
-          />
-        </label>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field">
+            <span>名称、别名或型号规格</span>
+            <n-input
+              v-model:value="filters.keyword"
+              clearable
+              placeholder="输入物资名称、别名或型号规格"
+              @keyup.enter="query"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <div class="filter-action-buttons">
+            <n-button v-if="auth.can('warehouse:write')" type="primary" @click="openCreate">
+              新建物资
+            </n-button>
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+          </div>
+        </div>
       </div>
-      <div class="filter-actions">
-        <n-button @click="resetFilters">重置</n-button>
-        <n-button type="primary" :loading="loading" @click="query">查询</n-button>
-      </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

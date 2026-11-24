@@ -327,115 +327,116 @@ onMounted(async () => {
       <div>
         <h1 class="page-title">隐患管理</h1>
       </div>
-      <div class="page-actions">
-        <n-button v-if="canWrite" type="primary" @click="openCreate">登记隐患</n-button>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
-        <label class="filter-field">
-          <span>整改状态</span>
-          <n-select
-            v-model:value="filters.status"
-            :options="statusOptions"
-            placeholder="不限"
-            clearable
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
+          <label class="filter-field">
+            <span>整改状态</span>
+            <n-select
+              v-model:value="filters.status"
+              :options="statusOptions"
+              placeholder="不限"
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>逾期</span>
+            <n-select
+              v-model:value="overdueSelect"
+              :options="overdueOptions"
+              placeholder="不限"
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>隐患类型</span>
+            <pinyin-select
+              v-model:value="filters.hazard_type_id"
+              :options="typeOptions"
+              placeholder="按大类选择"
+              clearable
+              filterable
+            />
+          </label>
+          <label class="filter-field">
+            <span>隐患等级</span>
+            <n-select
+              v-model:value="filters.level"
+              :options="levelOptions"
+              placeholder="不限"
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>责任单位</span>
+            <pinyin-select
+              v-model:value="filters.hazard_unit_id"
+              :options="unitOptions"
+              placeholder="不限"
+              clearable
+              filterable
+            />
+          </label>
+          <label class="filter-field">
+            <span>整改员工</span>
+            <pinyin-select
+              v-model:value="filters.rectify_person"
+              :options="rectifyPersonOptions"
+              placeholder="不限"
+              clearable
+              filterable
+            />
+          </label>
+          <label class="filter-field">
+            <span>检查区域</span>
+            <n-input
+              v-model:value="filters.area"
+              placeholder="如：201-冶炼主厂房"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>描述 / 人员 / 单位关键字</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="模糊搜索"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field filter-field-wide">
+            <span>检查日期范围</span>
+            <n-date-picker
+              v-model:value="filters.dateRange"
+              type="daterange"
+              clearable
+              class="full-width"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <FilterExpandButton v-model:expanded="filterExpanded" />
+          <ColumnVisibilityPicker
+            :value="visibleColumnKeys"
+            :options="fieldOptions"
+            storage-key="hazard.records.visible-columns.v1"
+            @update:value="visibleColumnKeys = $event"
           />
-        </label>
-        <label class="filter-field">
-          <span>逾期</span>
-          <n-select
-            v-model:value="overdueSelect"
-            :options="overdueOptions"
-            placeholder="不限"
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>隐患类型</span>
-          <pinyin-select
-            v-model:value="filters.hazard_type_id"
-            :options="typeOptions"
-            placeholder="按大类选择"
-            clearable
-            filterable
-          />
-        </label>
-        <label class="filter-field">
-          <span>隐患等级</span>
-          <n-select
-            v-model:value="filters.level"
-            :options="levelOptions"
-            placeholder="不限"
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>责任单位</span>
-          <pinyin-select
-            v-model:value="filters.hazard_unit_id"
-            :options="unitOptions"
-            placeholder="不限"
-            clearable
-            filterable
-          />
-        </label>
-        <label class="filter-field">
-          <span>整改员工</span>
-          <pinyin-select
-            v-model:value="filters.rectify_person"
-            :options="rectifyPersonOptions"
-            placeholder="不限"
-            clearable
-            filterable
-          />
-        </label>
-        <label class="filter-field">
-          <span>检查区域</span>
-          <n-input
-            v-model:value="filters.area"
-            placeholder="如：201-冶炼主厂房"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>描述 / 人员 / 单位关键字</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="模糊搜索"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field filter-field-wide">
-          <span>检查日期范围</span>
-          <n-date-picker
-            v-model:value="filters.dateRange"
-            type="daterange"
-            clearable
-            class="full-width"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span v-if="activeFilterCount" class="filter-count">
-          已启用 {{ activeFilterCount }} 项
-        </span>
-        <FilterExpandButton v-model:expanded="filterExpanded" />
-        <ColumnVisibilityPicker
-          :value="visibleColumnKeys"
-          :options="fieldOptions"
-          storage-key="hazard.records.visible-columns.v1"
-          @update:value="visibleColumnKeys = $event"
-        />
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+          <div class="filter-action-buttons">
+            <n-button v-if="canWrite" type="primary" @click="openCreate">登记隐患</n-button>
+
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

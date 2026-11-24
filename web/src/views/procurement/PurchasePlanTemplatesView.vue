@@ -554,84 +554,85 @@ onBeforeUnmount(() => {
       <div>
         <h1 class="page-title">周期性计划</h1>
       </div>
-      <div class="page-actions">
-        <n-space>
-          <n-button v-if="auth.can('purchase:write')" type="primary" @click="openCreate">
-            新建周期性计划
-          </n-button>
-        </n-space>
-      </div>
     </div>
-    <div class="filter-panel">
-      <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
-        <label class="filter-field">
-          <span>物资名称</span>
-          <n-input
-            v-model:value="filters.name"
-            placeholder="输入物资名称"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>型号规格</span>
-          <n-input
-            v-model:value="filters.model_spec"
-            placeholder="输入型号规格"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-        <label class="filter-field">
-          <span>提报员工</span>
-          <pinyin-select
-            v-model:value="filters.actual_demand_person"
-            :options="actualDemandPersonOptions"
-            placeholder="选择或搜索提报员工"
-            filterable
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>实际需求人</span>
-          <pinyin-select
-            v-model:value="filters.purchase_responsible"
-            :options="purchaseResponsibleOptions"
-            placeholder="选择或搜索实际需求人"
-            filterable
-            clearable
-          />
-        </label>
-        <label class="filter-field">
-          <span>类别</span>
-          <pinyin-select
-            v-model:value="filters.category"
-            :options="categoryOptions"
-            placeholder="选择类别"
-            filterable
-            clearable
-          />
-        </label>
-      </div>
-      <div class="filter-extras-actions">
-        <div class="filter-actions">
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-          <ColumnVisibilityPicker
-            :value="visibleColumnKeys"
-            :options="fieldOptions"
-            storage-key="procurement.purchase-plan-templates.visible-columns.v1"
-            @update:value="setVisibleColumnKeys"
-          />
-          <div class="filter-action-buttons">
-            <n-button @click="resetFilters">重置</n-button>
-            <n-button type="primary" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
+          <label class="filter-field">
+            <span>物资名称</span>
+            <n-input
+              v-model:value="filters.name"
+              placeholder="输入物资名称"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>型号规格</span>
+            <n-input
+              v-model:value="filters.model_spec"
+              placeholder="输入型号规格"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>提报员工</span>
+            <pinyin-select
+              v-model:value="filters.actual_demand_person"
+              :options="actualDemandPersonOptions"
+              placeholder="选择或搜索提报员工"
+              filterable
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>实际需求人</span>
+            <pinyin-select
+              v-model:value="filters.purchase_responsible"
+              :options="purchaseResponsibleOptions"
+              placeholder="选择或搜索实际需求人"
+              filterable
+              clearable
+            />
+          </label>
+          <label class="filter-field">
+            <span>类别</span>
+            <pinyin-select
+              v-model:value="filters.category"
+              :options="categoryOptions"
+              placeholder="选择类别"
+              filterable
+              clearable
+            />
+          </label>
+        </div>
+        <div class="filter-extras-actions">
+          <div class="filter-actions">
+            <span v-if="activeFilterCount" class="filter-count">
+              已启用 {{ activeFilterCount }} 项
+            </span>
+            <FilterExpandButton v-model:expanded="filterExpanded" />
+            <ColumnVisibilityPicker
+              :value="visibleColumnKeys"
+              :options="fieldOptions"
+              storage-key="procurement.purchase-plan-templates.visible-columns.v1"
+              @update:value="setVisibleColumnKeys"
+            />
+            <div class="filter-action-buttons">
+              <n-space>
+                <n-button v-if="auth.can('purchase:write')" type="primary" @click="openCreate">
+                  新建周期性计划
+                </n-button>
+              </n-space>
+
+              <n-button @click="resetFilters">重置</n-button>
+              <n-button type="primary" @click="query">查询</n-button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </n-card>
     <div ref="tableAreaRef" class="purchase-plan-table-area">
       <n-button
         class="table-fullscreen-toggle"

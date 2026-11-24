@@ -167,11 +167,11 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 卡片 | 页面内容统一 `n-card`；数据表卡片加 `data-card`，不在单页重设圆角/阴影/边框。**筛选区不再套卡片**：用无背景的 `.filter-panel` 结构容器，筛选字段直接落在页面底色上，也不再有「筛选条件」标题 |
+| 卡片 | 页面内容统一 `n-card`；数据表卡片加 `data-card`，不在单页重设圆角/阴影/边框。**筛选区使用紧凑 `filter-card`**：卡片内只有 `.filter-panel`（字段 + 底部操作行），不再有「筛选条件」标题；卡片内容内边距 `--list-filter-card-padding`（12px 16px 14px） |
 | 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
 | 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），**不显示「筛选条件」标题** |
-| 筛选操作行 | `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距由 `styles.css` 统一提供（`--list-filter-actions-*`），页面只写结构；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
-| 筛选计数 | 「已启用 N 项」放在 `.filter-actions` 左侧；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，与重置 / 查询同一行，出现或消失都不改变行高 |
+| 筛选操作行 | 卡片底部只保留**一行** `.filter-actions`：左侧计数 / 折叠 / 列选择，右侧把页级操作（导出、导入、新建、批量）与重置 / 查询统一放进 `.filter-action-buttons`；页头只留标题，不再单独占一行操作。间距走 `--list-filter-actions-*`，按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 筛选计数 | 「已启用 N 项」放在 `.filter-actions` 左侧；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，与业务操作 / 重置 / 查询同一行，出现或消失都不改变行高 |
 | 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；字段标签使用浮动标签（见「浮动标签」），不再占用独立标签行。标签字号 `--list-filter-label-size`（13px） |
 | 筛选区说明 | **不放小字描述**：筛选口径、选项含义、数据条数都不在筛选区解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
 | 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由 `.filter-actions` 左侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
@@ -266,9 +266,9 @@
 | 项 | 要求 |
 | --- | --- |
 | 页面骨架 | 页面纵向间距 `--page-gap`（16px）；页头最小高度 `--page-header-min-height`（40px）、间距 `--page-header-gap`、内边距 `--page-header-padding`；标题 `--page-title-size`（20px）/ `--page-title-line-height`（1.35） |
-| 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；说明类卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边。筛选区不套卡片 |
+| 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；说明类卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边。筛选区用紧凑 `filter-card`（卡片内容内边距 `--list-filter-card-padding` 12px 16px 14px） |
 | 字号层级 | 列表正文 `--list-body-size`（13px）/ `--list-body-line-height`（1.5）；辅助说明 `--list-caption-size`（12px）/ `--list-caption-line-height`（1.5）；树节点 / 双行单元格强调文字 `--list-emphasis-size`（14px）；双行单元格标题行高 `--list-cell-title-line-height`（1.4）、行间距 `--list-cell-gap`（2px） |
-| 筛选区 | 无背景 `.filter-panel` 容器 + `.filter-actions` / `.filter-action-buttons` 全局类；不再有「筛选条件」标题行，计数与折叠开关放在操作行左侧。页面不得再定义这些布局样式 |
+| 筛选区 | 紧凑 `filter-card` + `.filter-panel` + 底部单行 `.filter-actions` / `.filter-action-buttons`；不再有「筛选条件」标题行，页头只留标题；计数、折叠、列选择与页级操作、重置 / 查询都在同一操作行。页面不得再定义这些布局样式 |
 | 表格 | 表头与内容行分开取令牌：表头 `--list-table-header-padding-y`（10px）/ `--list-table-header-font-size`（13px）/ `--list-table-header-line-height`（1.5），内容行 `--list-table-cell-padding-y/x`（8px / 12px）/ `--list-table-font-size`（13px）/ `--list-table-line-height`（1.5）；表头略高于内容行。`n-data-table` 与 `n-table` 全局统一，页面不再单独写单元格样式 |
 | 分页 | `margin-top` / 上内边距走 `--list-pagination-margin-top` / `--list-pagination-padding-top`；表格卡片内再补 `--list-pagination-padding-x` / `--list-pagination-padding-bottom`，不贴卡片边缘 |
 | 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
@@ -450,7 +450,7 @@
 - [ ] 页面主色、按钮、菜单选中态一致
 - [ ] 列表页标题下没有可删除的重复说明
 - [ ] 卡片复用全局圆角、边框、阴影
-- [ ] 筛选区不套卡片（无 `filter-card`、无「筛选条件」标题），字段直接落在页面底色上；表格卡片使用 `data-card`
+- [ ] 筛选区使用紧凑 `filter-card`（无「筛选条件」标题）；页头只留标题，导出 / 导入 / 新建 / 批量与重置 / 查询收在卡片底部同一操作行；表格卡片使用 `data-card`
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
 - [ ] 表头上下内边距 10px、内容行 8px，表头略高于内容行；表格字号 / 行高 / 内边距全部走 `--list-table-*`
 - [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线、占位文字始终不重复），没有只靠 placeholder 当标签的字段

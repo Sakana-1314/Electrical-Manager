@@ -253,50 +253,51 @@ onMounted(loadTags)
       <div>
         <h1 class="page-title">台账总览</h1>
       </div>
-      <div class="page-actions">
-        <n-button v-if="canWrite" type="primary" @click="openCreate">新增台账</n-button>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field">
-          <span>名称 / 型号 / 备注</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="模糊搜索，可用 | 分隔多个关键词"
-            clearable
-            @keyup.enter="query"
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field">
+            <span>名称 / 型号 / 备注</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="模糊搜索，可用 | 分隔多个关键词"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
+            <span>标签</span>
+            <pinyin-tree-select
+              v-model:value="filters.tag_ids"
+              :options="tagOptions"
+              multiple
+              clearable
+              filterable
+              placeholder="选父标签会一并包含子标签"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <ColumnVisibilityPicker
+            :value="visibleColumnKeys"
+            :options="fieldOptions"
+            storage-key="ledger.items.visible-columns.v3"
+            @update:value="visibleColumnKeys = $event"
           />
-        </label>
-        <label class="filter-field">
-          <span>标签</span>
-          <pinyin-tree-select
-            v-model:value="filters.tag_ids"
-            :options="tagOptions"
-            multiple
-            clearable
-            filterable
-            placeholder="选父标签会一并包含子标签"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span v-if="activeFilterCount" class="filter-count">
-          已启用 {{ activeFilterCount }} 项
-        </span>
-        <ColumnVisibilityPicker
-          :value="visibleColumnKeys"
-          :options="fieldOptions"
-          storage-key="ledger.items.visible-columns.v3"
-          @update:value="visibleColumnKeys = $event"
-        />
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+          <div class="filter-action-buttons">
+            <n-button v-if="canWrite" type="primary" @click="openCreate">新增台账</n-button>
+
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

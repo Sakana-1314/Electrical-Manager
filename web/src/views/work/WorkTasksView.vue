@@ -213,45 +213,46 @@ function selectTask(key: string): void {
       <div>
         <h1 class="page-title">任务视图</h1>
       </div>
-      <div class="page-actions">
-        <n-button v-if="canWrite" type="primary" @click="openCreateTask">新增任务</n-button>
-      </div>
     </div>
 
-    <div class="filter-panel">
-      <div class="filter-grid">
-        <label class="filter-field filter-field-wide">
-          <span>日期区间</span>
-          <WorkRangePicker v-model="filters.range" />
-        </label>
-        <label class="filter-field">
-          <span>状态</span>
-          <n-select
-            v-model:value="filters.statuses"
-            :options="workTaskStatusOptions"
-            multiple
-            clearable
-            placeholder="可多选，清空即不限"
-          />
-        </label>
-        <label class="filter-field">
-          <span>关键字</span>
-          <n-input
-            v-model:value="filters.keyword"
-            placeholder="任务名 / 工作内容 / 备注，可用 | 分隔多个关键词"
-            clearable
-            @keyup.enter="query"
-          />
-        </label>
-      </div>
-      <div class="filter-actions">
-        <span class="filter-hint">点色块编辑记录，点任务名查看该任务的时间段明细</span>
-        <div class="filter-action-buttons">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" @click="query">查询</n-button>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-panel">
+        <div class="filter-grid">
+          <label class="filter-field filter-field-wide">
+            <span>日期区间</span>
+            <WorkRangePicker v-model="filters.range" />
+          </label>
+          <label class="filter-field">
+            <span>状态</span>
+            <n-select
+              v-model:value="filters.statuses"
+              :options="workTaskStatusOptions"
+              multiple
+              clearable
+              placeholder="可多选，清空即不限"
+            />
+          </label>
+          <label class="filter-field">
+            <span>关键字</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="任务名 / 工作内容 / 备注，可用 | 分隔多个关键词"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+        </div>
+        <div class="filter-actions">
+          <span class="filter-hint">点色块编辑记录，点任务名查看该任务的时间段明细</span>
+          <div class="filter-action-buttons">
+            <n-button v-if="canWrite" type="primary" @click="openCreateTask">新增任务</n-button>
+
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </div>
+    </n-card>
 
     <n-card class="data-card" :bordered="false">
       <WorkTimelineGrid
