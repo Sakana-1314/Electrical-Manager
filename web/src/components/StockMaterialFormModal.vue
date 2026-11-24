@@ -441,7 +441,7 @@ watch(
 
 .switch-field {
   display: flex;
-  min-height: var(--dialog-control-height);
+  min-height: var(--control-height);
   align-items: center;
   gap: var(--dialog-footer-gap);
 }

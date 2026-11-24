@@ -38,8 +38,6 @@
   --dialog-body-line-height: 1.6;
   --dialog-label-size: 13px;
   --dialog-label-line-height: 20px;
-  /* 弹窗内小尺寸控件的统一高度（n-form 的 size="small"） */
-  --dialog-control-height: var(--control-height-small);
   /* 标签与控件之间、相邻表单项之间、表单分组之间 */
   --dialog-label-gap: 4px;
   --dialog-field-gap: 20px;
@@ -129,10 +127,8 @@
   --list-tree-padding: 4px 0 12px;
   --list-badge-size: 12px;
   --list-badge-line-height: 18px;
-  /* 控件：列表页与筛选区默认高度 / 字号 / 宽度 */
+  /* 控件：所有输入 / 下拉 / 日期 / 数字输入共用一个高度与字号（含弹窗、登录页） */
   --control-height: 34px;
-  --control-height-small: 28px;
-  --control-height-large: 40px;
   --control-font-size: 13px;
   --control-padding-x: 12px;
   --control-width: 100%;
@@ -371,6 +367,23 @@ a {
 .page .n-card-content {
   padding: var(--list-card-content-padding);
 }
+/* ============ 控件统一尺寸 ============
+ * 所有输入框 / 下拉 / 日期 / 数字输入共用 `--control-height`（34px）与
+ * `--control-font-size`（13px）：列表页、筛选区、弹窗、登录页都不再按 size 分档。
+ * 文本域高度随内容（不强制 34px），但字号仍统一。 */
+.n-input {
+  --n-font-size: var(--control-font-size) !important;
+}
+.n-input:not(.n-input--textarea),
+.n-base-selection {
+  --n-height: var(--control-height) !important;
+  --n-font-size: var(--control-font-size) !important;
+}
+/* 输入框右侧的复制 / 重新生成等按钮与输入框同高，避免 34px 框配 28px 按钮 */
+.n-input-group .n-button {
+  height: var(--control-height);
+  flex: none;
+}
 /* 含表格的数据卡片：内容区不再做内边距，表格与分页条直接贴着卡片边。
  * 只命中「卡片里确实有 n-data-table」的情况：`.data-card` 也被树、甘特时间线等复用，
  * 那些页面仍需要卡片内边距。内容区归零后必须配合 overflow: hidden 保住卡片圆角，
@@ -429,16 +442,6 @@ a {
 .n-card.n-modal .n-form-item-label {
   font-size: var(--dialog-label-size);
   line-height: var(--dialog-label-line-height);
-}
-/* 弹窗控件统一为小尺寸档（与 n-form size="small" 一致）：高度 28px、字号 13px。 */
-.n-card.n-modal .n-input,
-.n-card.n-modal .n-input-number {
-  --n-height: var(--dialog-control-height) !important;
-  --n-font-size: var(--dialog-label-size) !important;
-}
-.n-card.n-modal .n-base-selection {
-  --n-height: var(--dialog-control-height) !important;
-  --n-font-size: var(--dialog-label-size) !important;
 }
 .n-card.n-modal .n-form-item--top-labelled {
   grid-template-rows: minmax(0, auto) 1fr;
@@ -655,26 +658,6 @@ a {
   :is(.n-input__placeholder, .n-base-selection-placeholder),
 .filter-field :is(.n-input__placeholder, .n-base-selection-placeholder) {
   opacity: 0;
-}
-/* 弹窗内控件是小尺寸：框内标签的垂直中心与左内边距跟 28px 档位对齐 */
-.n-card.n-modal
-  .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
-    :has(.n-form-item-label .n-checkbox)
-  ) {
-  --floating-field-height: var(--dialog-control-height);
-  --floating-label-inset-x: 10px;
-}
-.n-card.n-modal .filter-field {
-  --floating-field-height: var(--dialog-control-height);
-  --floating-label-inset-x: 10px;
-}
-/* 登录页控件是 large 档（40px），框内标签按同一高度居中 */
-.login-card
-  .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
-    :has(.n-form-item-label .n-checkbox)
-  ) {
-  --floating-field-height: var(--control-height-large);
-  --floating-label-inset-x: 14px;
 }
 /* 侧栏菜单密度：默认 42px 菜单项压到 34px（!important 压过 Naive 写在根上的内联变量） */
 .n-menu {
@@ -927,34 +910,8 @@ a {
 .filter-field .n-input-number {
   width: var(--control-width);
 }
-.filter-field .n-input,
-.filter-bar > .n-input,
-.filter-bar > .n-input-number {
-  --n-height: var(--control-height) !important;
-}
-.filter-field .n-base-selection,
-.filter-bar > .n-select .n-base-selection {
-  --n-height: var(--control-height) !important;
-}
-.filter-field .n-input,
-.filter-field .n-base-selection,
-.filter-bar > .n-input,
-.filter-bar > .n-select .n-base-selection {
-  --n-font-size: var(--control-font-size) !important;
-}
 .filter-field .n-input {
   background-color: var(--color-field-surface);
-}
-/* 页面级控件统一高度 / 字号：输入框、数字输入、日期与下拉选择器都走同一令牌，
- * 避免各页面再按 size 或局部高度写第二套尺寸。弹窗不在 `.page` 作用域内，仍用 size="small"。 */
-.page .n-input,
-.page .n-input-number {
-  --n-height: var(--control-height) !important;
-  --n-font-size: var(--control-font-size) !important;
-}
-.page .n-base-selection {
-  --n-height: var(--control-height) !important;
-  --n-font-size: var(--control-font-size) !important;
 }
 /* 日期区间等宽控件跨两列展示，避免两个日期输入挤在一格里；窄屏回到单列。 */
 .filter-field-wide {
