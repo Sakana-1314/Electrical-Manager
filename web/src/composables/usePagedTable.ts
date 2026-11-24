@@ -79,7 +79,7 @@ export interface UsePagedTable<T, F extends object> {
   changePage: (nextPage?: number) => Promise<void>
   changePageSize: (nextPageSize?: number) => Promise<void>
   resetFilters: () => Promise<void>
-  /** 无 urlSync 时为空操作；供 AI 查询等自定义路径复用 */
+  /** 无 urlSync 时为空操作；供页面自定义改筛选后同步地址栏 */
   syncRoute: () => Promise<void>
 }
 

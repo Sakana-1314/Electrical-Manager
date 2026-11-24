@@ -17,7 +17,6 @@ import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import { defineComponent, h } from 'vue'
 import type { PurchaseMaterial, PurchaseRecord } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
-import { aiSearchApi } from '@/api/aiSearch'
 import { useAuthStore } from '@/stores/auth'
 import PurchaseMaterialsView from './PurchaseMaterialsView.vue'
 import PurchaseRequestsView from './PurchaseRequestsView.vue'
@@ -43,12 +42,7 @@ vi.mock('@/api/procurement', () => ({
   },
 }))
 
-vi.mock('@/api/aiSearch', () => ({
-  aiSearchApi: { status: vi.fn(), expand: vi.fn() },
-}))
-
 const api = vi.mocked(procurementApi)
-const aiApi = vi.mocked(aiSearchApi)
 
 // jsdom 缺少 NDataTable 依赖的观测 API。
 class ResizeObserverStub {
@@ -260,7 +254,6 @@ async function clickButton(label: string) {
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
-  aiApi.status.mockResolvedValue({ available: false } as never)
 })
 
 afterEach(() => {

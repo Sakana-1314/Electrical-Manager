@@ -146,40 +146,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/ai-search/expand": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 查询词扩展 */
-        post: operations["expand_api_v1_ai_search_expand_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/ai-search/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 服务状态 */
-        get: operations["status_api_v1_ai_search_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/system-settings/advanced-settings": {
         parameters: {
             query?: never;
@@ -2643,39 +2609,6 @@ export interface components {
              * @description 默认用户权限键；缺省 / null 表示保持现状，空数组表示不授予任何权限
              */
             default_permissions?: string[] | null;
-        };
-        /**
-         * AiSearchExpandRead
-         * @example {
-         *       "original": "电机|接触器",
-         *       "expanded": "电机|电动机|接触器"
-         *     }
-         */
-        AiSearchExpandRead: {
-            /** Original */
-            original: string;
-            /** Expanded */
-            expanded: string;
-        };
-        /**
-         * AiSearchExpandRequest
-         * @example {
-         *       "value": "电机|接触器"
-         *     }
-         */
-        AiSearchExpandRequest: {
-            /** Value */
-            value: string;
-        };
-        /**
-         * AiSearchStatusRead
-         * @example {
-         *       "available": true
-         *     }
-         */
-        AiSearchStatusRead: {
-            /** Available */
-            available: boolean;
         };
         /**
          * ApiError
@@ -13628,231 +13561,6 @@ export interface operations {
                      *       "message": "请求字段或筛选参数不合法",
                      *       "details": {},
                      *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    expand_api_v1_ai_search_expand_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AiSearchExpandRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "original": "电机|接触器",
-                     *       "expanded": "电机|电动机|接触器"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AiSearchExpandRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-        };
-    };
-    status_api_v1_ai_search_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "available": true
-                     *     }
-                     */
-                    "application/json": components["schemas"]["AiSearchStatusRead"];
-                };
-            };
-            /** @description 业务校验失败 */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "NOT_FOUND",
-                     *       "message": "二级库物资不存在",
-                     *       "details": {},
-                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 未认证或凭证无效 */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "UNAUTHORIZED",
-                     *       "message": "请先登录",
-                     *       "details": {},
-                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 权限不足 */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "FORBIDDEN",
-                     *       "message": "没有执行此操作的权限",
-                     *       "details": {},
-                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 版本、状态或业务数据冲突 */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VERSION_CONFLICT",
-                     *       "message": "数据已被其他用户修改，请刷新后重试",
-                     *       "details": {},
-                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
-                     *     }
-                     */
-                    "application/json": components["schemas"]["ApiError"];
-                };
-            };
-            /** @description 请求参数校验失败 */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "code": "VALIDATION_ERROR",
-                     *       "message": "请求字段或筛选参数不合法",
-                     *       "details": {},
-                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];
@@ -26630,7 +26338,6 @@ export interface operations {
                 status?: components["schemas"]["PurchasePlanStatus"][] | null;
                 coded?: boolean | null;
                 moved?: boolean | null;
-                ai_expand?: boolean;
                 sort_by?: ("plan_no" | "plan_date" | "material_code" | "category" | "urgency" | "demand_department" | "name" | "model_spec" | "planned_qty" | "unit_name" | "actual_demand_person" | "purchase_responsible" | "subitem_no" | "usage" | "images") | null;
                 sort_order?: "asc" | "desc";
             };
@@ -30424,7 +30131,6 @@ export interface operations {
                 salesperson?: string | null;
                 subitem_no?: string | null;
                 empty_subitem_no?: boolean;
-                ai_expand?: boolean;
                 sort_by?: ("purchase_qty" | "plan_date" | "purchase_order_no" | "trace_no" | "contract_no" | "vessel_no" | "consolidation_date" | "consolidation_port" | "sailing_date" | "contract_sign_date" | "unit_price" | "category" | "demand_department" | "material_name" | "model_spec" | "material_code" | "actual_demand_person" | "usage" | "purchase_responsible" | "salesperson" | "status" | "purchase_date" | "images" | "subitem_no") | null;
                 sort_order?: "asc" | "desc";
             };

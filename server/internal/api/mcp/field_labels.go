@@ -25,7 +25,6 @@ var defaultParamLabels = map[string]string{
 	"search_value": "搜索值",
 	"sort_by":      "排序字段",
 	"sort_order":   "排序方向",
-	"ai_expand":    "AI 扩展搜索",
 	"limit":        "数量上限",
 	"cursor":       "分页游标",
 	"fields":       "同步字段",

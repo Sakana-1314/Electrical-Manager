@@ -32,11 +32,6 @@ type Settings struct {
 	WechatMiniProgramAppSecret string
 	// 小程序码环境（trial / release），不在管理端配置。
 	WechatMiniProgramCodeEnv string
-	// AI 搜索（OpenAI 兼容端点）完全由服务端环境变量配置，管理端不再提供配置入口。
-	AISearchEnabled  bool
-	AISearchEndpoint string
-	AISearchAPIKey   string
-	AISearchModel    string
 	// 飞书 / 钉钉机器人推送：地址、密钥、订阅事件都由环境变量提供。
 	FeishuWebhook   WebhookConfig
 	DingTalkWebhook WebhookConfig
@@ -88,9 +83,6 @@ func Load() (*Settings, error) {
 		WechatMiniProgramAppID:     env("APP_WECHAT_MINI_PROGRAM_APP_ID", ""),
 		WechatMiniProgramAppSecret: env("APP_WECHAT_MINI_PROGRAM_APP_SECRET", ""),
 		WechatMiniProgramCodeEnv:   env("APP_WECHAT_MINI_PROGRAM_CODE_ENV", "release"),
-		AISearchEndpoint:           strings.TrimRight(strings.TrimSpace(env("APP_AI_SEARCH_ENDPOINT", "")), "/"),
-		AISearchAPIKey:             strings.TrimSpace(env("APP_AI_SEARCH_API_KEY", "")),
-		AISearchModel:              strings.TrimSpace(env("APP_AI_SEARCH_MODEL", "")),
 		FeishuWebhook: WebhookConfig{
 			URL:    strings.TrimSpace(env("APP_FEISHU_WEBHOOK_URL", "")),
 			Secret: strings.TrimSpace(env("APP_FEISHU_WEBHOOK_SECRET", "")),
@@ -112,20 +104,11 @@ func Load() (*Settings, error) {
 		return nil, fmt.Errorf("APP_WECHAT_MINI_PROGRAM_CODE_ENV 只能是 trial 或 release")
 	}
 	var err error
-	if s.AISearchEnabled, err = envBool("APP_AI_SEARCH_ENABLED", false); err != nil {
-		return nil, err
-	}
 	if s.FeishuWebhook.Enabled, err = envBool("APP_FEISHU_WEBHOOK_ENABLED", false); err != nil {
 		return nil, err
 	}
 	if s.DingTalkWebhook.Enabled, err = envBool("APP_DINGTALK_WEBHOOK_ENABLED", false); err != nil {
 		return nil, err
-	}
-	if s.AISearchEnabled && (s.AISearchEndpoint == "" || s.AISearchAPIKey == "" || s.AISearchModel == "") {
-		return nil, fmt.Errorf("启用 APP_AI_SEARCH_ENABLED 时必须配置 APP_AI_SEARCH_ENDPOINT / APP_AI_SEARCH_API_KEY / APP_AI_SEARCH_MODEL")
-	}
-	if s.AISearchEndpoint != "" && !strings.HasPrefix(s.AISearchEndpoint, "http://") && !strings.HasPrefix(s.AISearchEndpoint, "https://") {
-		return nil, fmt.Errorf("APP_AI_SEARCH_ENDPOINT 必须使用 http:// 或 https://")
 	}
 	if s.FeishuWebhook.Enabled && s.FeishuWebhook.URL == "" {
 		return nil, fmt.Errorf("启用 APP_FEISHU_WEBHOOK_ENABLED 时必须配置 APP_FEISHU_WEBHOOK_URL")

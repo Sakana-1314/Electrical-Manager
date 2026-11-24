@@ -12,7 +12,6 @@ import type {
 } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { AppError } from '@/api/client'
-import { aiSearchApi } from '@/api/aiSearch'
 import { useAuthStore } from '@/stores/auth'
 import PurchasePlanDetailModal from '@/components/PurchasePlanDetailModal.vue'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
@@ -42,7 +41,6 @@ import { formatDate, toShanghaiDate } from '@/utils/time'
 import { downloadBlob, downloadFromUrl, exportDownloadUrl } from '@/utils/download'
 import { routeQueryString } from '@/utils/routeQuery'
 import { useExportJob } from '@/composables/useExportJob'
-import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
@@ -104,14 +102,13 @@ const {
   changePage,
   changePageSize,
   resetFilters,
-  syncRoute,
 } = usePagedTable<PurchaseMaterial, PurchaseFilters>({
   fetch: (f, pager) =>
     procurementApi.materials({
       page: pager.page,
       page_size: pager.page_size,
       moved: false,
-      name: searchName.value,
+      name: f.name.trim() || undefined,
       model_spec: f.model_spec.trim() || undefined,
       actual_demand_person:
         f.actual_demand_person && f.actual_demand_person !== EMPTY_DEMAND_PERSON_FILTER
@@ -139,7 +136,6 @@ const {
   onLoaded: () => {
     checkedRowKeys.value = []
   },
-  beforeQuery: () => clearExpandedName(),
   urlSync: {
     routeName: 'purchase-materials',
     fromQuery: (route) => {
@@ -184,9 +180,6 @@ const {
     preservedQueryKeys: ['detail'],
   },
 })
-const { searchName, applyExpandedName, clearExpandedName } = useImplicitAiSearch(() => filters.name)
-const aiAvailable = ref(false)
-const aiSearching = ref(false)
 // 异步导出（含图片渲染耗时较长）：提交 202 秒回 → 轮询 → 下载
 const { running: resultExporting, run: runResultExport } =
   useExportJob<PurchasePlanResultExportRequest>({
@@ -567,33 +560,6 @@ async function loadFilterOptions() {
     // 静默：选项沿用上一次结果
   }
 }
-async function loadAiStatus() {
-  try {
-    aiAvailable.value = (await aiSearchApi.status()).available
-  } catch {
-    aiAvailable.value = false
-  }
-}
-async function aiQuery() {
-  const value = filters.name.trim()
-  if (!value) {
-    message.warning('请先输入物资名称')
-    return
-  }
-  aiSearching.value = true
-  try {
-    const data = await aiSearchApi.expand(value)
-    applyExpandedName(data.expanded)
-    // 走原语而非 query()，避免 beforeQuery 清掉刚 apply 的扩展名
-    page.value = 1
-    await syncRoute()
-    await load()
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '智能查询失败')
-  } finally {
-    aiSearching.value = false
-  }
-}
 async function exportResults() {
   // 导出仍按「计划数量」「计量单位」两列走：列表里合成了一列「数量」，
   // 但导出沿用后端模板的列键与顺序，不能因为显示合并而少给下游一列。
@@ -612,7 +578,7 @@ async function exportResults() {
         : undefined
     const job = await runResultExport({
       columns: exportColumns,
-      name: searchName.value,
+      name: filters.name.trim() || undefined,
       model_spec: filters.model_spec.trim() || undefined,
       actual_demand_person: actualDemandPerson,
       empty_actual_demand_person: filters.actual_demand_person === EMPTY_DEMAND_PERSON_FILTER,
@@ -975,7 +941,6 @@ function handleExport(key: string) {
 onMounted(() => {
   document.addEventListener('fullscreenchange', syncTableFullscreen)
   void loadFilterOptions()
-  void loadAiStatus()
   // 列表首载由 usePagedTable（immediate）触发
 })
 onBeforeUnmount(() => {
@@ -1080,22 +1045,6 @@ onBeforeUnmount(() => {
               </n-space>
 
               <n-button @click="resetFilters">重置</n-button>
-              <n-button
-                secondary
-                type="primary"
-                :loading="aiSearching"
-                :disabled="!aiAvailable || !filters.name.trim()"
-                :title="
-                  aiAvailable
-                    ? filters.name.trim()
-                      ? '自动扩展物资名称同义词并立即查询'
-                      : '请先输入物资名称'
-                    : '请联系超级管理员配置大模型服务'
-                "
-                @click="aiQuery"
-              >
-                智能查询
-              </n-button>
               <n-button type="primary" @click="query">查询</n-button>
             </div>
           </div>

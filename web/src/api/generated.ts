@@ -36,7 +36,6 @@ export type QrLoginSession = components['schemas']['QrLoginSessionRead']
 export type QrLoginPoll = components['schemas']['QrLoginPollRead']
 export type TokenPairResponse = components['schemas']['TokenPairResponse']
 export type MiniProgramLoginResponse = components['schemas']['MiniProgramLoginResponse']
-export type AiSearchStatus = components['schemas']['AiSearchStatusRead']
 export type AdvancedSettings = components['schemas']['AdvancedSettingsRead']
 export type AdvancedSettingsWrite = components['schemas']['AdvancedSettingsUpdate']
 /* 项目（多项目数据隔离）：业务数据都挂在项目下，右上角切换当前项目。 */
@@ -150,14 +149,6 @@ export interface Page<T> {
 /** 用户 + 接口令牌（后端 UserApiTokenRead；令牌加密入库，读取接口每次解密回显，旧数据可能为 null） */
 export type ManagedUser = UserApiTokenRead
 
-/** AI 搜索扩展（输入/结果） */
-export interface AiSearchExpandInput {
-  value: string
-}
-export interface AiSearchExpandResult {
-  original: string
-  expanded: string
-}
 
 /** 物资档案导入结果 */
 export interface MaterialCodeLibraryImportResult {

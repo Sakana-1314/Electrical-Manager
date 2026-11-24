@@ -12,7 +12,6 @@
 | 请求打到不存在的 API 路径 | 400 | `ROUTE_NOT_FOUND` | `server/internal/app` 的 Gin `NoRoute` 处理器直接返回 400，message 为「接口路径不存在」，框架默认的 404 不会出现 |
 | 路径存在但方法不匹配 | 405 | `HTTP_ERROR` | Gin `NoMethod` 处理器返回，message 为 `Method Not Allowed` |
 | 前端路由级「页面不存在」 | — | — | `web/src/views/NotFoundView.vue`，浏览器端 UI 展示，不涉及 HTTP 状态码 |
-| 上游服务的 404 判断 | — | — | `service/aisearch` 判断上游 AI 接口 404 后转换为 `AI_ENDPOINT_NOT_FOUND`，属消费外部服务的逻辑 |
 
 ```json
 { "code": "NOT_FOUND", "message": "二级库物资不存在", "details": {}, "request_id": "…" }
@@ -73,9 +72,8 @@
 | 409 | 版本冲突 / 数据约束冲突 / 状态机不允许 | `VERSION_CONFLICT`、`DATA_CONFLICT`、`INVALID_STATUS_TRANSITION` |
 | 413 | 请求体过大 | `IMAGE_TOO_LARGE` |
 | 422 | 请求参数校验失败 | `VALIDATION_ERROR` |
-| 429 | 上游限流透传 | `AI_RATE_LIMITED` |
 | 500 | 服务内部错误 | `INTERNAL_SERVER_ERROR`、`DATABASE_ERROR`、`DATABASE_QUERY_ERROR` |
-| 502 / 503 | 上游不可用 / 服务不可用 | `AI_UPSTREAM_FAILED`、`AI_INVALID_RESPONSE`、`DATABASE_UNAVAILABLE`、`AI_NOT_CONFIGURED` |
+| 502 / 503 | 上游不可用 / 服务不可用 | `WECHAT_ACCESS_TOKEN_FAILED`、`WECHAT_AUTH_UNAVAILABLE`、`DATABASE_UNAVAILABLE` |
 
 `HTTP_ERROR` 只用于方法不匹配（405），状态码由 `NoMethod` 处理器直接指定，因此不出现在默认状态码映射里。
 

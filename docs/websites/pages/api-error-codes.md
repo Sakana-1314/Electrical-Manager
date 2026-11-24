@@ -137,28 +137,12 @@
 | `SHARE_NOT_FOUND` | 400 | 分享链接不存在或已失效 | `service/share` |
 | `SHARE_EXPIRED` | 400 | 分享链接已失效，请联系分享人重新分享 | `service/share` |
 
-## AI 搜索（上游）
-
-| code | HTTP | 含义 | 主要来源 |
-| --- | --- | --- | --- |
-| `AI_NOT_CONFIGURED` | 503 | AI 搜索服务未启用或配置不完整 | `service/aisearch` |
-| `AI_CONNECTION_FAILED` | 400 | 无法连接 AI 服务（地址/DNS/TLS/出网） | `service/aisearch` |
-| `AI_CONNECT_TIMEOUT` | 400 | 连接 AI 服务超时 | `service/aisearch` |
-| `AI_REQUEST_FAILED` | 400 | 请求 AI 服务失败 | `service/aisearch` |
-| `AI_REQUEST_TIMEOUT` / `AI_RESPONSE_TIMEOUT` | 400 | 请求或等待上游响应超时 | `service/aisearch` |
-| `AI_RATE_LIMITED` | 429 | 上游限流 | `service/aisearch` |
-| `AI_INVALID_RESPONSE` | 502 | 上游返回不是有效 JSON | `service/aisearch` |
-| `AI_UPSTREAM_FAILED` | 502 | 上游返回错误状态 | `service/aisearch` |
-| `AI_ENDPOINT_NOT_FOUND` | 400 | 上游接口 404（地址填错） | `service/aisearch` |
-| `AI_AUTH_FAILED` | 400 | 上游鉴权失败（Key 无效） | `service/aisearch` |
-| `AI_REQUEST_REJECTED` | 400 | 上游拒绝请求（模型名/参数不对） | `service/aisearch` |
-
 ## 微信小程序（上游）
 
 | code | HTTP | 含义 | 主要来源 |
 | --- | --- | --- | --- |
-| `WECHAT_NOT_CONFIGURED` | 503 | 微信小程序登录尚未配置 | `service/miniprogram`、`service/aisearch` |
-| `WECHAT_CONFIGURATION_INVALID` | 503 | AppID 与 AppSecret 配置无效 | `service/miniprogram`、`service/aisearch` |
+| `WECHAT_NOT_CONFIGURED` | 503 | 微信小程序登录尚未配置 | `service/miniprogram` |
+| `WECHAT_CONFIGURATION_INVALID` | 503 | AppID 与 AppSecret 配置无效 | `service/miniprogram` |
 | `WECHAT_AUTH_UNAVAILABLE` | 503 | 微信登录服务暂时不可用 | `service/miniprogram` |
 | `WECHAT_AUTH_INVALID_RESPONSE` | 502 | 微信登录服务返回异常 | `service/miniprogram` |
 | `WECHAT_ACCESS_TOKEN_FAILED` | 502 | 微信接口凭证获取失败 | `service/miniprogram` |

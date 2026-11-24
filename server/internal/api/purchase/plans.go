@@ -12,7 +12,6 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/common"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/excelexport"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/exportjob"
@@ -67,10 +66,6 @@ func normalStatusFor(c *web.Ctx) *string {
 	return &v
 }
 
-func expand(c *web.Ctx, value *string) (*string, error) {
-	return aisearch.ExpandSearchValue(c.DB, value, false)
-}
-
 // imagePaths 计划 / 记录附带的、磁盘上真实存在的原图路径（缺失的跳过）。
 func imagePaths(images []material.Image) excelexport.ImagePaths {
 	out := excelexport.ImagePaths{}
@@ -109,7 +104,6 @@ func listMaterials(c *web.Ctx) error {
 	status := p.QueryStrList("status", "oneof=正常|暂不申购|已归档")
 	coded := p.QueryBoolPtr("coded")
 	moved := p.QueryBoolPtr("moved")
-	aiExpand := p.QueryBool("ai_expand", false)
 	sortBy := p.QueryStr("sort_by", "oneof="+schema.PurchasePlanResultColumns)
 	sortOrder := p.QueryStrDefault("sort_order", "asc", "oneof=asc|desc")
 	if err := p.Err(); err != nil {
@@ -121,20 +115,6 @@ func listMaterials(c *web.Ctx) error {
 		}
 		if len(status) == 0 {
 			status = []string{domain.PlanStatusNormal}
-		}
-	}
-	if aiExpand {
-		var err error
-		if keyword, err = expand(c, keyword); err != nil {
-			return err
-		}
-		if name, err = expand(c, name); err != nil {
-			return err
-		}
-		if searchField != nil && *searchField == "name" {
-			if searchValue, err = expand(c, searchValue); err != nil {
-				return err
-			}
 		}
 	}
 	items, total, err := material.SearchPurchases(c.DB, material.PurchaseSearch{
