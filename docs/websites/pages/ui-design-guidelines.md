@@ -55,7 +55,7 @@
 | 卡片内边距 | 筛选 / 说明卡片 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区为 `0`，表格直接贴卡片边（见「数据表格」） |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
 | 字号档位 | 页面标题 `--page-title-size`（20px）；卡片 / 区块标题 `--list-card-title-size`（16px）；列表正文与表格 `--list-body-size` / `--list-table-font-size`（13px）；辅助说明 `--list-caption-size`（12px）。页面与列表页不再写死字号 |
-| 控件尺寸 | 列表页输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）；弹窗内 `size="small"` 用 `--control-height-small`（28px）。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 控件尺寸 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）——列表页、筛选区、弹窗、登录页不再按 `size` 分档；文本域高度随内容。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
 | 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `--list-table-font-size`（13px，由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）为 `--list-body-size`（13px）；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
@@ -270,7 +270,7 @@
 | 表格 | 单元格内边距 `--list-table-cell-padding-y/x`（8px / 12px）、字号 `--list-table-font-size`（13px）、行高 `--list-table-line-height`（1.5）、表头字重 `--list-table-header-weight` |
 | 分页 | `margin-top` / 上内边距走 `--list-pagination-margin-top` / `--list-pagination-padding-top`；表格卡片内再补 `--list-pagination-padding-x` / `--list-pagination-padding-bottom`，不贴卡片边缘 |
 | 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
-| 控件 | 列表页输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）；弹窗 `size="small"` 用 `--control-height-small`（28px）。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 控件 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px），弹窗与登录页也不再分档。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
 
 ### 浮动标签
 
@@ -279,8 +279,7 @@
 - 未输入且未聚焦：标签显示在控件框内，充当原位标签；**控件自带占位层始终隐藏（含聚焦态）**，避免标签与占位文字重复。
 - 聚焦或有值时：标签缩小并加粗加黑，压在控件上边框上，并用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；标签层级必须高于 Naive 的框线层（`.n-input__state-border` 的 `z-index:1`，标签用 `z-index:3`），否则框线会压在文字上。控件自身的 placeholder 不再显示。
 - 值判定：输入 / 日期 / 数字 / 文本域看原生 `input:placeholder-shown` / `textarea:placeholder-shown`；选择器（含多选）看 Naive 的 `.n-base-selection--selected`。多控件表单项（数量 + 单位）任一有值即浮起。
-- 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；弹窗内控件按 28px、
-  登录页 large 控件按 40px、列表页控件按 34px 计算框内垂直中心。
+- 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；所有控件统一按 `--control-height`（34px）计算框内垂直中心，弹窗 / 登录页 / 列表页不再分档。
 - 非输入类表单项保持原标签行：开关、纯展示、复选框作为 label 的批量修改字段（`:has(label .n-checkbox)` 排除）。
 - 令牌：`--floating-label-size`（浮起字号 11px）、`--floating-label-line-height`（14px）、
   `--floating-label-color`（浮起用 `--color-text-strong`，加黑）、`--floating-label-weight`（`600`，加粗）、
@@ -308,7 +307,7 @@
 | 页脚 | 按钮统一 `--dialog-footer-button-height`（28px）/ `--dialog-footer-button-size`（12px）/ `--dialog-footer-button-padding`，按钮组与左右分组间距 `--dialog-footer-gap`（8px）；≤360px 由令牌压到 26px / 11px。页脚结构统一用全局 `.modal-footer` / `.modal-footer-left` / `.modal-footer-right`，不要逐组件复制 |
 | 内容区滚动 | 桌面用 `--dialog-body-max-height`（`min(70vh, 660px)`）与 `--dialog-scroll-gutter`（12px）；窄屏 / 矮视口由全局断点解除内层上限，只保留内容区一层滚动 |
 | 宽度 | 仍按信息量用 `width: min(标准宽, calc(100vw - 24px/32px))` 取宽度，不强制所有弹窗同宽 |
-| 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），字号、行高、间距必须引用同一套令牌 |
+| 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：top 标签 + 浮动标签、`size="small" :show-feedback="false"`（控件高度仍由全局 `--control-height` 覆盖）、双列 `.form-grid` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），字号、行高、间距、控件高度必须引用同一套令牌 |
 
 ### 详情弹窗
 

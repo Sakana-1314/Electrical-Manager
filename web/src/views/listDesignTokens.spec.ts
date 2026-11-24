@@ -78,7 +78,6 @@ const REQUIRED_TOKENS = [
   '--list-badge-size',
   '--list-badge-line-height',
   '--control-height',
-  '--control-height-small',
   '--control-font-size',
   '--control-padding-x',
   '--control-width',
@@ -145,15 +144,12 @@ describe('列表页 / 控件令牌', () => {
     expect(styles).toMatch(
       /\.filter-field \.n-input,\s*\n\.filter-field \.n-select,\s*\n\.filter-field \.n-date-picker,\s*\n\.filter-field \.n-input-number \{[^}]*width: var\(--control-width\);/,
     )
+    // 高度 / 字号由全局控件规则统一，不再按页面 / 弹窗 / 登录页尺寸分档
+    expect(styles).toMatch(/\.n-input \{[^}]*--n-font-size: var\(--control-font-size\) !important;/)
     expect(styles).toMatch(
-      /\.filter-field \.n-input,\s*\n\.filter-bar > \.n-input,\s*\n\.filter-bar > \.n-input-number \{[^}]*--n-height: var\(--control-height\) !important;/,
+      /\.n-input:not\(\.n-input--textarea\),\s*\n\.n-base-selection \{[^}]*--n-height: var\(--control-height\) !important;[^}]*--n-font-size: var\(--control-font-size\) !important;/,
     )
-    expect(styles).toMatch(
-      /\.filter-field \.n-base-selection,\s*\n\.filter-bar > \.n-select \.n-base-selection \{[^}]*--n-height: var\(--control-height\) !important;/,
-    )
-    expect(styles).toMatch(
-      /\.page \.n-input,\s*\n\.page \.n-input-number \{[^}]*--n-height: var\(--control-height\) !important;[^}]*--n-font-size: var\(--control-font-size\) !important;/,
-    )
+    expect(styles).toMatch(/\.n-input-group \.n-button \{[^}]*height: var\(--control-height\);/)
   })
 
   it('分页条只引用列表令牌', () => {

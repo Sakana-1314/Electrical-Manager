@@ -58,7 +58,6 @@ describe('浮动标签令牌', () => {
       '--floating-label-padding-x',
       '--floating-label-inside-size',
       '--floating-label-inside-line-height',
-      '--control-height-large',
     ]) {
       expect(tokens, `:root 缺少 ${token}`).toContain(`${token}:`)
     }
@@ -131,13 +130,19 @@ describe('浮动标签接线', () => {
     expect(floating).toMatch(/\.n-form-item-label \.n-checkbox/)
   })
 
-  it('弹窗小尺寸与登录 large 尺寸各有自己的框内中心', () => {
-    expect(floating).toMatch(
-      /\.n-card\.n-modal\s*\n\s*\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\([\s\S]*?--floating-field-height: var\(--dialog-control-height\);/,
+  it('所有控件共用同一 --control-height，标签框内中心不再分档', () => {
+    expect(styles).toMatch(
+      /\.n-input:not\(\.n-input--textarea\),\s*\n\.n-base-selection \{[^}]*--n-height: var\(--control-height\) !important;/,
     )
     expect(floating).toMatch(
-      /\.login-card\s*\n\s*\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\([\s\S]*?--floating-field-height: var\(--control-height-large\);/,
+      /\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\([\s\S]*?--floating-field-height: var\(--control-height\);/,
     )
+    expect(styles).toMatch(
+      /\.filter-field \{[^}]*--floating-field-height: var\(--control-height\);/,
+    )
+    expect(styles).not.toContain('--dialog-control-height')
+    expect(styles).not.toContain('--control-height-small')
+    expect(styles).not.toContain('--control-height-large')
   })
 })
 
