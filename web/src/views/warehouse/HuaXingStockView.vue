@@ -499,11 +499,13 @@ function onFileChange(event: Event) {
 
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-        <div class="filter-heading-actions">
-          <n-tag v-if="activeFilterCount" :bordered="false" round type="success">
+        <div class="filter-title-row">
+          <div class="filter-title">筛选条件</div>
+          <span v-if="activeFilterCount" class="filter-count">
             已启用 {{ activeFilterCount }} 项
-          </n-tag>
+          </span>
+        </div>
+        <div class="filter-heading-actions">
           <FilterExpandButton v-model:expanded="filterExpanded" />
         </div>
       </div>

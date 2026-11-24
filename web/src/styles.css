@@ -98,6 +98,10 @@
   /* 筛选区 */
   --list-filter-heading-gap: 16px;
   --list-filter-heading-margin: 18px;
+  /* 筛选标题旁的「已启用 N 项」：12px 小字，与标题同一行，不撑高标题行 */
+  --list-filter-count-gap: 8px;
+  --list-filter-count-size: 12px;
+  --list-filter-count-line-height: 18px;
   --list-filter-actions-gap: 10px;
   --list-filter-actions-margin: 20px;
   --list-filter-actions-padding: 16px;
@@ -839,6 +843,21 @@ a {
 .filter-heading {
   justify-content: space-between;
   margin-bottom: var(--list-filter-heading-margin);
+}
+/* 标题与「已启用 N 项」同一行靠左：徽标行高小于标题行高，出现 / 消失都不改变筛选标题行高度 */
+.filter-title-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--list-filter-count-gap);
+}
+.filter-count {
+  flex: none;
+  color: var(--color-success);
+  font-size: var(--list-filter-count-size);
+  font-weight: 500;
+  line-height: var(--list-filter-count-line-height);
+  white-space: nowrap;
 }
 .filter-actions {
   margin-top: var(--list-filter-actions-margin);

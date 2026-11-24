@@ -324,10 +324,15 @@ const activeFilterCount = computed(
       </div>
     </div>
 
-    <n-card class="filter-card" title="筛选条件" :bordered="false">
-      <template #header-extra>
-        <span v-if="activeFilterCount" class="muted">已启用 {{ activeFilterCount }} 项</span>
-      </template>
+    <n-card class="filter-card" :bordered="false">
+      <div class="filter-heading">
+        <div class="filter-title-row">
+          <div class="filter-title">筛选条件</div>
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+        </div>
+      </div>
       <div class="filter-grid">
         <label class="filter-field">
           <span>文件名</span>
