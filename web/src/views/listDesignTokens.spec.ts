@@ -51,9 +51,8 @@ const REQUIRED_TOKENS = [
   '--list-cell-title-line-height',
   '--list-cell-gap',
   '--list-inline-gap',
+  '--list-panel-heading-gap',
   '--list-filter-heading-gap',
-  '--list-filter-heading-margin',
-  '--list-filter-count-gap',
   '--list-filter-count-size',
   '--list-filter-count-line-height',
   '--list-filter-actions-gap',
@@ -69,6 +68,10 @@ const REQUIRED_TOKENS = [
   '--list-table-line-height',
   '--list-table-cell-padding-y',
   '--list-table-cell-padding-x',
+  '--list-table-header-font-size',
+  '--list-table-header-line-height',
+  '--list-table-header-padding-y',
+  '--list-table-header-padding-x',
   '--list-table-header-weight',
   '--list-pagination-margin-top',
   '--list-pagination-padding-top',
@@ -120,13 +123,24 @@ describe('列表页 / 控件令牌', () => {
       /\.page \.n-card-content \{[^}]*padding: var\(--list-card-content-padding\);/,
     )
     expect(styles).toMatch(
-      /\.page \.n-data-table-th,\s*\n\.page \.n-data-table-td \{[^}]*padding: var\(--list-table-cell-padding-y\) var\(--list-table-cell-padding-x\);[^}]*font-size: var\(--list-table-font-size\);[^}]*line-height: var\(--list-table-line-height\);/,
+      /\.n-data-table \.n-data-table-th \{[^}]*padding: var\(--list-table-header-padding-y\) var\(--list-table-header-padding-x\);[^}]*font-size: var\(--list-table-header-font-size\);[^}]*font-weight: var\(--list-table-header-weight\);[^}]*line-height: var\(--list-table-header-line-height\);/,
     )
+    expect(styles).toMatch(
+      /\.n-data-table \.n-data-table-td \{[^}]*padding: var\(--list-table-cell-padding-y\) var\(--list-table-cell-padding-x\);[^}]*font-size: var\(--list-table-font-size\);[^}]*line-height: var\(--list-table-line-height\);/,
+    )
+    expect(styles).toMatch(
+      /\.n-table > thead > tr > th \{[^}]*padding: var\(--list-table-header-padding-y\) var\(--list-table-header-padding-x\);[^}]*font-size: var\(--list-table-header-font-size\);/,
+    )
+    expect(styles).toMatch(
+      /\.n-table > tbody > tr > td \{[^}]*padding: var\(--list-table-cell-padding-y\) var\(--list-table-cell-padding-x\);[^}]*font-size: var\(--list-table-font-size\);/,
+    )
+    expect(tokens).toContain('--list-table-header-padding-y: 10px;')
+    expect(tokens).toContain('--list-table-cell-padding-y: 8px;')
   })
 
-  it('筛选区布局由全局类统一提供', () => {
+  it('筛选区布局由全局类统一提供（无卡片容器 / 无标题行）', () => {
     expect(styles).toMatch(
-      /\.filter-heading \{[^}]*margin-bottom: var\(--list-filter-heading-margin\);/,
+      /\.filter-panel \{[^}]*display: flex;[^}]*--floating-label-bg: var\(--color-bg\);/,
     )
     expect(styles).toMatch(
       /\.filter-actions \{[^}]*margin-top: var\(--list-filter-actions-margin\);[^}]*padding-top: var\(--list-filter-actions-padding\);/,
@@ -141,13 +155,15 @@ describe('列表页 / 控件令牌', () => {
     expect(styles).toMatch(
       /\.filter-field > span \{[^}]*font-size: var\(--list-filter-label-size\);/,
     )
-    expect(styles).toMatch(/\.filter-title-row \{[^}]*gap: var\(--list-filter-count-gap\);/)
     expect(styles).toMatch(
       /\.filter-count \{[^}]*font-size: var\(--list-filter-count-size\);[^}]*line-height: var\(--list-filter-count-line-height\);/,
     )
+    expect(styles).not.toContain('.filter-card {')
+    expect(styles).not.toContain('.filter-heading {')
+    expect(styles).not.toContain('.filter-title {')
   })
 
-  it('「已启用 N 项」紧挨筛选标题且不再用 n-tag', () => {
+  it('「已启用 N 项」放在操作行左侧且不再用 n-tag / 标题行', () => {
     const files = [...vueFiles(`${WEB_ROOT}/src/views`), ...vueFiles(`${WEB_ROOT}/src/components`)]
     const counted = files.filter((path) =>
       readFileSync(path, 'utf8').includes('已启用 {{ activeFilterCount }}'),
@@ -155,11 +171,19 @@ describe('列表页 / 控件令牌', () => {
     expect(counted.length).toBeGreaterThan(5)
     for (const path of counted) {
       const source = readFileSync(path, 'utf8')
-      expect(source, `${path} 缺少 filter-title-row`).toContain('class="filter-title-row"')
       expect(source, `${path} 缺少 filter-count`).toContain('class="filter-count"')
+      expect(source, `${path} 计数不在操作行`).toMatch(
+        /class="(?:filter-actions|selector-search-actions)"/,
+      )
       expect(source, `${path} 仍用 n-tag 显示筛选计数`).not.toContain(
         'n-tag v-if="activeFilterCount"',
       )
+      expect(source, `${path} 仍有筛选标题`).not.toContain('filter-title')
+    }
+    for (const path of files) {
+      const source = readFileSync(path, 'utf8')
+      expect(source, `${path} 仍在使用 filter-card 容器`).not.toContain('class="filter-card"')
+      expect(source, `${path} 仍在使用 filter-heading`).not.toContain('class="filter-heading"')
     }
   })
 
@@ -182,7 +206,7 @@ describe('列表页 / 控件令牌', () => {
   })
 
   it('列表页不再各自复制筛选区布局样式', () => {
-    const selectors = ['.filter-heading {', '.filter-actions {', '.filter-action-buttons {']
+    const selectors = ['.filter-panel {', '.filter-actions {', '.filter-action-buttons {']
     for (const path of vueFiles(`${WEB_ROOT}/src/views`)) {
       const source = readFileSync(path, 'utf8')
       const styleBlocks = [...source.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]

@@ -10,7 +10,7 @@
  * 行尾可以直接给这个人排活（预填姓名的新增记录弹窗）。
  */
 import { computed, ref } from 'vue'
-import { NButton, NCard, NIcon, NInput, NTag, NTooltip } from 'naive-ui'
+import { NButton, NCard, NIcon, NInput, NTooltip } from 'naive-ui'
 import { AddOutline } from '@vicons/ionicons5'
 import { workApi } from '@/api/work'
 import type { WorkRecord, WorkWorkerTimeline } from '@/api/generated'
@@ -105,13 +105,7 @@ function openCreateRecord(name: string): void {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-        <div class="filter-heading-actions">
-          <n-tag :bordered="false" round>区间内 {{ total }} 人</n-tag>
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field filter-field-wide">
           <span>日期区间</span>
@@ -128,13 +122,14 @@ function openCreateRecord(name: string): void {
         </label>
       </div>
       <div class="filter-actions">
+        <span class="filter-count">区间内 {{ total }} 人</span>
         <span class="filter-hint">人员来自工作记录里填过的姓名；点色块编辑那条记录</span>
         <div class="filter-action-buttons">
           <n-button @click="resetFilters">重置</n-button>
           <n-button type="primary" @click="query">查询</n-button>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <WorkTimelineGrid

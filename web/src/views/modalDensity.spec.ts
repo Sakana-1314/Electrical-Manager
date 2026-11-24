@@ -139,7 +139,8 @@ describe('弹窗统一排版接线', () => {
       /\.n-card\.n-modal \.n-tab-pane \{[^}]*padding-top: var\(--dialog-tab-content-gap\);/,
     )
     expect(dialog).toContain('.n-descriptions-table-content')
-    expect(dialog).toContain('.n-data-table-td')
+    // 表格尺寸已改为全局令牌，弹窗内不再单独覆盖 DataTable 单元格
+    expect(styles).toContain('.n-data-table-td')
     expect(dialog).toMatch(
       /\.n-card\.n-modal \.n-alert \{[^}]*margin-bottom: var\(--dialog-block-gap\);/,
     )

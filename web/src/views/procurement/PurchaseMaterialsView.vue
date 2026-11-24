@@ -1005,18 +1005,7 @@ onBeforeUnmount(() => {
         </n-space>
       </div>
     </div>
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title-row">
-          <div class="filter-title">筛选条件</div>
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-        </div>
-        <div class="filter-heading-actions">
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
@@ -1080,6 +1069,10 @@ onBeforeUnmount(() => {
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <FilterExpandButton v-model:expanded="filterExpanded" />
           <ColumnVisibilityPicker
             :value="visibleColumnKeys"
             :options="fieldOptions"
@@ -1108,7 +1101,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </div>
-    </n-card>
+    </div>
     <div ref="tableAreaRef" class="purchase-plan-table-area">
       <n-button
         class="table-fullscreen-toggle"

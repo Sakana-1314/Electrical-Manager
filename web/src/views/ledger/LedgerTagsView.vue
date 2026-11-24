@@ -141,10 +141,7 @@ function hasDetail(node: unknown): boolean {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field">
           <span>标签范围</span>
@@ -156,7 +153,7 @@ function hasDetail(node: unknown): boolean {
           />
         </label>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <n-spin :show="loading">

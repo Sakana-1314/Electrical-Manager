@@ -218,10 +218,7 @@ function selectTask(key: string): void {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field filter-field-wide">
           <span>日期区间</span>
@@ -254,7 +251,7 @@ function selectTask(key: string): void {
           <n-button type="primary" @click="query">查询</n-button>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <WorkTimelineGrid
@@ -320,11 +317,11 @@ function selectTask(key: string): void {
     </n-card>
 
     <n-card v-if="selectedRow" class="data-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title">
+      <div class="panel-heading">
+        <div class="panel-title">
           {{ selectedRow.task.name }} · 时间段明细（{{ selectedRow.records.length }} 段）
         </div>
-        <div class="filter-heading-actions">
+        <div class="panel-heading-actions">
           <n-button
             v-if="canWrite"
             size="small"
@@ -358,6 +355,29 @@ function selectTask(key: string): void {
 </template>
 
 <style scoped>
+/* 任务详情面板标题：与列表页筛选区无关，单独用 panel-* 命名 */
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--list-filter-heading-gap);
+  margin-bottom: var(--list-panel-heading-gap);
+}
+
+.panel-title {
+  color: var(--color-text-strong);
+  font-size: var(--list-card-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: var(--list-card-title-line-height);
+}
+
+.panel-heading-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--list-inline-gap);
+}
+
 /* 任务名是选中入口：样式像正文，悬停才显示可点 */
 .task-label {
   padding: 0;
