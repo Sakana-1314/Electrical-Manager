@@ -147,17 +147,13 @@ function onFileChange(event: Event) {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <h1 class="page-title">二级库</h1>
-
-      <input
-        ref="fileInput"
-        class="hidden-file-input"
-        type="file"
-        accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-        @change="onFileChange"
-      />
-    </div>
+    <input
+      ref="fileInput"
+      class="hidden-file-input"
+      type="file"
+      accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+      @change="onFileChange"
+    />
 
     <n-card class="filter-card" :bordered="false">
       <div class="filter-panel">

@@ -74,12 +74,11 @@
    * 页面局部样式只允许引用 `var(--list-*)` / `var(--control-*)`，不写字面字号、行高、间距。
    * 表格卡片 `data-card` 的内容区不做内边距，表格（及分页条）直接贴着卡片边。 */
   --page-gap: 16px;
-  --page-header-min-height: 40px;
-  --page-header-gap: 10px 20px;
+  /* 页面名只出现在布局顶部的很矮导航条里（AppLayout 的 .app-topbar），视图不再渲染大标题；
+   * 少数页面仍有页级操作 / 信息行，统一压成一条紧凑行。 */
+  --page-header-gap: 10px;
   --page-header-padding: 0 2px;
-  --page-title-size: 20px;
-  --page-title-line-height: 1.35;
-  --page-title-weight: 600;
+  --heading-weight: 600;
   --list-card-header-padding: 16px 18px 10px;
   --list-card-content-padding: 14px 18px 18px;
   --list-card-gap: 18px;
@@ -334,30 +333,32 @@ a {
   /* 作为页面级局部加载遮罩（LoadingMask）的定位上下文 */
   position: relative;
 }
+/* 页级操作 / 信息行：页面名已在顶部导航条展示，这里只保留操作按钮或状态标签，
+ * 压成一条紧凑行（不再有 40px 最小高度与大标题）。 */
 .page-header {
   display: flex;
-  min-height: var(--page-header-min-height);
-  align-items: flex-start;
-  justify-content: space-between;
+  min-height: 0;
+  align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: var(--page-header-gap);
   padding: var(--page-header-padding);
+}
+/* 页头左侧还有统计标签（如用户管理）时保持两端分布，否则操作区一律靠右 */
+.page-header:has(.title-row) {
+  justify-content: space-between;
 }
 /* 页头右侧操作区：单个容器（不随标题换行），内部按钮在窄屏仍保持同一行 */
 .page-actions {
   display: flex;
   flex: none;
   min-width: 0;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--list-inline-gap);
 }
-.page-title {
-  margin: 0;
-  color: var(--color-text-strong);
-  font-size: var(--page-title-size);
-  font-weight: var(--page-title-weight);
-  letter-spacing: -0.02em;
-  line-height: var(--page-title-line-height);
+/* 无操作 / 无信息的页头不再占位（视图里的标题块已移除，这里兜底历史残留） */
+.page-header:not(:has(.page-actions, .title-row)) {
+  display: none;
 }
 .page-header > .n-space,
 .page-header > .n-button,
@@ -375,7 +376,7 @@ a {
 .page .n-card-header__main {
   color: var(--color-text-strong);
   font-size: var(--list-card-title-size);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
   line-height: var(--list-card-title-line-height);
 }
 /* 卡片内容密度：筛选 / 说明类卡片保留内边距；含表格的数据卡片在下方归零，表格直接贴边。 */
@@ -877,7 +878,7 @@ a {
 }
 .table-material-summary__name {
   color: var(--color-text-strong);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
 }
 .table-material-summary__meta {
   color: var(--color-text-muted);
@@ -997,7 +998,7 @@ a {
 .card-title {
   color: var(--color-text-strong);
   font-size: var(--list-card-title-size);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
   line-height: var(--list-card-title-line-height);
 }
 .muted {
@@ -1115,22 +1116,8 @@ a {
   .pagination-bar .n-pagination {
     flex-wrap: nowrap;
   }
-  /* 移动端窄导航条已展示当前页面标题，内容区不再重复标题；
-     页头只留操作区，下面这些按钮排成同一行，必要时压缩字号与内边距来容纳 */
-  .page-title {
-    display: none;
-  }
-  .page-header {
-    min-height: 0;
-    justify-content: flex-end;
-    /* 标题已隐藏，页头内只保留操作按钮，去掉与内容区的多余间距 */
-    padding: 0 2px;
-  }
-  /* 只隐藏「承载页面标题的容器」，不要误伤标题右侧的信息标签容器 */
-  .page-header > div:has(> .page-title),
-  .page-header > div:has(> div > .page-title) {
-    display: none;
-  }
+  /* 移动端页头只留操作区（页面名在顶部导航条），按钮排成同一行，
+     必要时压缩字号与内边距来容纳 */
   .page-actions {
     min-width: 0;
     max-width: 100%;

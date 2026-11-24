@@ -35,11 +35,9 @@ const tokens = rootTokens()
 
 const REQUIRED_TOKENS = [
   '--page-gap',
-  '--page-header-min-height',
   '--page-header-gap',
   '--page-header-padding',
-  '--page-title-size',
-  '--page-title-line-height',
+  '--heading-weight',
   '--list-card-header-padding',
   '--list-card-content-padding',
   '--list-card-title-size',
@@ -116,11 +114,10 @@ describe('列表页 / 控件令牌', () => {
       /\.page \{[^}]*font-size: var\(--list-body-size\);[^}]*line-height: var\(--list-body-line-height\);/,
     )
     expect(styles).toMatch(
-      /\.page-header \{[^}]*min-height: var\(--page-header-min-height\);[^}]*gap: var\(--page-header-gap\);[^}]*padding: var\(--page-header-padding\);/,
+      /\.page-header \{[^}]*min-height: 0;[^}]*justify-content: flex-end;[^}]*gap: var\(--page-header-gap\);[^}]*padding: var\(--page-header-padding\);/,
     )
-    expect(styles).toMatch(
-      /\.page-title \{[^}]*font-size: var\(--page-title-size\);[^}]*line-height: var\(--page-title-line-height\);/,
-    )
+    // 页面名统一在布局顶部导航条，视图不再渲染大标题
+    expect(styles).not.toContain('.page-title {')
     expect(styles).toMatch(
       /\.page \.n-card-header \{[^}]*padding: var\(--list-card-header-padding\);/,
     )

@@ -165,9 +165,6 @@ function handleExport(key: string) {
 <template>
   <div class="page">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">未编码物资</h1>
-      </div>
       <div class="page-actions">
         <n-space>
           <ColumnVisibilityPicker

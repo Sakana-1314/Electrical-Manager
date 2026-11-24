@@ -99,11 +99,12 @@ onMounted(load)
 
 <template>
   <div class="page advanced-settings-page">
-    <div class="page-header settings-header">
-      <h1 class="page-title">高级设置</h1>
-      <n-button type="primary" :loading="saving" :disabled="loading" @click="save">
-        保存配置
-      </n-button>
+    <div class="page-header">
+      <div class="page-actions">
+        <n-button type="primary" :loading="saving" :disabled="loading" @click="save">
+          保存配置
+        </n-button>
+      </div>
     </div>
 
     <div class="settings-grid">
@@ -142,13 +143,6 @@ onMounted(load)
 <style scoped>
 .advanced-settings-page {
   max-width: 860px;
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
 }
 
 .settings-grid {

@@ -300,9 +300,6 @@ void loadMemos()
 <template>
   <div class="page memo-page" :style="{ '--memo-font-size': `${fontSize}px` }">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">备忘录</h1>
-      </div>
       <div class="page-actions">
         <n-space :size="10" align="center">
           <span class="memo-font-size-label">字号</span>

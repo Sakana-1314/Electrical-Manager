@@ -73,7 +73,7 @@ web/src/
 ├── env.d.ts                ImportMetaEnv 声明 + __BUILD_TIME__
 ├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
 ├── api/client.ts           axios 实例、拦截器、AppError
-├── layouts/AppLayout.vue   唯一布局：侧边菜单/移动端抽屉 + 左下角用户菜单（桌面无顶栏；移动端仅窄导航条）
+├── layouts/AppLayout.vue   唯一布局：顶部很矮导航条 + 侧边菜单/移动端抽屉 + 左下角用户菜单
 ├── layouts/UserMenu.vue    左下角用户菜单（外观 / 线路 / 项目切换 / 用户设置 / 退出登录），桌面侧栏与移动端抽屉共用
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
@@ -96,7 +96,7 @@ web/src/
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
-| `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：侧边菜单 + 左下角用户菜单（移动端抽屉，顶部窄导航条） |
+| `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部很矮导航条（页面名）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 精简二级库 / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位，标准 / 精简二级库可同时出现）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
 | `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表；行点击/编辑/新建都打开 `StockMaterialFormModal`（详情、档案与补库策略、出库小程序码、删除） |
@@ -333,7 +333,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局（**桌面端无顶栏**）：左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位过滤：工作台、备忘录、二级库分组、精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「用户设置」（打开 `components/AccountSettingsModal.vue`，个人资料只读，可复制自己的 MCP 地址 / 令牌并修改密码）与「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，只保留一条 `56px` 窄导航条（菜单按钮 + 当前页标题，不放用户信息）作为抽屉入口，账号入口在抽屉左下角。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：顶部一条很矮的导航条（`.app-topbar`，桌面 40px、移动端 48px，标题取路由 `meta.title`，页面内不再渲染大标题）；左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位过滤：工作台、备忘录、二级库分组、精简二级库、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「用户设置」（打开 `components/AccountSettingsModal.vue`，个人资料只读，可复制自己的 MCP 地址 / 令牌并修改密码）与「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，导航条左侧额外显示菜单按钮作为抽屉入口（不放用户信息），账号入口在抽屉左下角。
 
 
 

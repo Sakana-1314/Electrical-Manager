@@ -72,11 +72,12 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
       </div>
     </n-layout-sider>
     <n-layout>
-      <!-- 桌面端无顶栏：内容区直接从页面标题开始，页面标题由各视图的 .page-header 承担。
-           移动端没有侧栏，抽屉需要一个入口，因此只保留一条窄导航条（菜单按钮 + 当前页标题），
-           不再放用户信息——账号入口统一在抽屉左下角。 -->
-      <n-layout-header v-if="isMobile" bordered class="mobile-topbar">
+      <!-- 顶部导航条：所有视口共用一条很矮的标题条（桌面 40px / 移动端 48px），
+           页面名只在这里出现，各视图不再渲染大标题；移动端没有侧栏，
+           导航条左侧额外提供抽屉入口。 -->
+      <n-layout-header bordered class="app-topbar" :class="{ 'is-mobile': isMobile }">
         <button
+          v-if="isMobile"
           type="button"
           class="menu-toggle"
           aria-label="打开导航菜单"
@@ -84,7 +85,7 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
         >
           <n-icon :size="18"><MenuOutline /></n-icon>
         </button>
-        <div class="mobile-title">{{ route.meta.title }}</div>
+        <div class="topbar-title">{{ route.meta.title }}</div>
       </n-layout-header>
       <n-layout-content class="app-content" :native-scrollbar="false">
         <!-- keepAlive 列表页最多缓存 6 个（两个申购列表页各约 2000 行、表格数据量大），超出按最久未用淘汰；
@@ -186,7 +187,7 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   border-top: 1px solid var(--color-border-subtle);
 }
 .app-content {
-  padding: 24px 28px 32px;
+  padding: 16px 28px 32px;
   background: var(--page-glow), var(--color-bg);
 }
 /* 抽屉内导航 */
@@ -215,24 +216,25 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border-subtle);
 }
-/* 移动端窄导航条：唯一作用是给抽屉一个入口，并显示当前页标题（内容区不再重复标题） */
-.mobile-topbar {
+/* 顶部导航条：很矮的一条，只展示当前页标题；桌面端与内容区左右内边距对齐。
+   内容区在导航条下方独立滚动，因此标题始终可见。 */
+.app-topbar {
   display: flex;
-  height: 56px;
+  height: 40px;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0 28px;
   background: var(--color-surface-translucent);
   backdrop-filter: blur(12px);
 }
 .menu-toggle {
   display: grid;
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 9px;
   color: var(--color-text);
   background: transparent;
   cursor: pointer;
@@ -246,11 +248,11 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   background: var(--color-primary-soft);
   outline: none;
 }
-.mobile-title {
+.topbar-title {
   min-width: 0;
   overflow: hidden;
   color: var(--color-text-strong);
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.25;
   text-overflow: ellipsis;
@@ -258,8 +260,20 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
 }
 /* 移动端（≤768px）内容区适配 */
 @media (max-width: 768px) {
+  /* 触摸目标留 40px，导航条只比桌面高 8px */
+  .app-topbar.is-mobile {
+    height: 48px;
+    padding: 0 12px;
+  }
+  .menu-toggle {
+    width: 40px;
+    height: 40px;
+  }
+  .topbar-title {
+    font-size: 15px;
+  }
   .app-content {
-    padding: 16px 14px 24px;
+    padding: 12px 14px 24px;
   }
 }
 </style>

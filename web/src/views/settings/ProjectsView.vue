@@ -143,9 +143,6 @@ function remove(row: Project) {
 <template>
   <div class="page">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">项目管理</h1>
-      </div>
       <div class="page-actions">
         <n-button type="primary" @click="open()">新建项目</n-button>
       </div>

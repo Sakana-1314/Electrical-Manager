@@ -359,7 +359,6 @@ function remove(row: ManagedUser) {
     <div class="page-header">
       <div>
         <div class="title-row">
-          <h1 class="page-title">用户管理</h1>
           <n-tag round size="small" type="info">{{ items.length }} 位</n-tag>
           <n-tag
             round
@@ -575,7 +574,7 @@ function remove(row: ManagedUser) {
   overflow: hidden;
   color: var(--color-text-strong);
   font-size: var(--list-body-size);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
   line-height: var(--list-cell-title-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
