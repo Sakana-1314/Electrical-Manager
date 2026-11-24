@@ -53,6 +53,9 @@ const REQUIRED_TOKENS = [
   '--list-inline-gap',
   '--list-filter-heading-gap',
   '--list-filter-heading-margin',
+  '--list-filter-count-gap',
+  '--list-filter-count-size',
+  '--list-filter-count-line-height',
   '--list-filter-actions-gap',
   '--list-filter-actions-margin',
   '--list-filter-actions-padding',
@@ -138,6 +141,26 @@ describe('列表页 / 控件令牌', () => {
     expect(styles).toMatch(
       /\.filter-field > span \{[^}]*font-size: var\(--list-filter-label-size\);/,
     )
+    expect(styles).toMatch(/\.filter-title-row \{[^}]*gap: var\(--list-filter-count-gap\);/)
+    expect(styles).toMatch(
+      /\.filter-count \{[^}]*font-size: var\(--list-filter-count-size\);[^}]*line-height: var\(--list-filter-count-line-height\);/,
+    )
+  })
+
+  it('「已启用 N 项」紧挨筛选标题且不再用 n-tag', () => {
+    const files = [...vueFiles(`${WEB_ROOT}/src/views`), ...vueFiles(`${WEB_ROOT}/src/components`)]
+    const counted = files.filter((path) =>
+      readFileSync(path, 'utf8').includes('已启用 {{ activeFilterCount }}'),
+    )
+    expect(counted.length).toBeGreaterThan(5)
+    for (const path of counted) {
+      const source = readFileSync(path, 'utf8')
+      expect(source, `${path} 缺少 filter-title-row`).toContain('class="filter-title-row"')
+      expect(source, `${path} 缺少 filter-count`).toContain('class="filter-count"')
+      expect(source, `${path} 仍用 n-tag 显示筛选计数`).not.toContain(
+        'n-tag v-if="activeFilterCount"',
+      )
+    }
   })
 
   it('输入框 / 下拉框的宽度、高度、字号只引用控件令牌', () => {

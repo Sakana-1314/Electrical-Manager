@@ -171,6 +171,7 @@
 | 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
 | 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），保留一个“筛选条件”标题 |
 | 筛选标题 / 操作行 | 标题行 `.filter-heading`、操作行 `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距全部由 `styles.css` 统一提供（`--list-filter-heading-*` / `--list-filter-actions-*`），页面只写结构，不再各自复制一套；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 筛选计数 | 「已启用 N 项」放在 `.filter-title-row` 内、紧挨「筛选条件」左侧标题；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，出现或消失都不改变标题行高度 |
 | 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；字段标签使用浮动标签（见「浮动标签」），不再占用独立标签行。标签字号 `--list-filter-label-size`（13px） |
 | 筛选卡片说明 | 标题下**不放小字描述**：筛选口径、选项含义、数据条数都不在筛选卡片里解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
 | 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由筛选卡片标题右侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
@@ -452,6 +453,7 @@
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
 - [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线、占位文字始终不重复），没有只靠 placeholder 当标签的字段
 - [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-heading` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
+- [ ] 「已启用 N 项」紧挨「筛选条件」左侧标题，使用 `.filter-count` 小字，出现 / 消失不改变标题行高度
 - [ ] 移动端页头/详情工具栏按钮排一排放不下时能横向滑动到每个按钮（不缩小、不换行）
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`

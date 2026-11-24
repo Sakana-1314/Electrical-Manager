@@ -171,10 +171,12 @@ function onFileChange(event: Event) {
 
     <n-card class="filter-card" :bordered="false">
       <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-        <n-tag v-if="activeFilterCount" :bordered="false" round type="success">
-          已启用 {{ activeFilterCount }} 项
-        </n-tag>
+        <div class="filter-title-row">
+          <div class="filter-title">筛选条件</div>
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+        </div>
       </div>
       <div class="filter-grid">
         <label class="filter-field">
