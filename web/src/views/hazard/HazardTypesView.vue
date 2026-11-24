@@ -270,7 +270,7 @@ function confirmDelete(): void {
 .hazard-type-tree {
   width: 100%;
   overflow: auto;
-  padding: 4px 0 12px;
+  padding: var(--list-tree-padding);
 }
 
 /* 节点内容：大类是带计数的标题块，小类是可点击卡片。
@@ -278,20 +278,21 @@ function confirmDelete(): void {
 .hazard-type-node {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 120px;
-  padding: 8px 14px;
+  gap: var(--list-tree-node-gap);
+  min-width: var(--list-tree-node-min-width);
+  padding: var(--list-tree-node-padding);
   white-space: nowrap;
 }
 
 .hazard-type-node__label {
-  font-size: 13px;
+  font-size: var(--list-body-size);
   font-weight: 500;
+  line-height: var(--list-cell-title-line-height);
 }
 
 .hazard-type-node.is-branch .hazard-type-node__label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--list-emphasis-size);
+  font-weight: var(--page-title-weight);
 }
 
 .hazard-type-node.is-leaf {
@@ -300,10 +301,11 @@ function confirmDelete(): void {
 
 .hazard-type-node__edit {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--list-caption-size);
+  line-height: var(--list-caption-line-height);
 }
 
 .hazard-type-empty {
-  padding: 40px 0;
+  padding: var(--list-empty-padding);
 }
 </style>

@@ -635,45 +635,4 @@ function onFileChange(event: Event) {
 .hidden-file-input {
   display: none;
 }
-
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
-.filter-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.filter-action-buttons {
-  display: flex;
-  flex: none;
-  /* 字段选择与查询/重置同组，窄屏放不下时换行，避免挤出卡片 */
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.filter-action-buttons :deep(.n-button) {
-  min-width: 88px;
-}
-
-@media (max-width: 760px) {
-  .filter-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filter-action-buttons {
-    justify-content: flex-end;
-  }
-}
 </style>

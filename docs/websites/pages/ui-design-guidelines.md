@@ -51,11 +51,12 @@
 | 卡片圆角 | `14px` |
 | 卡片阴影 | `--shadow-card`；仅可交互统计卡片悬停用 `--shadow-card-hover` |
 | 页面内容区内边距 | 上 `24px` / 左右 `28px` / 下 `32px` |
-| 一级区块间距 | `18px` |
-| 卡片内边距 | 由 Naive UI 主题控制，通常 `20px 22px` |
+| 页面一级区块间距 | `--page-gap`（`16px`）；统计卡片栅格间距 `--list-card-gap`（`18px`） |
+| 卡片内边距 | 筛选 / 说明卡片 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区为 `0`，表格直接贴卡片边（见「数据表格」） |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
-| 字号档位 | 页面标题 `24px`；区块标题 `16px`；正文与数据 `14px`；控件与次要说明 `13px`；微字说明 `12px` |
-| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `13px`（紧凑化后由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）同为 `13px`；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
+| 字号档位 | 页面标题 `--page-title-size`（20px）；卡片 / 区块标题 `--list-card-title-size`（16px）；列表正文与表格 `--list-body-size` / `--list-table-font-size`（13px）；辅助说明 `--list-caption-size`（12px）。页面与列表页不再写死字号 |
+| 控件尺寸 | 列表页输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）；弹窗内 `size="small"` 用 `--control-height-small`（28px）。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `--list-table-font-size`（13px，由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）为 `--list-body-size`（13px）；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
 `--color-surface-muted`，不用蓝色系底色。
@@ -167,8 +168,10 @@
 | 项 | 要求 |
 | --- | --- |
 | 卡片 | 页面内容统一 `n-card`；筛选卡片加 `filter-card`（轻微蓝灰渐变），数据表卡片加 `data-card`；不在单页重设圆角/阴影/边框 |
-| 简单筛选 | `filter-bar`，控件间距 `10px` |
-| 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由全局变量 `--filter-col-min-width` 统一控制，190px），保留一个“筛选条件”标题 |
+| 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
+| 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），保留一个“筛选条件”标题 |
+| 筛选标题 / 操作行 | 标题行 `.filter-heading`、操作行 `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距全部由 `styles.css` 统一提供（`--list-filter-heading-*` / `--list-filter-actions-*`），页面只写结构，不再各自复制一套；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；标签到控件 `--filter-field-label-gap`（6px），标签字号 `--list-filter-label-size`（13px） |
 | 筛选卡片说明 | 标题下**不放小字描述**：筛选口径、选项含义、数据条数都不在筛选卡片里解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
 | 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由筛选卡片标题右侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
 | 文本搜索 | 多关键词用半角 `|` 表示“或”（兼容全角 `｜`）；同一输入框内按 OR，不同控件之间按 AND；不在占位文字里重复该规则 |
@@ -189,7 +192,9 @@
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
 | 压缩控制 | 每列同时设 `width` 与相同 `minWidth`；`scroll-x` 按实际列宽计算，超宽时横向滚动，不靠等比压缩牺牲名称/型号列 |
 | 列宽调整 | 列表页统一用 `components/PersistentDataTable.vue` 包裹（`storage-key` 取 `模块/页面`）：有宽度的列自动可拖动，拖动结果按页面写入 localStorage，刷新 / 再次进入仍生效；页面不再手写 resize 逻辑 |
-| 移动端占满卡片 | 移动端（≤768px）**含表格**的数据卡片内容区 `padding: 0`，让表格四边直接占满卡片；屏幕留白（`.app-content` 左右 14px）保持不变，桌面端维持原样。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 12px 内边距。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
+| 表格贴边 | **所有视口**下，含表格的数据卡片内容区 `padding: 0`，表格四边直接贴着卡片；屏幕留白（`.app-content` 左右 14px）保持不变。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 / 下内边距（`--list-pagination-padding-*`）。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
+| 表格密度 | 单元格内边距 `--list-table-cell-padding-y/x`（8px / 12px）、字号 `--list-table-font-size`（13px）、行高 `--list-table-line-height`（1.5）、表头字重 `--list-table-header-weight`；页面不再单独写 `:deep(.n-data-table-th/td)` |
+| 单元格双行 | 物资名 / 型号等双行内容用 `--list-cell-title-line-height`（1.4）、`--list-cell-gap`（2px）；副行用 `--list-caption-size`（12px），不要页面各写 11px / 1.25 |
 | 普通表格 | `n-table` 必须放进 `table-scroll` 容器，并设符合字段数量的最小宽度 |
 
 | 内容类型 | 列宽 |
@@ -249,6 +254,23 @@
 | 快捷操作 | 页头下的一排主色浅底胶囊：办理入库 / 出库、新建申购计划、登记隐患。只对持有对应写权限位且模块可见的用户出现；新建类入口用 `?create=1` 打开目标页的新建弹窗，目标页消费后立即把该参数从 URL 去掉 |
 | 失败与刷新 | 各块（概览、隐患统计、低库存、最近出入库）独立请求、独立失败：失败的块显示「—」并在顶部提示「重试」，不拖垮整页；页头显示「更新于 HH:mm」；页面重新可见且数据超过 2 分钟时静默刷新一次（不遮罩） |
 | 加载态 | 指标用骨架屏占位，不用整页遮罩 |
+
+### 列表页统一排版
+
+所有列表页（筛选 + `data-card` 表格）共用一套设计令牌，数值只定义在 `styles.css` 的
+`:root` 里（`--page-*` / `--list-*` / `--control-*`），页面与组件只引用变量，
+**不写死字号 / 行高 / 间距 / 控件宽高**。
+
+| 项 | 要求 |
+| --- | --- |
+| 页面骨架 | 页面纵向间距 `--page-gap`（16px）；页头最小高度 `--page-header-min-height`（40px）、间距 `--page-header-gap`、内边距 `--page-header-padding`；标题 `--page-title-size`（20px）/ `--page-title-line-height`（1.35） |
+| 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；筛选 / 说明卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边 |
+| 字号层级 | 列表正文 `--list-body-size`（13px）/ `--list-body-line-height`（1.5）；辅助说明 `--list-caption-size`（12px）/ `--list-caption-line-height`（1.5）；树节点 / 双行单元格强调文字 `--list-emphasis-size`（14px）；双行单元格标题行高 `--list-cell-title-line-height`（1.4）、行间距 `--list-cell-gap`（2px） |
+| 筛选区 | 标题行 / 操作行 / 按钮组统一挂全局类 `.filter-heading` / `.filter-actions` / `.filter-action-buttons`，间距走 `--list-filter-heading-*` / `--list-filter-actions-*`；页面不得再定义这三类的布局样式 |
+| 表格 | 单元格内边距 `--list-table-cell-padding-y/x`（8px / 12px）、字号 `--list-table-font-size`（13px）、行高 `--list-table-line-height`（1.5）、表头字重 `--list-table-header-weight` |
+| 分页 | `margin-top` / 上内边距走 `--list-pagination-margin-top` / `--list-pagination-padding-top`；表格卡片内再补 `--list-pagination-padding-x` / `--list-pagination-padding-bottom`，不贴卡片边缘 |
+| 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
+| 控件 | 列表页输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）；弹窗 `size="small"` 用 `--control-height-small`（28px）。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
 
 ### 弹窗统一排版
 
@@ -410,7 +432,8 @@
 - [ ] 列表页标题下没有可删除的重复说明
 - [ ] 卡片复用全局圆角、边框、阴影
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
-- [ ] 移动端表格卡片内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
+- [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
+- [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-heading` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
 - [ ] 移动端页头/详情工具栏按钮排一排放不下时能横向滑动到每个按钮（不缩小、不换行）
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`

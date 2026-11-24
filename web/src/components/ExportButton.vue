@@ -40,7 +40,7 @@ function selectOption(key: string | number) {
 
 <style scoped>
 .export-button {
-  min-width: 88px;
+  min-width: var(--list-action-button-min-width);
 }
 
 .export-button__chevron {

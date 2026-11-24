@@ -317,46 +317,7 @@ function onFileChange(event: Event) {
 
 /* 下拉菜单触发按钮的展开指示：贴在文字右侧。 */
 .import-caret {
-  margin-left: 6px;
-  font-size: 14px;
-}
-
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
-.filter-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.filter-action-buttons {
-  display: flex;
-  flex: none;
-  gap: 10px;
-}
-
-.filter-action-buttons :deep(.n-button) {
-  min-width: 88px;
-}
-
-@media (max-width: 760px) {
-  .filter-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filter-action-buttons {
-    justify-content: flex-end;
-  }
+  margin-left: var(--list-filter-label-gap);
+  font-size: var(--list-split-icon-size);
 }
 </style>

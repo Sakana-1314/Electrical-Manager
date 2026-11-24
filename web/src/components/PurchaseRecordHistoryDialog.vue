@@ -312,6 +312,6 @@ function changePage(value: number) {
 }
 
 .history-search-actions :deep(.n-button) {
-  min-width: 88px;
+  min-width: var(--list-action-button-min-width);
 }
 </style>

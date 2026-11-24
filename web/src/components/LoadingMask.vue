@@ -60,7 +60,8 @@ defineProps<{
 .loading-mask__text {
   margin: 0;
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
 }
 
 .loading-mask-enter-active,

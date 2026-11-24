@@ -331,6 +331,6 @@ function confirmDelete(): void {
 }
 
 .unit-input {
-  flex: 0 0 104px;
+  flex: 0 0 var(--control-width-unit-small);
 }
 </style>

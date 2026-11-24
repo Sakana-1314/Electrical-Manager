@@ -758,7 +758,7 @@ function openHistoryRecord(record: PurchaseRecord) {
 }
 
 .quantity-unit-select {
-  width: 160px;
+  width: var(--control-width-unit);
 }
 
 .open-new-page-btn {

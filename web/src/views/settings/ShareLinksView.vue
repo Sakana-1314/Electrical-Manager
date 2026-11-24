@@ -324,12 +324,6 @@ const tableScrollX = getTableScrollX(columns)
 </template>
 
 <style scoped>
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 16px;
-}
-
 .column-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

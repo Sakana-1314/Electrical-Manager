@@ -243,20 +243,11 @@ function hasDetail(node: unknown): boolean {
 </template>
 
 <style scoped>
-/* 筛选区标题：与其它列表页同一套页面级样式（全局 styles.css 不提供这条）。 */
-.filter-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
 /* 横向树容器：树比卡片宽时容器内横向滚动，页面整体不出现横向滚动条。 */
 .ledger-tag-tree {
   width: 100%;
   overflow: auto;
-  padding: 4px 0 12px;
+  padding: var(--list-tree-padding);
 }
 
 /* 节点内容：名称 + 台账使用数量 + 可选「+」入口。
@@ -266,16 +257,17 @@ function hasDetail(node: unknown): boolean {
 .ledger-tag-node {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 120px;
-  padding: 8px 14px;
+  gap: var(--list-tree-node-gap);
+  min-width: var(--list-tree-node-min-width);
+  padding: var(--list-tree-node-padding);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .ledger-tag-node__label {
-  font-size: 13px;
+  font-size: var(--list-body-size);
   font-weight: 500;
+  line-height: var(--list-cell-title-line-height);
 }
 
 /* 台账使用数量：一个安静的数字计数（含 0），不做成彩色标签以免抢层级视线 */
@@ -285,14 +277,15 @@ function hasDetail(node: unknown): boolean {
   border-radius: 9px;
   background-color: var(--color-primary-soft);
   color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 18px;
+  font-size: var(--list-badge-size);
+  line-height: var(--list-badge-line-height);
   text-align: center;
 }
 
 .ledger-tag-node__orphan {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--list-caption-size);
+  line-height: var(--list-caption-line-height);
 }
 
 /* 「+」入口：悬停节点时才显现（去掉文字，靠 tooltip 说明） */
@@ -309,26 +302,26 @@ function hasDetail(node: unknown): boolean {
 /* 悬停浮层：备注可能很长，限高内滚动；图片沿用全站缩略图组件。 */
 .ledger-tag-popover {
   display: grid;
-  gap: 8px;
+  gap: var(--list-tree-node-gap);
   max-width: 320px;
 }
 
 .ledger-tag-popover__name {
   color: var(--color-text-strong);
-  font-weight: 600;
+  font-weight: var(--page-title-weight);
 }
 
 .ledger-tag-popover__remark {
   max-height: 180px;
   overflow: auto;
   color: var(--color-text);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .ledger-tag-empty {
-  padding: 40px 0;
+  padding: var(--list-empty-padding);
 }
 </style>
