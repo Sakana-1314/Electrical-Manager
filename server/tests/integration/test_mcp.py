@@ -65,7 +65,7 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
     client: AsyncClient,
 ) -> None:
     """MCP 端到端：工具清单可读、项目按「请求头 → 链接 ?project_id= → 默认项目」解析，
-    并能用 operation_call 完成一次带 If-Match 的真实写入。
+    并能用 call_api_operation 完成一次带 If-Match 的真实写入。
     """
     token = await _issue_admin_api_token(client)
     client.headers.pop("X-Project-Id", None)  # 真实 MCP 客户端只配置地址，不发项目头
@@ -77,15 +77,22 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
         )
         assert response.status_code == 200, response.text
         tools = response.json()["result"]["tools"]
-        assert {item["name"] for item in tools} == {
-            "system_whoami",
-            "projects_list",
-            "operations_list",
-            "operation_describe",
-            "operation_call",
-        }
-        # operation_call 必须能接受请求头，否则带乐观锁的写操作在 MCP 侧无法完成
-        arguments = next(item for item in tools if item["name"] == "operation_call")[
+        # 业务工具一跳完成常见操作，高级工具保留「任意管理端接口」的兜底能力。
+        names = {item["name"] for item in tools}
+        assert {
+            "get_current_user",
+            "list_projects",
+            "find_api_operations",
+            "describe_api_operation",
+            "call_api_operation",
+            "list_purchase_plans",
+            "list_purchase_records",
+            "list_inventory_balances",
+            "create_inventory_inbound",
+            "list_hazards",
+        } <= names
+        # call_api_operation 必须能接受请求头，否则带乐观锁的写操作在 MCP 侧无法完成
+        arguments = next(item for item in tools if item["name"] == "call_api_operation")[
             "inputSchema"
         ]["properties"]
         assert "headers" in arguments
@@ -95,7 +102,7 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
                 url,
                 headers={**MCP_HEADERS, "X-API-Token": token, **(extra_headers or {})},
                 json=mcp_request(
-                    "tools/call", {"name": "system_whoami", "arguments": {}}
+                    "tools/call", {"name": "get_current_user", "arguments": {}}
                 ),
             )
             assert call.status_code == 200, call.text
@@ -108,7 +115,7 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
                 json=mcp_request(
                     "tools/call",
                     {
-                        "name": "operation_call",
+                        "name": "call_api_operation",
                         "arguments": {"operation_id": operation_id, **arguments},
                     },
                 ),
@@ -140,7 +147,7 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
         assert unknown["project_name"] == "华星现有项目"
         assert unknown["project_source"] == "default"
 
-        # operation_call 完整跑通一次带 If-Match 的写入：新建标签 → 按版本号删除
+        # call_api_operation 完整跑通一次带 If-Match 的写入：新建标签 → 按版本号删除
         created = await call_operation(
             "create_ledger_tag_api_v1_ledger_tags_post", {"body": {"name": "MCP 端到端"}}
         )
@@ -159,7 +166,7 @@ async def test_mcp_streamable_http_with_user_token_lists_tools_and_resolves_proj
 
 
 async def test_mcp_operation_call_sends_if_match_header(client: AsyncClient) -> None:
-    """operation_call 把 If-Match 送到业务接口：版本不符 409 VERSION_CONFLICT，版本正确 204。"""
+    """call_api_operation 把 If-Match 送到业务接口：版本不符 409 VERSION_CONFLICT，版本正确 204。"""
     token = await _issue_admin_api_token(client)
     headers = await auth_headers(client, "admin")
     created = await client.post(
@@ -168,7 +175,7 @@ async def test_mcp_operation_call_sends_if_match_header(client: AsyncClient) -> 
     assert created.status_code == 201, created.text
     tag = created.json()
 
-    # 经 MCP HTTP 端点调用 operation_call 工具。
+    # 经 MCP HTTP 端点调用 call_api_operation 工具。
     async def operation_call(operation_id: str, **arguments: object) -> dict:
         call = await client.post(
             "/api/v1/mcp/",
@@ -176,7 +183,7 @@ async def test_mcp_operation_call_sends_if_match_header(client: AsyncClient) -> 
             json=mcp_request(
                 "tools/call",
                 {
-                    "name": "operation_call",
+                    "name": "call_api_operation",
                     "arguments": {"operation_id": operation_id, **arguments},
                 },
             ),
