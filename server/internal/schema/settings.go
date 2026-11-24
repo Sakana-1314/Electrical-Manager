@@ -20,18 +20,3 @@ type AdvancedSettingsUpdate struct {
 	DefaultPermissions             *[]string `json:"default_permissions"`
 	Version                        int64     `json:"version" v:"required,ge=0"`
 }
-
-// ---------------- AI 搜索（只读状态与扩展） ----------------
-
-type AiSearchStatusRead struct {
-	Available bool `json:"available"`
-}
-
-type AiSearchExpandRequest struct {
-	Value string `json:"value" v:"required,min=1,max=500"`
-}
-
-type AiSearchExpandRead struct {
-	Original string `json:"original"`
-	Expanded string `json:"expanded"`
-}

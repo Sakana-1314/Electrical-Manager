@@ -1,4 +1,4 @@
-"""本地上游桩服务：替被测服务扮演外部上游（AI 搜索、飞书 / 钉钉 Webhook、微信接口）。
+"""本地上游桩服务：替被测服务扮演外部上游（飞书 / 钉钉 Webhook、微信接口）。
 
 桩服务把收到的请求还原成 `httpx.Request`（URL 主机取自 Host 头，即服务改投前的原始上游，
 如 open.feishu.cn），交给用例给的 handler，再把返回的 `httpx.Response` 写回。服务通过仅在
@@ -87,18 +87,15 @@ StartUpstream = Callable[..., Awaitable[UpstreamStub]]
 
 @pytest_asyncio.fixture
 async def go_upstream(client: AsyncClient) -> AsyncIterator[StartUpstream]:
-    """返回 `start(kind, handler, response_timeout_seconds=0)`；用例结束时取消改投并关闭桩服务。"""
+    """返回 `start(kind, handler)`；用例结束时取消改投并关闭桩服务。"""
     started: list[tuple[str, UpstreamStub]] = []
 
-    async def start(
-        kind: str, handler: Handler, *, response_timeout_seconds: float = 0
-    ) -> UpstreamStub:
+    async def start(kind: str, handler: Handler) -> UpstreamStub:
         stub = UpstreamStub(handler)
         stub.start()
-        body: dict[str, Any] = {"base_url": stub.base_url}
-        if kind == "ai-search":
-            body["response_timeout_seconds"] = response_timeout_seconds
-        response = await client.post(f"/__test__/{kind}/upstream", json=body)
+        response = await client.post(
+            f"/__test__/{kind}/upstream", json={"base_url": stub.base_url}
+        )
         assert response.status_code == 200, response.text
         started.append((kind, stub))
         return stub

@@ -221,10 +221,6 @@ const router = createRouter({
           meta: { title: '高级设置', parent: '系统管理', permission: 'system:admin' },
         },
         {
-          path: 'settings/ai-search',
-          redirect: { name: 'advanced-settings' },
-        },
-        {
           path: 'settings/projects',
           name: 'projects',
           component: () => import('@/views/settings/ProjectsView.vue'),

@@ -11,7 +11,6 @@ import type {
 } from '@/api/generated'
 import { procurementApi } from '@/api/procurement'
 import { AppError } from '@/api/client'
-import { aiSearchApi } from '@/api/aiSearch'
 import ColumnVisibilityPicker from '@/components/ColumnVisibilityPicker.vue'
 import ExportLoadingOverlay from '@/components/ExportLoadingOverlay.vue'
 import ExportButton from '@/components/ExportButton.vue'
@@ -31,7 +30,6 @@ import { formatDate, toShanghaiDate } from '@/utils/time'
 import { downloadFromUrl, exportDownloadUrl } from '@/utils/download'
 import { routeQueryString } from '@/utils/routeQuery'
 import { useExportJob } from '@/composables/useExportJob'
-import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
@@ -99,13 +97,12 @@ const {
   changePage,
   changePageSize,
   resetFilters,
-  syncRoute,
 } = usePagedTable<PurchaseRecord, RecordFilters>({
   fetch: (f, pager) =>
     procurementApi.records({
       page: pager.page,
       page_size: pager.page_size,
-      name: searchName.value,
+      name: f.name.trim() || undefined,
       model_spec: f.model_spec.trim() || undefined,
       usage: f.usage.trim() || undefined,
       trace_no: f.trace_no.trim() || undefined,
@@ -137,7 +134,6 @@ const {
   onLoaded: () => {
     checkedRowKeys.value = []
   },
-  beforeQuery: () => clearExpandedName(),
   urlSync: {
     routeName: 'purchase-records',
     fromQuery: (route) => {
@@ -178,9 +174,6 @@ const {
     preservedQueryKeys: ['detail'],
   },
 })
-const { searchName, applyExpandedName, clearExpandedName } = useImplicitAiSearch(() => filters.name)
-const aiAvailable = ref(false)
-const aiSearching = ref(false)
 const batchUpdating = ref(false)
 const showBatchEdit = ref(false)
 const checkedRowKeys = ref<Array<string | number>>([])
@@ -635,34 +628,6 @@ async function loadFilterOptions() {
   }
 }
 
-async function loadAiStatus() {
-  try {
-    aiAvailable.value = (await aiSearchApi.status()).available
-  } catch {
-    aiAvailable.value = false
-  }
-}
-
-async function aiQuery() {
-  const value = filters.name.trim()
-  if (!value) {
-    message.warning('请先输入物资名称')
-    return
-  }
-  aiSearching.value = true
-  try {
-    const data = await aiSearchApi.expand(value)
-    applyExpandedName(data.expanded)
-    // 走原语而非 query()，避免 beforeQuery 清掉刚 apply 的扩展名
-    page.value = 1
-    await syncRoute()
-    await load()
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '智能查询失败')
-  } finally {
-    aiSearching.value = false
-  }
-}
 async function exportResults() {
   // 物资列在导出时展开成「名称 / 型号 / 编码」三列（Excel 一直如此），
   // 若用户又勾选了独立的「物料编码」列，这里用 Set 去重，避免导出两列编码。
@@ -683,7 +648,7 @@ async function exportResults() {
   try {
     const job = await runResultExport({
       columns: exportColumns,
-      name: searchName.value,
+      name: filters.name.trim() || undefined,
       model_spec: filters.model_spec.trim() || undefined,
       usage: filters.usage.trim() || undefined,
       trace_no: filters.trace_no.trim() || undefined,
@@ -942,7 +907,6 @@ async function batchUpdate() {
 
 onMounted(() => {
   void loadFilterOptions()
-  void loadAiStatus()
   // 列表首载由 usePagedTable（immediate）触发
 })
 </script>
@@ -1079,22 +1043,6 @@ onMounted(() => {
               </n-space>
 
               <n-button @click="resetFilters">重置</n-button>
-              <n-button
-                secondary
-                type="primary"
-                :loading="aiSearching"
-                :disabled="!aiAvailable || !filters.name.trim()"
-                :title="
-                  aiAvailable
-                    ? filters.name.trim()
-                      ? '自动扩展物资名称同义词并立即查询'
-                      : '请先输入物资名称'
-                    : '请联系超级管理员配置大模型服务'
-                "
-                @click="aiQuery"
-              >
-                智能查询
-              </n-button>
               <n-button type="primary" @click="query">查询</n-button>
             </div>
           </div>

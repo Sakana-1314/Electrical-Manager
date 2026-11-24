@@ -1,9 +1,8 @@
 // Package appsettings 管理端「高级设置」里仅剩的配置：
 // 小程序注册开关与新建用户 / 小程序新注册用户的默认权限位。
 //
-// 模型搜索、Webhook 与图片加速不在数据库配置：模型与 Webhook 走服务端环境变量
-// （见 internal/config），图片加速能力已移除（图片直接走当前后端线路）。
-// 标准二级库与精简二级库不再有运行模式：可见性由用户权限位决定。
+// Webhook 不在数据库配置（走服务端环境变量，见 internal/config）；图片加速能力已移除
+// （图片直接走当前后端线路）。标准二级库与精简二级库不再有运行模式：可见性由用户权限位决定。
 package appsettings
 
 import (
@@ -22,11 +21,11 @@ import (
 const (
 	settingKey = "runtime_settings"
 	// legacyKey 是旧版本把「AI 配置 + 小程序开关 + 图片加速 + 可见性」混存一行时的键。
-	// 新代码优先读 runtime_settings；旧库迁移前也能读到这里保留的字段。
+	// 键名沿用旧值只为读老库（AI 搜索已移除），新数据一律写 runtime_settings。
 	legacyKey = "ai_search_config"
 )
 
-// Config 是管理端高级设置（不含模型 / Webhook / 图片加速）。
+// Config 是管理端高级设置（不含 Webhook / 图片加速）。
 type Config struct {
 	MiniProgramRegistrationEnabled bool
 	// DefaultPermissions 新建用户 / 小程序新注册用户的默认权限位。

@@ -2,7 +2,6 @@
 package api
 
 import (
-	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/aisearch"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/codelib"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/exportjob"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/api/files"
@@ -23,7 +22,6 @@ import (
 
 func Register(r *web.Router) {
 	system.Register(r)      // auth / users / memos / version
-	aisearch.Register(r)    // ai_search
 	settings.Register(r)    // system_settings
 	stock.Register(r)       // stock_materials + inventory
 	codelib.Register(r)     // material_code_library

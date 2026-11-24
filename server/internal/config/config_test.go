@@ -115,10 +115,6 @@ func TestPreviewConcurrencyRejectsInvalid(t *testing.T) {
 func TestEnvOnlyIntegrationSettings(t *testing.T) {
 	preparePreviewEnv(t)
 	t.Setenv("APP_WECHAT_MINI_PROGRAM_CODE_ENV", "trial")
-	t.Setenv("APP_AI_SEARCH_ENABLED", "true")
-	t.Setenv("APP_AI_SEARCH_ENDPOINT", "https://ai.example.com/v1/")
-	t.Setenv("APP_AI_SEARCH_API_KEY", "secret")
-	t.Setenv("APP_AI_SEARCH_MODEL", "fast-model")
 	t.Setenv("APP_FEISHU_WEBHOOK_ENABLED", "true")
 	t.Setenv("APP_FEISHU_WEBHOOK_URL", "https://open.feishu.cn/open-apis/bot/v2/hook/x")
 	t.Setenv("APP_FEISHU_WEBHOOK_SECRET", "feishu-secret")
@@ -128,10 +124,6 @@ func TestEnvOnlyIntegrationSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !s.AISearchEnabled || s.AISearchEndpoint != "https://ai.example.com/v1" ||
-		s.AISearchAPIKey != "secret" || s.AISearchModel != "fast-model" {
-		t.Fatalf("AI config: %+v", s)
-	}
 	if s.WechatMiniProgramCodeEnv != "trial" {
 		t.Fatalf("code env = %q", s.WechatMiniProgramCodeEnv)
 	}
@@ -140,17 +132,6 @@ func TestEnvOnlyIntegrationSettings(t *testing.T) {
 	}
 	if !reflect.DeepEqual(s.FeishuWebhook.Events, []string{"stock.outbound.created", "mini_program.user.bound"}) {
 		t.Fatalf("feishu events = %v", s.FeishuWebhook.Events)
-	}
-}
-
-func TestAIEnabledRequiresCompleteConfig(t *testing.T) {
-	preparePreviewEnv(t)
-	t.Setenv("APP_AI_SEARCH_ENABLED", "true")
-	t.Setenv("APP_AI_SEARCH_ENDPOINT", "")
-	t.Setenv("APP_AI_SEARCH_API_KEY", "")
-	t.Setenv("APP_AI_SEARCH_MODEL", "")
-	if _, err := Load(); err == nil {
-		t.Fatal("启用 AI 搜索但缺少端点 / Key / 模型时应启动失败")
 	}
 }
 

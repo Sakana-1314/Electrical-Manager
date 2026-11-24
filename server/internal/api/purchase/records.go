@@ -65,25 +65,10 @@ func listPurchaseRecords(c *web.Ctx) error {
 	salesperson := p.QueryStr("salesperson", "max=128")
 	subitemNo := p.QueryStr("subitem_no", "max=64")
 	emptySubitemNo := p.QueryBool("empty_subitem_no", false)
-	aiExpand := p.QueryBool("ai_expand", false)
 	sortBy := p.QueryStr("sort_by", "oneof="+schema.PurchaseRecordResultColumns)
 	sortOrder := p.QueryStrDefault("sort_order", "asc", "oneof=asc|desc")
 	if err := p.Err(); err != nil {
 		return err
-	}
-	if aiExpand {
-		var err error
-		if keyword, err = expand(c, keyword); err != nil {
-			return err
-		}
-		if name, err = expand(c, name); err != nil {
-			return err
-		}
-		if searchField != nil && *searchField == "material_name" {
-			if searchValue, err = expand(c, searchValue); err != nil {
-				return err
-			}
-		}
 	}
 	lines, total, err := purchaserequest.SearchPurchaseRecords(c.DB, purchaserequest.RecordSearch{
 		Status: status, EmptyStatus: emptyStatus, Keyword: keyword, SearchField: searchField, SearchValue: searchValue,

@@ -124,7 +124,6 @@ web/src/
 | `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 任务视图：半日格时间线（一行一个任务，色块 = 该任务的一段工作并显示参与人员），点色块编辑记录、行尾编辑任务 / 排活、点任务名看该任务的时间段明细；任务 CRUD 按 `work:write` 隐藏 |
 | `/work/workers` | `work-workers` | `views/work/WorkWorkersView.vue`（`keepAlive`） | 需登录 | 人员视图：半日格时间线（一行一个人，色块 = 该人干的任务，按任务固定配色），姓名由工作记录的参与人员派生并按拼音排序；点色块编辑记录、行尾给该人排活 |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | 小程序注册开关 + 默认用户权限勾选矩阵（含标准 / 精简二级库位） |
-| `/settings/ai-search` | — | 无组件，`redirect: { name: 'advanced-settings' }` | — | 无组件，重定向到 advanced-settings |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `system:admin` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一用户，不区分来源） |
 | `/settings/attachments` | `attachments` | `views/settings/AttachmentsView.vue` | `system:admin` | 附件管理：列出全部图片与引用次数（含待删除，预览列照常显示缩略图、待删除的降透明度区分）、软删除单张、一键删除未引用附件（先调预检接口列出会被标记的清单与保护期跳过数量，再确认执行）、撤销删除 |
@@ -190,7 +189,7 @@ web/src/
   `refreshRequest` promise，避免刷新风暴。刷新失败或其余 401：`clearSession()` 后跳登录页。
 - 错误归一化：响应体带 `code` 时抛 `AppError`（保留 `code` / `message` / `details` / `request_id`）；否则按有无 `response` 构造 `SERVER_ERROR`（`服务请求失败（HTTP <status>），请稍后重试`）或 `NETWORK_ERROR`（`无法连接服务器，请检查网络后重试`），`request_id` 取自本次请求的 `X-Request-ID`。已归一化的 `AppError` 会被后续拦截器直接透传，不会因重放被再次包装。
 - 未消费响应头：**前端当前不读取任何响应头**（无 `X-Response-Time` / 服务端 `X-Request-ID` 的读取逻辑；`web/src/utils/download.ts` 的 `filenameFromContentDisposition` / `downloadBlobWithDisposition` 已实现但当前无调用点，导出下载走 `exportDownloadUrl` 拼地址）。
-- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`aiSearch.testSettings` 为 35s；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s；`files.uploadImage`（图片上传）为 30 分钟——单张最大 10MB，慢上行光传输就可能超过 30s，而 XHR 的 `timeout` 是请求总时长，超时即中止、重传只能从头再来，故一次给足时间，把「传得慢」与「连接真断了」区分开（后者由浏览器/系统报错）。
+- 超时覆盖：默认 30s；`systemSettings.imageAcceleration`、`systemSettings.miniProgramFeatures` 为 3000ms 且 `retry: false`（都在启动路径上、带各自回退值，弱网下宁可快速失败也不拖住首屏）；`procurement.importMaterialCodes`、`secondaryWarehouse.import`、`huaXingInventory.import` 为 120s；`files.uploadImage`（图片上传）为 30 分钟——单张最大 10MB，慢上行光传输就可能超过 30s，而 XHR 的 `timeout` 是请求总时长，超时即中止、重传只能从头再来，故一次给足时间，把「传得慢」与「连接真断了」区分开（后者由浏览器/系统报错）。
 #### 弱网自动重试（`web/src/api/retry.ts`）
 
 瞬时失败（断网、超时、连接被重置、网关抖动）自动重放，用户不必手点重试；策略与小程序同一套参数：
@@ -236,7 +235,6 @@ web/src/
 | `dictionaries.ts` | `/users*`、`/permissions` | 统一用户 CRUD、权限目录、接口令牌重置与账号合并 |
 | `projects.ts` | `/projects*` | 项目列表、新增、编辑（名称/启停）与删除 |
 | `systemSettings.ts` | `/system-settings/advanced-settings` | 高级设置（注册开关 + 默认用户权限）读写；公开的 mini-program-features 端点已随运行模式一起移除 |
-| `aiSearch.ts` | `/ai-search/*` | AI 搜索扩展与可用状态（模型配置在服务端环境变量） |
 | `share.ts` | `/shares*` | 创建/读取/列取/更新/撤回匿名分享链接 |
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
@@ -250,7 +248,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 31 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 33 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -268,6 +266,8 @@ web/src/
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
 | `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
+| `PinyinSelect.vue` | 带拼音筛选的 `n-select` 包装：`filterable` 时除原有文本匹配外，输入全拼（`luoshuan`）或首字母（`ls`）也能命中；其余 props / events / 插槽原样透传（远程搜索的下拉不套用） | props：`filter?: SelectFilter \| null`（调用方过滤先执行）；其它走 `$attrs` |
+| `PinyinTreeSelect.vue` | 带拼音筛选的 `n-tree-select` 包装，规则与 `PinyinSelect` 相同 | props：`filter?: (pattern, option) => boolean \| null`；其它走 `$attrs` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
 | `PurchasePlanDetailModal.vue` | 申购计划详情 / 编辑弹窗（申购计划页与未编码物资页共用：查看 / 编辑计划、图片附件、转入申购记录；无写权限时只读） | props：`show: boolean`、`plan: PurchaseMaterial \| null`（null 为新建）、`categories?: string[]`；emits：`update:show`、`saved`、`deleted`、`moved: [recordLineId: number]` |
 | `PurchaseRecordDetailModal.vue` | 申购记录详情 / 编辑弹窗（单据、物资、人员、备注、采购与发运、图片；转为计划 / 再次申购 / 新页面打开；申购记录页与华星总库存页共用） | props：`show: boolean`、`record: PurchaseRecord \| null`；emits：`update:show`、`saved`、`restored: [planId: number]`、`reapplyCreated: [planId: number]` |
@@ -286,7 +286,7 @@ web/src/
 | `WorkTaskFormModal.vue` | 任务新增 / 编辑弹窗（名称 / 状态 / 计划起止 / 工作内容 / 备注 / 图片，删除入口在页脚） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `WorkRecordFormModal.vue` | 工作记录新增 / 编辑弹窗（任务可搜索下拉、起止日期 + 上午 / 下午、参与人员可输入新姓名、备注；`readonly` 时变成只读详情） | props：`show`、`recordId?`、`presetTaskId?`、`presetDate?`、`presetParticipants?`、`readonly?`；emits：`update:show`、`saved` |
 ### Composable 清单
-`web/src/composables/` 下 7 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
+`web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
@@ -294,7 +294,6 @@ web/src/
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
-| `useImplicitAiSearch.ts` | 隐式 AI 搜索：用户显式展开关键词优先，源输入变化时自动清除展开值 | `searchName`、`applyExpandedName(value)`、`clearExpandedName()` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 5 个详情弹窗（物资 / 流水 / 工作记录 / 计划 / 记录） |
 | `useShiftWheelHorizontalScroll.ts` | 在表格滚动容器上支持 Shift+滚轮横向滚动 | 无返回值（内部挂/卸 `wheel` 监听，`passive: false`） | 申购 3 个列表页 |
 
@@ -314,6 +313,7 @@ web/src/
 | `stockMaterialCache.ts` | 物资选择器的请求合并：`fetchDefaultStockMaterials()`（前 200 条，15s 短时缓存，失败不缓存）、`fetchStockMaterial(id)`（只合并同时发出的重复请求）、`invalidateStockMaterialCache()`（出入库成功后调用） |
 | `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
+| `pinyinFilter.ts` | 下拉框拼音筛选：把选项文本转成「原文 + 全拼 + 首字母」索引并缓存（上限 5000 条）；`pinyinSelectFilter`、`pinyinTreeSelectFilter` 供 `PinyinSelect` / `PinyinTreeSelect` 使用，原文包含匹配保持不变 |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
 | `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（9 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；标准二级库与精简二级库是两个独立一级项；系统管理不参与）、`visibleNavFeatureKeys(can)`、`resolveLandingRouteName(can)`（落地页推导） |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
@@ -434,9 +434,9 @@ Go + Gin 单进程服务（PostgreSQL 16+ / pgx），源码在 `server/`，Go �
 server/
 ├── cmd/server/main.go  # 入口：读配置 → 建上传目录 → 初始化日志 → 打开连接池 → 启动清理 → 后台任务 → HTTP 服务；`server healthcheck` 子命令
 ├── internal/app/       # app.New()：中间件、NoRoute/NoMethod、/health、/api/v1/openapi.json、/api/docs、业务路由与 MCP 绑定；路由一致性测试
-├── internal/api/       # 17 个路由包：aisearch、codelib、deps、exportjob、files、hazard、huaxing、ledger、mcp、
+├── internal/api/       # 16 个路由包：codelib、deps、exportjob、files、hazard、huaxing、ledger、mcp、
 │                       #   miniprogram、purchase、secondary、settings、share、stock、system、work
-├── internal/service/   # 29 个业务包：aisearch、attachment、codelib、common、dashboard、dictionary、excelexport、
+├── internal/service/   # 28 个业务包：attachment、codelib、common、dashboard、dictionary、excelexport、
 │                       #   exportjob、file、hazard、huaxing、importfile、importjob、inventory、ledger、lite、material、
 │                       #   memo、miniprogram、plancleanup、plantemplate、price、project、purchaserequest、recordsync、
 │                       #   replenishment、share、webhook、work
@@ -464,7 +464,6 @@ server/
 | 路由包 | 接口前缀 | 依赖（按需列出） |
 | --- | --- | --- |
 | `api/system` | `/auth`、`/users`、`/memos`、`/version`、`/projects` | `auth.CurrentUser`、`auth.SystemAdmin`；`/version`、`/auth/login`、`/auth/refresh`、`/auth/qr-sessions*` 公开 |
-| `api/aisearch` | `/ai-search` | `auth.CurrentUser`（模型服务由 `APP_AI_SEARCH_*` 环境变量配置） |
 | `api/settings` | `/system-settings` | `advanced-settings` 读写均需系统管理位（公开运行模式端点已移除） |
 | `api/stock` | `/stock-materials`、`/inventory*`、`/dashboard/summary` | `auth.RequireProject`、`auth.WarehouseReader`、`auth.WarehouseWriter`、`deps.RequireFullSecondaryWarehouse`；仪表盘汇总只要求登录 |
 | `api/codelib` | `/material-code-library` | `auth.RequireProject`、`auth.PurchaseReader`、`auth.PurchaseWriter` |
@@ -819,8 +818,6 @@ flowchart LR
 | `WechatMiniProgramAppID` | `APP_WECHAT_MINI_PROGRAM_APP_ID` | `string` | `""` | 多个 AppID 逗号分隔，顺序须与 secret 一致（数量或唯一性不符返回 503 `WECHAT_CONFIGURATION_INVALID`） |
 | `WechatMiniProgramAppSecret` | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | `string` | `""` | 同上，仅后端保存 |
 | `WechatMiniProgramCodeEnv` | `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | `string` | `release` | 小程序码环境：`trial` / `release` |
-| `AISearchEnabled` | `APP_AI_SEARCH_ENABLED` | `bool` | `false` | 启用时必须同时配置端点 / Key / 模型 |
-| `AISearchEndpoint` / `AISearchAPIKey` / `AISearchModel` | `APP_AI_SEARCH_ENDPOINT` / `APP_AI_SEARCH_API_KEY` / `APP_AI_SEARCH_MODEL` | `string` | `""` | OpenAI 兼容端点、密钥与模型 |
 | `FeishuWebhook` | `APP_FEISHU_WEBHOOK_ENABLED` / `_URL` / `_SECRET` / `_EVENTS` | `struct` | 关闭 | 飞书机器人推送；事件逗号分隔 |
 | `DingTalkWebhook` | `APP_DINGTALK_WEBHOOK_ENABLED` / `_URL` / `_SECRET` / `_EVENTS` | `struct` | 关闭 | 钉钉机器人推送；事件逗号分隔 |
 | `WechatAPIBase` | `APP_WECHAT_API_BASE` | `string` | `https://api.weixin.qq.com` | 微信接口根地址（去掉末尾 `/`），测试可指向本地桩服务 |
@@ -854,7 +851,6 @@ flowchart LR
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 多个小程序按相同顺序逗号分隔 |
 | `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | `trial` / `release`，默认 `release` |
-| `APP_AI_SEARCH_*` | 启用时配置端点 / Key / 模型 |
 | `APP_FEISHU_WEBHOOK_*` / `APP_DINGTALK_WEBHOOK_*` | 地址 / 密钥 / 订阅事件 |
 | `APP_LOG_DIR` / `APP_LOG_BACKUP_COUNT` | `./data/logs` / `90` |
 | `APP_PREVIEW_CONCURRENCY` / `APP_PREVIEW_CACHE_DIR` | `6` / `./data/preview-cache` |
@@ -909,7 +905,7 @@ flowchart LR
 
 | 任务 | 生命周期 |
 | --- | --- |
-| 常驻任务 | 收到退出信号后 ctx 取消，各任务尽快返回；全部结束后执行 `OnShutdown` 收尾（`webhook.CloseClient`、`aisearch.CloseClients` 关闭 HTTP 客户端空闲连接） |
+| 常驻任务 | 收到退出信号后 ctx 取消，各任务尽快返回；全部结束后执行 `OnShutdown` 收尾（`webhook.CloseClient` 关闭 HTTP 客户端空闲连接） |
 | 请求内派生任务 | `importjob.EnqueueImport` 与 `exportjob` 登记任务后 `go RunJob(context.Background(), id, processor)`，由包级 `sync.WaitGroup` 跟踪（测试可 `Wait()`），单进程有效；进程重启时由启动清理把中断的任务标记失败 |
 | 测试环境 | 设置 `APP_DISABLE_WORKERS` 时不启动常驻任务（启动清理照常执行），避免与用例并发改写数据 |
 
@@ -945,7 +941,7 @@ flowchart LR
 | 层次 | 内容 |
 | --- | --- |
 | 静态检查 | `gofmt -l .`（应无输出）、`go vet ./...` |
-| Go 单元测试 | `go test ./...`：中间件、健康检查与未知路由、契约 / 路由一致性、MCP 目录、各 service 的纯逻辑（Excel 渲染、导入解析、图片重编码、附件保留期、Webhook、AI 搜索等）；少数需要 PostgreSQL 的用例默认连本机 `em_go_test` 库（可用 `GO_TEST_DATABASE_URL` 覆盖，CI 指向服务容器），连不上时跳过 |
+| Go 单元测试 | `go test ./...`：中间件、健康检查与未知路由、契约 / 路由一致性、MCP 目录、各 service 的纯逻辑（Excel 渲染、导入解析、图片重编码、附件保留期、Webhook 等）；少数需要 PostgreSQL 的用例默认连本机 `em_go_test` 库（可用 `GO_TEST_DATABASE_URL` 覆盖，CI 指向服务容器），连不上时跳过 |
 | 黑盒契约测试 | `server/tools/run_contract_tests.sh`：重建本地 PostgreSQL 测试库（导入 `init.sql`）→ 编译并启动 Go 服务（独立上传 / 日志目录，`APP_DISABLE_WORKERS=1`、`APP_TEST_HOOKS=1`）→ 运行 `server/tests/` 下的 pytest 用例，通过 HTTP 调用服务并直连同一数据库校验落库结果；`PGHOST` / `PGPORT` / `PGUSER` / `PGPASSWORD` 可覆盖连接 |
 | CI | `.github/workflows/api-test.yml`：PostgreSQL 16 服务容器 + 静态检查 + `go test ./...` + 黑盒契约测试；`contract-check.yml`：契约与内嵌副本、路由一致，前端生成类型未漂移；`e2e-simulation.yml`：编译后端连真实 PostgreSQL 跑 `server/scripts/e2e_simulation.py` 模拟用户操作 |
 #### Docker 与部署
