@@ -33,7 +33,17 @@ function mediaBlock(query: string): string {
   return styles.match(new RegExp(`@media \\(${query}\\) \\{[\\s\\S]*?\\n\\}`))?.[0] ?? ''
 }
 
+/** 顶部「窄屏 / 矮视口」令牌档位（与弹窗断点同一组条件）。 */
+function narrowTokens(): string {
+  return (
+    styles.match(
+      /@media \(max-width: 768px\), \(max-height: 560px\) \{\s*\n\s*:root \{[\s\S]*?\n\s*\}\s*\n\}/,
+    )?.[0] ?? ''
+  )
+}
+
 const dialog = dialogSection()
+const narrow = narrowTokens()
 const small = mediaBlock('max-width: 360px')
 
 describe('移动端弹窗样式接线', () => {
@@ -81,33 +91,34 @@ describe('移动端弹窗样式接线', () => {
     )
   })
 
-  it('底部按钮缩小尺寸与字号，且按钮组不换行', () => {
-    expect(dialog).toContain('.n-card.n-modal > .n-card__footer .n-button {')
-    expect(dialog).toContain('height: 28px')
-    expect(dialog).toContain('font-size: 12px')
+  it('底部按钮尺寸由令牌收紧，且按钮组不换行', () => {
+    // 桌面统一规则在「弹窗统一排版」区块；窄屏只改 :root 令牌，不再写第二套按钮规则
+    expect(styles).toMatch(
+      /\.n-card\.n-modal \.n-card__footer \.n-button,[^{]*\{[^}]*height: var\(--dialog-footer-button-height\);/,
+    )
+    expect(narrow).toContain('--dialog-footer-button-padding: 0 6px;')
+    expect(small).toContain('--dialog-footer-button-height: 26px;')
+    expect(small).toContain('--dialog-footer-button-size: 11px;')
     // 压过组件库写在元素上的行内 flex-flow: wrap，否则按钮组会折行
     expect(dialog).toContain('flex-wrap: nowrap !important')
     expect(dialog).toContain('.n-card.n-modal > .n-card__footer .n-space')
     expect(dialog).toContain('.n-card.n-modal > .n-card__footer .modal-footer')
+    expect(dialog).toContain('gap: var(--dialog-footer-gap) !important')
     expect(dialog).toContain('flex: none')
   })
 
-  it('页脚按钮上方留出间距，且极窄屏覆盖时不会把它重置为 0', () => {
-    // 页脚上边距 14px：按钮不再紧贴内容区（声明前可能有注释，故不逐字锚定换行）
-    expect(dialog).toMatch(/\.n-card\.n-modal > \.n-card__footer \{[^}]*padding: 14px 12px 8px;/)
-    // ≤360px 只收窄左右留白，上边距必须保持同值；写成 `padding: 0 8px 8px` 会静默清零
-    expect(small).toMatch(/\.n-card\.n-modal > \.n-card__footer \{[^}]*padding: 14px 8px 8px;/)
-    expect(small).not.toContain('padding: 0 8px 8px')
+  it('页脚间距由令牌提供，且极窄屏不会把上边距重置为 0', () => {
+    expect(narrow).toContain('--dialog-footer-padding: 14px 12px 8px;')
+    expect(small).toContain('--dialog-footer-padding: 14px 8px 8px;')
+    expect(styles).not.toContain('padding: 0 8px 8px')
+    // 不能再有写死页脚内边距的规则（只允许 :root 令牌声明）
+    expect(styles).not.toMatch(/\.n-card\.n-modal > \.n-card__footer \{[^}]*padding: 14px/)
   })
 
-  it('极窄屏再压一档，并排在弹窗规则之后（否则被覆盖）', () => {
-    expect(small).toContain('height: 26px')
-    expect(small).toContain('font-size: 11px')
-
-    const wideIndex = styles.indexOf(MARKER)
-    const narrowIndex = styles.indexOf('@media (max-width: 360px)')
-    expect(wideIndex).toBeGreaterThan(-1)
-    expect(narrowIndex).toBeGreaterThan(-1)
-    expect(narrowIndex).toBeGreaterThan(wideIndex)
+  it('极窄屏只通过令牌再压一档页脚', () => {
+    expect(small).toContain('--dialog-footer-gap: 4px;')
+    expect(small).toContain('--dialog-footer-button-padding: 0 4px;')
+    // ≤360px 不再单独写 .n-card__footer 规则，避免和统一规则各改各的
+    expect(small).not.toContain('.n-card.n-modal > .n-card__footer')
   })
 })

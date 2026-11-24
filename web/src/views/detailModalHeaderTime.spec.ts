@@ -24,9 +24,10 @@ const HEADER_TIME_FILES = [
 ]
 
 describe('详情弹窗标题右侧的更新时间', () => {
-  it('字号比正文小一档，且不加 nowrap（窄屏靠换行让位）', () => {
+  it('字号走弹窗辅助说明令牌（12px），且不加 nowrap（窄屏靠换行让位）', () => {
     expect(rule, 'styles.css 里未找到 .card-header-time 规则').not.toBe('')
-    expect(rule).toMatch(/font-size:\s*12px/)
+    expect(rule).toMatch(/font-size:\s*var\(--dialog-caption-size\)/)
+    expect(styles).toMatch(/--dialog-caption-size:\s*12px;/)
     expect(rule).not.toContain('nowrap')
   })
 

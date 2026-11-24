@@ -654,9 +654,7 @@ function openHistoryRecord(record: PurchaseRecord) {
     style="width: min(560px, calc(100vw - 24px))"
     :mask-closable="false"
   >
-    <n-alert type="info" style="margin-bottom: 16px">
-      计划信息将带入申购记录，转入后仍可继续修改和整理。
-    </n-alert>
+    <n-alert type="info"> 计划信息将带入申购记录，转入后仍可继续修改和整理。 </n-alert>
     <n-form label-placement="top" size="small" :show-feedback="false">
       <div class="form-grid">
         <n-form-item label="申购单号">

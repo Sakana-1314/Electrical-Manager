@@ -306,16 +306,4 @@ function confirmDelete(): void {
 .hazard-type-empty {
   padding: 40px 0;
 }
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
-}
 </style>

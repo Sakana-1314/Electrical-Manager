@@ -83,7 +83,7 @@ async function confirm() {
     style="width: min(640px, calc(100vw - 24px))"
     :mask-closable="false"
   >
-    <n-alert type="warning" style="margin-bottom: 16px">
+    <n-alert type="warning">
       反向冲销将生成一条与原流水相反方向的流水（原入库 → 出库，原出库 →
       入库）。可为每项物资指定冲销数量， 未冲销的剩余数量可后续再次冲销。
     </n-alert>

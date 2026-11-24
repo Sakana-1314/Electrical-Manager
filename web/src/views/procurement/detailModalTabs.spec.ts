@@ -314,15 +314,15 @@ describe('申购计划详情弹窗的字段分组', () => {
     expect(strayAngleBrackets()).toEqual([])
   })
 
-  it('详情弹窗标记落在卡片根元素上（恢复宽松行距的全局 CSS 依赖它）', async () => {
+  it('详情弹窗标记落在卡片根元素上（关闭接线与清单守卫依赖它）', async () => {
     api.materials.mockResolvedValue({ items: [plan()], page: 1, page_size: 20, total: 1 } as never)
     api.materialFilterOptions.mockResolvedValue(PLAN_FILTER_OPTIONS as never)
     api.material.mockResolvedValue(plan() as never)
     api.materialCodeExists.mockResolvedValue({ exists: true } as never)
     await mountList(PurchaseMaterialsView, '/procurement/materials?detail=1')
 
-    // styles.css 用 `.n-card.n-modal:not([data-detail-modal])` 排除详情弹窗；
-    // 组件库改版把 attrs 挪走时这里会先失败，不至于静默变挤。
+    // 弹窗排版已统一（不再按该标记分叉行距），但关闭接线与 detailModalClose.spec.ts
+    // 的清单仍依赖它；组件库改版把 attrs 挪走时这里会先失败。
     const card = document.body.querySelector('.n-card.n-modal')
     expect(card?.hasAttribute('data-detail-modal')).toBe(true)
   })

@@ -140,9 +140,9 @@ watch(
           </n-button>
         </n-input-group>
       </n-form-item>
-      <p class="token-hint">MCP 地址已包含令牌，请勿公开分享；令牌仅供本人使用。</p>
+      <p class="dialog-hint token-hint">MCP 地址已包含令牌，请勿公开分享；令牌仅供本人使用。</p>
       <n-divider />
-      <div class="section-title">修改密码</div>
+      <div class="dialog-section-title">修改密码</div>
       <n-form-item label="当前密码">
         <n-input
           v-model:value="form.current_password"
@@ -185,28 +185,23 @@ watch(
 }
 .account-name {
   color: var(--color-text-strong);
-  font-size: 14px;
+  font-size: var(--dialog-body-size);
   font-weight: 600;
+  line-height: var(--dialog-body-line-height);
 }
 .account-meta {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
   word-break: break-all;
 }
 .account-hint {
   margin-top: 2px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 .token-hint {
   margin: -4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-.section-title {
-  margin-bottom: 4px;
-  color: var(--color-text-strong);
-  font-size: 13px;
-  font-weight: 600;
 }
 </style>

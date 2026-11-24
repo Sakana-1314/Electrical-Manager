@@ -346,7 +346,12 @@ watch(
         </div>
       </n-card>
 
-      <n-alert v-if="editing" type="warning" title="修改影响提示" style="margin-top: 12px">
+      <n-alert
+        v-if="editing"
+        type="warning"
+        title="修改影响提示"
+        style="margin-top: var(--dialog-block-gap)"
+      >
         保存后，后端会按发生时间重放相关物资的全部流水；允许形成负库存。
       </n-alert>
 
@@ -493,7 +498,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 32px;
+  gap: var(--dialog-section-gap);
 }
 
 .operation-hero-main {
@@ -502,33 +507,35 @@ watch(
 
 .operation-eyebrow {
   color: var(--color-primary-hover);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
   font-weight: 700;
   letter-spacing: 0.14em;
+  line-height: var(--dialog-caption-line-height);
 }
 
 .operation-title-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-top: 8px;
+  gap: var(--dialog-block-gap);
+  margin-top: var(--dialog-section-title-gap);
 }
 
 .operation-no {
   color: var(--color-text-strong);
-  font-size: clamp(18px, 2vw, 24px);
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: var(--dialog-title-size);
+  font-weight: var(--dialog-title-weight);
+  line-height: var(--dialog-title-line-height);
 }
 
 .operation-meta-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--dialog-section-title-gap);
+  margin-top: var(--dialog-block-gap);
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--dialog-body-size);
+  line-height: var(--dialog-body-line-height);
 }
 
 .operation-meta-row strong {
@@ -539,38 +546,40 @@ watch(
 .operation-meta-divider {
   width: 1px;
   height: 14px;
-  margin: 0 4px;
+  margin: 0 var(--dialog-label-gap);
   background: var(--color-border);
 }
 
 .operation-line-count {
   flex: none;
   min-width: 132px;
-  padding: 18px 24px;
+  padding: var(--dialog-block-padding);
   border: 1px solid var(--color-primary-border);
-  border-radius: 16px;
+  border-radius: var(--dialog-block-radius);
   background: var(--color-surface-translucent);
   text-align: center;
 }
 
 .operation-line-count > span {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 
 .operation-line-count div {
-  margin-top: 4px;
+  margin-top: var(--dialog-label-gap);
   color: var(--color-primary-strong-text);
 }
 
 .operation-line-count strong {
-  font-size: 30px;
-  line-height: 1;
+  font-size: var(--dialog-metric-size);
+  line-height: var(--dialog-metric-line-height);
 }
 
 .operation-line-count small {
-  margin-left: 4px;
-  font-size: 13px;
+  margin-left: var(--dialog-label-gap);
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 
 @media (max-width: 720px) {

@@ -243,7 +243,7 @@ function confirmDelete(): void {
         </n-form-item>
         <n-form-item label="启用">
           <n-switch v-model:value="form.enabled" />
-          <span class="switch-hint">
+          <span class="dialog-hint switch-hint">
             {{ form.enabled ? '启用：登记隐患时可选择该单位' : '停用：登记隐患时不可选' }}
           </span>
         </n-form-item>
@@ -267,20 +267,6 @@ function confirmDelete(): void {
 
 <style scoped>
 .switch-hint {
-  margin-left: 10px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
+  margin-left: var(--dialog-footer-gap);
 }
 </style>

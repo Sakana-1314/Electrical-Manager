@@ -106,7 +106,7 @@ async function copyLink() {
   >
     <!-- 第一步：确认信息 + 选择失效时间 -->
     <template v-if="step === 'confirm'">
-      <n-alert type="warning" :bordered="false" style="margin-bottom: 16px">
+      <n-alert type="warning" :bordered="false">
         你将把勾选的 <b>{{ itemIds.length }} 条{{ title }}</b> 分享为
         <b>无需登录即可访问的公开页面</b
         >。任何获得链接的人都能查看这些数据，请确认内容不涉及敏感信息。
@@ -130,7 +130,7 @@ async function copyLink() {
 
     <!-- 第二步：再次确认 -->
     <template v-else-if="step === 'final'">
-      <n-alert type="warning" :bordered="false" style="margin-bottom: 16px">
+      <n-alert type="warning" :bordered="false">
         再次确认：将分享 <b>{{ itemIds.length }} 条{{ title }}</b
         >，失效时间为 <b>{{ expiryLabels[expiry] }}</b
         >。分享后任何获得链接的人 <b>无需登录</b>即可查看，此操作将立即生效。
@@ -147,11 +147,11 @@ async function copyLink() {
     <!-- 第三步：分享成功，展示链接 -->
     <template v-else>
       <n-result status="success" title="分享成功" :description="`已生成 ${title} 分享链接`" />
-      <n-input-group style="margin-top: 8px">
+      <n-input-group style="margin-top: var(--dialog-section-title-gap)">
         <n-input :value="shareUrl" readonly class="share-url-input" />
         <n-button type="primary" @click="copyLink">复制链接</n-button>
       </n-input-group>
-      <n-alert type="info" :bordered="false" style="margin-top: 16px">
+      <n-alert type="info" :bordered="false" style="margin-top: var(--dialog-block-gap)">
         链接失效时间为 {{ expiryLabels[expiry] }}。可在链接有效期内随时撤回，撤回后链接立即失效。
       </n-alert>
     </template>
@@ -181,6 +181,7 @@ async function copyLink() {
 <style scoped>
 .share-url-input :deep(input) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 </style>

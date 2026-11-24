@@ -542,7 +542,8 @@ async function remove(file: FileObject) {
 .upload-name {
   overflow: hidden;
   color: var(--color-text);
-  font-size: 12px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -565,7 +566,8 @@ async function remove(file: FileObject) {
 .upload-status {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -573,8 +575,9 @@ async function remove(file: FileObject) {
 .upload-elapsed {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: var(--dialog-caption-size);
   font-variant-numeric: tabular-nums;
+  line-height: var(--dialog-caption-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -593,8 +596,8 @@ async function remove(file: FileObject) {
   border-radius: 6px;
   background: var(--color-surface);
   color: var(--color-text);
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
   cursor: pointer;
 }
 .upload-btn:hover {

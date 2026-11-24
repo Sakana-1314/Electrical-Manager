@@ -408,7 +408,10 @@ async function saveEditRecord() {
     <template v-if="editing?.updated_at" #header-extra>
       <span class="card-header-time">{{ formatShanghaiTime(editing.updated_at) }}</span>
     </template>
-    <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
+    <n-scrollbar
+      style="max-height: var(--dialog-body-max-height)"
+      content-style="padding-right: var(--dialog-scroll-gutter)"
+    >
       <n-form label-placement="top" size="small" :show-feedback="false" :disabled="!canWrite">
         <!-- 字段按业务域分 tab：一屏铺开会显拥挤；display-directive="show" 让未激活的
              tab 也保持挂载，切回来时输入内容 / 上传进度不会丢 -->
@@ -640,7 +643,10 @@ async function saveEditRecord() {
     style="width: 760px; max-width: calc(100vw - 32px)"
     :mask-closable="false"
   >
-    <n-scrollbar style="max-height: 70vh" content-style="padding-right: 12px">
+    <n-scrollbar
+      style="max-height: var(--dialog-body-max-height)"
+      content-style="padding-right: var(--dialog-scroll-gutter)"
+    >
       <n-form label-placement="top" size="small" :show-feedback="false">
         <div class="form-grid">
           <n-form-item label="需求日期" required>

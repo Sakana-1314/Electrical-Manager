@@ -351,9 +351,7 @@ async function confirmReplenishment() {
       style="width: min(560px, calc(100vw - 24px))"
       :mask-closable="false"
     >
-      <n-alert type="warning" style="margin-bottom: 16px">
-        确认以下信息后才会新增申购计划，取消不会产生任何数据。
-      </n-alert>
+      <n-alert type="warning"> 确认以下信息后才会新增申购计划，取消不会产生任何数据。 </n-alert>
       <n-descriptions v-if="replenishmentRow" :column="2" label-placement="left">
         <n-descriptions-item label="物资">{{ replenishmentRow.name }}</n-descriptions-item>
         <n-descriptions-item label="型号规格">{{

@@ -55,7 +55,7 @@
 | 卡片内边距 | 由 Naive UI 主题控制，通常 `20px 22px` |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
 | 字号档位 | 页面标题 `24px`；区块标题 `16px`；正文与数据 `14px`；控件与次要说明 `13px`；微字说明 `12px` |
-| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `13px`（紧凑化后由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。次要说明文字（`.muted`，如开关说明、表格里的型号副行）同为 `13px`；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
+| 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `13px`（紧凑化后由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）同为 `13px`；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
 `--color-surface-muted`，不用蓝色系底色。
@@ -250,19 +250,25 @@
 | 失败与刷新 | 各块（概览、隐患统计、低库存、最近出入库）独立请求、独立失败：失败的块显示「—」并在顶部提示「重试」，不拖垮整页；页头显示「更新于 HH:mm」；页面重新可见且数据超过 2 分钟时静默刷新一次（不遮罩） |
 | 加载态 | 指标用骨架屏占位，不用整页遮罩 |
 
-### 弹窗密度
+### 弹窗统一排版
 
-所有 `preset="card"` 弹窗共用一套紧凑密度（与用户详情弹窗同口径），由全局规则与表单 props 统一，**不要逐弹窗再写间距覆盖**；
-例外是带 `data-detail-modal` 标记的详情弹窗（见「详情弹窗」一节）：以阅读为主，保留 Naive 默认的标签行高与校验反馈区，不与表单弹窗一起压空态占位。
+所有 `preset="card"` 弹窗（表单 / 详情 / 批量 / 设置）共用一套设计令牌，数值只定义在
+`styles.css` 的 `:root` 里（`--dialog-*`），组件与页面只引用变量、**不写死字号 / 行高 / 间距**。
+表单弹窗与详情弹窗也同口径，不再按 `data-detail-modal` 分叉出两套行距；该标记只用于识别详情弹窗
+（关闭接线与清单守卫），不再影响密度。
 
 | 项 | 要求 |
 | --- | --- |
-| 表单尺寸 | 弹窗内的 `n-form` 一律 `size="small"`（输入控件 28px 高）；带 `:rules` 内联校验的表单保留反馈区，纯展示编辑 / 无校验表单再加 `:show-feedback="false"` |
-| 表单行距 | `styles.css` 全局把 `.n-card.n-modal .n-form-item` 行距压到 `14px`（末行归零）——scoped `:deep` 作用不到 teleport 出去的弹窗根，不要往页面里写 |
-| 空态占位 | 表单类弹窗：Naive 表单项默认给每行**预留 24px 校验反馈区**（空态也占位）、top 标签行另有 24px min-height（网格行 + 元素）与 6px 下内边距，行与行之间空态约 38px 纯空白。`styles.css` 用 `.n-card.n-modal:not([data-detail-modal])` 把这些空态预留压除（`.n-form-item-feedback-wrapper` min-height 0、`--top-labelled` 网格行 minmax(0, auto) + 标签 min-height 0 / 下内边距 2px）：校验报错出现时反馈区按内容自然撑开，报错仍可见。**详情弹窗不压**（`data-detail-modal` 排除）：压掉后行高 / 行距过挤（2026-11-23 用户反馈「页面拥挤不协调」），保留 Naive 默认。不要为省行距把弹窗表单改成无校验——压的是空态占位，不是报错能力 |
-| 页脚按钮 | `styles.css` 全局把弹窗页脚按钮统一为 `28px` 高 / `12px` 字 / 左右内边距 `10px`（`.n-card__footer` / `.n-card__action` 内的 `.n-button`），与移动端断点、用户详情弹窗 footer 同口径 |
-| 弹窗外框 | header `16px 22px 10px`、content `14px 22px 18px`（同样全局声明）；宽度仍用 `width: min(标准宽, calc(100vw - 24px/32px))` 按弹窗信息量定 |
-| 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），只统一尺寸与行距 |
+| 字号层级 | 弹窗标题 `--dialog-title-size`（16px）；正文、表单标签、描述列表、表格、提示统一 `--dialog-body-size` / `--dialog-label-size`（13px）；辅助说明、更新时间、上传状态统一 `--dialog-caption-size`（12px）。不要再出现 11px / 14px / 15px 等弹窗内字号 |
+| 行高 | 标题 `--dialog-title-line-height`（1.4）；正文 `--dialog-body-line-height`（1.6）；标签 `--dialog-label-line-height`（20px）；辅助说明 `--dialog-caption-line-height`（1.5）；展示型大数字用 `--dialog-metric-*` |
+| 表单项与标签 | 标签到控件 `--dialog-label-gap`（4px），表单项之间 `--dialog-field-gap`（20px，窄屏 16px，末行归零）。标签行不再保留 Naive 默认的 24px 空态占位；反馈区 `min-height: 0`，校验报错出现时按内容自然撑开，报错仍然可见 |
+| 外框 | header `--dialog-header-padding`、content `--dialog-content-padding`、footer `--dialog-footer-padding`（桌面 `16px 22px 12px` / `14px 22px 18px` / `12px 22px 18px`）；嵌套卡片（如流水摘要块）用 `--dialog-block-radius` / `--dialog-block-padding` |
+| 分组与区块 | 弹窗内区块标题统一挂全局类 `dialog-section-title`（13px / 600 / 下间距 8px）；辅助说明挂 `dialog-hint`（12px / 弱色）。`n-alert` 的下间距、`n-divider` 的上下间距、`n-collapse` 头部字号分别走 `--dialog-block-gap` / `--dialog-section-gap` / 正文令牌 |
+| tabs | 弹窗内 tab 字号 `--dialog-tab-size`（13px）、标签间距 `--dialog-tab-gap`（桌面 32px / 窄屏 18px）、tab 与内容间距 `--dialog-tab-content-gap`（桌面 16px / 窄屏 12px）。详情字段分组的行距与普通弹窗相同，不再单独写一套 |
+| 页脚 | 按钮统一 `--dialog-footer-button-height`（28px）/ `--dialog-footer-button-size`（12px）/ `--dialog-footer-button-padding`，按钮组与左右分组间距 `--dialog-footer-gap`（8px）；≤360px 由令牌压到 26px / 11px。页脚结构统一用全局 `.modal-footer` / `.modal-footer-left` / `.modal-footer-right`，不要逐组件复制 |
+| 内容区滚动 | 桌面用 `--dialog-body-max-height`（`min(70vh, 660px)`）与 `--dialog-scroll-gutter`（12px）；窄屏 / 矮视口由全局断点解除内层上限，只保留内容区一层滚动 |
+| 宽度 | 仍按信息量用 `width: min(标准宽, calc(100vw - 24px/32px))` 取宽度，不强制所有弹窗同宽 |
+| 参考实现 | 用户详情弹窗（`UsersView.vue` 的 `user-edit-modal`）是完整参考：`label-placement="left" label-width="84" size="small" :show-feedback="false"` + 分节条带化；其余弹窗保持各自的 `label-placement`（top / left 均可），字号、行高、间距必须引用同一套令牌 |
 
 ### 详情弹窗
 
@@ -276,8 +282,8 @@
 | 项 | 要求 |
 | --- | --- |
 | 形态 | `n-modal preset="card"`，宽度与同类弹窗一致；移动端自动获得「移动端弹窗」一节的全局规则，页面不写断点 |
-| 分组 | 字段多时优先按业务域拆成**弹窗内 tab**（申购计划 3 个：物资信息 / 申购信息 / 备注与附件；申购记录 4 个，多一个「采购进度」），用 `n-tabs type="line" size="small"` + `display-directive="show"`（切 tab 不丢输入，表单校验覆盖全部字段）。保存前先定位缺必填项的 tab 并自动切过去，报错不能留在隐藏 tab 里。tab 字号 13px，标签间距桌面 36px / 手机 18px，内容区表单项行距 20px（手机 16px）——比弹窗全局的 14px 松一档，分组后每屏字段少、要保留呼吸感。字段较少的弹窗用 `n-divider` 分节（“单据信息”“物资明细”），标题用业务名词，不用“基本信息 1” |
-| 行距 | 详情弹窗保留 Naive 默认的宽松行高（top 标签行 24px min-height、校验反馈区 24px 空态占位），**不套用表单类弹窗「压除空态占位」的紧凑口径**：`styles.css` 用 `.n-card.n-modal:not([data-detail-modal])` 排除。字段分组 tab 内表单项行距 20px（手机 16px），比弹窗全局的 14px 松一档 |
+| 分组 | 字段多时优先按业务域拆成**弹窗内 tab**（申购计划 3 个：物资信息 / 申购信息 / 备注与附件；申购记录 4 个，多一个「采购进度」），用 `n-tabs type="line" size="small"` + `display-directive="show"`（切 tab 不丢输入，表单校验覆盖全部字段）。保存前先定位缺必填项的 tab 并自动切过去，报错不能留在隐藏 tab 里。tab 字号与间距走「弹窗统一排版」一节的 `--dialog-tab-*` 令牌。字段较少的弹窗用 `n-divider` 分节（“单据信息”“物资明细”），标题用业务名词，不用“基本信息 1” |
+| 行距 | 与所有 `preset="card"` 弹窗同一套行距：标签到控件 `--dialog-label-gap`、表单项之间 `--dialog-field-gap`，空态不预留校验反馈区（报错出现时撑开）。`data-detail-modal` 只用于识别详情弹窗，不再切换密度 |
 | 布局 | 两列用 `form-grid` |
 | 页脚 | 左侧放页级操作（删除、转入申购记录、恢复为计划、反向冲销、在新页面打开）与只读摘要（最后更新时间、状态标签）；右侧放「取消 / 保存修改」，只保留一个主按钮 |
 | 互转跳转 | 单条「申购计划 → 申购记录」与「申购记录 → 申购计划」都从详情弹窗发起，成功后跳对方列表并带上 `?detail=<新记录 / 新计划的 id>`，由对方列表自动打开详情弹窗（不再跳详情页） |
@@ -303,11 +309,11 @@
 | 整窗限高 | 弹窗最高 `calc(var(--dialog-avail) - var(--dialog-pad-y) * 2)`（`--dialog-avail` 为 `100dvh`，`100vh` 作回退）——**与留白同源**，卡片 + 上下留白正好铺满视口，页脚不会跑到屏幕外 |
 | 命中条件 | 必须同时匹配**宽与高**：手机横屏（如 844×390）宽度 > 768px，只按 `max-width` 判断会让整套规则失效、弹窗（416px）比视口（390px）还高 |
 | 内部滑动 | 只保留**一层**滚动，由内容区（`.n-card-content`）承担；`n-scrollbar` 的行内 `max-height` 与隐患弹窗 `.modal-body` 的上限在这里让位；标题行与页脚 `flex: none` 保持自然高度（否则限高后页脚被压扁、按钮溢出卡片下沿），收缩量全部由内容区承担 |
-| 底部按钮 | 底下一排按钮必须排成**一行**：按内容宽度不换行，并缩小尺寸与字号——≤768px 用 `28px` 高 / `12px` 字，≤360px 再压到 `26px` 高 / `11px`；极窄时由页脚横向滑动承接（与 `.page-actions` 同一约定） |
-| 页脚间距 | 页脚 `padding-top` 为 `14px`：按钮与上方内容之间留出间距，不紧贴内容区。≤360px 只收窄左右（`padding: 14px 8px 8px`），**上边距必须保持同值**——写成 `padding: 0 8px 8px` 会把按钮上方的间距静默清零 |
+| 底部按钮 | 底下一排按钮必须排成**一行**：按内容宽度不换行，并缩小尺寸与字号——≤768px 用 `--dialog-footer-button-height`（28px）/ `--dialog-footer-button-size`（12px），≤360px 由令牌再压到 26px 高 / 11px；极窄时由页脚横向滑动承接（与 `.page-actions` 同一约定） |
+| 页脚间距 | 页脚内边距与按钮间距走 `--dialog-footer-padding` / `--dialog-footer-gap`：窄屏上边距为 `14px`，≤360px 只收窄左右（`14px 8px 8px`），**上边距必须保持同值**——写成 `0 8px 8px` 会把按钮上方的间距静默清零 |
 | 宽度收缩 | 弹窗卡片 `min-width: 0`：部分弹窗写死了 `width: min(960px, 92vw)` / `calc(100vw - 32px)`，窄屏上可能比「视口减左右留白」还宽，flex 默认 `min-width: auto` 又拒绝收缩，会让左右留白一侧大一侧小 |
-| 影响范围 | 只作用于 Naive 生成的 `.n-card.n-modal`；`.n-dialog`（确认弹窗）与 `n-image` 预览不匹配该作用域，不受影响 |
-| 桌面端 | 不命中该断点时保持原有观感与 `70vh / 65vh` 滚动上限 |
+| 影响范围 | 只作用于 Naive 生成的 `.n-card.n-modal`；`.n-dialog`（确认弹窗）与 `n-image` 预览不匹配该作用域，确认弹窗的字号 / 内边距由 `theme.ts` 的 `Dialog` 覆盖与弹窗对齐 |
+| 桌面端 | 不命中该断点时内容区滚动上限统一用 `--dialog-body-max-height`（`min(70vh, 660px)`），不再各弹窗分别写 `70vh / 65vh` |
 
 弹窗底部按钮组仍用 `n-space` / `.modal-footer` 组织，无需为移动端改动模板；新增弹窗只要沿用 `preset="card"` 即可自动获得上述行为。改动这段规则时 `web/src/views/mobileDialog.spec.ts` 会守住上述接线（含「留白必须自适应」「必须同时匹配宽高」「页脚不得参与收缩」三条回归）。
 

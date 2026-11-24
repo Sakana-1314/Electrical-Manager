@@ -289,22 +289,15 @@ function changePage(value: number) {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--filter-grid-gap);
+  margin-bottom: var(--dialog-block-gap);
 }
 
+/* 筛选项的排版（纵向排列、标签 13px、标签到控件 6px）由 styles.css 的 .filter-field 统一提供，
+   这里只负责弹窗里的最小宽度与均分。 */
 .filter-field {
-  display: flex;
   min-width: 180px;
   flex: 1 1 180px;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.filter-field > span {
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .filter-field :deep(.n-input) {
@@ -314,7 +307,7 @@ function changePage(value: number) {
 
 .history-search-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--dialog-footer-gap);
   margin-left: auto;
 }
 

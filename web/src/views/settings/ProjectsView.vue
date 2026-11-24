@@ -178,7 +178,7 @@ function remove(row: Project) {
         <n-form-item label="设为默认项目">
           <div class="form-switch-row">
             <n-switch v-model:value="form.is_default" />
-            <span class="form-hint">默认项目用于小程序 / MCP 未指定项目时的兜底归属</span>
+            <span class="dialog-hint">默认项目用于小程序 / MCP 未指定项目时的兜底归属</span>
           </div>
         </n-form-item>
         <n-form-item label="备注">
@@ -199,11 +199,6 @@ function remove(row: Project) {
 .form-switch-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-/* 开关旁的说明文字：与用户/高级设置页的次要说明同一套弱化样式 */
-.form-hint {
-  color: var(--color-text-muted);
-  font-size: 12px;
+  gap: var(--dialog-block-gap);
 }
 </style>

@@ -225,17 +225,3 @@ function confirmDelete(): void {
     </template>
   </n-modal>
 </template>
-
-<style scoped>
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
-}
-</style>

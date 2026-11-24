@@ -333,16 +333,4 @@ function confirmDelete(): void {
 .unit-input {
   flex: 0 0 104px;
 }
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
-}
 </style>

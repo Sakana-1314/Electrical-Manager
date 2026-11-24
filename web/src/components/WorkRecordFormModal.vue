@@ -421,9 +421,10 @@ const summary = computed(() => {
 
 <style scoped>
 .record-summary {
-  margin: 0 0 12px;
+  margin: 0 0 var(--dialog-block-gap);
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--dialog-caption-size);
+  line-height: var(--dialog-caption-line-height);
 }
 
 /* 日期与半天档同一行：一条记录的端点永远是「日期 + 上午 / 下午」两个值 */
@@ -440,17 +441,5 @@ const summary = computed(() => {
 
 .half-select {
   flex: 0 0 96px;
-}
-
-.modal-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.modal-footer-right {
-  display: flex;
-  gap: 8px;
 }
 </style>

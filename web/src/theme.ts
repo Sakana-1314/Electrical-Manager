@@ -184,6 +184,17 @@ function createThemeOverrides(palette: ThemePalette): GlobalThemeOverrides {
       // 描述列表承载数据值，同样保持 14px
       fontSizeMedium: '14px',
     },
+    Dialog: {
+      // 确认弹窗（useDialog）与 preset="card" 弹窗共用同一套排版：
+      // 标题 16 / 正文 13、内边距 22、操作区间距与弹窗页脚一致（8px）。
+      borderRadius: '14px',
+      fontSize: '13px',
+      titleFontSize: '16px',
+      titleFontWeight: '600',
+      padding: '16px 22px 18px',
+      contentMargin: '8px 0 16px 0',
+      actionSpace: '8px',
+    },
     Menu: {
       borderRadius: '10px',
       // 左侧导航（侧栏 + 移动端抽屉）比正文小 1px，让导航更紧凑；图标尺寸由菜单 iconSize 决定，不随字号变
