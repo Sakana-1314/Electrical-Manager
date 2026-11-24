@@ -55,7 +55,7 @@
 | 卡片内边距 | 筛选 / 说明卡片 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区为 `0`，表格直接贴卡片边（见「数据表格」） |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
 | 字号档位 | 页面标题 `--page-title-size`（20px）；卡片 / 区块标题 `--list-card-title-size`（16px）；列表正文与表格 `--list-body-size` / `--list-table-font-size`（13px）；辅助说明 `--list-caption-size`（12px）。页面与列表页不再写死字号 |
-| 控件尺寸 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）——列表页、筛选区、弹窗、登录页不再按 `size` 分档；文本域高度随内容。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 控件尺寸 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）——列表页、筛选区、弹窗、登录页不再按 `size` 分档；文本域高度随内容。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px）。多选下拉的已选值标签统一 `--control-tag-height`（20px）/ `--control-tag-font-size`（11px）/ `--control-tag-padding-x`（6px）/ `--control-tag-gap`（4px），不再用 Naive 默认的 24px / 14px 把 34px 控件撑满 |
 | 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `--list-table-font-size`（13px，由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）为 `--list-body-size`（13px）；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
 绿色仅用于完成、启用、正常等成功语义，不得表示普通主操作；侧栏、抽屉等需要与白卡片和浅蓝底拉开层次的区域用
