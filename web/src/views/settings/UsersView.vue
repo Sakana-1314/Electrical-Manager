@@ -376,7 +376,6 @@ function remove(row: ManagedUser) {
     <n-card class="data-card"
       ><PersistentDataTable
         storage-key="settings/users"
-        class="compact-table"
         size="small"
         :bordered="false"
         :columns="columns"
@@ -552,44 +551,39 @@ function remove(row: ManagedUser) {
 </template>
 
 <style scoped>
-/* 紧凑版式：用户格两行（姓名 + 用户名），单元格上下留白压到 6px，一屏能多看三成行。 */
+/* 紧凑版式：用户格两行（姓名 + 用户名），表格密度走全局列表令牌。 */
 .title-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-}
-.compact-table :deep(.n-data-table-th),
-.compact-table :deep(.n-data-table-td) {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  gap: var(--list-inline-gap);
 }
 .user-cell {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--list-cell-gap);
   min-width: 0;
 }
 .user-name-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--list-inline-gap);
   min-width: 0;
 }
 .user-name {
   overflow: hidden;
   color: var(--color-text-strong);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.35;
+  font-size: var(--list-body-size);
+  font-weight: var(--page-title-weight);
+  line-height: var(--list-cell-title-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .user-username {
   overflow: hidden;
   color: var(--color-text-muted);
-  font-size: 11px;
-  line-height: 1.25;
+  font-size: var(--list-caption-size);
+  line-height: var(--list-caption-line-height);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

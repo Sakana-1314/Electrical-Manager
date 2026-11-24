@@ -358,39 +358,6 @@ function selectTask(key: string): void {
 </template>
 
 <style scoped>
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
-.filter-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.filter-hint {
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.filter-action-buttons {
-  display: flex;
-  flex: none;
-  gap: 10px;
-}
-
-.filter-action-buttons :deep(.n-button) {
-  min-width: 88px;
-}
-
 /* 任务名是选中入口：样式像正文，悬停才显示可点 */
 .task-label {
   padding: 0;
@@ -406,16 +373,5 @@ function selectTask(key: string): void {
   color: var(--color-primary-strong-text);
   text-decoration: underline;
   outline: none;
-}
-
-@media (max-width: 900px) {
-  .filter-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filter-action-buttons {
-    justify-content: flex-end;
-  }
 }
 </style>

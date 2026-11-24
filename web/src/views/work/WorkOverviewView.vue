@@ -324,43 +324,4 @@ onMounted(loadOptions)
   </div>
 </template>
 
-<style scoped>
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
-.filter-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.filter-action-buttons {
-  display: flex;
-  flex: none;
-  gap: 10px;
-}
-
-.filter-action-buttons :deep(.n-button) {
-  min-width: 88px;
-}
-
-@media (max-width: 900px) {
-  .filter-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filter-action-buttons {
-    justify-content: flex-end;
-  }
-}
-</style>
+<style scoped></style>

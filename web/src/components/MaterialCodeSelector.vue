@@ -266,7 +266,7 @@ function changePage(value: number) {
 }
 
 .selector-search-actions :deep(.n-button) {
-  min-width: 88px;
+  min-width: var(--list-action-button-min-width);
 }
 
 @media (max-width: 680px) {

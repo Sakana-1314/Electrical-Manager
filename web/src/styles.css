@@ -39,7 +39,7 @@
   --dialog-label-size: 13px;
   --dialog-label-line-height: 20px;
   /* 弹窗内小尺寸控件的统一高度（n-form 的 size="small"） */
-  --dialog-control-height: 28px;
+  --dialog-control-height: var(--control-height-small);
   /* 标签与控件之间、相邻表单项之间、表单分组之间 */
   --dialog-label-gap: 4px;
   --dialog-field-gap: 20px;
@@ -71,10 +71,78 @@
   /* 弹窗内唯一允许的展示型大数字（如流水明细项数） */
   --dialog-metric-size: 24px;
   --dialog-metric-line-height: 1;
-  /* 筛选区：统一各页面筛选输入框宽度（桌面端常见宽度下一行 5 个，过窄自动降列） */
-  --filter-col-min-width: 190px;
-  --filter-grid-gap: 14px;
-  --filter-field-label-gap: 6px;
+  /* ============ 列表页 / 控件设计令牌 ============
+   * 列表页的页面骨架、筛选区、卡片、表格、分页与控件统一从这里取值；
+   * 页面局部样式只允许引用 `var(--list-*)` / `var(--control-*)`，不写字面字号、行高、间距。
+   * 表格卡片 `data-card` 的内容区不做内边距，表格（及分页条）直接贴着卡片边。 */
+  --page-gap: 16px;
+  --page-header-min-height: 40px;
+  --page-header-gap: 10px 20px;
+  --page-header-padding: 0 2px;
+  --page-title-size: 20px;
+  --page-title-line-height: 1.35;
+  --page-title-weight: 600;
+  --list-card-header-padding: 16px 18px 10px;
+  --list-card-content-padding: 14px 18px 18px;
+  --list-card-gap: 18px;
+  --list-card-title-size: 16px;
+  --list-card-title-line-height: 1.4;
+  /* 列表正文 / 辅助说明 / 强调文字（树节点、双行单元格的小标题） */
+  --list-body-size: 13px;
+  --list-body-line-height: 1.5;
+  --list-caption-size: 12px;
+  --list-caption-line-height: 1.5;
+  --list-emphasis-size: 14px;
+  --list-cell-title-line-height: 1.4;
+  --list-cell-gap: 2px;
+  --list-inline-gap: 8px;
+  --list-empty-padding: 40px 0;
+  /* 筛选区 */
+  --list-filter-heading-gap: 16px;
+  --list-filter-heading-margin: 18px;
+  --list-filter-actions-gap: 10px;
+  --list-filter-actions-margin: 20px;
+  --list-filter-actions-padding: 16px;
+  --list-filter-bar-gap: 10px;
+  --list-filter-grid-gap: 14px;
+  --list-filter-col-min-width: 190px;
+  --list-filter-label-gap: 6px;
+  --list-filter-label-size: 13px;
+  /* 操作按钮最小宽度（筛选区的重置 / 查询等） */
+  --list-action-button-min-width: 88px;
+  --list-split-icon-size: 14px;
+  /* 表格 */
+  --list-table-font-size: 13px;
+  --list-table-line-height: 1.5;
+  --list-table-cell-padding-y: 8px;
+  --list-table-cell-padding-x: 12px;
+  --list-table-header-weight: 600;
+  /* 分页条 */
+  --list-pagination-margin-top: 16px;
+  --list-pagination-padding-top: 14px;
+  --list-pagination-padding-x: 12px;
+  --list-pagination-padding-bottom: 12px;
+  /* 自定义树 / 双行单元格 */
+  --list-tree-node-gap: 8px;
+  --list-tree-node-min-width: 120px;
+  --list-tree-node-padding: 8px 14px;
+  --list-tree-padding: 4px 0 12px;
+  --list-badge-size: 12px;
+  --list-badge-line-height: 18px;
+  /* 控件：列表页与筛选区默认高度 / 字号 / 宽度 */
+  --control-height: 34px;
+  --control-height-small: 28px;
+  --control-font-size: 13px;
+  --control-padding-x: 12px;
+  --control-width: 100%;
+  --control-width-short: 150px;
+  --control-width-medium: 220px;
+  --control-width-unit: 160px;
+  --control-width-unit-small: 104px;
+  /* 旧筛选令牌保留为别名，弹窗内的筛选（历史记录 / 物料编码选择器）继续可用 */
+  --filter-col-min-width: var(--list-filter-col-min-width);
+  --filter-grid-gap: var(--list-filter-grid-gap);
+  --filter-field-label-gap: var(--list-filter-label-gap);
   /* 表格：与 Naive UI DataTable 的表头 / 行悬停保持一致（明暗各一套） */
   --color-table-header: #f7f9fc;
   --color-table-header-text: #3d4758;
@@ -236,18 +304,21 @@ a {
 .page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--page-gap);
+  /* 页面正文的默认字号 / 行高：未单独声明的文字也跟随列表令牌 */
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
   /* 作为页面级局部加载遮罩（LoadingMask）的定位上下文 */
   position: relative;
 }
 .page-header {
   display: flex;
-  min-height: 40px;
+  min-height: var(--page-header-min-height);
   align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 10px 20px;
-  padding: 0 2px;
+  gap: var(--page-header-gap);
+  padding: var(--page-header-padding);
 }
 /* 页头右侧操作区：单个容器（不随标题换行），内部按钮在窄屏仍保持同一行 */
 .page-actions {
@@ -255,15 +326,15 @@ a {
   flex: none;
   min-width: 0;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--list-inline-gap);
 }
 .page-title {
   margin: 0;
   color: var(--color-text-strong);
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--page-title-size);
+  font-weight: var(--page-title-weight);
   letter-spacing: -0.02em;
-  line-height: 1.35;
+  line-height: var(--page-title-line-height);
 }
 .page-header > .n-space,
 .page-header > .n-button,
@@ -276,15 +347,32 @@ a {
   box-shadow: var(--shadow-card);
 }
 .page .n-card-header {
-  padding: 16px 18px 10px;
+  padding: var(--list-card-header-padding);
 }
 .page .n-card-header__main {
   color: var(--color-text-strong);
-  font-weight: 600;
+  font-size: var(--list-card-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: var(--list-card-title-line-height);
 }
-/* 卡片内容密度：默认 20px+ 内边距压到 16px，弹窗同口径（弹窗不走 .page 前缀，单独声明） */
+/* 卡片内容密度：筛选 / 说明类卡片保留内边距；含表格的数据卡片在下方归零，表格直接贴边。 */
 .page .n-card-content {
-  padding: 14px 18px 18px;
+  padding: var(--list-card-content-padding);
+}
+/* 含表格的数据卡片：内容区不再做内边距，表格与分页条直接贴着卡片边。
+ * 只命中「卡片里确实有 n-data-table」的情况：`.data-card` 也被树、甘特时间线等复用，
+ * 那些页面仍需要卡片内边距。内容区归零后必须配合 overflow: hidden 保住卡片圆角，
+ * 否则表头灰底 / 行背景会把四角盖成直角。 */
+.data-card:has(.n-data-table) {
+  overflow: hidden;
+}
+.data-card:has(.n-data-table) > .n-card-content {
+  padding: 0;
+}
+.data-card:has(.n-data-table) .pagination-bar {
+  padding-right: var(--list-pagination-padding-x);
+  padding-bottom: var(--list-pagination-padding-bottom);
+  padding-left: var(--list-pagination-padding-x);
 }
 /* ============ 弹窗统一排版 ============
  * 所有 `preset="card"` 弹窗共用同一套外框、字号、行高与间距，数值全部来自 :root 的
@@ -329,6 +417,16 @@ a {
 .n-card.n-modal .n-form-item-label {
   font-size: var(--dialog-label-size);
   line-height: var(--dialog-label-line-height);
+}
+/* 弹窗控件统一为小尺寸档（与 n-form size="small" 一致）：高度 28px、字号 13px。 */
+.n-card.n-modal .n-input,
+.n-card.n-modal .n-input-number {
+  --n-height: var(--dialog-control-height) !important;
+  --n-font-size: var(--dialog-label-size) !important;
+}
+.n-card.n-modal .n-base-selection {
+  --n-height: var(--dialog-control-height) !important;
+  --n-font-size: var(--dialog-label-size) !important;
 }
 .n-card.n-modal .n-form-item--top-labelled {
   grid-template-rows: minmax(0, auto) 1fr;
@@ -457,18 +555,15 @@ a {
 }
 .filter-title {
   color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--list-card-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: var(--list-card-title-line-height);
 }
 .filter-description {
-  margin-top: 2px;
+  margin-top: var(--list-cell-gap);
   color: var(--color-text-muted);
-  font-size: 12px;
-}
-/* 这条规则用的是 naive-ui 不产出的 BEM 写法（真实类名是单短横线的 .n-card-content），
-   因此从未生效；保留原样不动，避免顺带改变桌面端上内边距（桌面端本次要求维持不变）。 */
-.data-card .n-card__content {
-  padding-top: 18px;
+  font-size: var(--list-caption-size);
+  line-height: var(--list-caption-line-height);
 }
 /* ============ 横向树共用样式（vue3-tree-org 颜色令牌适配） ============
  * 隐患类型与台账标签两个页面共用 .org-tree-horizontal（至多 3 层），页面只加自己的层级 class。
@@ -547,14 +642,14 @@ a {
 .page .n-data-table-th {
   background-color: var(--color-table-header);
   color: var(--color-table-header-text);
-  font-weight: 600;
+  font-weight: var(--list-table-header-weight);
 }
-/* 表格密度：单元格上下内边距 12px → 5px，正文字号统一 13px（所有列表页整体紧凑） */
+/* 表格密度：所有列表页统一单元格内边距、字号与行高。 */
 .page .n-data-table-th,
 .page .n-data-table-td {
-  padding-top: 8px;
-  padding-bottom: 8px;
-  font-size: 13px;
+  padding: var(--list-table-cell-padding-y) var(--list-table-cell-padding-x);
+  font-size: var(--list-table-font-size);
+  line-height: var(--list-table-line-height);
 }
 .page .n-data-table-tr:hover .n-data-table-td {
   background-color: var(--color-table-row-hover);
@@ -569,7 +664,7 @@ a {
 .table-text-two-line {
   display: -webkit-box;
   overflow: hidden;
-  line-height: 1.45;
+  line-height: var(--list-cell-title-line-height);
   overflow-wrap: anywhere;
   white-space: normal;
   -webkit-box-orient: vertical;
@@ -579,8 +674,8 @@ a {
 .table-material-summary {
   display: grid;
   min-width: 0;
-  gap: 2px;
-  line-height: 1.4;
+  gap: var(--list-cell-gap);
+  line-height: var(--list-cell-title-line-height);
 }
 .table-material-summary__name,
 .table-material-summary__meta {
@@ -590,20 +685,62 @@ a {
 }
 .table-material-summary__name {
   color: var(--color-text-strong);
-  font-weight: 600;
+  font-weight: var(--page-title-weight);
 }
 .table-material-summary__meta {
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--list-caption-size);
+  line-height: var(--list-caption-line-height);
 }
 /* 可点击的表格文本（如华星总库存的货品编码）：只做链接观感，点击由整行承担 */
 .table-link-strong {
   color: var(--color-primary);
 }
+/* ============ 列表页筛选区 ============
+ * 标题行 / 操作行 / 操作按钮组原先在 14 个列表页里各写一份，现统一由这里提供；
+ * 页面只负责结构（`.filter-heading` / `.filter-actions` / `.filter-action-buttons`）。 */
+.filter-heading,
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--list-filter-heading-gap);
+}
+.filter-heading {
+  justify-content: space-between;
+  margin-bottom: var(--list-filter-heading-margin);
+}
+.filter-actions {
+  margin-top: var(--list-filter-actions-margin);
+  padding-top: var(--list-filter-actions-padding);
+  border-top: 1px solid var(--color-border-subtle);
+}
+/* 简单页面只有直接放置的按钮：首个按钮用 auto 外边距推到右侧；
+ * 复杂页面的左侧说明 / 字段选择 + 右侧按钮组由 `.filter-action-buttons` 的 auto 外边距分开。 */
+.filter-actions > .n-button:first-child {
+  margin-left: auto;
+}
+.filter-action-buttons {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--list-filter-actions-gap);
+  margin-left: auto;
+}
+.filter-action-buttons .n-button {
+  min-width: var(--list-action-button-min-width);
+}
+.filter-actions .n-button {
+  font-size: var(--control-font-size);
+}
+.filter-hint {
+  color: var(--color-text-muted);
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
+}
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--list-filter-bar-gap);
   align-items: center;
 }
 .filter-grid {
@@ -619,15 +756,45 @@ a {
 }
 .filter-field > span {
   color: var(--color-text);
-  font-size: 13px;
+  font-size: var(--list-filter-label-size);
   font-weight: 500;
+  line-height: var(--list-body-line-height);
+}
+/* 筛选区控件统一宽度与高度：居中栏宽由栅格决定（100%），高度 34px，字号 13px。 */
+.filter-field .n-input,
+.filter-field .n-select,
+.filter-field .n-date-picker,
+.filter-field .n-input-number {
+  width: var(--control-width);
 }
 .filter-field .n-input,
-.filter-field .n-select {
-  width: 100%;
+.filter-bar > .n-input,
+.filter-bar > .n-input-number {
+  --n-height: var(--control-height) !important;
+}
+.filter-field .n-base-selection,
+.filter-bar > .n-select .n-base-selection {
+  --n-height: var(--control-height) !important;
+}
+.filter-field .n-input,
+.filter-field .n-base-selection,
+.filter-bar > .n-input,
+.filter-bar > .n-select .n-base-selection {
+  --n-font-size: var(--control-font-size) !important;
 }
 .filter-field .n-input {
   background-color: var(--color-field-surface);
+}
+/* 页面级控件统一高度 / 字号：输入框、数字输入、日期与下拉选择器都走同一令牌，
+ * 避免各页面再按 size 或局部高度写第二套尺寸。弹窗不在 `.page` 作用域内，仍用 size="small"。 */
+.page .n-input,
+.page .n-input-number {
+  --n-height: var(--control-height) !important;
+  --n-font-size: var(--control-font-size) !important;
+}
+.page .n-base-selection {
+  --n-height: var(--control-height) !important;
+  --n-font-size: var(--control-font-size) !important;
 }
 /* 日期区间等宽控件跨两列展示，避免两个日期输入挤在一格里；窄屏回到单列。 */
 .filter-field-wide {
@@ -643,7 +810,7 @@ a {
   display: flex;
   flex: none;
   align-items: center;
-  gap: 8px;
+  gap: var(--list-inline-gap);
 }
 /* 筛选折叠开关：折叠态下的可见数量由下面两组按断点限定的规则统一决定，页面只负责给
    `.filter-grid` 绑 `is-collapsed`；筛选项不超过该断点的上限时按钮由样式自动隐藏。 */
@@ -667,13 +834,15 @@ a {
 }
 .card-title {
   color: var(--color-text-strong);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--list-card-title-size);
+  font-weight: var(--page-title-weight);
+  line-height: var(--list-card-title-line-height);
 }
 .muted {
   color: var(--color-text-muted);
   /* 次要说明文字（开关说明、表格里的型号副行等）比正文小一档 */
-  font-size: 13px;
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
 }
 /**
  * 详情弹窗标题右侧的「最后更新」时间（`#header-extra` 槽）。
@@ -705,8 +874,8 @@ a {
 .pagination-bar {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: var(--list-pagination-margin-top);
+  padding-top: var(--list-pagination-padding-top);
   border-top: 1px solid var(--color-border-subtle);
 }
 .full-width {
@@ -714,13 +883,13 @@ a {
 }
 .action-row {
   display: flex;
-  gap: 8px;
+  gap: var(--list-inline-gap);
   flex-wrap: wrap;
 }
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
+  gap: var(--list-card-gap);
 }
 .stat-grid > .n-card {
   transition:
@@ -747,11 +916,8 @@ a {
   }
 }
 
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  /* 筛选操作按钮组窄屏纵向铺满，与各页面已有的局部规则一致 */
+/* 筛选操作行在窄屏统一堆叠：左侧说明 / 字段选择在上，按钮组靠右；按钮组内部的按钮保持一行。 */
+@media (max-width: 900px) {
   .filter-actions {
     align-items: stretch;
     flex-direction: column;
@@ -759,6 +925,15 @@ a {
   .filter-actions > .n-button,
   .filter-actions > button {
     width: 100%;
+  }
+  .filter-action-buttons {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   /* 筛选折叠（手机端 ≤768px）：收起时只保留前 2 个筛选项（列宽只够一个，两个条件已占满一屏）；
      数量超过 2 个时折叠开关必须可见，否则后面的条件在手机端无法展开。 */
@@ -827,34 +1002,13 @@ a {
   }
   .page-header .n-button {
     flex: none;
-    font-size: 13px;
+    font-size: var(--control-font-size);
   }
   .page-header .n-button .n-button__content {
-    font-size: 13px;
+    font-size: var(--control-font-size);
   }
   .page-header .n-button.n-button--medium-type {
-    --n-padding: 0 11px;
-  }
-  /* 移动端：含表格的数据卡片内边距全部归零，让表格四边直接占满卡片。
-     Naive 的内边距作用在内容区 `.n-card-content` 上（注意是单短横线：`.n-card__content`
-     是 BEM 写法，naive-ui 2.x 实际不产出这个类），归零即让表格贴住卡片四边；
-     屏幕留白（.app-content 的左右 14px）保留。
-     只命中「卡片里确实有表格」的情况（:has(.n-data-table)）：.data-card 也被「关于」页与
-     台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，那些页面的内边距保持原样。
-     分页条补回左右内边距，避免贴着卡片下沿与左右边缘。 */
-  .data-card:has(.n-data-table) > .n-card-content {
-    padding: 0;
-  }
-  /* padding 归零后表头（灰底）与行背景直接顶到卡片四角，而卡片默认 overflow: visible
-     不裁剪子元素，圆角就被方形背景"盖"掉了（表现为四角变直角）。让卡片裁剪内容即可恢复
-     圆角；卡片本身圆角仍是 --radius-card，边框不受影响。
-     注意不要写成 overflow: auto/scroll——那会给卡片再套一层滚动条。 */
-  .data-card:has(.n-data-table) {
-    overflow: hidden;
-  }
-  .data-card:has(.n-data-table) .pagination-bar {
-    padding-left: 12px;
-    padding-right: 12px;
+    --n-padding: 0 var(--control-padding-x);
   }
 }
 

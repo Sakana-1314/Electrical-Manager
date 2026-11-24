@@ -416,22 +416,3 @@ async function confirmReplenishment() {
     />
   </div>
 </template>
-
-<style scoped>
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
-.filter-actions {
-  justify-content: flex-end;
-  margin-top: 20px;
-}
-</style>

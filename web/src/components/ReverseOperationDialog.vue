@@ -103,7 +103,7 @@ async function confirm() {
           <td>{{ operation.lines[index].model_spec }}</td>
           <td>{{ operation.lines[index].quantity }} {{ operation.lines[index].unit_name }}</td>
           <td>{{ line.max }} {{ operation.lines[index].unit_name }}</td>
-          <td style="width: 160px">
+          <td style="width: var(--control-width-unit)">
             <QuantityInput
               v-model:value="line.quantity"
               :decimal-places="1"

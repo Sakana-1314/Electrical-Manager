@@ -333,7 +333,7 @@ const activeFilterCount = computed(
           v-model:value="filters.keyword"
           placeholder="文件名"
           clearable
-          style="width: 220px"
+          style="width: var(--control-width-medium)"
           @keyup.enter="query"
         />
         <!-- 不设「全部」选项：清空选择即为不限 -->
@@ -342,7 +342,7 @@ const activeFilterCount = computed(
           :options="statusOptions"
           placeholder="删除状态"
           clearable
-          style="width: 150px"
+          style="width: var(--control-width-short)"
           aria-label="删除状态"
         />
         <n-select
@@ -350,7 +350,7 @@ const activeFilterCount = computed(
           :options="referencedOptions"
           placeholder="引用情况"
           clearable
-          style="width: 150px"
+          style="width: var(--control-width-short)"
           aria-label="引用情况"
         />
         <n-button type="primary" @click="query">查询</n-button>

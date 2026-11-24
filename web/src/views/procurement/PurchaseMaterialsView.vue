@@ -1375,20 +1375,8 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.filter-heading {
-  margin-bottom: 18px;
-}
-
 .status-filter-select :deep(.n-base-selection-tags) {
-  min-height: 34px;
+  min-height: var(--control-height);
   padding: 4px 30px 1px 10px;
 }
 
@@ -1398,22 +1386,6 @@ onBeforeUnmount(() => {
 
 .status-filter-select :deep(.n-base-selection-placeholder) {
   padding: 0 30px 0 10px;
-}
-
-.filter-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--color-border-subtle);
-}
-
-.filter-action-buttons {
-  display: flex;
-  flex: none;
-  gap: 10px;
-}
-
-.filter-action-buttons :deep(.n-button) {
-  min-width: 88px;
 }
 
 .purchase-plan-table-area {
@@ -1453,22 +1425,11 @@ onBeforeUnmount(() => {
 
 .purchase-plan-table-area:fullscreen {
   overflow: auto;
-  padding: 16px;
+  padding: var(--page-gap);
   background: var(--color-bg);
 }
 
 .purchase-plan-table-area:fullscreen :deep(.n-card) {
   min-height: 100%;
-}
-
-@media (max-width: 900px) {
-  .filter-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .filter-action-buttons {
-    justify-content: flex-end;
-  }
 }
 </style>
