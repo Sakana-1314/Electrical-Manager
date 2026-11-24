@@ -276,13 +276,14 @@
 
 所有输入框 / 下拉 / 多选 / 日期 / 数字输入 / 文本域统一使用浮动标签，**不再只用 placeholder 当标签**：
 
-- 未输入且未聚焦：标签显示在控件框内，充当原位标签；控件自带占位层隐藏，避免与标签重影。
-- 聚焦或有值时：标签缩小、压在控件上边框上，并用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；此时控件自身的 placeholder 才显示。
+- 未输入且未聚焦：标签显示在控件框内，充当原位标签；**控件自带占位层始终隐藏（含聚焦态）**，避免标签与占位文字重复。
+- 聚焦或有值时：标签缩小并加粗加黑，压在控件上边框上，并用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；标签层级必须高于 Naive 的框线层（`.n-input__state-border` 的 `z-index:1`，标签用 `z-index:3`），否则框线会压在文字上。控件自身的 placeholder 不再显示。
 - 值判定：输入 / 日期 / 数字 / 文本域看原生 `input:placeholder-shown` / `textarea:placeholder-shown`；选择器（含多选）看 Naive 的 `.n-base-selection--selected`。多控件表单项（数量 + 单位）任一有值即浮起。
 - 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；弹窗内控件按 28px、
   登录页 large 控件按 40px、列表页控件按 34px 计算框内垂直中心。
 - 非输入类表单项保持原标签行：开关、纯展示、复选框作为 label 的批量修改字段（`:has(label .n-checkbox)` 排除）。
 - 令牌：`--floating-label-size`（浮起字号 11px）、`--floating-label-line-height`（14px）、
+  `--floating-label-color`（浮起用 `--color-text-strong`，加黑）、`--floating-label-weight`（`600`，加粗）、
   `--floating-label-top`（`0`，标签中心压在框线上）、`--floating-label-bg`（断开框线的底色）、
   `--floating-label-padding-x`（浮起时左右留白 4px）、`--floating-label-inset-x`（12px / 弹窗 10px / 登录 14px）、
   `--floating-label-inside-size`（13px）、`--floating-label-inside-line-height`（20px）。
@@ -450,7 +451,7 @@
 - [ ] 卡片复用全局圆角、边框、阴影
 - [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
-- [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线），没有只靠 placeholder 当标签的字段
+- [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线、占位文字始终不重复），没有只靠 placeholder 当标签的字段
 - [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-heading` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
 - [ ] 移动端页头/详情工具栏按钮排一排放不下时能横向滑动到每个按钮（不缩小、不换行）
 - [ ] 状态色符合语义，未用于普通装饰

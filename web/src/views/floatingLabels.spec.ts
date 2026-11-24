@@ -50,6 +50,8 @@ describe('浮动标签令牌', () => {
     for (const token of [
       '--floating-label-size',
       '--floating-label-line-height',
+      '--floating-label-color',
+      '--floating-label-weight',
       '--floating-label-inset-x',
       '--floating-label-top',
       '--floating-label-bg',
@@ -80,19 +82,24 @@ describe('浮动标签接线', () => {
       /\.n-input__input-el:not\(:placeholder-shown\),\s*\n\s*\.n-input__textarea-el:not\(:placeholder-shown\),\s*\n\s*\.n-base-selection--selected/,
     )
     expect(floating).toMatch(
-      /top: var\(--floating-label-top\);[\s\S]*?padding: 0 var\(--floating-label-padding-x\);[\s\S]*?background: var\(--floating-label-bg\);[\s\S]*?font-size: var\(--floating-label-size\);[\s\S]*?transform: translateY\(-50%\);/,
+      /top: var\(--floating-label-top\);[\s\S]*?padding: 0 var\(--floating-label-padding-x\);[\s\S]*?background: var\(--floating-label-bg\);[\s\S]*?color: var\(--floating-label-color\);[\s\S]*?font-size: var\(--floating-label-size\);[\s\S]*?font-weight: var\(--floating-label-weight\);[\s\S]*?transform: translateY\(-50%\);/,
     )
     expect(tokens).toContain('--floating-label-top: 0px;')
+    expect(tokens).toContain('--floating-label-weight: 600;')
+    expect(tokens).toContain('--floating-label-color: var(--color-text-strong);')
   })
 
-  it('空态隐藏控件自带占位层（输入与选择器都覆盖）', () => {
+  it('有浮动标签的字段始终隐藏控件自带占位层（聚焦也不回来）', () => {
     expect(floating).toMatch(
-      /:is\(\.n-input__placeholder, \.n-base-selection-placeholder\) \{\s*\n\s*opacity: 0;/,
+      /\.filter-field :is\(\.n-input__placeholder, \.n-base-selection-placeholder\) \{\s*\n\s*opacity: 0;/,
     )
-    // 只在「未聚焦 + 无值」时隐藏；聚焦或选择器展开时要让占位层回来
     expect(floating).toMatch(
-      /:not\(:focus-within\):not\(:has\(\.n-base-selection--focus, \.n-base-selection--active\)\)/,
+      /\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\([\s\S]*?:is\(\.n-input__placeholder, \.n-base-selection-placeholder\) \{\s*\n\s*opacity: 0;/,
     )
+    // 不能把 :focus-within / 选择器展开作为显示占位层的条件，否则聚焦后文本与标签重复
+    const hideRule = floating.match(/\/\* 有浮动标签的字段始终隐藏[\s\S]*?opacity: 0;/)?.[0] ?? ''
+    expect(hideRule).not.toBe('')
+    expect(hideRule).not.toContain(':focus-within')
   })
 
   it('筛选字段使用同一套浮动标签', () => {
@@ -113,6 +120,11 @@ describe('浮动标签接线', () => {
     expect(floating).toMatch(
       /\.filter-field:has\(\.n-input__textarea-el:placeholder-shown\)[\s\S]*?top: calc\(var\(--floating-label-inset-x\) - 2px\);/,
     )
+  })
+
+  it('标签层级高于 Naive 框线，底色才能真正盖断框线', () => {
+    expect(floating).toMatch(/\.n-form-item-label \{[\s\S]*?z-index: 3;/)
+    expect(styles).toMatch(/\.filter-field > span \{[\s\S]*?z-index: 3;/)
   })
 
   it('非输入类表单项（复选标签 / 开关）保持原标签行', () => {
