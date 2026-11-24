@@ -72,6 +72,8 @@ declare module 'vue' {
     OperationDetailModal: typeof import('./src/components/OperationDetailModal.vue')['default']
     OperationLinesEditor: typeof import('./src/components/OperationLinesEditor.vue')['default']
     PersistentDataTable: typeof import('./src/components/PersistentDataTable.vue')['default']
+    PinyinSelect: typeof import('./src/components/PinyinSelect.vue')['default']
+    PinyinTreeSelect: typeof import('./src/components/PinyinTreeSelect.vue')['default']
     PurchasePlanDetailModal: typeof import('./src/components/PurchasePlanDetailModal.vue')['default']
     PurchaseRecordDetailModal: typeof import('./src/components/PurchaseRecordDetailModal.vue')['default']
     PurchaseRecordHistoryDialog: typeof import('./src/components/PurchaseRecordHistoryDialog.vue')['default']

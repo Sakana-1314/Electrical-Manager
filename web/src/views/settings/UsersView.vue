@@ -11,6 +11,7 @@ import { resolveMcpUrl } from '@/config/env'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
 import { formatShanghaiTime } from '@/utils/time'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 // 权限位目录（GET /permissions）：系统管理 + 各功能读写，勾选后按位存进用户 permissions。
 const permissionOptions = ref<PermissionRead[]>([])
@@ -521,7 +522,7 @@ function remove(row: ManagedUser) {
             </div>
           </div></n-form-item
         ><n-form-item label="要并入的来源账号" required
-          ><n-select
+          ><pinyin-select
             v-model:value="mergeSourceId"
             filterable
             placeholder="选择要被合并的账号（合并后删除）"

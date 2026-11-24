@@ -46,6 +46,7 @@ import { useImplicitAiSearch } from '@/composables/useImplicitAiSearch'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizontalScroll'
 import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -1035,7 +1036,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>提报员工</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.actual_demand_person"
             :options="actualDemandPersonOptions"
             placeholder="选择或搜索提报员工"
@@ -1045,7 +1046,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>子项号</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.subitem_no"
             :options="subitemOptions"
             placeholder="选择或搜索子项号"
@@ -1055,7 +1056,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>类别</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.category"
             :options="categoryOptions"
             placeholder="选择类别"
@@ -1171,7 +1172,7 @@ onBeforeUnmount(() => {
             <template #label>
               <n-checkbox v-model:checked="batchEditForm.update_category">修改类别</n-checkbox>
             </template>
-            <n-select
+            <pinyin-select
               v-model:value="batchEditForm.category"
               :options="categoryOptions"
               filterable

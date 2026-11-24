@@ -11,6 +11,7 @@ import { purchaseCategoryOptions } from '@/constants/purchase'
 import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { useAuthStore } from '@/stores/auth'
 import { dateToTimestamp, formatShanghaiTime, toShanghaiDate } from '@/utils/time'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const props = defineProps<{
   show: boolean
@@ -432,7 +433,7 @@ async function saveEditRecord() {
                 />
               </n-form-item>
               <n-form-item label="类别">
-                <n-select
+                <pinyin-select
                   v-model:value="editForm.category"
                   :options="purchaseCategoryOptions"
                   filterable
@@ -677,7 +678,7 @@ async function saveEditRecord() {
             <n-input v-model:value="reapplyForm.material_code" maxlength="64" placeholder="留空" />
           </n-form-item>
           <n-form-item label="类别">
-            <n-select
+            <pinyin-select
               v-model:value="reapplyForm.category"
               :options="purchaseCategoryOptions"
               filterable

@@ -31,6 +31,7 @@ import type { WorkHalfDay, WorkRecordWrite, WorkTask } from '@/api/generated'
 import { useMaskCloseGuard } from '@/composables/useMaskCloseGuard'
 import { dateToTimestamp, toShanghaiDate } from '@/utils/time'
 import { formatRecordRange, participantOptions, workHalfOptions } from '@/utils/work'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 /** 参与人上限与姓名长度：与后端 `WORK_PARTICIPANT_LIMIT` / 姓名长度上限一致。 */
 const PARTICIPANT_LIMIT = 20
@@ -335,7 +336,7 @@ const summary = computed(() => {
       <n-grid :cols="2" :x-gap="20">
         <n-grid-item :span="2">
           <n-form-item label="任务" path="taskId">
-            <n-select
+            <pinyin-select
               v-model:value="form.taskId"
               :options="taskOptions"
               filterable
@@ -370,7 +371,7 @@ const summary = computed(() => {
         </n-grid-item>
         <n-grid-item :span="2">
           <n-form-item label="参与人员" path="participants">
-            <n-select
+            <pinyin-select
               v-model:value="form.participants"
               :options="participantSuggestions"
               multiple

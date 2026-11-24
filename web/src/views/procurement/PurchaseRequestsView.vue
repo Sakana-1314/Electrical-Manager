@@ -37,6 +37,7 @@ import { useShiftWheelHorizontalScroll } from '@/composables/useShiftWheelHorizo
 import { renderMaterialCode, renderTwoLineText } from '@/utils/tableText'
 import { useAuthStore } from '@/stores/auth'
 import { formatUnitPrice } from '@/utils/purchase'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -1016,7 +1017,7 @@ onMounted(() => {
         </label>
         <label class="filter-field">
           <span>提报员工</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.actual_demand_person"
             :options="actualDemandPersonOptions"
             placeholder="选择或搜索提报员工"
@@ -1026,7 +1027,7 @@ onMounted(() => {
         </label>
         <label class="filter-field">
           <span>实际需求人</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.purchase_responsible"
             :options="purchaseResponsibleOptions"
             placeholder="选择或搜索实际需求人"
@@ -1036,7 +1037,7 @@ onMounted(() => {
         </label>
         <label class="filter-field">
           <span>业务员</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.salesperson"
             :options="salespersonOptions"
             placeholder="选择或搜索业务员"
@@ -1046,7 +1047,7 @@ onMounted(() => {
         </label>
         <label class="filter-field">
           <span>申购状态</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.status"
             :options="statusOptions"
             clearable
@@ -1056,7 +1057,7 @@ onMounted(() => {
         </label>
         <label class="filter-field">
           <span>子项号</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.subitem_no"
             :options="subitemOptions"
             clearable
@@ -1301,7 +1302,7 @@ onMounted(() => {
                   修改提报员工
                 </n-checkbox>
               </template>
-              <n-select
+              <pinyin-select
                 v-model:value="batchEditForm.actual_demand_person"
                 :options="actualDemandPersonOptions"
                 filterable
@@ -1316,7 +1317,7 @@ onMounted(() => {
                   修改实际需求人
                 </n-checkbox>
               </template>
-              <n-select
+              <pinyin-select
                 v-model:value="batchEditForm.purchase_responsible"
                 :options="purchaseResponsibleOptions"
                 filterable
@@ -1331,7 +1332,7 @@ onMounted(() => {
                   >修改业务员</n-checkbox
                 >
               </template>
-              <n-select
+              <pinyin-select
                 v-model:value="batchEditForm.salesperson"
                 :options="salespersonOptions"
                 filterable

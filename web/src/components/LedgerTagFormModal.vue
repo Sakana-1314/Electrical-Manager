@@ -14,7 +14,6 @@ import {
   NFormItem,
   NInput,
   NModal,
-  NTreeSelect,
   useDialog,
   useMessage,
   type FormInst,
@@ -25,6 +24,7 @@ import { ledgerApi } from '@/api/ledger'
 import type { FileObject, LedgerTag, LedgerTagWrite } from '@/api/generated'
 import ImageUploader from '@/components/ImageUploader.vue'
 import { tagParentOptions } from '@/utils/ledger'
+import PinyinTreeSelect from '@/components/PinyinTreeSelect.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -183,7 +183,7 @@ function confirmDelete(): void {
         <n-input v-model:value="form.name" placeholder="如：低压柜" />
       </n-form-item>
       <n-form-item label="上级标签">
-        <n-tree-select
+        <pinyin-tree-select
           v-model:value="form.parentId"
           :options="parentOptions"
           :loading="loadingParent"

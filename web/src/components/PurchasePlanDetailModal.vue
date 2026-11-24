@@ -31,6 +31,7 @@ import {
   rememberPurchaseResponsible,
 } from '@/utils/purchase'
 import { dateToTimestamp, formatShanghaiTime, toShanghaiDate } from '@/utils/time'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const props = defineProps<{
   show: boolean
@@ -548,7 +549,7 @@ function openHistoryRecord(record: PurchaseRecord) {
               <n-input v-model:value="form.subitem_no" maxlength="64" placeholder="选填" />
             </n-form-item>
             <n-form-item label="类别">
-              <n-select
+              <pinyin-select
                 v-model:value="form.category"
                 :options="categoryOptions"
                 filterable

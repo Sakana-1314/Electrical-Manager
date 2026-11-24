@@ -24,6 +24,7 @@ import FilterExpandButton from '@/components/FilterExpandButton.vue'
 import LoadingMask from '@/components/LoadingMask.vue'
 import PurchaseRecordDetailModal from '@/components/PurchaseRecordDetailModal.vue'
 import PurchaseRecordHistoryDialog from '@/components/PurchaseRecordHistoryDialog.vue'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -536,7 +537,7 @@ function onFileChange(event: Event) {
         </label>
         <label class="filter-field">
           <span>申购部门</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.purchaseDepartment"
             :options="departmentOptions"
             multiple
@@ -547,7 +548,7 @@ function onFileChange(event: Event) {
         </label>
         <label class="filter-field">
           <span>申购人</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.purchaser"
             :options="purchaserOptions"
             multiple

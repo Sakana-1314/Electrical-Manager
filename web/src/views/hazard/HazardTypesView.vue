@@ -13,7 +13,6 @@ import {
   NFormItem,
   NInput,
   NModal,
-  NSelect,
   NSpin,
   NTag,
   useDialog,
@@ -29,6 +28,7 @@ import type { HazardType } from '@/api/generated'
 import { usePagedTable } from '@/composables/usePagedTable'
 import { useAuthStore } from '@/stores/auth'
 import { buildHazardTypeTree } from '@/utils/hazard'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const auth = useAuthStore()
 const message = useMessage()
@@ -235,7 +235,7 @@ function confirmDelete(): void {
     >
       <n-form ref="formRef" :model="form" :rules="rules" label-placement="top" size="small">
         <n-form-item label="大类" path="major">
-          <n-select
+          <pinyin-select
             v-model:value="form.major"
             :options="majorOptions"
             placeholder="可下拉选择已有大类，也可直接输入新大类"

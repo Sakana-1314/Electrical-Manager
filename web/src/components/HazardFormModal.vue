@@ -35,6 +35,7 @@ import type {
 import ImageUploader from '@/components/ImageUploader.vue'
 import { dateToTimestamp, toShanghaiDate } from '@/utils/time'
 import { hazardLevels, hazardStatuses } from '@/utils/hazard'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const props = withDefaults(defineProps<{ show: boolean; hazardId?: number | null }>(), {
   hazardId: null,
@@ -361,7 +362,7 @@ function confirmDelete(): void {
           </n-grid-item>
           <n-grid-item>
             <n-form-item label="责任单位" path="hazardUnitId">
-              <n-select
+              <pinyin-select
                 v-model:value="form.hazardUnitId"
                 :options="unitOptions"
                 placeholder="选择后自动带出责任人"
@@ -402,7 +403,7 @@ function confirmDelete(): void {
           </n-grid-item>
           <n-grid-item :span="2">
             <n-form-item label="隐患类型" path="hazardTypeId">
-              <n-select
+              <pinyin-select
                 v-model:value="form.hazardTypeId"
                 :options="typeOptions"
                 placeholder="先选大类，再选小类"
