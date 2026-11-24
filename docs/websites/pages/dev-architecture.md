@@ -248,7 +248,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 31 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 33 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -266,6 +266,8 @@ web/src/
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
 | `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
+| `PinyinSelect.vue` | 带拼音筛选的 `n-select` 包装：`filterable` 时除原有文本匹配外，输入全拼（`luoshuan`）或首字母（`ls`）也能命中；其余 props / events / 插槽原样透传（远程搜索的下拉不套用） | props：`filter?: SelectFilter \| null`（调用方过滤先执行）；其它走 `$attrs` |
+| `PinyinTreeSelect.vue` | 带拼音筛选的 `n-tree-select` 包装，规则与 `PinyinSelect` 相同 | props：`filter?: (pattern, option) => boolean \| null`；其它走 `$attrs` |
 | `OperationDetailModal.vue` | 出入库流水详情 / 编辑 / 冲销弹窗（Hero 摘要、单据信息、物资明细、修改影响提示与变化摘要确认、反向冲销） | props：`show: boolean`、`operationId?: number \| null`；emits：`update:show`、`saved`、`reversed: [id: number]` |
 | `PurchasePlanDetailModal.vue` | 申购计划详情 / 编辑弹窗（申购计划页与未编码物资页共用：查看 / 编辑计划、图片附件、转入申购记录；无写权限时只读） | props：`show: boolean`、`plan: PurchaseMaterial \| null`（null 为新建）、`categories?: string[]`；emits：`update:show`、`saved`、`deleted`、`moved: [recordLineId: number]` |
 | `PurchaseRecordDetailModal.vue` | 申购记录详情 / 编辑弹窗（单据、物资、人员、备注、采购与发运、图片；转为计划 / 再次申购 / 新页面打开；申购记录页与华星总库存页共用） | props：`show: boolean`、`record: PurchaseRecord \| null`；emits：`update:show`、`saved`、`restored: [planId: number]`、`reapplyCreated: [planId: number]` |
@@ -284,7 +286,7 @@ web/src/
 | `WorkTaskFormModal.vue` | 任务新增 / 编辑弹窗（名称 / 状态 / 计划起止 / 工作内容 / 备注 / 图片，删除入口在页脚） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `WorkRecordFormModal.vue` | 工作记录新增 / 编辑弹窗（任务可搜索下拉、起止日期 + 上午 / 下午、参与人员可输入新姓名、备注；`readonly` 时变成只读详情） | props：`show`、`recordId?`、`presetTaskId?`、`presetDate?`、`presetParticipants?`、`readonly?`；emits：`update:show`、`saved` |
 ### Composable 清单
-`web/src/composables/` 下 7 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
+`web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
@@ -311,6 +313,7 @@ web/src/
 | `stockMaterialCache.ts` | 物资选择器的请求合并：`fetchDefaultStockMaterials()`（前 200 条，15s 短时缓存，失败不缓存）、`fetchStockMaterial(id)`（只合并同时发出的重复请求）、`invalidateStockMaterialCache()`（出入库成功后调用） |
 | `themeMode.ts` | 界面外观偏好（`localStorage` key `theme.mode`，档位 `auto` / `light` / `dark`，默认 `auto`）：`THEME_MODE_OPTIONS`、`normalizeThemeMode`、`readThemeMode`、`writeThemeMode`；非法值回落 `auto` 且不写回脏值，存储不可用时静默降级。`index.html` 的首屏预置脚本用同一套 key 与档位规则 |
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
+| `pinyinFilter.ts` | 下拉框拼音筛选：把选项文本转成「原文 + 全拼 + 首字母」索引并缓存（上限 5000 条）；`pinyinSelectFilter`、`pinyinTreeSelectFilter` 供 `PinyinSelect` / `PinyinTreeSelect` 使用，原文包含匹配保持不变 |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
 | `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（9 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；标准二级库与精简二级库是两个独立一级项；系统管理不参与）、`visibleNavFeatureKeys(can)`、`resolveLandingRouteName(can)`（落地页推导） |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
