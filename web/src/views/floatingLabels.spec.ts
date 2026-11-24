@@ -51,6 +51,7 @@ describe('浮动标签令牌', () => {
       '--floating-label-size',
       '--floating-label-line-height',
       '--floating-label-color',
+      '--floating-label-focus-color',
       '--floating-label-weight',
       '--floating-label-inset-x',
       '--floating-label-top',
@@ -84,8 +85,12 @@ describe('浮动标签接线', () => {
       /top: var\(--floating-label-top\);[\s\S]*?padding: 0 var\(--floating-label-padding-x\);[\s\S]*?background: var\(--floating-label-bg\);[\s\S]*?color: var\(--floating-label-color\);[\s\S]*?font-size: var\(--floating-label-size\);[\s\S]*?font-weight: var\(--floating-label-weight\);[\s\S]*?transform: translateY\(-50%\);/,
     )
     expect(tokens).toContain('--floating-label-top: 0px;')
-    expect(tokens).toContain('--floating-label-weight: 600;')
+    expect(tokens).toContain('--floating-label-weight: 400;')
     expect(tokens).toContain('--floating-label-color: var(--color-text-strong);')
+    expect(tokens).toContain('--floating-label-focus-color: var(--color-primary);')
+    expect(floating).toMatch(
+      /\.filter-field:focus-within > span,[\s\S]*?color: var\(--floating-label-focus-color\);/,
+    )
   })
 
   it('有浮动标签的字段始终隐藏控件自带占位层（聚焦也不回来）', () => {

@@ -140,7 +140,8 @@
   --floating-label-size: 11px;
   --floating-label-line-height: 14px;
   --floating-label-color: var(--color-text-strong);
-  --floating-label-weight: 600;
+  --floating-label-focus-color: var(--color-primary);
+  --floating-label-weight: 400;
   --floating-label-inset-x: 12px;
   --floating-label-top: 0px;
   --floating-label-bg: var(--color-surface);
@@ -637,6 +638,19 @@ a {
   font-weight: var(--floating-label-weight);
   line-height: var(--floating-label-line-height);
   transform: translateY(-50%);
+}
+/* 当前聚焦的字段：浮起标签用主题色强调；失焦后有值时回到深色 */
+.n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
+    :has(.n-form-item-label .n-checkbox)
+  ):focus-within
+  .n-form-item-label,
+.n-form-item--top-labelled:has(.n-base-selection--focus, .n-base-selection--active):not(
+    :has(.n-form-item-label .n-checkbox)
+  )
+  .n-form-item-label,
+.filter-field:focus-within > span,
+.filter-field:has(.n-base-selection--focus, .n-base-selection--active) > span {
+  color: var(--floating-label-focus-color);
 }
 /* 空文本域：标签贴在文本域首行，不要垂直居中（有其他输入已填时不套用） */
 .n-form-item--top-labelled:has(.n-input__textarea-el:placeholder-shown):not(

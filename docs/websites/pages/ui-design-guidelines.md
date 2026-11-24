@@ -277,14 +277,14 @@
 所有输入框 / 下拉 / 多选 / 日期 / 数字输入 / 文本域统一使用浮动标签，**不再只用 placeholder 当标签**：
 
 - 未输入且未聚焦：标签显示在控件框内，充当原位标签；**控件自带占位层始终隐藏（含聚焦态）**，避免标签与占位文字重复。
-- 聚焦或有值时：标签缩小并加粗加黑，压在控件上边框上，并用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；标签层级必须高于 Naive 的框线层（`.n-input__state-border` 的 `z-index:1`，标签用 `z-index:3`），否则框线会压在文字上。控件自身的 placeholder 不再显示。
+- 聚焦或有值时：标签缩小并压在控件上边框上，用与容器一致的底色把该处框线断开（标准 outlined 浮动标签）；标签不加粗，有值时用深色 `--floating-label-color`，当前聚焦时用主题色 `--floating-label-focus-color` 强调。标签层级必须高于 Naive 的框线层（`.n-input__state-border` 的 `z-index:1`，标签用 `z-index:3`），否则框线会压在文字上。控件自身的 placeholder 不再显示。
 - 值判定：输入 / 日期 / 数字 / 文本域看原生 `input:placeholder-shown` / `textarea:placeholder-shown`；选择器（含多选）看 Naive 的 `.n-base-selection--selected`。多控件表单项（数量 + 单位）任一有值即浮起。
 - 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；所有控件统一按 `--control-height`（34px）计算框内垂直中心，弹窗 / 登录页 / 列表页不再分档。
 - 非输入类表单项保持原标签行：开关、纯展示、复选框作为 label 的批量修改字段（`:has(label .n-checkbox)` 排除）。
 - 令牌：`--floating-label-size`（浮起字号 11px）、`--floating-label-line-height`（14px）、
-  `--floating-label-color`（浮起用 `--color-text-strong`，加黑）、`--floating-label-weight`（`600`，加粗）、
-  `--floating-label-top`（`0`，标签中心压在框线上）、`--floating-label-bg`（断开框线的底色）、
-  `--floating-label-padding-x`（浮起时左右留白 4px）、`--floating-label-inset-x`（12px / 弹窗 10px / 登录 14px）、
+  `--floating-label-color`（有值时 `--color-text-strong` 深色）、`--floating-label-focus-color`（聚焦时 `--color-primary` 主题色）、
+  `--floating-label-weight`（`400`，不加粗）、`--floating-label-top`（`0`，标签中心压在框线上）、`--floating-label-bg`（断开框线的底色）、
+  `--floating-label-padding-x`（浮起时左右留白 4px）、`--floating-label-inset-x`（12px）、
   `--floating-label-inside-size`（13px）、`--floating-label-inside-line-height`（20px）。
 - 页面结构：用户详情表单改为 top 标签；附件筛选改为 `filter-grid` + `filter-field`；备忘录标题 / 正文包成
   `filter-field`（`标题` / `正文` 标签），不再只靠 placeholder。由 `web/src/views/floatingLabels.spec.ts` 守住接线。
