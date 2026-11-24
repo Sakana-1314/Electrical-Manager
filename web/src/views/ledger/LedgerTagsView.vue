@@ -132,12 +132,6 @@ function hasDetail(node: unknown): boolean {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">标签管理</h1>
-      </div>
-    </div>
-
     <n-card class="filter-card" :bordered="false">
       <div class="filter-panel">
         <div class="filter-grid">
@@ -309,7 +303,7 @@ function hasDetail(node: unknown): boolean {
 
 .ledger-tag-popover__name {
   color: var(--color-text-strong);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
 }
 
 .ledger-tag-popover__remark {

@@ -18,12 +18,6 @@ onMounted(async () => {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">关于系统</h1>
-      </div>
-    </div>
-
     <n-card class="data-card about-card" :bordered="false">
       <section class="product-overview">
         <div class="product-mark">HXNI</div>

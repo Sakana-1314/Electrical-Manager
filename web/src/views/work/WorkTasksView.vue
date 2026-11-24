@@ -209,12 +209,6 @@ function selectTask(key: string): void {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">任务视图</h1>
-      </div>
-    </div>
-
     <n-card class="filter-card" :bordered="false">
       <div class="filter-panel">
         <div class="filter-grid">
@@ -368,7 +362,7 @@ function selectTask(key: string): void {
 .panel-title {
   color: var(--color-text-strong);
   font-size: var(--list-card-title-size);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
   line-height: var(--list-card-title-line-height);
 }
 

@@ -152,11 +152,6 @@ onMounted(async () => {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">{{ title }}</h1>
-      </div>
-    </div>
     <n-card title="业务信息"
       ><n-form label-placement="top"
         ><div class="form-grid">

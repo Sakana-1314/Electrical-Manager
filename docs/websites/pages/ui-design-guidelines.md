@@ -5,7 +5,7 @@
 | 原则 | 要求 |
 | --- | --- |
 | 信息优先 | 视觉层级服务于业务信息，不做无意义装饰与重复说明 |
-| 页头克制 | 列表页页头只放标题与必要操作，不在标题下重复解释页面名称 |
+| 页头克制 | 页面名在布局顶部的很矮导航条里；页头只保留页级操作与统计标签，不在页头重复解释页面名称 |
 | 一致分组 | 筛选、数据、详情、编辑统一使用卡片容器 |
 | 单一主色 | 交互主色用蓝色；绿色只表达成功语义 |
 | 复用优先 | 相同交互必须复用公共组件或全局样式，不复制页面级实现 |
@@ -54,7 +54,7 @@
 | 页面一级区块间距 | `--page-gap`（`16px`）；统计卡片栅格间距 `--list-card-gap`（`18px`） |
 | 卡片内边距 | 筛选 / 说明卡片 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区为 `0`，表格直接贴卡片边（见「数据表格」） |
 | 表单栅格列间距 / 卡片栅格间距 | `20px` / `18px` |
-| 字号档位 | 页面标题 `--page-title-size`（20px）；卡片 / 区块标题 `--list-card-title-size`（16px）；列表正文与表格 `--list-body-size` / `--list-table-font-size`（13px）；辅助说明 `--list-caption-size`（12px）。页面与列表页不再写死字号 |
+| 字号档位 | 顶部导航条标题 `13px`（移动端 `15px`）；卡片 / 区块标题 `--list-card-title-size`（16px）；列表正文与表格 `--list-body-size` / `--list-table-font-size`（13px）；辅助说明 `--list-caption-size`（12px）。页面与列表页不再写死字号 |
 | 控件尺寸 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px）——列表页、筛选区、弹窗、登录页不再按 `size` 分档；文本域高度随内容。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px）。多选下拉的已选值标签统一 `--control-tag-height`（20px）/ `--control-tag-font-size`（11px）/ `--control-tag-padding-x`（6px）/ `--control-tag-gap`（4px），不再用 Naive 默认的 24px / 14px 把 34px 控件撑满 |
 | 控件字号 | 输入框 / 下拉 / 日期 / 数字输入的**文字与占位文字**、按钮、分页、表单标签统一走 `theme.ts` 的 `fontSizeMedium`（`13px`）；表格正文字号统一 `--list-table-font-size`（13px，由 `styles.css` 的 `.page .n-data-table-th/td` 覆盖），页面里的描述列表保持 `14px`（标签按小一档渲染，无需覆盖）——数据展示不跟着控件一起缩小。**弹窗内是统一口径**：描述列表、表格、提示都引用 `--dialog-body-size`（13px），不与表单标签分叉（见「弹窗统一排版」）。次要说明文字（`.muted`，如开关说明、表格里的型号副行）为 `--list-body-size`（13px）；详情弹窗标题右侧的更新时间用更小一档的 `.card-header-time`（`12px`） |
 
@@ -120,13 +120,20 @@
 
 ## 页面结构
 
-### 页头
+### 顶部导航条与页级操作行
+
+页面名只由布局顶部一条很矮的导航条展示（桌面 40px、移动端 48px，标题 13px / 600，移动端 15px）：
+导航条位于内容区之上、跟随内容区独立滚动，左侧在移动端额外放抽屉入口（菜单按钮），不放用户信息。
+**各视图不再渲染 `.page-title` 大标题**，内容区直接从筛选卡片 / 数据卡片开始。
 
 ```html
+<!-- AppLayout：所有视口共用 -->
+<n-layout-header bordered class="app-topbar" :class="{ 'is-mobile': isMobile }">
+  <div class="topbar-title">{{ route.meta.title }}</div>
+</n-layout-header>
+
+<!-- 视图：仅当页面还有页级操作或统计标签时保留一条紧凑行 -->
 <div class="page-header">
-  <div>
-    <h1 class="page-title">页面标题</h1>
-  </div>
   <div class="page-actions">
     <n-space>页面操作</n-space>
   </div>
@@ -135,19 +142,19 @@
 
 | 场景 | 要求 |
 | --- | --- |
-| 列表页 | 不使用 `page-subtitle` |
+| 列表页 | 不使用 `page-subtitle`；页级操作（导出 / 导入 / 新建 / 批量）收进筛选卡片的 `.filter-actions`，不再占首页一行 |
 | 详情弹窗 | 标题下可显示一行关键元数据（编号、状态、时间、型号），最多一行 |
 | 标题右侧时间 | 详情弹窗的「最后更新时间」放 `#header-extra` 槽（标题右侧、关闭按钮左侧），用 `.card-header-time`（12px，比正文小一档、比标题 16px 明显轻），**只显示时间、不带「最后更新：」前缀**；不占页脚空间、不与页脚操作按钮抢位。到关闭按钮之间要留出间距：组件库只给关闭按钮 8px 左外边距，12px 的时间会贴上去，`.card-header-time` 再补 `margin-right: 8px`（合计 16px）。窄屏放不下时标题换行即可，不要 `nowrap`（会把标题挤出可视区） |
 | 业务规则 | 放进对应卡片、表单提示或 `n-alert`，不写在页头 |
-| 操作区容器 | 页头右侧控件统一放进 `.page-actions`（不直接与标题同级），便于窄屏统一压缩；隐藏的 `file input` 随按钮放在容器内即可 |
-| 移动端标题 | 移动端由布局顶部的窄导航条（菜单按钮 + 当前页标题）展示页面名，内容区隐藏 `.page-title`，只留操作区；桌面端无顶栏，内容区标题保持展示 |
-| 移动端操作区 | 页头多个按钮必须排在同一行：`styles.css` 里统一把 `.page-actions` 内按钮字号压到 13px、内边距收窄，按钮组按内容宽度不压缩，超出时由操作区**横向滑动**承接，不换行、不把页面撑宽。滑动要能真正滑到每个按钮，靠两条互相配合的声明：`.page-actions` 的 `justify-content` 必须是 `flex-start`（写成 `flex-end` 会把溢出堆在左端，而横向滚动只能滚到右端，左端按钮永久不可达 —— 实测 320~480px 下「导出」「批量修改」被切在屏幕外），行内 `.n-space` 需 `width: max-content` 撑出可滚动区间（只设 `flex: none` 时会被压到容器宽度、`scrollWidth === clientWidth` 而滑不动）。由 `web/src/views/buttonRowScroll.spec.ts` 守住 |
+| 操作区容器 | 页级控件统一放进 `.page-actions`（不直接裸放），便于窄屏统一压缩；隐藏的 `file input` 直接放在 `.page` 根下即可（`display:none` 不占行） |
+| 无内容的页头 | 没有 `.page-actions` / `.title-row` 的 `.page-header` 由全局样式隐藏，不占纵向间距；新页面优先不再写页头 |
+| 移动端操作区 | 页级多个按钮必须排在同一行：`styles.css` 里统一把 `.page-actions` 内按钮字号压到 13px、内边距收窄，按钮组按内容宽度不压缩，超出时由操作区**横向滑动**承接，不换行、不把页面撑宽。滑动要能真正滑到每个按钮，靠两条互相配合的声明：`.page-actions` 的 `justify-content` 必须是 `flex-start`（写成 `flex-end` 会把溢出堆在左端，而横向滚动只能滚到右端，左端按钮永久不可达 —— 实测 320~480px 下「导出」「批量修改」被切在屏幕外），行内 `.n-space` 需 `width: max-content` 撑出可滚动区间（只设 `flex: none` 时会被压到容器宽度、`scrollWidth === clientWidth` 而滑不动）。由 `web/src/views/buttonRowScroll.spec.ts` 守住 |
 
 ### 页面标题与浏览器标题
 
 | 项 | 要求 |
 | --- | --- |
-| 页面标题 | 桌面端由各视图的 `.page-header` + `.page-title` 承担（无顶栏，页面名只出现一次）；移动端由布局窄导航条展示当前页标题，内容区标题隐藏 |
+| 页面标题 | 唯一出现在布局顶部导航条（`.app-topbar`）里，取路由 `meta.title`；视图内不再写 `.page-title`，避免桌面 / 移动端重复或缺失 |
 | 浏览器标题 | 由路由 `meta.title` + `meta.parent` 拼成「上级 / 当前 - HXNI 电气无忧」；顶级条目（工作台、备忘录、二级库、华星总库存）不设 `meta.parent`，只展示当前页名，不挂「备件管理」这类根名称 |
 | 上级取值 | 二级条目用所属菜单分组名（二级库 / 申购管理 / 隐患管理 / 台账管理 / 工作管理 / 系统管理），操作页用所属列表页标题或所属入口标题；详情已改为列表页弹窗，因此不再为详情单独设 `meta.parent` |
 | 详情弹窗 | 弹窗标题用短名（如「申购计划详情」），避免与列表页标题完全重复 |
@@ -170,7 +177,7 @@
 | 卡片 | 页面内容统一 `n-card`；数据表卡片加 `data-card`，不在单页重设圆角/阴影/边框。**筛选区使用紧凑 `filter-card`**：卡片内只有 `.filter-panel`（字段 + 底部操作行），不再有「筛选条件」标题；卡片内容内边距 `--list-filter-card-padding`（12px 16px 14px） |
 | 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
 | 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），**不显示「筛选条件」标题** |
-| 筛选操作行 | 卡片底部只保留**一行** `.filter-actions`：左侧计数 / 折叠 / 列选择，右侧把页级操作（导出、导入、新建、批量）与重置 / 查询统一放进 `.filter-action-buttons`；页头只留标题，不再单独占一行操作。间距走 `--list-filter-actions-*`，按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 筛选操作行 | 卡片底部只保留**一行** `.filter-actions`：左侧计数 / 折叠 / 列选择，右侧把页级操作（导出、导入、新建、批量）与重置 / 查询统一放进 `.filter-action-buttons`；页面名在顶部导航条，页头不再单独占一行。间距走 `--list-filter-actions-*`，按钮最小宽度 `--list-action-button-min-width`（88px） |
 | 筛选计数 | 「已启用 N 项」放在 `.filter-actions` 左侧；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，与业务操作 / 重置 / 查询同一行，出现或消失都不改变行高 |
 | 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；字段标签使用浮动标签（见「浮动标签」），不再占用独立标签行。标签字号 `--list-filter-label-size`（13px） |
 | 筛选区说明 | **不放小字描述**：筛选口径、选项含义、数据条数都不在筛选区解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
@@ -253,8 +260,8 @@
 | 指标分组 | 按业务模块分卡片（二级库 / 申购 / 隐患），每卡 2×2 指标格，右上角「进入」跳模块首页；分组与指标跟随模块读权限位：标准二级库与精简二级库是两个独立分组，按各自 `:read` 权限位显隐 |
 | 指标直达 | 指标格整块是链接，带筛选直达列表页：低库存 → `/warehouse/stock?low_stock=true`；今日入库 / 出库 → `/warehouse/operations?operation_type=…`；逾期未整改 → `/hazards?overdue=true`；隐患三状态 → `/hazards?status=…`。keepAlive 列表页已打开过时，URL 上的新筛选会被采纳并重新查询（见 `usePagedTable` 的 keepAlive 重新激活规则），不会被旧状态覆盖 |
 | 颜色 | 数值为 0 时一律退回中性色，不用红 / 橙制造「有事」的错觉；有值时低库存、逾期、整改受阻用危险色，待整改、未编码用警告色，已整改用成功色，其余用主色 |
-| 快捷操作 | 页头下的一排主色浅底胶囊：办理入库 / 出库、新建申购计划、登记隐患。只对持有对应写权限位且模块可见的用户出现；新建类入口用 `?create=1` 打开目标页的新建弹窗，目标页消费后立即把该参数从 URL 去掉 |
-| 失败与刷新 | 各块（概览、隐患统计、低库存、最近出入库）独立请求、独立失败：失败的块显示「—」并在顶部提示「重试」，不拖垮整页；页头显示「更新于 HH:mm」；页面重新可见且数据超过 2 分钟时静默刷新一次（不遮罩） |
+| 快捷操作 | 导航条下的一排主色浅底胶囊：办理入库 / 出库、新建申购计划、登记隐患。只对持有对应写权限位且模块可见的用户出现；新建类入口用 `?create=1` 打开目标页的新建弹窗，目标页消费后立即把该参数从 URL 去掉 |
+| 失败与刷新 | 各块（概览、隐患统计、低库存、最近出入库）独立请求、独立失败：失败的块显示「—」并在顶部提示「重试」，不拖垮整页；工作台页级操作行显示「更新于 HH:mm」；页面重新可见且数据超过 2 分钟时静默刷新一次（不遮罩） |
 | 加载态 | 指标用骨架屏占位，不用整页遮罩 |
 
 ### 列表页统一排版
@@ -265,10 +272,10 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 页面骨架 | 页面纵向间距 `--page-gap`（16px）；页头最小高度 `--page-header-min-height`（40px）、间距 `--page-header-gap`、内边距 `--page-header-padding`；标题 `--page-title-size`（20px）/ `--page-title-line-height`（1.35） |
+| 页面骨架 | 页面纵向间距 `--page-gap`（16px）；页面名由布局顶部 `.app-topbar` 展示（桌面 40px、移动端 48px），视图不再写大标题；仍有页级操作 / 统计标签的页面用一条紧凑 `.page-header`（间距 `--page-header-gap`、内边距 `--page-header-padding`），空页头自动隐藏 |
 | 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；说明类卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边。筛选区用紧凑 `filter-card`（卡片内容内边距 `--list-filter-card-padding` 12px 16px 14px） |
 | 字号层级 | 列表正文 `--list-body-size`（13px）/ `--list-body-line-height`（1.5）；辅助说明 `--list-caption-size`（12px）/ `--list-caption-line-height`（1.5）；树节点 / 双行单元格强调文字 `--list-emphasis-size`（14px）；双行单元格标题行高 `--list-cell-title-line-height`（1.4）、行间距 `--list-cell-gap`（2px） |
-| 筛选区 | 紧凑 `filter-card` + `.filter-panel` + 底部单行 `.filter-actions` / `.filter-action-buttons`；不再有「筛选条件」标题行，页头只留标题；计数、折叠、列选择与页级操作、重置 / 查询都在同一操作行。页面不得再定义这些布局样式 |
+| 筛选区 | 紧凑 `filter-card` + `.filter-panel` + 底部单行 `.filter-actions` / `.filter-action-buttons`；不再有「筛选条件」标题行，页面名在顶部导航条；计数、折叠、列选择与页级操作、重置 / 查询都在同一操作行。页面不得再定义这些布局样式 |
 | 表格 | 表头与内容行分开取令牌：表头 `--list-table-header-padding-y`（10px）/ `--list-table-header-font-size`（13px）/ `--list-table-header-line-height`（1.5），内容行 `--list-table-cell-padding-y/x`（8px / 12px）/ `--list-table-font-size`（13px）/ `--list-table-line-height`（1.5）；表头略高于内容行。`n-data-table` 与 `n-table` 全局统一，页面不再单独写单元格样式 |
 | 分页 | `margin-top` / 上内边距走 `--list-pagination-margin-top` / `--list-pagination-padding-top`；表格卡片内再补 `--list-pagination-padding-x` / `--list-pagination-padding-bottom`，不贴卡片边缘 |
 | 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
@@ -381,7 +388,7 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 位置 | 页面标题右侧，不与查询/重置混排 |
+| 位置 | 筛选卡片底部操作行的 `.filter-action-buttons` 里，与重置 / 查询同排；页面没有筛选卡片时放页级 `.page-actions` |
 | 命名 | 统一叫“导出”，具体内容由按钮标题、下拉选项与操作反馈说明 |
 | 交互 | 只有一种导出方式时点击直接执行；多种方式时用同一按钮的下拉菜单承载 |
 | 选项 | 明确区分“查询结果”“已选数据”与业务模板等范围；依赖勾选数据的选项在未选择时禁用 |
@@ -450,7 +457,7 @@
 - [ ] 页面主色、按钮、菜单选中态一致
 - [ ] 列表页标题下没有可删除的重复说明
 - [ ] 卡片复用全局圆角、边框、阴影
-- [ ] 筛选区使用紧凑 `filter-card`（无「筛选条件」标题）；页头只留标题，导出 / 导入 / 新建 / 批量与重置 / 查询收在卡片底部同一操作行；表格卡片使用 `data-card`
+- [ ] 筛选区使用紧凑 `filter-card`（无「筛选条件」标题）；页面名在顶部导航条，导出 / 导入 / 新建 / 批量与重置 / 查询收在卡片底部同一操作行；表格卡片使用 `data-card`
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
 - [ ] 表头上下内边距 10px、内容行 8px，表头略高于内容行；表格字号 / 行高 / 内边距全部走 `--list-table-*`
 - [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线、占位文字始终不重复），没有只靠 placeholder 当标签的字段

@@ -272,11 +272,6 @@ async function confirmReplenishment() {
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">库存查询</h1>
-      </div>
-    </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-panel">
         <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">

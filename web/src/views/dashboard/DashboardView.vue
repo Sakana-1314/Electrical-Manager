@@ -344,9 +344,6 @@ onMounted(() => void load())
 <template>
   <div class="page dashboard">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">工作台</h1>
-      </div>
       <div class="page-actions">
         <n-space :size="10" align="center" :wrap="false">
           <span v-if="updatedLabel" class="dashboard-updated">{{ updatedLabel }}</span>

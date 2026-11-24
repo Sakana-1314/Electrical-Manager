@@ -197,9 +197,6 @@ function confirmDelete(): void {
 <template>
   <div class="page">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">责任单位</h1>
-      </div>
       <div class="page-actions">
         <n-button v-if="canWrite" type="primary" @click="openCreate">新增单位</n-button>
       </div>

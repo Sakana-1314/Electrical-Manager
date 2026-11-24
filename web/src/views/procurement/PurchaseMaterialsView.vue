@@ -986,11 +986,6 @@ onBeforeUnmount(() => {
 <template>
   <div class="page">
     <ExportLoadingOverlay :show="exportLoading" />
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">申购计划</h1>
-      </div>
-    </div>
     <n-card class="filter-card" :bordered="false">
       <div class="filter-panel">
         <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">

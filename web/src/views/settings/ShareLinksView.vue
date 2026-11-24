@@ -229,11 +229,6 @@ const tableScrollX = getTableScrollX(columns)
 
 <template>
   <div class="page">
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">分享链接</h1>
-      </div>
-    </div>
     <n-card class="data-card"
       ><PersistentDataTable
         storage-key="settings/share-links"

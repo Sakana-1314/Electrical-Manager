@@ -178,9 +178,6 @@ function confirmDelete(): void {
 <template>
   <div class="page">
     <div class="page-header">
-      <div>
-        <h1 class="page-title">隐患类型</h1>
-      </div>
       <div class="page-actions">
         <n-button v-if="canWrite" type="primary" @click="openCreate">新增隐患类型</n-button>
       </div>
@@ -292,7 +289,7 @@ function confirmDelete(): void {
 
 .hazard-type-node.is-branch .hazard-type-node__label {
   font-size: var(--list-emphasis-size);
-  font-weight: var(--page-title-weight);
+  font-weight: var(--heading-weight);
 }
 
 .hazard-type-node.is-leaf {
