@@ -16,7 +16,6 @@ import {
   NPagination,
   NTag,
   NTooltip,
-  NTreeSelect,
   type DataTableColumns,
   type TreeSelectOption,
 } from 'naive-ui'
@@ -41,6 +40,7 @@ import {
   type LedgerItemFilters,
 } from '@/utils/ledger'
 import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
+import PinyinTreeSelect from '@/components/PinyinTreeSelect.vue'
 
 const auth = useAuthStore()
 const canWrite = computed(() => auth.can('ledger:write'))
@@ -279,7 +279,7 @@ onMounted(loadTags)
         </label>
         <label class="filter-field">
           <span>标签</span>
-          <n-tree-select
+          <pinyin-tree-select
             v-model:value="filters.tag_ids"
             :options="tagOptions"
             multiple

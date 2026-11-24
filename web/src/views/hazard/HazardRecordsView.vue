@@ -39,6 +39,7 @@ import {
   isHazardOverdue,
   type HazardFilters,
 } from '@/utils/hazard'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const auth = useAuthStore()
 const canWrite = computed(() => auth.can('hazard:write'))
@@ -362,7 +363,7 @@ onMounted(async () => {
         </label>
         <label class="filter-field">
           <span>隐患类型</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.hazard_type_id"
             :options="typeOptions"
             placeholder="按大类选择"
@@ -381,7 +382,7 @@ onMounted(async () => {
         </label>
         <label class="filter-field">
           <span>责任单位</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.hazard_unit_id"
             :options="unitOptions"
             placeholder="不限"
@@ -391,7 +392,7 @@ onMounted(async () => {
         </label>
         <label class="filter-field">
           <span>整改员工</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.rectify_person"
             :options="rectifyPersonOptions"
             placeholder="不限"

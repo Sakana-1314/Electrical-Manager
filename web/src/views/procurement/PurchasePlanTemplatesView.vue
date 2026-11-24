@@ -36,6 +36,7 @@ import { createTableRowClickGuard } from '@/utils/tableRowNavigation'
 import { renderMaterialCode, renderQuantityWithUnit, renderTwoLineText } from '@/utils/tableText'
 import { formatShanghaiTime } from '@/utils/time'
 import { routeQueryString } from '@/utils/routeQuery'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const auth = useAuthStore()
 const message = useMessage()
@@ -592,7 +593,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>提报员工</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.actual_demand_person"
             :options="actualDemandPersonOptions"
             placeholder="选择或搜索提报员工"
@@ -602,7 +603,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>实际需求人</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.purchase_responsible"
             :options="purchaseResponsibleOptions"
             placeholder="选择或搜索实际需求人"
@@ -612,7 +613,7 @@ onBeforeUnmount(() => {
         </label>
         <label class="filter-field">
           <span>类别</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.category"
             :options="categoryOptions"
             placeholder="选择类别"
@@ -743,7 +744,7 @@ onBeforeUnmount(() => {
             </template>
             <div class="form-grid">
               <n-form-item label="类别">
-                <n-select
+                <pinyin-select
                   v-model:value="form.category"
                   :options="categoryOptions"
                   filterable

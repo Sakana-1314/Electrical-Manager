@@ -15,7 +15,6 @@ import {
   NCard,
   NInput,
   NPagination,
-  NSelect,
   NTag,
   type DataTableColumns,
   type SelectOption,
@@ -43,6 +42,7 @@ import {
   workTaskStatusTypes,
   type WorkOverviewFilters,
 } from '@/utils/work'
+import PinyinSelect from '@/components/PinyinSelect.vue'
 
 const auth = useAuthStore()
 const canWrite = computed(() => auth.can('work:write'))
@@ -241,7 +241,7 @@ onMounted(loadOptions)
         </label>
         <label class="filter-field">
           <span>任务</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.task_ids"
             :options="taskOptions"
             multiple
@@ -252,7 +252,7 @@ onMounted(loadOptions)
         </label>
         <label class="filter-field">
           <span>参与人员</span>
-          <n-select
+          <pinyin-select
             v-model:value="filters.participants"
             :options="participantOptions"
             multiple

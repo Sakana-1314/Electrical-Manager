@@ -16,7 +16,6 @@ import {
   NInput,
   NInputNumber,
   NModal,
-  NTreeSelect,
   useDialog,
   useMessage,
   type FormInst,
@@ -27,6 +26,7 @@ import { ledgerApi } from '@/api/ledger'
 import type { FileObject, LedgerItem, LedgerItemWrite, LedgerTag } from '@/api/generated'
 import ImageUploader from '@/components/ImageUploader.vue'
 import { tagSelectOptions } from '@/utils/ledger'
+import PinyinTreeSelect from '@/components/PinyinTreeSelect.vue'
 
 const props = withDefaults(defineProps<{ show: boolean; itemId?: number | null }>(), {
   itemId: null,
@@ -268,7 +268,7 @@ function confirmDelete(): void {
         </n-grid-item>
         <n-grid-item>
           <n-form-item label="标签">
-            <n-tree-select
+            <pinyin-tree-select
               v-model:value="form.tagIds"
               :options="tagOptions"
               multiple
