@@ -95,11 +95,11 @@
   --list-cell-gap: 2px;
   --list-inline-gap: 8px;
   --list-empty-padding: 40px 0;
+  /* 详情面板标题与内容之间（如任务时间段明细） */
+  --list-panel-heading-gap: 18px;
   /* 筛选区 */
   --list-filter-heading-gap: 16px;
-  --list-filter-heading-margin: 18px;
-  /* 筛选标题旁的「已启用 N 项」：12px 小字，与标题同一行，不撑高标题行 */
-  --list-filter-count-gap: 8px;
+  /* 操作行左侧的「已启用 N 项」：12px 小字，不撑高操作行 */
   --list-filter-count-size: 12px;
   --list-filter-count-line-height: 18px;
   --list-filter-actions-gap: 10px;
@@ -113,11 +113,15 @@
   /* 操作按钮最小宽度（筛选区的重置 / 查询等） */
   --list-action-button-min-width: 88px;
   --list-split-icon-size: 14px;
-  /* 表格 */
+  /* 表格：表头比内容行略高（上下内边距 10 / 8），所有表格统一走这套令牌 */
   --list-table-font-size: 13px;
   --list-table-line-height: 1.5;
   --list-table-cell-padding-y: 8px;
   --list-table-cell-padding-x: 12px;
+  --list-table-header-font-size: 13px;
+  --list-table-header-line-height: 1.5;
+  --list-table-header-padding-y: 10px;
+  --list-table-header-padding-x: 12px;
   --list-table-header-weight: 600;
   /* 分页条 */
   --list-pagination-margin-top: 16px;
@@ -484,13 +488,6 @@ a {
 .n-card.n-modal .n-descriptions-table-header {
   color: var(--color-text-muted);
 }
-.n-card.n-modal .n-table th,
-.n-card.n-modal .n-table td,
-.n-card.n-modal .n-data-table-th,
-.n-card.n-modal .n-data-table-td {
-  font-size: var(--dialog-body-size);
-  line-height: var(--dialog-body-line-height);
-}
 .n-card.n-modal .n-alert {
   margin-bottom: var(--dialog-block-gap);
   font-size: var(--dialog-body-size);
@@ -685,20 +682,37 @@ a {
 .n-button {
   --n-icon-size: 16px !important;
 }
-.filter-card {
-  background: linear-gradient(145deg, var(--color-surface) 0%, var(--color-surface-soft) 100%);
+/* ============ 列表页筛选区 ============
+ * 筛选区不再套卡片：`filter-panel` 只是无背景的结构容器，筛选字段直接落在页面底色上。
+ * 计数与折叠开关放进底部操作行左侧，不再有「筛选条件」标题行，也不因计数出现改变行高。
+ * 页面只负责结构（`.filter-panel` / `.filter-actions` / `.filter-action-buttons`）。 */
+.filter-panel {
+  display: flex;
+  flex-direction: column;
+  /* 无卡片时浮动标签的断线底色跟页面底色一致 */
+  --floating-label-bg: var(--color-bg);
 }
-.filter-title {
-  color: var(--color-text-strong);
-  font-size: var(--list-card-title-size);
-  font-weight: var(--page-title-weight);
-  line-height: var(--list-card-title-line-height);
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--list-filter-heading-gap);
+  margin-top: var(--list-filter-actions-margin);
+  padding-top: var(--list-filter-actions-padding);
+  border-top: 1px solid var(--color-border-subtle);
 }
-.filter-description {
-  margin-top: var(--list-cell-gap);
-  color: var(--color-text-muted);
-  font-size: var(--list-caption-size);
-  line-height: var(--list-caption-line-height);
+/* 计数与折叠开关在操作行左侧；12px 小字不参与行高（操作行本身由按钮撑起） */
+.filter-count {
+  flex: none;
+  color: var(--color-success);
+  font-size: var(--list-filter-count-size);
+  font-weight: 500;
+  line-height: var(--list-filter-count-line-height);
+  white-space: nowrap;
+}
+/* 简单页面只有直接放置的按钮：首个按钮用 auto 外边距推到右侧；
+ * 复杂页面的左侧说明 / 字段选择 + 右侧按钮组由 `.filter-action-buttons` 的 auto 外边距分开。 */
+.filter-actions > .n-button:first-child {
+  margin-left: auto;
 }
 /* ============ 横向树共用样式（vue3-tree-org 颜色令牌适配） ============
  * 隐患类型与台账标签两个页面共用 .org-tree-horizontal（至多 3 层），页面只加自己的层级 class。
@@ -774,20 +788,35 @@ a {
   border-color: var(--color-primary);
   background-color: var(--color-primary-soft);
 }
-.page .n-data-table-th {
+/* ============ 表格统一尺寸 ============
+ * 所有 DataTable / n-table 共用同一套令牌：表头上下内边距 10px，内容行 8px，
+ * 表头比内容行略高；字号、行高、表头字重全部只从 --list-table-* 取值。 */
+.n-data-table .n-data-table-th {
+  padding: var(--list-table-header-padding-y) var(--list-table-header-padding-x);
   background-color: var(--color-table-header);
   color: var(--color-table-header-text);
+  font-size: var(--list-table-header-font-size);
   font-weight: var(--list-table-header-weight);
+  line-height: var(--list-table-header-line-height);
 }
-/* 表格密度：所有列表页统一单元格内边距、字号与行高。 */
-.page .n-data-table-th,
-.page .n-data-table-td {
+.n-data-table .n-data-table-td {
   padding: var(--list-table-cell-padding-y) var(--list-table-cell-padding-x);
   font-size: var(--list-table-font-size);
   line-height: var(--list-table-line-height);
 }
-.page .n-data-table-tr:hover .n-data-table-td {
+.n-data-table .n-data-table-tr:hover .n-data-table-td {
   background-color: var(--color-table-row-hover);
+}
+.n-table > thead > tr > th {
+  padding: var(--list-table-header-padding-y) var(--list-table-header-padding-x);
+  font-size: var(--list-table-header-font-size);
+  font-weight: var(--list-table-header-weight);
+  line-height: var(--list-table-header-line-height);
+}
+.n-table > tbody > tr > td {
+  padding: var(--list-table-cell-padding-y) var(--list-table-cell-padding-x);
+  font-size: var(--list-table-font-size);
+  line-height: var(--list-table-line-height);
 }
 .table-scroll {
   width: 100%;
@@ -830,44 +859,6 @@ a {
 /* 可点击的表格文本（如华星总库存的货品编码）：只做链接观感，点击由整行承担 */
 .table-link-strong {
   color: var(--color-primary);
-}
-/* ============ 列表页筛选区 ============
- * 标题行 / 操作行 / 操作按钮组原先在 14 个列表页里各写一份，现统一由这里提供；
- * 页面只负责结构（`.filter-heading` / `.filter-actions` / `.filter-action-buttons`）。 */
-.filter-heading,
-.filter-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--list-filter-heading-gap);
-}
-.filter-heading {
-  justify-content: space-between;
-  margin-bottom: var(--list-filter-heading-margin);
-}
-/* 标题与「已启用 N 项」同一行靠左：徽标行高小于标题行高，出现 / 消失都不改变筛选标题行高度 */
-.filter-title-row {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--list-filter-count-gap);
-}
-.filter-count {
-  flex: none;
-  color: var(--color-success);
-  font-size: var(--list-filter-count-size);
-  font-weight: 500;
-  line-height: var(--list-filter-count-line-height);
-  white-space: nowrap;
-}
-.filter-actions {
-  margin-top: var(--list-filter-actions-margin);
-  padding-top: var(--list-filter-actions-padding);
-  border-top: 1px solid var(--color-border-subtle);
-}
-/* 简单页面只有直接放置的按钮：首个按钮用 auto 外边距推到右侧；
- * 复杂页面的左侧说明 / 字段选择 + 右侧按钮组由 `.filter-action-buttons` 的 auto 外边距分开。 */
-.filter-actions > .n-button:first-child {
-  margin-left: auto;
 }
 .filter-action-buttons {
   display: flex;
@@ -955,13 +946,6 @@ a {
     grid-column: auto;
   }
 }
-/* 筛选区头部右侧操作（如「已启用 N 项」标签与折叠开关） */
-.filter-heading-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--list-inline-gap);
-}
 /* 筛选折叠开关：折叠态下的可见数量由下面两组按断点限定的规则统一决定，页面只负责给
    `.filter-grid` 绑 `is-collapsed`；筛选项不超过该断点的上限时按钮由样式自动隐藏。 */
 .filter-collapse-btn {
@@ -975,7 +959,7 @@ a {
   .filter-grid.is-collapsed > :nth-child(n + 7) {
     display: none;
   }
-  .filter-card:not(:has(.filter-grid > :nth-child(7))) .filter-collapse-btn {
+  .filter-panel:not(:has(.filter-grid > :nth-child(7))) .filter-collapse-btn {
     display: none;
   }
 }
@@ -1090,7 +1074,7 @@ a {
   .filter-grid.is-collapsed > :nth-child(n + 3) {
     display: none;
   }
-  .filter-card:not(:has(.filter-grid > :nth-child(3))) .filter-collapse-btn {
+  .filter-panel:not(:has(.filter-grid > :nth-child(3))) .filter-collapse-btn {
     display: none;
   }
   /* 分页器过宽时允许横向滑动，避免挤压溢出 */

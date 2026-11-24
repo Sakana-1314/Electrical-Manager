@@ -218,12 +218,7 @@ function rowProps(row: StockMaterial) {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div>
-          <div class="filter-title">筛选条件</div>
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field">
           <span>名称、别名或型号规格</span>
@@ -239,7 +234,7 @@ function rowProps(row: StockMaterial) {
         <n-button @click="resetFilters">重置</n-button>
         <n-button type="primary" :loading="loading" @click="query">查询</n-button>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

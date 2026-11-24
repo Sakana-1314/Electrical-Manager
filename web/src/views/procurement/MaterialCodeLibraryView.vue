@@ -231,18 +231,7 @@ function onFileChange(event: Event) {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title-row">
-          <div class="filter-title">筛选条件</div>
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-        </div>
-        <div class="filter-heading-actions">
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称</span>
@@ -274,6 +263,10 @@ function onFileChange(event: Event) {
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">
+          <span v-if="activeFilterCount" class="filter-count">
+            已启用 {{ activeFilterCount }} 项
+          </span>
+          <FilterExpandButton v-model:expanded="filterExpanded" />
           <span class="muted"
             >共 {{ total.toLocaleString() }} 条 · 物料表导入：{{ lastImportAt || '—' }} ·
             价格表导入：{{ priceLastImportAt || '—' }}</span
@@ -284,7 +277,7 @@ function onFileChange(event: Event) {
           </div>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card">
       <LoadingMask :show="importing" text="正在导入并全量更新，请勿重复提交…" />

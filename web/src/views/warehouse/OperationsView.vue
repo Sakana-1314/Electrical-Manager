@@ -198,13 +198,7 @@ function rowProps(row: StockOperation) {
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title">筛选条件</div>
-        <div class="filter-heading-actions">
-          <FilterExpandButton v-model:expanded="filterExpanded" />
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid" :class="{ 'is-collapsed': !filterExpanded }">
         <label class="filter-field">
           <span>物资名称或型号规格</span>
@@ -248,11 +242,14 @@ function rowProps(row: StockOperation) {
       </div>
       <div class="filter-extras-actions">
         <div class="filter-actions">
-          <n-button @click="resetFilters">重置</n-button>
-          <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+          <FilterExpandButton v-model:expanded="filterExpanded" />
+          <div class="filter-action-buttons">
+            <n-button @click="resetFilters">重置</n-button>
+            <n-button type="primary" :loading="loading" @click="query">查询</n-button>
+          </div>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

@@ -258,15 +258,7 @@ onMounted(loadTags)
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title-row">
-          <div class="filter-title">筛选条件</div>
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field">
           <span>名称 / 型号 / 备注</span>
@@ -290,6 +282,9 @@ onMounted(loadTags)
         </label>
       </div>
       <div class="filter-actions">
+        <span v-if="activeFilterCount" class="filter-count">
+          已启用 {{ activeFilterCount }} 项
+        </span>
         <ColumnVisibilityPicker
           :value="visibleColumnKeys"
           :options="fieldOptions"
@@ -301,7 +296,7 @@ onMounted(loadTags)
           <n-button type="primary" @click="query">查询</n-button>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable

@@ -167,14 +167,14 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 卡片 | 页面内容统一 `n-card`；筛选卡片加 `filter-card`（轻微蓝灰渐变），数据表卡片加 `data-card`；不在单页重设圆角/阴影/边框 |
+| 卡片 | 页面内容统一 `n-card`；数据表卡片加 `data-card`，不在单页重设圆角/阴影/边框。**筛选区不再套卡片**：用无背景的 `.filter-panel` 结构容器，筛选字段直接落在页面底色上，也不再有「筛选条件」标题 |
 | 简单筛选 | `filter-bar`，控件间距 `--list-filter-bar-gap`（10px） |
-| 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），保留一个“筛选条件”标题 |
-| 筛选标题 / 操作行 | 标题行 `.filter-heading`、操作行 `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距全部由 `styles.css` 统一提供（`--list-filter-heading-*` / `--list-filter-actions-*`），页面只写结构，不再各自复制一套；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
-| 筛选计数 | 「已启用 N 项」放在 `.filter-title-row` 内、紧挨「筛选条件」左侧标题；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，出现或消失都不改变标题行高度 |
+| 多条件筛选 | 用栅格形式（`filter-grid`，列最小宽度由 `--list-filter-col-min-width` 统一控制，190px），**不显示「筛选条件」标题** |
+| 筛选操作行 | `.filter-actions`、右侧按钮组 `.filter-action-buttons` 的布局与间距由 `styles.css` 统一提供（`--list-filter-actions-*`），页面只写结构；操作按钮最小宽度 `--list-action-button-min-width`（88px） |
+| 筛选计数 | 「已启用 N 项」放在 `.filter-actions` 左侧；用 `.filter-count`（12px / 18px 行高、`--list-filter-count-*`）而非 `n-tag`，与重置 / 查询同一行，出现或消失都不改变行高 |
 | 筛选控件 | 筛选格里的输入 / 下拉 / 日期 / 数字输入统一 `width: var(--control-width)`（栅格内 100%）、`--n-height: var(--control-height)`（34px）、`--n-font-size: var(--control-font-size)`（13px）；字段标签使用浮动标签（见「浮动标签」），不再占用独立标签行。标签字号 `--list-filter-label-size`（13px） |
-| 筛选卡片说明 | 标题下**不放小字描述**：筛选口径、选项含义、数据条数都不在筛选卡片里解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
-| 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由筛选卡片标题右侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
+| 筛选区说明 | **不放小字描述**：筛选口径、选项含义、数据条数都不在筛选区解释（重复说明只会挤占首屏）；需要提示“未选择”的含义时写进控件 `placeholder`，口径本身写进文档 |
+| 筛选折叠 | 收起时按 DOM 顺序保留前 N 个筛选项：**桌面端 6 个**（约一排）、**手机端 2 个**（≤768px，列宽只够一个）；其余由 `.filter-actions` 左侧的 `FilterExpandButton`（文案“更多筛选 / 收起筛选”）展开。页面只给 `.filter-grid` 绑 `is-collapsed`（即 `!filterExpanded`），可见数量与“没有可展开项时不显示按钮”都由 `styles.css` 按断点统一决定——页面不写折叠逻辑、不加断点规则。**约束**：`.filter-grid` 的直接子元素只能是筛选项（`label.filter-field`），折叠按子元素序号计数；日期区间等宽控件用 `filter-field-wide`（跨两列） |
 | 文本搜索 | 多关键词用半角 `|` 表示“或”（兼容全角 `｜`）；同一输入框内按 OR，不同控件之间按 AND；不在占位文字里重复该规则 |
 | 下拉筛选 | 只列具体的筛选项，**不放“全部”选项**——清空选择即代表不限；控件加 `clearable` 并写 `placeholder` 说明该条件，让“未选择”可读、可撤销 |
 | 按钮 | 主按钮为“查询”，重置为次按钮并与查询相邻；查询/重置不受筛选折叠影响，始终可见 |
@@ -185,7 +185,8 @@
 
 | 项 | 要求 |
 | --- | --- |
-| 表头 | 浅灰蓝背景 + 中等字重 |
+| 表头 | 浅灰蓝背景 + 中等字重；上下内边距 `--list-table-header-padding-y`（10px），比内容行 `--list-table-cell-padding-y`（8px）略高 |
+| 表格尺寸 | 表头 / 内容行的字号、行高、内边距、字重全部走 `--list-table-*` 令牌（表头字号 `--list-table-header-font-size`、行高 `--list-table-header-line-height`，内容行 `--list-table-font-size` / `--list-table-line-height`）；`n-data-table` 与 `n-table` 同一套，页面不再单独写 `:deep(.n-data-table-th/td)` |
 | 行悬停 | 淡蓝背景，不改文字颜色 |
 | 分页 | 卡片底部右侧，带顶部分隔线 |
 | 操作列 | 行点击进详情时，仍保留明确文字操作或可感知的鼠标状态 |
@@ -265,10 +266,10 @@
 | 项 | 要求 |
 | --- | --- |
 | 页面骨架 | 页面纵向间距 `--page-gap`（16px）；页头最小高度 `--page-header-min-height`（40px）、间距 `--page-header-gap`、内边距 `--page-header-padding`；标题 `--page-title-size`（20px）/ `--page-title-line-height`（1.35） |
-| 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；筛选 / 说明卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边 |
+| 卡片 | 卡片标题 `--list-card-title-size`（16px）与 `--list-card-title-line-height`（1.4）；说明类卡片内容内边距 `--list-card-content-padding`（`14px 18px 18px`）；含表格的 `data-card` 内容区 `padding: 0`，表格与分页条直接贴边。筛选区不套卡片 |
 | 字号层级 | 列表正文 `--list-body-size`（13px）/ `--list-body-line-height`（1.5）；辅助说明 `--list-caption-size`（12px）/ `--list-caption-line-height`（1.5）；树节点 / 双行单元格强调文字 `--list-emphasis-size`（14px）；双行单元格标题行高 `--list-cell-title-line-height`（1.4）、行间距 `--list-cell-gap`（2px） |
-| 筛选区 | 标题行 / 操作行 / 按钮组统一挂全局类 `.filter-heading` / `.filter-actions` / `.filter-action-buttons`，间距走 `--list-filter-heading-*` / `--list-filter-actions-*`；页面不得再定义这三类的布局样式 |
-| 表格 | 单元格内边距 `--list-table-cell-padding-y/x`（8px / 12px）、字号 `--list-table-font-size`（13px）、行高 `--list-table-line-height`（1.5）、表头字重 `--list-table-header-weight` |
+| 筛选区 | 无背景 `.filter-panel` 容器 + `.filter-actions` / `.filter-action-buttons` 全局类；不再有「筛选条件」标题行，计数与折叠开关放在操作行左侧。页面不得再定义这些布局样式 |
+| 表格 | 表头与内容行分开取令牌：表头 `--list-table-header-padding-y`（10px）/ `--list-table-header-font-size`（13px）/ `--list-table-header-line-height`（1.5），内容行 `--list-table-cell-padding-y/x`（8px / 12px）/ `--list-table-font-size`（13px）/ `--list-table-line-height`（1.5）；表头略高于内容行。`n-data-table` 与 `n-table` 全局统一，页面不再单独写单元格样式 |
 | 分页 | `margin-top` / 上内边距走 `--list-pagination-margin-top` / `--list-pagination-padding-top`；表格卡片内再补 `--list-pagination-padding-x` / `--list-pagination-padding-bottom`，不贴卡片边缘 |
 | 树 / 空态 | 横向树容器 `--list-tree-padding`，节点间距 / 最小宽度 / 内边距走 `--list-tree-node-*`，空态 `--list-empty-padding`；计数徽标 `--list-badge-*` |
 | 控件 | 所有输入框 / 下拉 / 日期 / 数字输入统一 `--control-height`（34px）与 `--control-font-size`（13px），弹窗与登录页也不再分档。宽度用 `--control-width`（栅格内 100%）、`--control-width-short`（150px）、`--control-width-medium`（220px）、`--control-width-unit`（160px）；筛选操作按钮最小宽度 `--list-action-button-min-width`（88px） |
@@ -449,11 +450,12 @@
 - [ ] 页面主色、按钮、菜单选中态一致
 - [ ] 列表页标题下没有可删除的重复说明
 - [ ] 卡片复用全局圆角、边框、阴影
-- [ ] 筛选卡片使用 `filter-card`，表格卡片使用 `data-card`
+- [ ] 筛选区不套卡片（无 `filter-card`、无「筛选条件」标题），字段直接落在页面底色上；表格卡片使用 `data-card`
 - [ ] 表格卡片在所有视口下内边距归零、表格占满卡片，且没有误伤复用 `data-card` 的非表格页面
+- [ ] 表头上下内边距 10px、内容行 8px，表头略高于内容行；表格字号 / 行高 / 内边距全部走 `--list-table-*`
 - [ ] 输入框 / 下拉 / 多选 / 日期 / 文本域使用浮动标签（未输入在框内、聚焦或有值压在框线上并断开框线、占位文字始终不重复），没有只靠 placeholder 当标签的字段
-- [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-heading` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
-- [ ] 「已启用 N 项」紧挨「筛选条件」左侧标题，使用 `.filter-count` 小字，出现 / 消失不改变标题行高度
+- [ ] 列表页间距 / 行高 / 字号引用 `--page-*` / `--list-*` / `--control-*`，没有页面自写 `.filter-panel` / `.filter-actions` / `.filter-action-buttons` 布局或写死控件宽高
+- [ ] 「已启用 N 项」放在筛选操作行左侧，使用 `.filter-count` 小字，出现 / 消失不改变行高
 - [ ] 移动端页头/详情工具栏按钮排一排放不下时能横向滑动到每个按钮（不缩小、不换行）
 - [ ] 状态色符合语义，未用于普通装饰
 - [ ] 图片附件复用 `ImageUploader`

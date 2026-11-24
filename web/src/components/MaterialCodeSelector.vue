@@ -161,14 +161,6 @@ function changePage(value: number) {
     :bordered="false"
   >
     <div class="selector-search">
-      <div class="filter-heading">
-        <div class="filter-title-row">
-          <div class="filter-title">筛选条件</div>
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-        </div>
-      </div>
       <div class="selector-search-fields">
         <label class="filter-field">
           <span>物资名称</span>
@@ -199,6 +191,9 @@ function changePage(value: number) {
         </label>
       </div>
       <div class="selector-search-actions">
+        <span v-if="activeFilterCount" class="filter-count">
+          已启用 {{ activeFilterCount }} 项
+        </span>
         <n-button @click="clearSearch">清空</n-button>
         <n-button @click="resetSearch">重置</n-button>
         <n-button type="primary" :loading="loading" @click="search">查询</n-button>
@@ -234,14 +229,6 @@ function changePage(value: number) {
   margin-bottom: var(--dialog-block-gap);
 }
 
-.filter-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--dialog-block-gap);
-  margin-bottom: var(--dialog-field-gap);
-}
-
 .selector-search-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -265,6 +252,11 @@ function changePage(value: number) {
   margin-top: var(--dialog-field-gap);
   padding-top: var(--dialog-block-gap);
   border-top: 1px solid var(--color-border-subtle);
+}
+
+/* 计数靠左，清空 / 重置 / 查询靠右 */
+.selector-search-actions .filter-count {
+  margin-right: auto;
 }
 
 .selector-search-actions :deep(.n-button) {

@@ -324,15 +324,7 @@ const activeFilterCount = computed(
       </div>
     </div>
 
-    <n-card class="filter-card" :bordered="false">
-      <div class="filter-heading">
-        <div class="filter-title-row">
-          <div class="filter-title">筛选条件</div>
-          <span v-if="activeFilterCount" class="filter-count">
-            已启用 {{ activeFilterCount }} 项
-          </span>
-        </div>
-      </div>
+    <div class="filter-panel">
       <div class="filter-grid">
         <label class="filter-field">
           <span>文件名</span>
@@ -364,12 +356,15 @@ const activeFilterCount = computed(
         </label>
       </div>
       <div class="filter-actions">
+        <span v-if="activeFilterCount" class="filter-count">
+          已启用 {{ activeFilterCount }} 项
+        </span>
         <div class="filter-action-buttons">
           <n-button secondary @click="resetFilters">重置</n-button>
           <n-button type="primary" @click="query">查询</n-button>
         </div>
       </div>
-    </n-card>
+    </div>
 
     <n-card class="data-card" :bordered="false">
       <PersistentDataTable
