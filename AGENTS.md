@@ -125,10 +125,16 @@ npm run build             # 类型检查 + 生产构建
 
 ## MCP 可调用性约定（必须遵守）
 
-MCP 工具目录由内嵌的接口契约自动生成（`server/internal/api/mcp`，契约副本见 `server/internal/openapi`），**默认要求每个管理端接口都能被 `operation_call` 完整操作**：
+MCP 有两层工具（`server/internal/api/mcp`，契约副本见 `server/internal/openapi`）：
 
-- **参数位置只用** 路径 / 查询 / 请求头 / JSON 请求体；文件上传只能单文件 multipart 且表单字段名必须是 `file`（cookie、多文件或其它表单字段 MCP 传不进去，新增这类接口必须同时扩展 `operation_call`）。
-- **乐观锁版本号走 `If-Match` 请求头**：网页端由 `web/src/api/*.ts` 按需传，MCP 端用 `operation_call` 的 `headers` 传（如 `{"If-Match": "3"}`）；`X-API-Token` 与 `X-Project-Id` 由 MCP 层统一设置，不接受调用方传入。
+- **业务工具**（`business_tools.go`）：按业务流程命名的 `list_*` / `create_*` / `batch_update_*`，一跳完成常见查询与写入；筛选**默认值与网页端一致**（如申购计划默认「正常 + 未转入」、未编码物资固定 `coded=false`、工作总览默认本月、新建默认今天），改网页默认值时同步改对应工具与 Go 测试。
+- **基础 / 高级工具**：`get_current_user` / `list_projects` / `find_api_operations` / `describe_api_operation` / `call_api_operation`；业务工具覆盖不到的能力走高级接口。
+
+**默认要求每个管理端接口都能被 `call_api_operation` 完整操作**：
+
+- **业务工具绑定契约**：每个业务工具用 `operation_id` 绑定契约接口，参数落位（路径 / 查询 / 请求体字段）由 `business_tools_test.go` 校验；新增业务工具要同时更新 `docs/websites/pages/dev-architecture.md` 的 MCP 小节，否则文档一致性测试失败。
+- **参数位置只用** 路径 / 查询 / 请求头 / JSON 请求体；文件上传只能单文件 multipart 且表单字段名必须是 `file`（cookie、多文件或其它表单字段 MCP 传不进去，新增这类接口必须同时扩展 `call_api_operation`）。
+- **乐观锁版本号走 `If-Match` 请求头**：网页端由 `web/src/api/*.ts` 按需传，MCP 端用 `call_api_operation` 的 `headers` 传（如 `{"If-Match": "3"}`）；批量编辑业务工具的数组项带 `id` / `line_id` 与 `version`。`X-API-Token` 与 `X-Project-Id` 由 MCP 层统一设置，不接受调用方传入。
 - **排除项必须显式且同步**：需要排除的接口（登录/刷新、小程序专用前缀等）写进 `server/internal/api/mcp` 的 `ExcludedPaths` / `ExcludedPrefixes`，同时更新 `docs/websites/pages/dev-architecture.md` 的 MCP 小节；排除项必须仍能命中存活路由（端点删除后要清理），由 `server` 目录下的 Go 测试校验。
 - **文档同步**：改工具清单、排除清单或 MCP 链接参数（`project_id` 在 `token` 之前）时必须同步文档，否则 CI 的文档一致性测试失败。
 

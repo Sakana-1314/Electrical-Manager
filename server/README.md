@@ -20,13 +20,19 @@ https://<服务域名>/api/v1/mcp/?token=<接口令牌>
 支持自定义请求头的 MCP 客户端也可以把地址设为不含查询参数的 `/api/v1/mcp/`，并发送
 `X-API-Token` 或 `Authorization: Bearer <接口令牌>`。
 
-服务提供五个工具：
+服务提供两档工具：
 
-- `system_whoami`：确认令牌对应的用户、权限键与当前项目。
-- `projects_list`：列出全部项目。
-- `operations_list`：按标签或关键字查询可用业务操作。
-- `operation_describe`：读取某个操作的参数和响应契约。
-- `operation_call`：调用已登记的业务接口；文件上传和下载使用 Base64。
+- 业务工具：`list_inventory_balances`、`list_low_stock_materials`、`list_inventory_operations`、
+  `list_stock_materials`、`create_inventory_inbound`、`create_inventory_outbound`、
+  `list_purchase_plans`、`list_purchase_records`、`list_purchase_templates`、`list_uncoded_materials`、`create_purchase_plan`、
+  `move_purchase_plans_to_record`、`batch_update_purchase_plans`、`batch_update_purchase_records`、
+  `list_material_codes`、`list_huaxing_inventory`、`list_lite_inventory`、`list_hazards`、
+  `create_hazard`、`update_hazard`、`list_ledger_items`、`list_work_overview`、`list_memos`、`create_memo`、
+  `get_dashboard_summary`。参数默认值与网页端一致（如申购计划默认只看「正常 + 未转入」、
+  工作总览默认本月、新建默认今天）。
+- 基础 / 高级工具：`get_current_user`（当前用户与项目）、`list_projects`（全部项目）、
+  `find_api_operations`（按标签或关键字查管理端接口）、`describe_api_operation`（接口参数与响应契约）、
+  `call_api_operation`（调用任意已登记接口；文件上传和下载使用 Base64）。业务工具覆盖不到时使用这一档。
 
 MCP 不接受 SQL、数据库表名或任意 URL，只能按 OpenAPI 中登记的 `operationId` 调用管理端业务
 接口。每次调用仍经过原有的参数校验、权限位、乐观锁、事务和审计逻辑；只读用户不能借助 MCP

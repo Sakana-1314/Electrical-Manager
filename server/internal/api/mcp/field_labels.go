@@ -8,7 +8,7 @@ import "fmt"
 // Actual Demand Person / Purchase Responsible），与界面文案并不一致，甚至语义相反：
 //   - actual_demand_person 在界面上叫「提报员工」
 //   - purchase_responsible 在界面上叫「实际需求人」
-// 这里只改 operation_describe 的展示层（字段键名、契约与接口返回都不变），
+// 这里只改 describe_api_operation 的展示层（字段键名、契约与接口返回都不变），
 // 让 Agent 用界面上的叫法与用户沟通，避免把两个人员字段弄反。
 //
 // 同一个字段在不同模块含义不同（如 name、status、item_id、material_id），

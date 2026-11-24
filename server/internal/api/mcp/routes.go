@@ -1,6 +1,6 @@
 // Package mcp 对应原 app/mcp_server.py：面向 AI Agent 的 MCP 服务（Streamable HTTP，无状态，JSON 响应）。
 //
-// 工具目录由内嵌的 OpenAPI 契约生成，operation_call 在进程内把请求转发给应用自身的 HTTP 处理器，
+// 工具目录由内嵌的 OpenAPI 契约生成，业务工具与 call_api_operation 在进程内把请求转发给应用自身的 HTTP 处理器，
 // 因此每次调用仍经过原有的参数校验、角色权限、乐观锁、事务与审计逻辑。
 package mcp
 
@@ -45,11 +45,14 @@ var (
 	headerNotes    = map[string]string{"if-match": "乐观锁版本号（String(version)）；不传则不校验版本"}
 )
 
-const instructions = "先调用 operations_list 查找操作，再调用 operation_describe 确认参数，最后使用 " +
-	"operation_call 执行。operation_describe 的 call_arguments 说明每个参数该放进 " +
+const instructions = "优先使用业务工具完成常见查询与操作（list_* / create_* / batch_update_*）：" +
+	"它们的筛选默认值与网页端一致（如 list_purchase_plans 默认只查「正常」且未转入申购记录的计划，" +
+	"list_work_overview 默认本月），查询默认每页 20 条，翻页传 page / page_size。" +
+	"业务工具覆盖不到的能力才走高级接口：先 find_api_operations 查找接口，再 describe_api_operation " +
+	"确认参数，最后用 call_api_operation 执行；describe_api_operation 的 call_arguments 说明每个参数该放进 " +
 	"path_params / query / headers / body / file 的哪一个；带乐观锁的写操作把版本号放进 " +
 	"headers（如 {\"If-Match\": \"3\"}）。当前项目由 MCP 连接决定（请求头 X-Project-Id 优先，" +
-	"其次链接参数 ?project_id=，都缺省时用默认项目），可用 system_whoami 查看。" +
+	"其次链接参数 ?project_id=，都缺省时用默认项目），可用 get_current_user 查看。" +
 	"不得猜测 operation_id 或绕过现有业务接口。"
 
 var (
@@ -57,7 +60,7 @@ var (
 	appHandler http.Handler
 )
 
-// SetHandler 绑定应用自身的 HTTP 处理器（operation_call 进程内转发用）。
+// SetHandler 绑定应用自身的 HTTP 处理器（业务工具与 call_api_operation 进程内转发用）。
 func SetHandler(h http.Handler) {
 	handlerMu.Lock()
 	appHandler = h
@@ -317,26 +320,30 @@ func callTool(c *gin.Context, ident *identity, name string, args map[string]any)
 	}
 	var result map[string]any
 	var err error
-	switch name {
-	case "system_whoami":
-		result, err = systemWhoami(c, ident)
-	case "projects_list":
-		result, err = callInternal(c, ident, "GET", "/api/v1/projects", nil, nil, nil, nil)
-	case "operations_list":
-		result, err = operationsList(optString(args, "category"), optString(args, "keyword"))
-	case "operation_describe":
-		id, ok := args["operation_id"].(string)
-		if !ok {
-			err = errf("operation_id: Field required")
-			break
-		}
-		result, err = operationDescribe(id)
-	case "operation_call":
-		result, err = operationCall(c, ident, args)
-	default:
-		return map[string]any{
-			"content": []any{map[string]any{"type": "text", "text": "Unknown tool: " + name}},
-			"isError": true,
+	if tool := businessToolByName(name); tool != nil {
+		result, err = callBusinessTool(c, ident, tool, args)
+	} else {
+		switch name {
+		case "get_current_user":
+			result, err = systemWhoami(c, ident)
+		case "list_projects":
+			result, err = callInternal(c, ident, "GET", "/api/v1/projects", nil, nil, nil, nil)
+		case "find_api_operations":
+			result, err = operationsList(optString(args, "category"), optString(args, "keyword"))
+		case "describe_api_operation":
+			id, ok := args["operation_id"].(string)
+			if !ok {
+				err = errf("operation_id: Field required")
+				break
+			}
+			result, err = operationDescribe(id)
+		case "call_api_operation":
+			result, err = operationCall(c, ident, args)
+		default:
+			return map[string]any{
+				"content": []any{map[string]any{"type": "text", "text": "Unknown tool: " + name}},
+				"isError": true,
+			}
 		}
 	}
 	if err != nil {
@@ -971,37 +978,42 @@ func nullable(schema map[string]any) map[string]any {
 
 func toolDefinitions() []any {
 	empty := map[string]any{"properties": map[string]any{}, "type": "object"}
-	return []any{
+	tools := []any{}
+	// 业务工具放在最前：Agent 先看到可直接执行的业务动作，高级接口作为兜底。
+	for _, tool := range businessTools() {
+		tools = append(tools, tool.definition())
+	}
+	return append(tools,
 		map[string]any{
-			"name": "system_whoami", "title": "查看当前身份",
-			"description": "返回当前 MCP 令牌对应的管理端用户、角色，以及本次调用所属的项目。\n\n多项目隔离下业务数据只在「当前项目」内可见，这里显式回显项目与项目来源（请求头 / 链接参数 /\n默认项目），便于 Agent 自检。",
-			"inputSchema": empty, "outputSchema": objectOutput("system_whoamiDictOutput"), "annotations": readOnly(),
+			"name": "get_current_user", "title": "查看当前身份与项目",
+			"description": "返回当前 MCP 令牌对应的管理端用户、权限键，以及本次调用所属的项目。\n\n多项目隔离下业务数据只在「当前项目」内可见，这里显式回显项目与项目来源（请求头 / 链接参数 /\n默认项目），便于 Agent 自检。",
+			"inputSchema": empty, "outputSchema": objectOutput("get_current_userOutput"), "annotations": readOnly(),
 		},
 		map[string]any{
-			"name": "projects_list", "title": "查看可用项目",
+			"name": "list_projects", "title": "查看可用项目",
 			"description": "列出全部项目（多项目数据隔离：业务接口只操作当前项目的数据）。",
-			"inputSchema": empty, "outputSchema": objectOutput("projects_listDictOutput"), "annotations": readOnly(),
+			"inputSchema": empty, "outputSchema": objectOutput("list_projectsOutput"), "annotations": readOnly(),
 		},
 		map[string]any{
-			"name": "operations_list", "title": "查询可用操作",
-			"description": "列出可调用的业务操作。category 按接口标签筛选，keyword 按名称和说明搜索。",
+			"name": "find_api_operations", "title": "高级：查找接口",
+			"description": "业务工具不覆盖时使用：列出可调用的管理端接口。category 按接口标签筛选，keyword 按名称和说明搜索。\n\n找到 operation_id 后先用 describe_api_operation 确认参数，再 call_api_operation。",
 			"inputSchema": map[string]any{"type": "object", "properties": map[string]any{
 				"category": nullable(map[string]any{"type": "string"}),
 				"keyword":  nullable(map[string]any{"type": "string"}),
 			}},
-			"outputSchema": objectOutput("operations_listDictOutput"), "annotations": readOnly(),
+			"outputSchema": objectOutput("find_api_operationsOutput"), "annotations": readOnly(),
 		},
 		map[string]any{
-			"name": "operation_describe", "title": "查看操作参数",
-			"description": "返回指定业务操作的路径参数、查询参数、请求体和响应契约。",
+			"name": "describe_api_operation", "title": "高级：查看接口参数",
+			"description": "返回指定管理端接口的路径参数、查询参数、请求体、响应契约与参数落位提示 call_arguments。",
 			"inputSchema": map[string]any{"type": "object", "required": []any{"operation_id"}, "properties": map[string]any{
 				"operation_id": map[string]any{"type": "string", "title": "Operation Id"},
 			}},
-			"outputSchema": objectOutput("operation_describeDictOutput"), "annotations": readOnly(),
+			"outputSchema": objectOutput("describe_api_operationOutput"), "annotations": readOnly(),
 		},
 		map[string]any{
-			"name": "operation_call", "title": "执行业务操作",
-			"description": "调用一个已登记的业务操作。\n\npath 参数放 `path_params`，查询参数放 `query`，JSON 请求体放 `body`，附件用\n`file.content_base64`；带乐观锁的写操作把版本号放 `headers`（如 `{\"If-Match\": \"3\"}`）。\n具体落位见 operation_describe 的 `call_arguments`。",
+			"name": "call_api_operation", "title": "高级：调用接口",
+			"description": "业务工具不覆盖时使用：调用一个已登记的管理端接口。\n\npath 参数放 `path_params`，查询参数放 `query`，JSON 请求体放 `body`，附件用\n`file.content_base64`；带乐观锁的写操作把版本号放 `headers`（如 `{\"If-Match\": \"3\"}`）。\n具体落位见 describe_api_operation 的 `call_arguments`。",
 			"inputSchema": map[string]any{
 				"type":     "object",
 				"required": []any{"operation_id"},
@@ -1027,8 +1039,8 @@ func toolDefinitions() []any {
 					"file": nullable(map[string]any{"$ref": "#/$defs/McpFileInput"}),
 				},
 			},
-			"outputSchema": objectOutput("operation_callDictOutput"),
+			"outputSchema": objectOutput("call_api_operationOutput"),
 			"annotations":  map[string]any{"readOnlyHint": false, "destructiveHint": true, "idempotentHint": false, "openWorldHint": false},
 		},
-	}
+	)
 }

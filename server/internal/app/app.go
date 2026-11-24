@@ -51,7 +51,7 @@ func New() *gin.Engine {
 		c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(openapi.SwaggerHTML(config.S.AppName, "/api/v1/openapi.json")))
 	})
 	api.Register(web.NewRouter(r.Group("/api/v1")))
-	// MCP 的 operation_call 在进程内转发给本引擎。
+	// MCP 的业务工具与 call_api_operation 在进程内转发给本引擎。
 	mcp.SetHandler(r)
 	return r
 }
