@@ -295,7 +295,7 @@
   line-height: 38rpx;
 }
 
-/* 标签与正文之间默认左右各留 32rpx，收成一档。 */
+/* 标签与正文之间默认两层 32rpx 间距，收成一档 16rpx。 */
 .input-card .t-input__label:not(:empty) {
   margin-right: 16rpx;
 }
