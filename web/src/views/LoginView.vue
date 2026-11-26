@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/api/auth'
 import { resolveLandingRouteName } from '@/utils/navigation'
 import { LOGO_URL } from '@/constants/branding'
+import { activeBackendUrl } from '@/api/backend'
+import { deliverSession, handoffRequest, type HandoffRequest } from '@/utils/userscriptHandoff'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,6 +16,23 @@ const message = useMessage()
 const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
 const model = reactive({ username: '', password: '' })
+/**
+ * 油猴脚本的交接模式：`?userscript=1&origin=…&nonce=…` 且来源在白名单里。
+ * 有值时登录成功不跳转，改为等待用户点「授权」，由本页把登录态 postMessage 回脚本窗口。
+ */
+const handoff = ref<HandoffRequest | null>(handoffRequest(route.query))
+const handoffDelivered = ref(false)
+const handoffFailed = ref('')
+const pendingSession = ref<{ accessToken: string } | null>(null)
+
+/** 交接模式下登录成功：记住令牌并停在授权面板（不跳转，否则弹窗会离开授权页）。 */
+async function finishLogin(accessToken: string) {
+  if (!handoff.value) {
+    await afterLogin()
+    return
+  }
+  pendingSession.value = { accessToken }
+}
 const rules: FormRules = {
   username: { required: true, message: '请输入用户名', trigger: 'blur' },
   password: { required: true, message: '请输入密码', trigger: 'blur' },
@@ -44,7 +63,7 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(model)
-    await afterLogin()
+    await finishLogin(auth.token ?? '')
   } catch (error) {
     message.error(error instanceof Error ? error.message : '登录失败')
   } finally {
@@ -91,7 +110,7 @@ async function pollQrLogin() {
           user: result.user,
         })
         stopQrPolling()
-        await afterLogin()
+        await finishLogin(result.access_token)
         return
       }
     }
@@ -119,6 +138,28 @@ watch(activeTab, (tab) => {
 // 默认页签就是扫码登录，mount 时 watch 不会触发，这里主动创建一次会话。
 void startQrLogin()
 
+/**
+ * 把登录态交给发起授权的油猴脚本。
+ *
+ * 只回传令牌、接口地址与用户的权限键；回传目标 origin 由 `handoffRequest` 白名单校验，
+ * 非白名单 / 非弹窗场景 `handoff` 为 null，本函数不会被调用。
+ */
+function authorizeUserscript() {
+  if (!handoff.value || !pendingSession.value || !auth.user) return
+  const ok = deliverSession(
+    handoff.value,
+    { accessToken: pendingSession.value.accessToken, user: auth.user },
+    activeBackendUrl(),
+  )
+  handoffDelivered.value = ok
+  if (!ok) handoffFailed.value = '发起窗口已关闭，授权未送达；请回到脚本重新打开授权窗口。'
+}
+
+/** 授权后关闭弹窗（脚本自己也会在收到消息后关窗，两处都做以防浏览器限制）。 */
+function closeHandoffWindow() {
+  window.close()
+}
+
 onBeforeUnmount(() => {
   disposed = true
   stopQrPolling()
@@ -136,65 +177,137 @@ onBeforeUnmount(() => {
     </section>
     <section class="login-panel">
       <n-card class="login-card" :bordered="false">
-        <h2>欢迎登录</h2>
-        <n-tabs v-model:value="activeTab" type="segment" animated>
-          <n-tab-pane name="password" tab="账号密码">
-            <n-form
-              ref="formRef"
-              :model="model"
-              :rules="rules"
-              size="large"
-              @submit.prevent="submit"
+        <!-- 油猴脚本的授权模式：登录后停在本页，等用户点一次授权把登录态交回脚本窗口。 -->
+        <template v-if="handoff">
+          <h2>{{ handoffDelivered ? '已授权' : '授权登录' }}</h2>
+          <p class="handoff-hint">
+            油猴脚本正在请求使用你的登录态来同步采购数据。登录成功后点「授权」即可，令牌只回传给发起窗口。
+          </p>
+          <div v-if="handoffDelivered" class="handoff-result">
+            <n-alert type="success" :show-icon="true">已把登录态交给脚本，可以关闭本窗口。</n-alert>
+            <n-button block size="large" type="primary" @click="closeHandoffWindow"
+              >关闭窗口</n-button
             >
-              <n-form-item label="用户名" path="username"
-                ><n-input v-model:value="model.username" placeholder="用户名"
-              /></n-form-item>
-              <n-form-item label="密码" path="password"
-                ><n-input
-                  v-model:value="model.password"
-                  type="password"
-                  show-password-on="click"
-                  placeholder="密码"
-                  @keyup.enter="submit"
-              /></n-form-item>
-              <n-button type="primary" block size="large" :loading="loading" @click="submit"
-                >登录</n-button
-              >
-            </n-form>
-          </n-tab-pane>
-          <n-tab-pane name="qr" tab="小程序扫码">
-            <div class="qr-login">
-              <div v-if="qrStatus === 'loading'" class="qr-state">
-                <n-spin size="small" />
-                <span>正在生成二维码…</span>
-              </div>
-              <template v-else-if="qrStatus === 'ready' && !qrImageFailed">
-                <img
-                  class="qr-image"
-                  :src="qrImageUrl"
-                  alt="小程序扫码登录二维码"
-                  @error="qrImageFailed = true"
-                />
-                <p class="qr-hint">请使用微信扫一扫，在小程序中确认登录</p>
-                <p class="qr-subhint">二维码 5 分钟内有效</p>
-              </template>
-              <div v-else-if="qrStatus === 'ready'" class="qr-state qr-error">
-                <p>二维码生成失败，请重试或使用账号密码登录。</p>
-                <n-button size="small" @click="startQrLogin">重新生成</n-button>
-              </div>
-              <div v-else-if="qrStatus === 'expired'" class="qr-state qr-error">
-                <p>二维码已过期</p>
-                <n-button size="small" type="primary" secondary @click="startQrLogin"
-                  >刷新二维码</n-button
+          </div>
+          <div v-else-if="pendingSession" class="handoff-result">
+            <n-alert v-if="handoffFailed" type="error" :show-icon="true">{{
+              handoffFailed
+            }}</n-alert>
+            <n-button block size="large" type="primary" @click="authorizeUserscript">
+              授权脚本使用我的登录态
+            </n-button>
+          </div>
+          <template v-else>
+            <n-tabs v-model:value="activeTab" type="segment" animated>
+              <n-tab-pane name="qr" tab="小程序扫码">
+                <div class="qr-login">
+                  <div v-if="qrStatus === 'loading'" class="qr-state">
+                    <n-spin size="small" />
+                    <span>正在生成二维码…</span>
+                  </div>
+                  <template v-else-if="qrStatus === 'ready' && !qrImageFailed">
+                    <img
+                      class="qr-image"
+                      :src="qrImageUrl"
+                      alt="小程序扫码登录二维码"
+                      @error="qrImageFailed = true"
+                    />
+                    <p class="qr-hint">请使用微信扫一扫，在小程序中确认登录</p>
+                  </template>
+                  <div v-else class="qr-state qr-error">
+                    <p>二维码暂时不可用，请使用账号密码登录。</p>
+                    <n-button size="small" @click="startQrLogin">重试</n-button>
+                  </div>
+                </div>
+              </n-tab-pane>
+              <n-tab-pane name="password" tab="账号密码">
+                <n-form
+                  ref="formRef"
+                  :model="model"
+                  :rules="rules"
+                  size="large"
+                  @submit.prevent="submit"
                 >
+                  <n-form-item label="用户名" path="username"
+                    ><n-input v-model:value="model.username" placeholder="用户名"
+                  /></n-form-item>
+                  <n-form-item label="密码" path="password"
+                    ><n-input
+                      v-model:value="model.password"
+                      type="password"
+                      show-password-on="click"
+                      placeholder="密码"
+                      @keyup.enter="submit"
+                  /></n-form-item>
+                  <n-button type="primary" block size="large" :loading="loading" @click="submit"
+                    >登录</n-button
+                  >
+                </n-form>
+              </n-tab-pane>
+            </n-tabs>
+          </template>
+        </template>
+        <template v-else>
+          <h2>欢迎登录</h2>
+          <n-tabs v-model:value="activeTab" type="segment" animated>
+            <n-tab-pane name="password" tab="账号密码">
+              <n-form
+                ref="formRef"
+                :model="model"
+                :rules="rules"
+                size="large"
+                @submit.prevent="submit"
+              >
+                <n-form-item label="用户名" path="username"
+                  ><n-input v-model:value="model.username" placeholder="用户名"
+                /></n-form-item>
+                <n-form-item label="密码" path="password"
+                  ><n-input
+                    v-model:value="model.password"
+                    type="password"
+                    show-password-on="click"
+                    placeholder="密码"
+                    @keyup.enter="submit"
+                /></n-form-item>
+                <n-button type="primary" block size="large" :loading="loading" @click="submit"
+                  >登录</n-button
+                >
+              </n-form>
+            </n-tab-pane>
+            <n-tab-pane name="qr" tab="小程序扫码">
+              <div class="qr-login">
+                <div v-if="qrStatus === 'loading'" class="qr-state">
+                  <n-spin size="small" />
+                  <span>正在生成二维码…</span>
+                </div>
+                <template v-else-if="qrStatus === 'ready' && !qrImageFailed">
+                  <img
+                    class="qr-image"
+                    :src="qrImageUrl"
+                    alt="小程序扫码登录二维码"
+                    @error="qrImageFailed = true"
+                  />
+                  <p class="qr-hint">请使用微信扫一扫，在小程序中确认登录</p>
+                  <p class="qr-subhint">二维码 5 分钟内有效</p>
+                </template>
+                <div v-else-if="qrStatus === 'ready'" class="qr-state qr-error">
+                  <p>二维码生成失败，请重试或使用账号密码登录。</p>
+                  <n-button size="small" @click="startQrLogin">重新生成</n-button>
+                </div>
+                <div v-else-if="qrStatus === 'expired'" class="qr-state qr-error">
+                  <p>二维码已过期</p>
+                  <n-button size="small" type="primary" secondary @click="startQrLogin"
+                    >刷新二维码</n-button
+                  >
+                </div>
+                <div v-else-if="qrStatus === 'error'" class="qr-state qr-error">
+                  <p>扫码登录暂时不可用，请使用账号密码登录。</p>
+                  <n-button size="small" @click="startQrLogin">重试</n-button>
+                </div>
               </div>
-              <div v-else-if="qrStatus === 'error'" class="qr-state qr-error">
-                <p>扫码登录暂时不可用，请使用账号密码登录。</p>
-                <n-button size="small" @click="startQrLogin">重试</n-button>
-              </div>
-            </div>
-          </n-tab-pane>
-        </n-tabs>
+            </n-tab-pane>
+          </n-tabs>
+        </template>
       </n-card>
     </section>
   </main>
