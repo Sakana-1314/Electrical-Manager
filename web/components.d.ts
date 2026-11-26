@@ -71,6 +71,7 @@ declare module 'vue' {
     NTag: typeof import('naive-ui')['NTag']
     OperationDetailModal: typeof import('./src/components/OperationDetailModal.vue')['default']
     OperationLinesEditor: typeof import('./src/components/OperationLinesEditor.vue')['default']
+    PermissionMatrix: typeof import('./src/components/PermissionMatrix.vue')['default']
     PersistentDataTable: typeof import('./src/components/PersistentDataTable.vue')['default']
     PinyinSelect: typeof import('./src/components/PinyinSelect.vue')['default']
     PinyinTreeSelect: typeof import('./src/components/PinyinTreeSelect.vue')['default']

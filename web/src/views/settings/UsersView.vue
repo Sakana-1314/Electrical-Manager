@@ -12,6 +12,7 @@ import { usePagedTable } from '@/composables/usePagedTable'
 import { useProjectStore } from '@/stores/project'
 import { formatShanghaiTime } from '@/utils/time'
 import PinyinSelect from '@/components/PinyinSelect.vue'
+import PermissionMatrix from '@/components/PermissionMatrix.vue'
 
 // 权限位目录（GET /permissions）：系统管理 + 各功能读写，勾选后按位存进用户 permissions。
 const permissionOptions = ref<PermissionRead[]>([])
@@ -27,12 +28,6 @@ const MODULE_LABELS: Record<string, string> = {
   ledger: '台账',
   hazard: '隐患',
   work: '工单',
-}
-/** 权限勾选项文案：二级库 Lite 与华星总库存的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
-function permissionItemLabel(item: PermissionRead): string {
-  if ((item.module === 'lite' || item.module === 'huaxing') && item.action === 'write')
-    return '导入'
-  return item.action === 'write' ? '读写' : item.action === 'read' ? '查看' : '可管理'
 }
 const permissionGroups = computed(() => {
   const groups = new Map<string, PermissionRead[]>()
@@ -113,18 +108,6 @@ onMounted(() => {
     .catch(() => undefined)
 })
 
-/** 勾选权限：写权限自动带上同模块读权限；取消读权限时同时取消写权限。 */
-function togglePermission(key: string, checked: boolean) {
-  const next = new Set(form.permissions)
-  if (checked) {
-    next.add(key)
-    if (key.endsWith(':write')) next.add(`${key.slice(0, -':write'.length)}:read`)
-  } else {
-    next.delete(key)
-    if (key.endsWith(':read')) next.delete(`${key.slice(0, -':read'.length)}:write`)
-  }
-  form.permissions = [...next]
-}
 const columns = preventTableColumnCompression<ManagedUser>([
   {
     title: '用户',
@@ -423,21 +406,7 @@ function remove(row: ManagedUser) {
         </div>
         <div class="form-section">
           <div class="dialog-section-title">权限</div>
-          <div class="permission-grid">
-            <div v-for="group in permissionGroups" :key="group.module" class="permission-group">
-              <div class="permission-group-label">{{ group.label }}</div>
-              <div class="permission-group-items">
-                <n-checkbox
-                  v-for="item in group.items"
-                  :key="item.key"
-                  size="small"
-                  :checked="form.permissions.includes(item.key)"
-                  :label="permissionItemLabel(item)"
-                  @update:checked="togglePermission(item.key, $event)"
-                />
-              </div>
-            </div>
-          </div>
+          <PermissionMatrix v-model="form.permissions" :options="permissionOptions" />
         </div>
         <div v-if="editing" class="form-section">
           <div class="dialog-section-title">安全与接入</div>
@@ -629,41 +598,6 @@ function remove(row: ManagedUser) {
   margin-top: var(--dialog-block-gap);
   padding-top: var(--dialog-block-gap);
   border-top: 1px solid var(--color-border-subtle);
-}
-.permission-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--dialog-label-gap) var(--dialog-footer-gap);
-}
-.permission-group {
-  display: flex;
-  align-items: center;
-  gap: var(--dialog-footer-gap);
-  min-height: 30px;
-  padding: var(--dialog-label-gap) var(--dialog-footer-gap);
-  border-radius: var(--dialog-block-radius);
-  background: var(--color-panel);
-}
-.permission-group-label {
-  flex: none;
-  width: 64px;
-  color: var(--color-text-strong);
-  font-size: var(--dialog-caption-size);
-  font-weight: var(--dialog-title-weight);
-  line-height: var(--dialog-caption-line-height);
-}
-.permission-group-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dialog-label-gap) var(--dialog-block-gap);
-}
-@media (max-width: 560px) {
-  .permission-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .login-strip {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 .merge-target {
   display: flex;
