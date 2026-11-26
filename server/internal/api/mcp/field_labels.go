@@ -411,6 +411,13 @@ var defaultFieldLabels = map[string]string{
 
 // schemaFieldLabels 按 schema 名覆盖默认名：同一字段在不同模块的界面文案不同时使用。
 var schemaFieldLabels = map[string]map[string]string{
+	// 小程序「进入网页版」的票据请求体（公开接口，仅兑换用，字段名保持契约原文）。
+	"WebOpenTicketCreate": {
+		"path": "落地路由",
+	},
+	"WebOpenTicketRedeemRequest": {
+		"ticket": "登录票据",
+	},
 	"OperationLineWrite": {
 		"stock_material_id": "物资",
 	},

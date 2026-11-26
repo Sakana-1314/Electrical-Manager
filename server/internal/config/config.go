@@ -36,14 +36,17 @@ type Settings struct {
 	FeishuWebhook   WebhookConfig
 	DingTalkWebhook WebhookConfig
 	// 微信接口根地址（默认官方地址；测试可指向本地桩服务）。
-	WechatAPIBase              string
-	UploadDir                  string
-	PreviewCacheDir            string // 缩略图缓存目录，独立于 UploadDir，便于单独清理
-	PreviewConcurrency         int    // 同时渲染缩略图的上限，超出的请求排队等待
-	TemplateDir                string
-	LogDir                     string
-	LogBackupCount             int
-	MaxImageBytes              int64
+	WechatAPIBase      string
+	UploadDir          string
+	PreviewCacheDir    string // 缩略图缓存目录，独立于 UploadDir，便于单独清理
+	PreviewConcurrency int    // 同时渲染缩略图的上限，超出的请求排队等待
+	TemplateDir        string
+	LogDir             string
+	LogBackupCount     int
+	MaxImageBytes      int64
+	// WebBaseURL 是网页端站点地址（小程序「进入网页版」拼 web-view 地址用）；
+	// 缺省时回落到 CORS 允许来源的第一条，再回落到请求 Host。
+	WebBaseURL                 string
 	CORSOrigins                []string
 	CORSAllowCredentials       bool
 	CORSMaxAge                 int
@@ -148,6 +151,7 @@ func Load() (*Settings, error) {
 	if s.AttachmentCleanupEnabled, err = envBool("APP_ATTACHMENT_CLEANUP_ENABLED", true); err != nil {
 		return nil, err
 	}
+	s.WebBaseURL = strings.TrimRight(strings.TrimSpace(env("APP_WEB_BASE_URL", "")), "/")
 	for _, item := range strings.Split(env("APP_CORS_ORIGINS", ""), ",") {
 		if item = strings.TrimSpace(item); item != "" {
 			s.CORSOrigins = append(s.CORSOrigins, item)

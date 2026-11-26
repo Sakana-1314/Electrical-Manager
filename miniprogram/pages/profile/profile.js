@@ -1,4 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
+const { request } = require('../../utils/request');
 const { hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const {
@@ -9,6 +10,9 @@ const {
 } = require('../../utils/project');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
 const Toast = toastModule.default || toastModule;
+
+// 御坂学习中转小程序的 appId：半屏打开它，由它的 web-view 承载网页版（业务域名已配置）。
+const WEB_VERSION_APP_ID = 'wxb42fe32e6e071916';
 
 function formatDateTime(value) {
   const date = new Date(value);
@@ -26,6 +30,8 @@ Page({
     user: null,
     // 没有二级库 Pro 读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
     recordsVisible: false,
+    // 「进入网页版」按钮的请求中态
+    openingWeb: false,
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
     projectPickerVisible: false,
@@ -168,5 +174,55 @@ Page({
 
   openRecords() {
     wx.navigateTo({ url: '/pages/records/records' });
+  },
+
+  /**
+   * 进入网页版：用当前登录态换一次性票据，再半屏唤起**御坂学习中转小程序**的 web 页展示。
+   *
+   * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版与接口同域、
+   * 不在本小程序的业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意
+   * 已配置域名的 H5，因此用 `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带票据的
+   * `/web-open` 地址，网页兑换票据后即用本人身份登录。
+   *
+   * 票据 2 分钟有效、只能兑换一次；`openEmbeddedMiniProgram` 失败（未授权 / 目标小程序不可用）时
+   * 回落到本站 `pages/web-view`（业务域名已配置时同样可用），仍失败则提示。
+   */
+  async openWebVersion() {
+    if (this.data.openingWeb) return;
+    this.setData({ openingWeb: true });
+    try {
+      const result = await request({
+        url: '/auth/web-open/tickets',
+        method: 'POST',
+        data: { path: '/' },
+      });
+      if (!result || !result.url) throw new Error(t('webOpenFailed'));
+      const webPath = `/packages/static-package/pages/web/web?url=${encodeURIComponent(result.url)}`;
+      const opened = await new Promise((resolve) => {
+        wx.openEmbeddedMiniProgram({
+          appId: WEB_VERSION_APP_ID,
+          path: webPath,
+          envVersion: 'release',
+          allowFullScreen: true,
+          success: () => resolve(true),
+          fail: () => resolve(false),
+        });
+      });
+      if (opened) return;
+      // 中转小程序不可用：回落到本站 web-view 页（票据仍有效，页面自己会再换一次）。
+      wx.navigateTo({
+        url: `/pages/web-view/web-view?url=${encodeURIComponent(result.url)}`,
+      });
+    } catch (error) {
+      Toast({
+        context: this,
+        selector: '#profile-toast',
+        message: (error && error.message) || t('webOpenFailed'),
+        theme: 'error',
+        direction: 'column',
+      });
+    } finally {
+      this.setData({ openingWeb: false });
+    }
   },
 });

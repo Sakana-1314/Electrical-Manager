@@ -1,6 +1,11 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { parseScanResult } = require('../../utils/scan');
-const { canOutbound, entryEnabled, hasStandardInventory } = require('../../utils/features');
+const {
+  canManageStock,
+  canOutbound,
+  entryEnabled,
+  hasStandardInventory,
+} = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
@@ -21,6 +26,7 @@ Page({
     // 这些值只在 featureReady 置位时一并写入，渲染入口前已是最终结果。
     entryVisible: {
       inventory: true,
+      stockManage: true,
       huaxing: true,
       purchasePlans: true,
       purchaseRecords: true,
@@ -65,6 +71,8 @@ Page({
         // 入口 = 用户权限位里有对应模块的读权限（管理端与小程序端同一套权限）。
         entryVisible: {
           inventory: entryEnabled('inventory'),
+          // 二级库管理（物资档案 / 扫码入库）按写权限出现，与出库同一个权限位。
+          stockManage: canManageStock(),
           huaxing: entryEnabled('huaxing'),
           purchasePlans: entryEnabled('purchasePlans'),
           purchaseRecords: entryEnabled('purchaseRecords'),
@@ -130,6 +138,11 @@ Page({
 
   openInventory() {
     wx.navigateTo({ url: '/pages/inventory/inventory' });
+  },
+
+  /** 二级库管理：物资档案 + 扫码入库（写权限位才出现）。 */
+  openStockManage() {
+    wx.navigateTo({ url: '/pages/stock-materials/stock-materials' });
   },
 
   /** 水印相机：现场拍照工具，所有已登录用户都可用，不看权限位。 */

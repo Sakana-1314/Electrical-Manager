@@ -1,0 +1,73 @@
+.stock-material-form-page {
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+.loading-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 360rpx;
+}
+
+.section-extra {
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+}
+
+/* 图片九宫格：三列等宽，缩略图裁成正方形，角上挂删除按钮。 */
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16rpx;
+  padding: 24rpx 32rpx 28rpx;
+}
+
+.image-cell {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: 16rpx;
+  background: var(--app-surface-soft);
+}
+
+.image-thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.image-remove {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  color: var(--app-on-brand);
+  background: var(--app-scrim);
+}
+
+.image-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx dashed var(--app-border-strong);
+  color: var(--app-text-muted);
+}
+
+.form-actions {
+  display: flex;
+  gap: 16rpx;
+  padding: 8rpx 0 24rpx;
+}
+
+.form-actions .danger-action {
+  flex: none;
+}
+
+.form-actions .primary-action {
+  flex: 1;
+}

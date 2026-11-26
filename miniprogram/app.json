@@ -19,12 +19,16 @@
     "pages/purchase-plan-detail/purchase-plan-detail",
     "pages/purchase-record-detail/purchase-record-detail",
     "pages/records/records",
+    "pages/stock-materials/stock-materials",
+    "pages/stock-material-form/stock-material-form",
+    "pages/stock-inbound/stock-inbound",
     "pages/profile/profile",
     "pages/hazards/hazards",
     "pages/hazard-detail/hazard-detail",
     "pages/hazard-create/hazard-create",
     "pages/bind/bind",
     "pages/web-login/web-login",
+    "pages/web-view/web-view",
     "pages/registration-closed/registration-closed"
   ],
   "window": {

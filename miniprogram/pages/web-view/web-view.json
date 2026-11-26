@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "网页版",
+  "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-empty": "tdesign-miniprogram/empty/empty",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

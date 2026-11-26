@@ -95,6 +95,46 @@ export interface paths {
         patch: operations["change_my_password_api_v1_auth_me_password_patch"];
         trace?: never;
     };
+    "/api/v1/auth/web-open/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 换取进入网页版的一次性票据
+         * @description 小程序用登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
+         */
+        post: operations["create_web_open_ticket_api_v1_auth_web_open_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/web-open/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 用票据换取网页登录令牌
+         * @description 网页 /web-open 页用小程序给的票据换回登录令牌（一次性，兑换后票据立即失效）。
+         */
+        post: operations["redeem_web_open_ticket_api_v1_auth_web_open_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/qr-sessions": {
         parameters: {
             query?: never;
@@ -847,6 +887,74 @@ export interface paths {
         get: operations["scan_material_api_v1_mini_program_materials__material_uuid__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mini-program/stock-materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 物资档案列表
+         * @description 小程序端二级库物资档案列表，与网页端同一查询与排序。
+         */
+        get: operations["mini_program_stock_materials_api_v1_mini_program_stock_materials_get"];
+        put?: never;
+        /**
+         * 新建物资档案
+         * @description 新建二级库物资并把余额初始化为 0；名称 + 型号规格 + 单位重复时返回 409 DUPLICATE_MATERIAL。
+         */
+        post: operations["mini_program_create_stock_material_api_v1_mini_program_stock_materials_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mini-program/stock-materials/{material_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * 删除物资档案
+         * @description 删除二级库物资；有流水时 409，版本号走 If-Match。
+         */
+        delete: operations["mini_program_delete_stock_material_api_v1_mini_program_stock_materials__material_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * 编辑物资档案
+         * @description 按 id 编辑二级库物资（version 为乐观锁版本号）。image_ids 省略表示不改图片，显式传 [] 才清空。
+         */
+        patch: operations["mini_program_update_stock_material_api_v1_mini_program_stock_materials__material_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/mini-program/inbound": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 扫码入库
+         * @description 扫码入库（与管理端入库同一实现）：client_request_id 幂等，occurred_at 必须带时区。
+         */
+        post: operations["mini_program_inbound_api_v1_mini_program_inbound_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4755,6 +4863,202 @@ export interface components {
             subitem_no?: string | null;
             /** Executed By */
             executed_by?: string | null;
+        };
+        /**
+         * MiniProgramStockMaterialRead
+         * @example {
+         *       "id": 1,
+         *       "uuid": "uuid-示例",
+         *       "name": "交流接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "current_qty": "6",
+         *       "stock_status": "low_stock",
+         *       "version": 1
+         *     }
+         */
+        MiniProgramStockMaterialRead: {
+            /** Id */
+            id: number;
+            /** Uuid */
+            uuid: string;
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Current Qty */
+            current_qty: string;
+            /** Stock Status */
+            stock_status: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * Page[MiniProgramStockMaterialRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "uuid": "uuid-示例",
+         *           "name": "交流接触器",
+         *           "model_spec": "CJX2-2510 AC220V",
+         *           "unit_name": "个",
+         *           "current_qty": "6",
+         *           "stock_status": "low_stock",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 20
+         *     }
+         */
+        Page_MiniProgramStockMaterialRead_: {
+            /** Items */
+            items: components["schemas"]["MiniProgramStockMaterialRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * MiniProgramInboundCreate
+         * @example {
+         *       "client_request_id": 1,
+         *       "material_uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
+         *       "occurred_at": "2026-09-13T10:30:00+08:00",
+         *       "quantity": "4",
+         *       "business_reason": "1#回转窑主电机控制柜检修更换"
+         *     }
+         */
+        MiniProgramInboundCreate: {
+            /** Client Request Id */
+            client_request_id: string;
+            /**
+             * Material Uuid
+             * Format: uuid
+             */
+            material_uuid: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Quantity */
+            quantity: number | string;
+            /** Business Reason */
+            business_reason?: string;
+        };
+        /**
+         * MiniProgramInboundRead
+         * @example {
+         *       "operation_id": 3,
+         *       "operation_no": "OUT20260706000003",
+         *       "material_uuid": "material_uuid-示例",
+         *       "material_name": "交流接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "quantity": "4",
+         *       "before_qty": "3",
+         *       "after_qty": "2",
+         *       "occurred_at": "2026-09-13T10:30:00+08:00",
+         *       "executed_by": "孙浩宇"
+         *     }
+         */
+        MiniProgramInboundRead: {
+            /** Operation Id */
+            operation_id: number;
+            /** Operation No */
+            operation_no: string;
+            /** Material Uuid */
+            material_uuid: string;
+            /** Material Name */
+            material_name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Quantity */
+            quantity: string;
+            /** Before Qty */
+            before_qty: string;
+            /** After Qty */
+            after_qty: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Executed By */
+            executed_by: string;
+        };
+        /**
+         * MiniProgramStockMaterialCreate
+         * @example {
+         *       "name": "交流接触器",
+         *       "name_id": "E011-00237",
+         *       "alias": "接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "remark": "",
+         *       "image_ids": [
+         *         "f197715a-47e4-488d-aab6-43a5e2a76111"
+         *       ]
+         *     }
+         */
+        MiniProgramStockMaterialCreate: {
+            /** Name */
+            name: string;
+            /** Name Id */
+            name_id?: string | null;
+            /** Alias */
+            alias?: string | null;
+            /** Model Spec */
+            model_spec: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Remark */
+            remark?: string | null;
+            /**
+             * Image Ids
+             * @default []
+             */
+            image_ids: string[];
+        };
+        /**
+         * MiniProgramStockMaterialUpdate
+         * @example {
+         *       "name": "交流接触器",
+         *       "name_id": "E011-00237",
+         *       "alias": "接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "remark": "",
+         *       "image_ids": [],
+         *       "version": 1
+         *     }
+         */
+        MiniProgramStockMaterialUpdate: {
+            /** Name */
+            name: string;
+            /** Name Id */
+            name_id?: string | null;
+            /** Alias */
+            alias?: string | null;
+            /** Model Spec */
+            model_spec: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Remark */
+            remark?: string | null;
+            /** Image Ids */
+            image_ids?: string[] | null;
+            /** Version */
+            version: number;
         };
         /**
          * MiniProgramOutboundCreate
@@ -12294,6 +12598,81 @@ export interface components {
             permissions?: string[];
         };
         /**
+         * WebOpenTicketCreate
+         * @example {
+         *       "path": "path-示例"
+         *     }
+         */
+        WebOpenTicketCreate: {
+            /** Path */
+            path?: string;
+        };
+        /**
+         * WebOpenTicketRead
+         * @example {
+         *       "ticket": "ticket-示例",
+         *       "expires_at": "2026-09-13T10:30:00+08:00",
+         *       "url": "https://img.hxni-electrical.com/files/images/01900010-0000-7000-8000-000000000001"
+         *     }
+         */
+        WebOpenTicketRead: {
+            /** Ticket */
+            ticket: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * WebOpenTicketRedeemRequest
+         * @example {
+         *       "ticket": "ticket-示例"
+         *     }
+         */
+        WebOpenTicketRedeemRequest: {
+            /** Ticket */
+            ticket: string;
+        };
+        /**
+         * WebOpenTicketRedeemRead
+         * @example {
+         *       "access_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "refresh_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "token_type": "bearer",
+         *       "user": {
+         *         "id": 1,
+         *         "username": "warehouse",
+         *         "display_name": "孙浩宇",
+         *         "department_name": "department_name-示例",
+         *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
+         *         "created_at": "2026-09-13T10:30:00+08:00",
+         *         "last_used_at": "2026-09-13T10:30:00+08:00",
+         *         "permissions": [
+         *           "permissions_item-示例"
+         *         ],
+         *         "version": 1
+         *       },
+         *       "project_id": 1,
+         *       "path": "path-示例"
+         *     }
+         */
+        WebOpenTicketRedeemRead: {
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /** Token Type */
+            token_type: string;
+            user: components["schemas"]["UserRead"];
+            /** Project Id */
+            project_id: number;
+            /** Path */
+            path: string;
+        };
+        /**
          * UserRead
          * @example {
          *       "id": 1,
@@ -13383,6 +13762,151 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_web_open_ticket_api_v1_auth_web_open_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebOpenTicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "ticket": "9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11",
+                     *       "expires_at": "2026-09-12T10:32:00+00:00",
+                     *       "url": "https://electrical.example.com/web-open?ticket=9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11&path=/"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebOpenTicketRead"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    redeem_web_open_ticket_api_v1_auth_web_open_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebOpenTicketRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access",
+                     *       "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh",
+                     *       "token_type": "bearer",
+                     *       "user": {
+                     *         "id": 1,
+                     *         "username": "admin",
+                     *         "display_name": "管理员",
+                     *         "department_name": "电气自动化车间",
+                     *         "permissions": [
+                     *           "system:admin"
+                     *         ],
+                     *         "wechat_openid": null,
+                     *         "created_at": "2026-01-02T03:04:05+00:00",
+                     *         "last_used_at": "2026-09-12T02:30:00+00:00",
+                     *         "version": 1
+                     *       },
+                     *       "project_id": 1,
+                     *       "path": "/"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebOpenTicketRedeemRead"];
                 };
             };
             /** @description 未认证或凭证无效 */
@@ -21538,6 +22062,611 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramMaterialRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_stock_materials_api_v1_mini_program_stock_materials_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                keyword?: string | null;
+            };
+            header?: {
+                "Accept-Language"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": 12,
+                     *           "uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
+                     *           "name": "交流接触器",
+                     *           "model_spec": "CJX2-2510 AC220V",
+                     *           "unit_name": "个",
+                     *           "current_qty": "6",
+                     *           "stock_status": "low_stock",
+                     *           "version": 3
+                     *         }
+                     *       ],
+                     *       "page": 1,
+                     *       "page_size": 20,
+                     *       "total": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Page_MiniProgramStockMaterialRead_"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_create_stock_material_api_v1_mini_program_stock_materials_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MiniProgramStockMaterialCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 21,
+                     *       "uuid": "5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11",
+                     *       "name": "中间继电器",
+                     *       "model_spec": "MY4N-GS DC24V",
+                     *       "unit_name": "个",
+                     *       "current_qty": "0",
+                     *       "stock_status": "out_of_stock",
+                     *       "version": 1
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MiniProgramStockMaterialRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_delete_stock_material_api_v1_mini_program_stock_materials__material_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string | null;
+            };
+            path: {
+                material_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_update_stock_material_api_v1_mini_program_stock_materials__material_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                material_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MiniProgramStockMaterialUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "id": 21,
+                     *       "uuid": "5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11",
+                     *       "name": "中间继电器",
+                     *       "model_spec": "MY4N-GS DC24V",
+                     *       "unit_name": "个",
+                     *       "current_qty": "3",
+                     *       "stock_status": "low_stock",
+                     *       "version": 2
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MiniProgramStockMaterialRead"];
+                };
+            };
+            /** @description 业务校验失败 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "3e8bde7a-5efd-4970-a60e-3fc57a9f7654"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 权限不足 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "FORBIDDEN",
+                     *       "message": "没有执行此操作的权限",
+                     *       "details": {},
+                     *       "request_id": "c14b4ca3-c239-4d97-a1ea-d2880f942054"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 版本、状态或业务数据冲突 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "fde9fdd5-0168-4a03-afd0-eb8ae0526629"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    mini_program_inbound_api_v1_mini_program_inbound_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MiniProgramInboundCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "operation_id": 21,
+                     *       "operation_no": "IN20260912000021",
+                     *       "material_uuid": "4472cf85-d9fc-4ab1-a362-eb7c4f5a18c4",
+                     *       "material_name": "接线端子",
+                     *       "model_spec": "UK-2.5B 灰",
+                     *       "unit_name": "个",
+                     *       "quantity": "100",
+                     *       "before_qty": "750",
+                     *       "after_qty": "850",
+                     *       "occurred_at": "2026-09-12T16:10:00+08:00",
+                     *       "executed_by": "孙浩宇"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["MiniProgramInboundRead"];
                 };
             };
             /** @description 业务校验失败 */

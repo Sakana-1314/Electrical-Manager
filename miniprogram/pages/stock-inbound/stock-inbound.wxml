@@ -1,0 +1,109 @@
+<app-navbar title="{{i18n.stockInboundTitle}}" />
+<view class="page-shell stock-inbound-page">
+  <view wx:if="{{loading}}" class="section-card loading-card">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+
+  <block wx:else>
+    <!-- 已选物资：名称 / 型号 / 当前库存，与出库页同一张摘要卡。 -->
+    <view wx:if="{{material}}" class="section-card material-card">
+      <view class="material-name">{{material.name}}</view>
+      <view wx:if="{{material.model_spec}}" class="material-spec">{{material.model_spec}}</view>
+      <view class="material-divider"></view>
+      <view class="material-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.stockMaterialQuantity}}</view>
+          <view class="quantity-value">
+            {{material.current_qty}}<text wx:if="{{material.unit_name}}" class="quantity-unit">{{material.unit_name}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 入库成功后展示单据信息（单号 / 前后数量），可继续扫下一件。 -->
+    <view wx:if="{{result}}" class="section-card result-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.stockInboundSuccessTitle}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <view class="result-row">
+        <text class="result-label">{{i18n.stockInboundNo}}</text>
+        <text class="result-value" user-select="{{true}}">{{result.operation_no}}</text>
+      </view>
+      <view class="result-row">
+        <text class="result-label">{{i18n.stockInboundBefore}}</text>
+        <text class="result-value">{{result.before_qty}} {{result.unit_name}}</text>
+      </view>
+      <view class="result-row">
+        <text class="result-label">{{i18n.stockInboundAfter}}</text>
+        <text class="result-value">{{result.after_qty}} {{result.unit_name}}</text>
+      </view>
+      <view class="result-actions">
+        <t-button theme="primary" size="large" bind:tap="resetForm">{{i18n.stockInboundSubmit}}</t-button>
+      </view>
+    </view>
+
+    <view wx:if="{{material && !result}}" class="section-card form-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.stockInboundInfo}}</view>
+      </view>
+      <view class="section-divider"></view>
+      <t-cell-group>
+        <t-input
+          label="{{i18n.stockInboundQuantity}}"
+          type="digit"
+          value="{{form.quantity}}"
+          suffix="{{material.unit_name}}"
+          placeholder="{{i18n.inputPlaceholder}}"
+          data-field="quantity"
+          bind:change="onFieldChange"
+        />
+        <t-input
+          label="{{i18n.stockInboundReason}}"
+          value="{{form.businessReason}}"
+          placeholder="{{i18n.stockInboundOptional}}"
+          maxlength="500"
+          data-field="businessReason"
+          bind:change="onFieldChange"
+        />
+      </t-cell-group>
+    </view>
+
+    <view wx:if="{{material && !result}}" class="inbound-actions">
+      <t-button
+        class="inbound-action"
+        theme="default"
+        variant="outline"
+        size="large"
+        icon="scan"
+        loading="{{scanning}}"
+        disabled="{{scanning || submitting}}"
+        bind:tap="scanMaterial"
+      >{{i18n.scanTitle}}</t-button>
+      <t-button
+        class="inbound-action"
+        theme="primary"
+        size="large"
+        icon="check-circle"
+        loading="{{submitting}}"
+        disabled="{{submitting || scanning}}"
+        bind:tap="submit"
+      >{{i18n.stockInboundSubmit}}</t-button>
+    </view>
+
+    <!-- 还没选物资：扫码或从物资档案里挑一条。 -->
+    <view wx:if="{{!material && !result}}" class="section-card empty-card">
+      <t-empty icon="scan" description="{{i18n.stockChooseMaterial}}" />
+      <view class="empty-actions">
+        <t-button theme="primary" size="large" icon="scan" loading="{{scanning}}" bind:tap="scanMaterial">
+          {{i18n.scanTitle}}
+        </t-button>
+        <t-button theme="default" variant="outline" size="large" bind:tap="chooseMaterial">
+          {{i18n.stockMaterialsTitle}}
+        </t-button>
+      </view>
+    </view>
+  </block>
+
+  <t-toast id="stock-inbound-toast" />
+</view>
