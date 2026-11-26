@@ -157,6 +157,83 @@ func TestBusinessToolDefaultsFollowWeb(t *testing.T) {
 	}
 }
 
+// 分页与接口默认值对齐：所有分页型业务工具的 page / page_size 必须是 1 / 20（上限 200），
+// 且它们的 operation_id 在契约里确实声明了同名查询参数——网页端 usePagedTable 缺省也是 20。
+func TestBusinessToolPagingMatchesContract(t *testing.T) {
+	_, byID, err := Catalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range businessTools() {
+		page := findParam(tool, "page")
+		size := findParam(tool, "page_size")
+		if page == nil && size == nil {
+			continue // 无分页（概览 / 备忘录）
+		}
+		if page == nil || size == nil {
+			t.Errorf("%s: page 与 page_size 必须同时出现", tool.Name)
+			continue
+		}
+		if page.Default != 1 || !page.HasDefault {
+			t.Errorf("%s: 默认页码应为 1，实际 %#v", tool.Name, page.Default)
+		}
+		if size.Default != 20 || !size.HasDefault {
+			t.Errorf("%s: 默认每页条数应为 20（与网页端一致），实际 %#v", tool.Name, size.Default)
+		}
+		if size.Schema["maximum"] != 200 {
+			t.Errorf("%s: 每页条数上限应为 200，实际 %#v", tool.Name, size.Schema["maximum"])
+		}
+		entry := byID[tool.OperationID]
+		declared := map[string]bool{}
+		for _, raw := range entry.Parameters {
+			if item, ok := raw.(map[string]any); ok {
+				declared[str(item["name"])] = true
+			}
+		}
+		if !declared["page"] || !declared["page_size"] {
+			t.Errorf("%s: 接口 %s 没有声明 page / page_size", tool.Name, tool.OperationID)
+		}
+	}
+}
+
+func findParam(tool *businessTool, name string) *businessParam {
+	for i := range tool.Params {
+		if tool.Params[i].Name == name {
+			return &tool.Params[i]
+		}
+	}
+	return nil
+}
+
+// 新增的网页端筛选参数（低库存开关、流水来源、按字段搜索、空值过滤、排序）必须落到查询串上，
+// 否则 Agent 传了也查不到对应结果。
+func TestBusinessToolForwardsWebFilters(t *testing.T) {
+	cases := []struct {
+		tool string
+		args map[string]any
+		want map[string]any
+	}{
+		{"list_inventory_balances", map[string]any{"low_stock": true}, map[string]any{"low_stock": true}},
+		{"list_inventory_operations", map[string]any{"source_type": "MINI_PROGRAM"}, map[string]any{"source_type": "MINI_PROGRAM"}},
+		{"list_purchase_plans", map[string]any{"sort_by": "plan_date", "sort_order": "desc"}, map[string]any{"sort_by": "plan_date", "sort_order": "desc"}},
+		{"list_purchase_records", map[string]any{"search_field": "material_code", "search_value": "AB-01"}, map[string]any{"search_field": "material_code", "search_value": "AB-01"}},
+		{"list_purchase_templates", map[string]any{"purchase_responsible": "李建军"}, map[string]any{"purchase_responsible": "李建军"}},
+	}
+	for _, c := range cases {
+		_, query, _ := mustBuild(t, c.tool, c.args)
+		for key, want := range c.want {
+			if query[key] != want {
+				t.Errorf("%s: 参数 %s 应转发为 %#v，实际 %#v", c.tool, key, want, query[key])
+			}
+		}
+	}
+	// 缺省时不应凭空多传空值：低库存 / 空值过滤 / 排序方向以外的参数保持不出现
+	_, query, _ := mustBuild(t, "list_inventory_operations", nil)
+	if _, ok := query["source_type"]; ok {
+		t.Errorf("未传来源时不应带上 source_type，实际 %#v", query["source_type"])
+	}
+}
+
 func TestBusinessToolRejectsMissingRequiredBody(t *testing.T) {
 	tool := businessToolByName("create_inventory_inbound")
 	if tool == nil {
