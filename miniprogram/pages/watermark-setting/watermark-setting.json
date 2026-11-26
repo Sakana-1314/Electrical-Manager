@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "水印设置",
+  "usingComponents": {
+    "app-navbar": "/components/app-navbar/app-navbar",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-switch": "tdesign-miniprogram/switch/switch",
+    "t-toast": "tdesign-miniprogram/toast/toast"
+  }
+}

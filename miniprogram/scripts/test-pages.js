@@ -132,7 +132,7 @@ function loadPage(relative) {
   assert(pageConfig, `page config not captured: ${relative}`);
   const page = Object.assign({}, pageConfig);
   page.data = JSON.parse(JSON.stringify(pageConfig.data));
-  page.setData = function setData(patch) {
+  page.setData = function setData(patch, callback) {
     Object.keys(patch).forEach((key) => {
       // 支持 "form.quantity" 这类路径键
       if (key.indexOf('.') > 0) {
@@ -142,6 +142,9 @@ function loadPage(relative) {
         this.data[key] = patch[key];
       }
     });
+    // 页面把「写数据后刷新派生状态」的逻辑放在 setData 回调里（如水印文本、预览尺寸），
+    // 桩必须同步执行回调，否则这些派生字段永远算不出来。
+    if (typeof callback === 'function') callback();
   };
   return page;
 }
@@ -870,6 +873,173 @@ async function run() {
   assert(
     importTimeLabel('2026-11-08T10:00:00+08:00', timeNow).endsWith('（2天3时前）'),
     'import time must append the relative label in parentheses',
+  );
+
+  // ===== 水印相机：设置归一 / 置顶顺序 / 默认启用开关 =====
+  const watermark = require(path.join(root, 'utils/watermark.js'));
+  // 空 storage 时回到默认：五项水印都开、没有常用词
+  const defaults = watermark.readSettings();
+  assert(defaults.words.length === 0 && defaults.pinned.length === 0, 'watermark settings start empty');
+  assert(
+    watermark.FIELD_KEYS.every((key) => defaults.fields[key] === true),
+    'every watermark field must default to enabled',
+  );
+  // 写入：去空白、去重、丢非字符串；置顶只能指向存在的词
+  const savedSettings = watermark.writeSettings({
+    words: [' 检修完成 ', '检修完成', '', 42, '待复核'],
+    pinned: ['检修完成', '不存在的词'],
+    fields: { time: false, date: true },
+  });
+  assert(
+    savedSettings.words.join(',') === '检修完成,待复核',
+    'words must be trimmed and deduplicated',
+  );
+  assert(
+    savedSettings.pinned.join(',') === '检修完成',
+    'pinned words must be limited to existing words',
+  );
+  assert(
+    savedSettings.fields.time === false && savedSettings.fields.week === true,
+    'field toggles must be merged over the defaults',
+  );
+  // 置顶排序：置顶在前、其余保持原顺序，且不重复出现
+  assert(
+    watermark.orderedWords({
+      words: ['A', 'B', 'C'],
+      pinned: ['C', 'A'],
+      fields: watermark.defaultFieldEnabled(),
+    }).join(',') === 'C,A,B',
+    'pinned words must lead in pin order without duplicates',
+  );
+  // 脏数据（数组 / 非对象 / 非法字段值）必须回落，不能让页面挂掉
+  const dirtySettings = watermark.writeSettings({ words: 'oops', pinned: 'oops', fields: ['x'] });
+  assert(
+    dirtySettings.words.length === 0 && watermark.FIELD_KEYS.every((key) => dirtySettings.fields[key]),
+    'corrupt settings must fall back to defaults',
+  );
+  storage.set(watermark.SETTINGS_STORAGE_KEY, { words: ['甲'], pinned: ['甲'], fields: { time: false } });
+  const reread = watermark.readSettings();
+  assert(
+    reread.words[0] === '甲' && reread.pinned[0] === '甲' && reread.fields.time === false,
+    'settings must survive a storage round trip',
+  );
+
+  // ===== 水印相机页：四行顺序、开关联动、常用词插入光标处 =====
+  storage.set(watermark.SETTINGS_STORAGE_KEY, {
+    words: ['例行巡检', '检修完成'],
+    pinned: ['检修完成'],
+    fields: watermark.defaultFieldEnabled(),
+  });
+  const cameraPage = loadPage('pages/watermark-camera/watermark-camera.js');
+  cameraPage.applySettings();
+  cameraPage.refreshClock();
+  assert(
+    cameraPage.data.words.join(',') === '检修完成,例行巡检',
+    'camera must show pinned words first',
+  );
+  // 时间 → 日期 星期 → 地点 → 文案 的自上而下顺序（buildMarkRows 从下往上落笔，顺序要对上）
+  cameraPage.setData({ location: '华星现场', matter: '检修完成' });
+  cameraPage.refreshMark();
+  const markOrder = cameraPage.buildMarkRows().map((row) => row.text);
+  assert(markOrder.length === 4, `four watermark rows expected, got ${markOrder.length}`);
+  assert(/^\d{2}:\d{2}:\d{2}$/.test(markOrder[0]), 'time row must come first');
+  assert(markOrder[1].includes(cameraPage.data.clock.date), 'date + week row must come second');
+  assert(markOrder[2].startsWith('地点'), 'location row must come third');
+  assert(markOrder[3] === '检修完成', 'matter row must come last');
+  // 关掉某个项目：对应的行立刻消失，其余顺序不变
+  cameraPage.toggleField({ currentTarget: { dataset: { field: 'week' } }, detail: { value: false } });
+  assert(
+    !cameraPage.buildMarkRows()[1].text.includes(cameraPage.data.clock.week),
+    'disabling week must drop the weekday from the date row',
+  );
+  cameraPage.toggleField({ currentTarget: { dataset: { field: 'time' } }, detail: { value: false } });
+  assert(
+    cameraPage.buildMarkRows().length === 3,
+    'disabling time must remove the time row entirely',
+  );
+  // 五项全关：没有任何水印行（页面会提示未启用）
+  ['date', 'location', 'matter'].forEach((key) =>
+    cameraPage.toggleField({ currentTarget: { dataset: { field: key } }, detail: { value: false } }),
+  );
+  assert(cameraPage.buildMarkRows().length === 0, 'all fields off must render no watermark rows');
+  // 常用词插入到光标处，而不是一律追加到末尾
+  cameraPage.setData({ matter: 'AB' });
+  cameraPage._matterCursor = 1;
+  cameraPage.insertWord({ currentTarget: { dataset: { word: 'X' } } });
+  assert(cameraPage.data.matter === 'AXB', `insertWord must splice at the caret, got ${cameraPage.data.matter}`);
+  assert(cameraPage.data.matterCursor === 2, 'caret must land after the inserted word');
+  // 添加常用词：已存在的给出提示、不重复写入
+  toasts.length = 0;
+  cameraPage.setData({ matter: '检修完成' });
+  cameraPage.addWord();
+  assert(
+    toasts.some((item) => item.message === i18n.t('watermarkWordExisted')),
+    'adding an existing word must explain why nothing happened',
+  );
+  cameraPage.setData({ matter: '新增词语' });
+  cameraPage.addWord();
+  assert(
+    watermark.readSettings().words.includes('新增词语'),
+    'adding a new word must persist it to storage',
+  );
+  // 长按删除：确认后从常用词与置顶里同时移除
+  let modalOptions = null;
+  const originalShowModal = global.wx.showModal;
+  global.wx.showModal = (options) => {
+    modalOptions = options;
+    options.success({ confirm: true });
+  };
+  cameraPage.removeWord({ currentTarget: { dataset: { word: '检修完成' } } });
+  global.wx.showModal = originalShowModal;
+  assert(modalOptions && modalOptions.title === i18n.t('watermarkWordDeleteTitle'), 'delete must confirm first');
+  const afterDelete = watermark.readSettings();
+  assert(!afterDelete.words.includes('检修完成'), 'deleted word must be gone from words');
+  assert(!afterDelete.pinned.includes('检修完成'), 'deleted word must be gone from pinned too');
+  // 取消编辑弹层不该顺手切回「先拍后写」：先写后拍下次点快门仍应回到编辑
+  cameraPage.setData({ mode: 'write', popupVisible: true });
+  cameraPage.onPopupChange({ detail: { visible: false } });
+  assert(cameraPage.data.popupVisible === false, 'dismissing the sheet must close it');
+  assert(cameraPage.data.mode === 'write', 'dismissing the sheet must keep the current mode');
+
+  // ===== 水印设置页：置顶切换 / 至少保留一项 =====
+  storage.set(watermark.SETTINGS_STORAGE_KEY, {
+    words: ['甲', '乙'],
+    pinned: ['乙'],
+    fields: watermark.defaultFieldEnabled(),
+  });
+  const settingPage = loadPage('pages/watermark-setting/watermark-setting.js');
+  settingPage.loadSettings();
+  assert(
+    settingPage.data.words.map((item) => item.word).join(',') === '乙,甲',
+    'settings list must show pinned words first',
+  );
+  assert(
+    settingPage.data.words[0].pinned === true && settingPage.data.words[1].pinned === false,
+    'settings rows must expose the pinned flag',
+  );
+  assert(settingPage.data.fieldRows.length === watermark.FIELD_KEYS.length, 'one switch row per field');
+  // 置顶 / 取消置顶
+  settingPage.togglePin({ currentTarget: { dataset: { word: '甲' } } });
+  assert(watermark.readSettings().pinned.join(',') === '甲,乙', 'pinning must add to the front');
+  settingPage.togglePin({ currentTarget: { dataset: { word: '甲' } } });
+  assert(watermark.readSettings().pinned.join(',') === '乙', 'unpinning must drop the word');
+  // 最后一项不允许关：提示并且状态回退
+  const lockedSettings = watermark.readSettings();
+  lockedSettings.fields = { time: true, date: false, week: false, location: false, matter: false };
+  watermark.writeSettings(lockedSettings);
+  settingPage.loadSettings();
+  toasts.length = 0;
+  settingPage.toggleField({ currentTarget: { dataset: { field: 'time' } }, detail: { value: false } });
+  assert(
+    toasts.some((item) => item.message === i18n.t('watermarkFieldLockedHint')),
+    'turning off the last field must explain why it is blocked',
+  );
+  assert(watermark.readSettings().fields.time === true, 'the last enabled field must stay on');
+  // 恢复默认：五项都开
+  settingPage.resetFields();
+  assert(
+    watermark.FIELD_KEYS.every((key) => watermark.readSettings().fields[key] === true),
+    'reset must enable every watermark field again',
   );
 
   console.log('Mini Program page logic check passed.');

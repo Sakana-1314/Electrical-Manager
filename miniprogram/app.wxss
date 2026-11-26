@@ -64,6 +64,8 @@ page, .page {
   --app-status-danger-soft: var(--td-error-color-light);
   --app-scrim: var(--td-mask-active);
   --app-transparent: transparent;
+  /* 取景衬底：相机预览、定格图与照片水印的底色。明暗两套都取最深一档灰，不随浅色变白。 */
+  --app-camera-bg: var(--td-gray-color-14);
   /* TDesign 组件补充语义（官方主题未覆盖的部分） */
   --td-toast-bg-color: var(--td-mask-active);
   --td-toast-color: var(--td-text-color-anti);

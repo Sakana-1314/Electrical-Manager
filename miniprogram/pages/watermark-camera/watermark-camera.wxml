@@ -1,0 +1,194 @@
+<app-navbar title="{{i18n.watermarkTitle}}" />
+<view class="page-shell watermark-page">
+  <!-- 共用片段：水印四行（时间 → 日期 星期 → 地点 → 文案），实时叠加层与评审小图共用 -->
+  <template name="mark">
+    <view wx:if="{{mark.time}}" class="lm-time">{{mark.time}}</view>
+    <view wx:if="{{mark.dateWeek}}" class="lm-sub">{{mark.dateWeek}}</view>
+    <view wx:if="{{mark.locationLine}}" class="lm-sub">{{mark.locationLine}}</view>
+    <view wx:if="{{mark.matter}}" class="lm-matter">{{mark.matter}}</view>
+    <view wx:if="{{!mark.time && !mark.dateWeek && !mark.locationLine && !mark.matter}}" class="lm-sub">{{i18n.watermarkNoWatermark}}</view>
+  </template>
+
+  <!-- 共用片段：水印项目开关 + 地点 / 文案输入 + 常用词，评审视图与编辑弹层共用 -->
+  <template name="fields">
+    <view class="field-list">
+      <view class="field-row">
+        <view class="field-label">{{i18n.watermarkFieldTime}}</view>
+        <view class="field-tail">
+          <text class="field-hint">{{mark.time || i18n.watermarkShowTimeOff}}</text>
+          <t-switch size="small" value="{{fields.time}}" data-field="time" bind:change="toggleField" />
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.watermarkFieldDate}}</view>
+        <view class="field-tail">
+          <text class="field-hint">{{fields.date ? clock.date : i18n.watermarkShowTimeOff}}</text>
+          <t-switch size="small" value="{{fields.date}}" data-field="date" bind:change="toggleField" />
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.watermarkFieldWeek}}</view>
+        <view class="field-tail">
+          <text class="field-hint">{{fields.week ? clock.week : i18n.watermarkShowTimeOff}}</text>
+          <t-switch size="small" value="{{fields.week}}" data-field="week" bind:change="toggleField" />
+        </view>
+      </view>
+      <view class="field-row">
+        <view class="field-label">{{i18n.watermarkFieldLocation}}</view>
+        <view class="field-tail">
+          <t-switch size="small" value="{{fields.location}}" data-field="location" bind:change="toggleField" />
+        </view>
+      </view>
+      <view class="field-row field-row-last">
+        <view class="field-label">{{i18n.watermarkFieldMatter}}</view>
+        <view class="field-tail">
+          <t-switch size="small" value="{{fields.matter}}" data-field="matter" bind:change="toggleField" />
+        </view>
+      </view>
+    </view>
+
+    <view class="input-card">
+      <t-input
+        label="{{i18n.watermarkFieldLocation}}"
+        align="left"
+        borderless
+        value="{{location}}"
+        placeholder="{{i18n.watermarkLocationPlaceholder}}"
+        bind:change="onLocationInput"
+        bind:keyboardheightchange="onKeyboardChange"
+      >
+        <t-button slot="extra" size="extra-small" theme="primary" variant="outline" bind:tap="chooseLocation">{{i18n.watermarkChooseLocation}}</t-button>
+      </t-input>
+      <view class="input-divider"></view>
+      <t-textarea
+        label="{{i18n.watermarkFieldMatter}}"
+        borderless
+        value="{{matter}}"
+        placeholder="{{i18n.watermarkMatterPlaceholder}}"
+        maxlength="120"
+        autosize
+        cursor="{{matterCursor}}"
+        focus="{{matterFocus}}"
+        adjust-position="{{false}}"
+        bind:change="onMatterInput"
+        bind:focus="onMatterFocus"
+        bind:blur="onMatterBlur"
+        bind:keyboardheightchange="onKeyboardChange"
+      />
+    </view>
+
+    <!-- 常用词：点击插入到文案光标处，长按删除；置顶顺序在「水印设置」里改 -->
+    <scroll-view class="word-bar" scroll-x enable-flex>
+      <view class="word-row">
+        <view
+          wx:for="{{words}}"
+          wx:key="*this"
+          class="word-chip"
+          hover-class="word-chip-active"
+          data-word="{{item}}"
+          bind:tap="insertWord"
+          bind:longpress="removeWord"
+        >{{item}}</view>
+        <view class="word-chip word-chip-add" hover-class="word-chip-active" bind:tap="addWord">{{i18n.watermarkWordAdd}}</view>
+      </view>
+    </scroll-view>
+    <view wx:if="{{!words.length}}" class="word-empty">{{i18n.watermarkWordEmpty}}</view>
+  </template>
+
+  <!-- 顶部：拍摄模式切换 + 水印设置入口 -->
+  <view class="watermark-toolbar">
+    <view class="mode-switch">
+      <view
+        class="mode-item {{mode === 'shoot' ? 'mode-item-active' : ''}}"
+        data-mode="shoot"
+        bind:tap="switchMode"
+      >{{i18n.watermarkModeShootFirst}}</view>
+      <view
+        class="mode-item {{mode === 'write' ? 'mode-item-active' : ''}}"
+        data-mode="write"
+        bind:tap="switchMode"
+      >{{i18n.watermarkModeWriteFirst}}</view>
+    </view>
+    <view class="setting-entry" hover-class="setting-entry-active" aria-role="button" aria-label="{{i18n.watermarkSettingEntry}}" bind:tap="openSetting">
+      <t-icon name="setting" size="34rpx" />
+      <text class="setting-entry-text">{{i18n.watermarkSettingEntry}}</text>
+    </view>
+  </view>
+
+  <!-- 取景视图：先拍后写定格后（pending 有值）让位给评审视图 -->
+  <block wx:if="{{!(mode === 'shoot' && pending)}}">
+    <view class="frame" bindtouchstart="zoomStart" bindtouchmove="zoomMove" bindtouchend="zoomEnd">
+      <camera
+        class="camera"
+        device-position="{{devicePosition}}"
+        flash="{{flash}}"
+        mode="normal"
+        binderror="onCameraError"
+        bindinitdone="onInitDone"
+      />
+      <!-- 先写后拍：文案定稿后把水印实时叠在取景画面上，点一下可回去改 -->
+      <view wx:if="{{mode === 'write' && armed}}" class="live-mark" bind:tap="openForm">
+        <template is="mark" data="{{ mark, i18n }}" />
+      </view>
+
+      <!-- 变焦：预设 1x / 2x / 5x，双指缩放时实时显示当前倍率 -->
+      <view class="zoom-bar">
+        <text wx:if="{{zooming}}" class="zoom-value">{{zoomText}}</text>
+        <block wx:else>
+          <view class="zoom-step {{zoom === 1 ? 'zoom-step-active' : ''}}" data-zoom="1" bind:tap="setZoomStep">1x</view>
+          <view class="zoom-step {{zoom === 2 ? 'zoom-step-active' : ''}}" data-zoom="2" bind:tap="setZoomStep">2x</view>
+          <view class="zoom-step {{zoom === 5 ? 'zoom-step-active' : ''}}" data-zoom="5" bind:tap="setZoomStep">5x</view>
+        </block>
+      </view>
+    </view>
+
+    <view class="capture-bar">
+      <view class="side-btn" bind:tap="toggleFlash">
+        <t-icon name="{{flash === 'torch' ? 'flashlight-filled' : 'flashlight'}}" size="44rpx" />
+      </view>
+      <view class="shutter-box" bind:tap="shoot">
+        <view class="shutter {{busy ? 'shutter-busy' : ''}}"></view>
+      </view>
+      <view class="side-btn" bind:tap="switchCamera">
+        <t-icon name="rotate" size="44rpx" />
+      </view>
+    </view>
+    <view class="capture-hint">{{i18n.watermarkCapture}}</view>
+  </block>
+
+  <!-- 评审视图（先拍后写）：定格图 + 实时水印，下方直接写地点与文案 -->
+  <view wx:if="{{mode === 'shoot' && pending}}" class="review" style="padding-bottom: {{keyboardHeight}}px">
+    <view class="review-stage">
+      <view class="review-image" style="{{reviewImageStyle}}">
+        <image class="review-img" src="{{pending}}" mode="aspectFill" />
+        <view class="live-mark live-mark-small" style="{{reviewMarkStyle}}">
+          <template is="mark" data="{{ mark, i18n }}" />
+        </view>
+      </view>
+    </view>
+    <view class="review-form {{keyboardHeight ? 'review-form-compact' : ''}}">
+      <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
+      <view class="detail-actions">
+        <t-button class="detail-action" variant="outline" size="large" block bind:tap="retake">{{i18n.watermarkRetake}}</t-button>
+        <t-button class="detail-action" theme="primary" size="large" block disabled="{{busy}}" bind:tap="saveReview">{{i18n.watermarkSaveAlbum}}</t-button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 编辑弹层（先写后拍）：定稿后水印才叠到取景画面 -->
+  <t-popup visible="{{popupVisible}}" placement="bottom" bind:visible-change="onPopupChange">
+    <view class="edit-form" style="padding-bottom: calc(env(safe-area-inset-bottom) + 40rpx + {{keyboardHeight}}px)">
+      <view class="edit-title">{{i18n.watermarkEditTitle}}</view>
+      <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
+      <view class="detail-actions">
+        <t-button class="detail-action" theme="default" variant="outline" size="large" block bind:tap="closeForm">{{i18n.watermarkCancel}}</t-button>
+        <t-button class="detail-action" theme="primary" size="large" block bind:tap="onFormConfirm">{{i18n.watermarkDone}}</t-button>
+      </view>
+    </view>
+  </t-popup>
+
+  <!-- 合成用离屏画布：2d 类型、不参与布局 -->
+  <canvas id="watermark-canvas" type="2d" class="compose-canvas"></canvas>
+
+  <t-toast id="watermark-toast" />
+</view>

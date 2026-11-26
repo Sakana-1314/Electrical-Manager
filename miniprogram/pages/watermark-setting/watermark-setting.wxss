@@ -1,0 +1,111 @@
+/* 水印设置：两张卡片（默认水印项目 / 常用词与置顶），配色全部走主题令牌。 */
+.watermark-setting-page {
+  padding: 24rpx;
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+}
+
+/* 水印项目开关行：与全站表单行同一套密度（22rpx 纵向内边距、底部分割线）。 */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 22rpx 32rpx;
+  border-bottom: 2rpx solid var(--app-divider);
+}
+
+.switch-row-last {
+  border-bottom: 0;
+}
+
+.switch-label {
+  color: var(--app-text);
+  font-size: 28rpx;
+}
+
+.setting-actions {
+  padding: 20rpx 32rpx 28rpx;
+}
+
+/* 常用词条：整行可长按删除，右侧两个图标按钮（置顶 / 删除）。 */
+.word-count {
+  margin: 18rpx 32rpx 8rpx;
+  color: var(--app-text-muted);
+  font-size: 23rpx;
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 20rpx 32rpx;
+  border-bottom: 2rpx solid var(--app-divider);
+}
+
+.word-row:last-child {
+  border-bottom: 0;
+}
+
+.word-row-active {
+  background: var(--app-surface-soft);
+}
+
+.word-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.word-pin-badge {
+  flex: none;
+  padding: 2rpx 12rpx;
+  border-radius: 999rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand-text);
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.word-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-strong);
+  font-size: 27rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.word-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.word-icon-btn {
+  display: flex;
+  width: 64rpx;
+  height: 64rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+  color: var(--app-text-muted);
+}
+
+.word-icon-btn-active {
+  background: var(--app-brand-soft);
+  color: var(--app-brand-icon);
+}
+
+.word-icon-btn-hover {
+  background: var(--app-surface-soft);
+}
+
+.word-empty {
+  padding: 32rpx;
+  color: var(--app-text-subtle);
+  font-size: 24rpx;
+  line-height: 1.6;
+}
