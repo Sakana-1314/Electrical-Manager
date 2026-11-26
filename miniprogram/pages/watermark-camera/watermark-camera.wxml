@@ -9,44 +9,9 @@
     <view wx:if="{{!mark.time && !mark.dateWeek && !mark.locationLine && !mark.matter}}" class="lm-sub">{{i18n.watermarkNoWatermark}}</view>
   </template>
 
-  <!-- 共用片段：水印项目开关 + 地点 / 文案输入 + 常用词，评审视图与编辑弹层共用 -->
+  <!-- 共用片段：地点 / 文案输入 + 常用词，评审视图与编辑弹层共用；
+       水印项目开关统一由「水印设置」页维护，拍摄页不再重复一套开关 -->
   <template name="fields">
-    <view class="field-list">
-      <view class="field-row">
-        <view class="field-label">{{i18n.watermarkFieldTime}}</view>
-        <view class="field-tail">
-          <text class="field-hint">{{mark.time || i18n.watermarkShowTimeOff}}</text>
-          <t-switch size="small" value="{{fields.time}}" data-field="time" bind:change="toggleField" />
-        </view>
-      </view>
-      <view class="field-row">
-        <view class="field-label">{{i18n.watermarkFieldDate}}</view>
-        <view class="field-tail">
-          <text class="field-hint">{{fields.date ? clock.date : i18n.watermarkShowTimeOff}}</text>
-          <t-switch size="small" value="{{fields.date}}" data-field="date" bind:change="toggleField" />
-        </view>
-      </view>
-      <view class="field-row">
-        <view class="field-label">{{i18n.watermarkFieldWeek}}</view>
-        <view class="field-tail">
-          <text class="field-hint">{{fields.week ? clock.week : i18n.watermarkShowTimeOff}}</text>
-          <t-switch size="small" value="{{fields.week}}" data-field="week" bind:change="toggleField" />
-        </view>
-      </view>
-      <view class="field-row">
-        <view class="field-label">{{i18n.watermarkFieldLocation}}</view>
-        <view class="field-tail">
-          <t-switch size="small" value="{{fields.location}}" data-field="location" bind:change="toggleField" />
-        </view>
-      </view>
-      <view class="field-row field-row-last">
-        <view class="field-label">{{i18n.watermarkFieldMatter}}</view>
-        <view class="field-tail">
-          <t-switch size="small" value="{{fields.matter}}" data-field="matter" bind:change="toggleField" />
-        </view>
-      </view>
-    </view>
-
     <view class="input-card">
       <t-input
         label="{{i18n.watermarkFieldLocation}}"
@@ -62,11 +27,11 @@
       <view class="input-divider"></view>
       <t-textarea
         label="{{i18n.watermarkFieldMatter}}"
-        borderless
         value="{{matter}}"
         placeholder="{{i18n.watermarkMatterPlaceholder}}"
         maxlength="120"
-        autosize
+        autosize="{{matterAutosize}}"
+        disable-default-padding="{{true}}"
         cursor="{{matterCursor}}"
         focus="{{matterFocus}}"
         adjust-position="{{false}}"
@@ -167,7 +132,7 @@
       </view>
     </view>
     <view class="review-form {{keyboardHeight ? 'review-form-compact' : ''}}">
-      <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
+      <template is="fields" data="{{ location, matter, words, clock, mark, matterAutosize, matterCursor, matterFocus, i18n }}" />
       <view class="detail-actions">
         <t-button class="detail-action" variant="outline" size="large" block bind:tap="retake">{{i18n.watermarkRetake}}</t-button>
         <t-button class="detail-action" theme="primary" size="large" block disabled="{{busy}}" bind:tap="saveReview">{{i18n.watermarkSaveAlbum}}</t-button>
@@ -179,7 +144,7 @@
   <t-popup visible="{{popupVisible}}" placement="bottom" bind:visible-change="onPopupChange">
     <view class="edit-form" style="padding-bottom: calc(env(safe-area-inset-bottom) + 40rpx + {{keyboardHeight}}px)">
       <view class="edit-title">{{i18n.watermarkEditTitle}}</view>
-      <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
+      <template is="fields" data="{{ location, matter, words, clock, mark, matterAutosize, matterCursor, matterFocus, i18n }}" />
       <view class="detail-actions">
         <t-button class="detail-action" theme="default" variant="outline" size="large" block bind:tap="closeForm">{{i18n.watermarkCancel}}</t-button>
         <t-button class="detail-action" theme="primary" size="large" block bind:tap="onFormConfirm">{{i18n.watermarkDone}}</t-button>
