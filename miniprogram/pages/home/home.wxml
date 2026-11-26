@@ -45,6 +45,15 @@
         <view class="action-description">{{scanDescription}}</view>
       </view>
 
+      <!-- 水印相机：现场拍照自动叠加时间地点，所有人可用（不按权限隐藏）。 -->
+      <view class="action-card" hover-class="action-card-active" bind:tap="openWatermark">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="camera" size="38rpx" /></view>
+          <view class="action-title">{{i18n.watermarkTitle}}</view>
+        </view>
+        <view class="action-description">{{i18n.watermarkDescription}}</view>
+      </view>
+
       <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
         <view class="action-head">
           <view class="action-icon"><t-icon name="layers" size="38rpx" /></view>

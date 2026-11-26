@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/watermark-camera/watermark-camera",
+    "pages/watermark-setting/watermark-setting",
     "pages/outbound/outbound",
     "pages/outbound-success/outbound-success",
     "pages/inventory/inventory",

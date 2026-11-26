@@ -1,0 +1,74 @@
+<app-navbar title="{{i18n.watermarkSettingTitle}}" />
+<view class="page-shell watermark-setting-page">
+  <!-- 默认启用的水印项目：拍摄页进入时按这里的开关初始化，拍摄中仍可临时改 -->
+  <view class="section-card">
+    <view class="section-heading">
+      <view class="section-title">{{i18n.watermarkSettingsFieldsTitle}}</view>
+      <view class="section-description">{{i18n.watermarkSettingsFieldsHint}}</view>
+    </view>
+    <view class="section-divider"></view>
+    <view class="switch-row {{index === fieldRows.length - 1 ? 'switch-row-last' : ''}}" wx:for="{{fieldRows}}" wx:key="key">
+      <view class="switch-label">{{item.label}}</view>
+      <t-switch
+        size="small"
+        value="{{item.enabled}}"
+        data-field="{{item.key}}"
+        bind:change="toggleField"
+      />
+    </view>
+    <view class="setting-actions">
+      <t-button size="small" variant="outline" bind:tap="resetFields">{{i18n.watermarkFieldsReset}}</t-button>
+    </view>
+  </view>
+
+  <!-- 常用词与置顶：图钉置顶、长按删除；置顶的词排在拍摄页最前面 -->
+  <view class="section-card">
+    <view class="section-heading">
+      <view class="section-title">{{i18n.watermarkWordListTitle}}</view>
+      <view class="section-description">{{i18n.watermarkSettingsPinHint}}</view>
+    </view>
+    <view class="section-divider"></view>
+
+    <view wx:if="{{!words.length}}" class="word-empty">{{i18n.watermarkWordNone}}</view>
+    <block wx:else>
+      <view class="word-count">{{wordCountLabel}}</view>
+      <view
+        wx:for="{{words}}"
+        wx:key="word"
+        class="word-row"
+        hover-class="word-row-active"
+        data-word="{{item.word}}"
+        bind:longpress="removeWord"
+      >
+        <view class="word-main">
+          <text wx:if="{{item.pinned}}" class="word-pin-badge">{{i18n.watermarkPinnedBadge}}</text>
+          <text class="word-text">{{item.word}}</text>
+        </view>
+        <view class="word-actions">
+          <view
+            class="word-icon-btn {{item.pinned ? 'word-icon-btn-active' : ''}}"
+            hover-class="word-icon-btn-hover"
+            aria-role="button"
+            aria-label="{{item.pinned ? i18n.watermarkUnpin : i18n.watermarkPin}}"
+            data-word="{{item.word}}"
+            bind:tap="togglePin"
+          >
+            <t-icon name="{{item.pinned ? 'pin-filled' : 'pin'}}" size="34rpx" />
+          </view>
+          <view
+            class="word-icon-btn"
+            hover-class="word-icon-btn-hover"
+            aria-role="button"
+            aria-label="{{i18n.watermarkDeleteWordAction}}"
+            data-word="{{item.word}}"
+            bind:tap="removeWord"
+          >
+            <t-icon name="delete" size="34rpx" />
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <t-toast id="watermark-setting-toast" />
+</view>

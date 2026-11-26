@@ -132,6 +132,11 @@ Page({
     wx.navigateTo({ url: '/pages/inventory/inventory' });
   },
 
+  /** 水印相机：现场拍照工具，所有已登录用户都可用，不看权限位。 */
+  openWatermark() {
+    wx.navigateTo({ url: '/pages/watermark-camera/watermark-camera' });
+  },
+
   openHuaXingInventory() {
     wx.navigateTo({ url: '/pages/huaxing-inventory/huaxing-inventory' });
   },
