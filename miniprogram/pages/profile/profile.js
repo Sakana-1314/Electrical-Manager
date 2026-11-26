@@ -1,4 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
+const { request } = require('../../utils/request');
 const { hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const {
@@ -26,6 +27,8 @@ Page({
     user: null,
     // 没有二级库 Pro 读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
     recordsVisible: false,
+    // 「进入网页版」按钮的请求中态
+    openingWeb: false,
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。
     projectPickerVisible: false,
@@ -168,5 +171,38 @@ Page({
 
   openRecords() {
     wx.navigateTo({ url: '/pages/records/records' });
+  },
+
+  /**
+   * 进入网页版：用当前登录态换一次性票据，再半屏打开网页版（web-view 载入带票据的地址）。
+   *
+   * 票据 2 分钟有效、只能兑换一次；网页 /web-open 页兑换后写入登录态并跳到目标路由。
+   * `wx.openEmbeddedMiniProgram` 只能打开别的小程序，这里要打开的是 H5 页面，
+   * 因此直接 navigateTo 到本站的 web-view 页面（半屏 web-view，标题栏可返回）。
+   */
+  async openWebVersion() {
+    if (this.data.openingWeb) return;
+    this.setData({ openingWeb: true });
+    try {
+      const result = await request({
+        url: '/auth/web-open/tickets',
+        method: 'POST',
+        data: { path: '/' },
+      });
+      if (!result || !result.url) throw new Error(t('webOpenFailed'));
+      wx.navigateTo({
+        url: `/pages/web-view/web-view?url=${encodeURIComponent(result.url)}`,
+      });
+    } catch (error) {
+      Toast({
+        context: this,
+        selector: '#profile-toast',
+        message: (error && error.message) || t('webOpenFailed'),
+        theme: 'error',
+        direction: 'column',
+      });
+    } finally {
+      this.setData({ openingWeb: false });
+    }
   },
 });
