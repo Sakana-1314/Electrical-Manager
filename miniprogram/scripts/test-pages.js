@@ -946,22 +946,36 @@ async function run() {
   assert(markOrder[1].includes(cameraPage.data.clock.date), 'date + week row must come second');
   assert(markOrder[2].startsWith('地点'), 'location row must come third');
   assert(markOrder[3] === '检修完成', 'matter row must come last');
-  // 关掉某个项目：对应的行立刻消失，其余顺序不变
-  cameraPage.toggleField({ currentTarget: { dataset: { field: 'week' } }, detail: { value: false } });
+  // 拍摄页没有自己的开关入口：项目开关只认「水印设置」页写下的值，
+  // 关掉的项目在拍摄页重新读设置后就该消失（对应行的排版顺序不变）。
+  assert(typeof cameraPage.toggleField === 'undefined', 'camera page must not keep its own field switches');
+  const hiddenSettings = watermark.readSettings();
+  hiddenSettings.fields = { time: false, date: true, week: false, location: true, matter: true };
+  watermark.writeSettings(hiddenSettings);
+  cameraPage.applySettings();
+  cameraPage.refreshMark();
+  const trimmedRows = cameraPage.buildMarkRows().map((row) => row.text);
+  assert(trimmedRows.length === 3, `settings-off fields must drop rows, got ${trimmedRows.length}`);
   assert(
-    !cameraPage.buildMarkRows()[1].text.includes(cameraPage.data.clock.week),
-    'disabling week must drop the weekday from the date row',
+    !trimmedRows[0].includes(cameraPage.data.clock.time) &&
+      trimmedRows[0].includes(cameraPage.data.clock.date) &&
+      !trimmedRows[0].includes(cameraPage.data.clock.week),
+    'settings-off time / week must not reach the date row',
   );
-  cameraPage.toggleField({ currentTarget: { dataset: { field: 'time' } }, detail: { value: false } });
-  assert(
-    cameraPage.buildMarkRows().length === 3,
-    'disabling time must remove the time row entirely',
-  );
-  // 五项全关：没有任何水印行（页面会提示未启用）
-  ['date', 'location', 'matter'].forEach((key) =>
-    cameraPage.toggleField({ currentTarget: { dataset: { field: key } }, detail: { value: false } }),
-  );
+  // 五项全关（脏数据兜底）：没有任何水印行（页面会提示未启用）
+  hiddenSettings.fields = { time: false, date: false, week: false, location: false, matter: false };
+  storage.set(watermark.SETTINGS_STORAGE_KEY, { words: ['例行巡检'], pinned: [], fields: hiddenSettings.fields });
+  cameraPage.applySettings();
+  cameraPage.refreshMark();
   assert(cameraPage.buildMarkRows().length === 0, 'all fields off must render no watermark rows');
+  // 还原成默认开关，后续用例（常用词插入 / 删除）按四项水印继续
+  storage.set(watermark.SETTINGS_STORAGE_KEY, {
+    words: ['例行巡检', '检修完成'],
+    pinned: ['检修完成'],
+    fields: watermark.defaultFieldEnabled(),
+  });
+  cameraPage.applySettings();
+  cameraPage.refreshMark();
   // 常用词插入到光标处，而不是一律追加到末尾
   cameraPage.setData({ matter: 'AB' });
   cameraPage._matterCursor = 1;

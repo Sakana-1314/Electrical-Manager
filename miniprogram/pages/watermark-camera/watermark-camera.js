@@ -1,7 +1,6 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { getMessages, t } = require('../../utils/i18n');
 const {
-  FIELD_KEYS,
   WORD_MAX,
   normalizeFields,
   orderedWords,
@@ -23,6 +22,10 @@ const MARK_ROWS = {
 
 /** 保存到相册的成品宽度上限：现场记录够用，也不会因为超长边撑爆单次合成内存。 */
 const OUTPUT_MAX_WIDTH = 1440;
+
+/** 文案框自适应高度区间（px，1px≈2rpx 时约一行半到四行）：默认不铺满，写长后长到上限为止。 */
+const MATTER_MIN_HEIGHT = 30;
+const MATTER_MAX_HEIGHT = 76;
 
 /** 白字 + 底部阴影：canvas 里没有主题令牌，色值集中在这里，避免散落在绘制逻辑里。 */
 const MARK_TEXT_STRONG = 'rgba(255, 255, 255, 1)';
@@ -46,10 +49,12 @@ Page({
     pending: '',
     armed: false,
 
-    // 水印项目各自是否启用：进页面时取本机设置的「默认启用」，拍摄中可临时改。
+    // 水印项目各自是否启用：只读本机设置的「默认启用」，开关入口统一在「水印设置」页。
     fields: normalizeFields(null),
     location: '',
     matter: '',
+    // 文案框的 autosize 区间：默认两行，写长后长到上限为止。
+    matterAutosize: { minHeight: MATTER_MIN_HEIGHT, maxHeight: MATTER_MAX_HEIGHT },
     clock: { date: '', time: '', week: '' },
     // 实时叠加层与 Canvas 共用的四行文本（空串表示该行不显示）。
     mark: { time: '', dateWeek: '', locationLine: '', matter: '' },
@@ -70,9 +75,9 @@ Page({
   },
 
   /**
-   * 回到页面时重读本机设置：从「水印设置」页改完常用词 / 默认开关后返回即生效。
+   * 回到页面时重读本机设置：从「水印设置」页改完默认开关 / 常用词后返回即生效。
    *
-   * 拍摄中途（已定格或已定稿）不覆盖现场改过的开关，免得把当前这次拍摄的选择冲掉。
+   * 拍摄中途（已定格或已定稿）不覆盖现场正在写的内容，等这一轮结束再同步。
    */
   onShow() {
     if (this.data.busy || this.data.pending || this.data.armed) return;
@@ -91,7 +96,7 @@ Page({
     if (this.onKeyboardHeight) wx.offKeyboardHeightChange(this.onKeyboardHeight);
   },
 
-  /** 读本机设置：常用词按「置顶在前、其余保持原顺序」排好，水印项目回到默认启用值。 */
+  /** 读本机设置：常用词按「置顶在前、其余保持原顺序」排好，水印项目取「默认启用」的开关。 */
   applySettings() {
     let settings;
     try {
@@ -228,13 +233,6 @@ Page({
     this._pinchDistance = 0;
     this.setData({ zooming: false });
     this.setZoom(this.data.zoom);
-  },
-
-  /** 拍摄页临时开关某个水印项目：只影响本次拍摄，不改本机默认设置。 */
-  toggleField(e) {
-    const key = e.currentTarget.dataset.field;
-    if (!FIELD_KEYS.includes(key)) return;
-    this.setData({ [`fields.${key}`]: e.detail.value }, () => this.refreshMark());
   },
 
   onLocationInput(e) {

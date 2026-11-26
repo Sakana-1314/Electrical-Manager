@@ -1,6 +1,6 @@
 <app-navbar title="{{i18n.watermarkSettingTitle}}" />
 <view class="page-shell watermark-setting-page">
-  <!-- 默认启用的水印项目：拍摄页进入时按这里的开关初始化，拍摄中仍可临时改 -->
+  <!-- 启用的水印项目：这里是唯一的开关入口，拍摄页进入时按这里的开关初始化 -->
   <view class="section-card">
     <view class="section-heading">
       <view class="section-title">{{i18n.watermarkSettingsFieldsTitle}}</view>

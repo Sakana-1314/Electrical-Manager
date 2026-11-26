@@ -271,59 +271,53 @@
   padding-top: 16rpx;
 }
 
-/* ===== 水印项目开关行（评审表单与编辑弹层共用） ===== */
-.field-list {
-  overflow: hidden;
-  margin-bottom: 20rpx;
-  border: 2rpx solid var(--app-card-border);
-  border-radius: 22rpx;
-}
-
-.field-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-  padding: 20rpx 24rpx;
-  border-bottom: 2rpx solid var(--app-divider);
-}
-
-.field-row-last {
-  border-bottom: 0;
-}
-
-.field-label {
-  flex: none;
-  color: var(--app-text-secondary);
-  font-size: 26rpx;
-}
-
-.field-tail {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 16rpx;
-}
-
-.field-hint {
-  overflow: hidden;
-  color: var(--app-text-subtle);
-  font-size: 23rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 地点 / 文案：灰底输入卡，两个输入框之间一条分割线。 */
+/* ===== 地点 / 文案：灰底输入卡，两个输入框之间一条分割线 =====
+ * 紧凑口径：字号 / 行高比整站正文小一档，上下留白收到一档，
+ * 文案框只按内容长高（autosize 区间在页面 JS 里给），不占掉半屏。 */
 .input-card {
+  --td-input-vertical-padding: 14rpx 20rpx;
+  --td-textarea-padding: 14rpx 20rpx;
+  --td-textarea-label-color: var(--app-text-secondary);
   overflow: hidden;
   margin-bottom: 16rpx;
   border-radius: 22rpx;
   background: var(--app-surface-soft);
 }
 
+/* TDesign 的输入 / 文案正文没有字号令牌，靠页面样式压一档（组件是 apply-shared，页面样式能进来）。 */
+.input-card .t-input__label:not(:empty),
+.input-card .t-input__control,
+.input-card .t-input__placeholder,
+.input-card .t-textarea__label:not(:empty),
+.input-card .t-textarea__wrapper-inner,
+.input-card .t-textarea__placeholder {
+  font-size: 26rpx;
+  line-height: 38rpx;
+}
+
+/* 标签与正文之间默认左右各留 32rpx，收成一档。 */
+.input-card .t-input__label:not(:empty) {
+  margin-right: 16rpx;
+}
+
+.input-card .t-input__label:not(:empty) + .t-input__wrap {
+  margin-left: 0;
+}
+
+.input-card .t-textarea__label:not(:empty) {
+  padding-bottom: 6rpx;
+}
+
+/* 地图选点按钮跟着输入卡缩一档，避免把行高撑回 56rpx。 */
+.input-card .t-button--size-extra-small {
+  --td-button-extra-small-height: 48rpx;
+  --td-button-extra-small-font: 600 24rpx / 34rpx var(--td-font-family);
+  --td-button-extra-small-padding-horizontal: 18rpx;
+}
+
 .input-divider {
   height: 2rpx;
-  margin: 0 24rpx;
+  margin: 0 20rpx;
   background: var(--app-divider);
 }
 
