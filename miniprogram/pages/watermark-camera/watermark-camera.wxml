@@ -169,8 +169,8 @@
     <view class="review-form {{keyboardHeight ? 'review-form-compact' : ''}}">
       <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
       <view class="detail-actions">
-        <t-button class="detail-action" variant="outline" bind:tap="retake">{{i18n.watermarkRetake}}</t-button>
-        <t-button class="detail-action" theme="primary" disabled="{{busy}}" bind:tap="saveReview">{{i18n.watermarkSaveAlbum}}</t-button>
+        <t-button class="detail-action" variant="outline" size="large" block bind:tap="retake">{{i18n.watermarkRetake}}</t-button>
+        <t-button class="detail-action" theme="primary" size="large" block disabled="{{busy}}" bind:tap="saveReview">{{i18n.watermarkSaveAlbum}}</t-button>
       </view>
     </view>
   </view>
@@ -181,8 +181,8 @@
       <view class="edit-title">{{i18n.watermarkEditTitle}}</view>
       <template is="fields" data="{{ fields, location, matter, words, clock, mark, matterCursor, matterFocus, i18n }}" />
       <view class="detail-actions">
-        <t-button class="detail-action" theme="default" variant="outline" bind:tap="closeForm">{{i18n.watermarkCancel}}</t-button>
-        <t-button class="detail-action" theme="primary" bind:tap="onFormConfirm">{{i18n.watermarkDone}}</t-button>
+        <t-button class="detail-action" theme="default" variant="outline" size="large" block bind:tap="closeForm">{{i18n.watermarkCancel}}</t-button>
+        <t-button class="detail-action" theme="primary" size="large" block bind:tap="onFormConfirm">{{i18n.watermarkDone}}</t-button>
       </view>
     </view>
   </t-popup>

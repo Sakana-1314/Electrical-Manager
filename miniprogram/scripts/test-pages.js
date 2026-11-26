@@ -995,6 +995,11 @@ async function run() {
   const afterDelete = watermark.readSettings();
   assert(!afterDelete.words.includes('检修完成'), 'deleted word must be gone from words');
   assert(!afterDelete.pinned.includes('检修完成'), 'deleted word must be gone from pinned too');
+  // 取消编辑弹层不该顺手切回「先拍后写」：先写后拍下次点快门仍应回到编辑
+  cameraPage.setData({ mode: 'write', popupVisible: true });
+  cameraPage.onPopupChange({ detail: { visible: false } });
+  assert(cameraPage.data.popupVisible === false, 'dismissing the sheet must close it');
+  assert(cameraPage.data.mode === 'write', 'dismissing the sheet must keep the current mode');
 
   // ===== 水印设置页：置顶切换 / 至少保留一项 =====
   storage.set(watermark.SETTINGS_STORAGE_KEY, {

@@ -367,8 +367,9 @@ Page({
     this.setData({ popupVisible: true });
   },
 
+  /** 关闭编辑弹层：保留当前模式（先写后拍下次点快门仍回到编辑），只收掉弹层与键盘让位。 */
   closeForm() {
-    this.setData({ popupVisible: false, mode: 'shoot', armed: false, keyboardHeight: 0 });
+    this.setData({ popupVisible: false, keyboardHeight: 0 });
   },
 
   onPopupChange(e) {
