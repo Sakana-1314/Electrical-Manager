@@ -1,5 +1,5 @@
 // Package importjob 对应原 services/import_job_service.py：Excel 导入任务（物料编码库 / 物料价格 /
-// 华星库存 / 精简二级库共用）。
+// 华星库存 / 二级库 Lite 共用）。
 //
 // 接口层只负责上传落盘 + 登记任务并返回 202，真正的解析与全量替换放到后台 goroutine 里执行。
 // 任务生命周期 PENDING → RUNNING → SUCCEEDED | FAILED 持久化在 excel_import_job 表，前端轮询状态端点。

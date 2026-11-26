@@ -72,7 +72,7 @@ const groups = computed<MetricGroup[]>(() => {
   if (showWarehouse.value) {
     out.push({
       key: 'warehouse',
-      title: '二级库',
+      title: '二级库 Pro',
       to: { name: 'stock' },
       metrics: [
         {
@@ -113,12 +113,12 @@ const groups = computed<MetricGroup[]>(() => {
   if (showLite.value) {
     out.push({
       key: 'warehouse_lite',
-      title: '二级库',
+      title: '二级库 Lite',
       to: { name: 'warehouse-lite' },
       metrics: [
         {
           key: 'lite',
-          label: '精简库存',
+          label: 'Lite 库存',
           value: s?.lite_inventory_count ?? null,
           icon: FileTrayStackedOutline,
           tone: 'primary',

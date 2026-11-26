@@ -337,7 +337,7 @@ func PurchaseRecordDetail(s *db.Session, lineID int64) (schema.MiniProgramPurcha
 	return purchaseRecordItemReads([]*purchaserequest.Line{line})[0], nil
 }
 
-// ---------------- 编码库 / 台账 / 华星库存 / 精简库存 ----------------
+// ---------------- 编码库 / 台账 / 华星库存 / Lite 库存 ----------------
 
 // MiniProgramCodeFilter 是小程序物料编码的筛选条件（nil / 空串表示不限）。
 type MiniProgramCodeFilter struct {
@@ -447,7 +447,7 @@ func ListHuaXingInventory(s *db.Session, f MiniProgramHuaXingFilter, page, pageS
 	return out, total, nil
 }
 
-// ListLiteInventory 对应 list_lite_inventory：精简二级库列表（仅查看，无出入库）。
+// ListLiteInventory 对应 list_lite_inventory：二级库 Lite 列表（仅查看，无出入库）。
 func ListLiteInventory(s *db.Session, keyword *string, page, pageSize int64) ([]schema.MiniProgramLiteInventoryItemRead, int64, error) {
 	items, total, err := lite.Search(s, lite.SearchParams{Keyword: keyword, Page: page, PageSize: pageSize})
 	if err != nil {

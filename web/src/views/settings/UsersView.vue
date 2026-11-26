@@ -19,8 +19,8 @@ const permissionOptions = ref<PermissionRead[]>([])
 const defaultPermissions = ref<string[]>([])
 const MODULE_LABELS: Record<string, string> = {
   system: '系统管理',
-  warehouse: '二级库',
-  lite: '二级库',
+  warehouse: '二级库 Pro',
+  lite: '二级库 Lite',
   purchase: '申购',
   huaxing: '华星总库存',
   codes: '物料编码库',
@@ -28,7 +28,7 @@ const MODULE_LABELS: Record<string, string> = {
   hazard: '隐患',
   work: '工单',
 }
-/** 权限勾选项文案：精简二级库与华星总库存的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
+/** 权限勾选项文案：二级库 Lite 与华星总库存的写权限实际是 Excel 导入，用「导入」和标准库的「读写」区分。 */
 function permissionItemLabel(item: PermissionRead): string {
   if ((item.module === 'lite' || item.module === 'huaxing') && item.action === 'write')
     return '导入'

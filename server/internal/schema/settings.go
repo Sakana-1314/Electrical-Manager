@@ -6,7 +6,7 @@ import "github.com/Sakana-1314/Electrical-Manager/server/internal/jtype"
 
 // AdvancedSettingsRead 管理端高级设置：小程序注册开关 + 默认用户权限。
 // 模型服务、Webhook、图片加速都不再由管理端配置（分别走服务端环境变量或已移除）；
-// 标准二级库与精简二级库不再有运行模式，可见性由各权限位决定。
+// 二级库 Pro 与二级库 Lite 不再有运行模式，可见性由各权限位决定。
 type AdvancedSettingsRead struct {
 	MiniProgramRegistrationEnabled bool           `json:"mini_program_registration_enabled"`
 	DefaultPermissions             []string       `json:"default_permissions"`

@@ -666,8 +666,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 精简库存列表
-         * @description 精简二级库列表查询（物资名称/型号独立筛选，各字段内多关键词按 | 分隔做 OR 匹配）。
+         * 二级库 Lite 列表
+         * @description 二级库 Lite 列表查询（物资名称/型号独立筛选，各字段内多关键词按 | 分隔做 OR 匹配）。
          */
         get: operations["list_lite_inventory_api_v1_secondary_warehouse_get"];
         put?: never;
@@ -704,7 +704,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 导入精简库存 */
+        /** 导入二级库 Lite */
         post: operations["import_lite_inventory_api_v1_secondary_warehouse_import_post"];
         delete?: never;
         options?: never;
@@ -878,8 +878,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 精简库存
-         * @description 精简二级库（仅查看）。小程序端按二级库模式调用本接口或 /inventory。
+         * 二级库 Lite
+         * @description 二级库 Lite（仅查看）。小程序端按二级库模式调用本接口或 /inventory。
          */
         get: operations["mini_program_lite_inventory_api_v1_mini_program_lite_inventory_get"];
         put?: never;
@@ -2562,7 +2562,7 @@ export interface components {
     schemas: {
         /**
          * AdvancedSettingsRead
-         * @description 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；标准 / 精简二级库没有运行模式，可见性由权限位决定。
+         * @description 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；二级库 Pro / Lite 没有运行模式，可见性由权限位决定。
          * @example {
          *       "mini_program_registration_enabled": true,
          *       "updated_at": "2026-09-13T10:30:00+08:00",
@@ -2892,7 +2892,7 @@ export interface components {
         /**
          * Body_import_lite_inventory_api_v1_secondary_warehouse_import_post
          * @example {
-         *       "file": "精简二级库台账_20260912.xlsx"
+         *       "file": "二级库 Lite 台账_20260912.xlsx"
          *     }
          */
         Body_import_lite_inventory_api_v1_secondary_warehouse_import_post: {
@@ -2931,7 +2931,7 @@ export interface components {
         };
         /**
          * DashboardSummaryRead
-         * @description 工作台概览计数；标准二级库与精简二级库同时计数，前端按用户权限位选择展示。
+         * @description 工作台概览计数；二级库 Pro 与二级库 Lite 同时计数，前端按用户权限位选择展示。
          * @example {
          *       "stock_material_count": 23,
          *       "lite_inventory_count": 41,
@@ -2949,7 +2949,7 @@ export interface components {
             stock_material_count: number;
             /**
              * Lite Inventory Count
-             * @description 精简二级库（lite_inventory）行数；两种二级库并存，前端按用户权限位展示对应卡片。
+             * @description 二级库 Lite（lite_inventory）行数；两种二级库并存，前端按用户权限位展示对应卡片。
              */
             lite_inventory_count: number;
             /** Low Stock Count */
@@ -4106,7 +4106,7 @@ export interface components {
         };
         /**
          * LiteInventoryRead
-         * @description 管理端精简二级库行（Excel 一次性导入 + 只读查询）。
+         * @description 管理端二级库 Lite 行（Excel 一次性导入 + 只读查询）。
          * @example {
          *       "id": 1,
          *       "name": "绝缘胶带",
@@ -4561,7 +4561,7 @@ export interface components {
         };
         /**
          * MiniProgramLiteInventoryItemRead
-         * @description 小程序端精简二级库行（无出入库，仅查看）。
+         * @description 小程序端二级库 Lite 行（无出入库，仅查看）。
          * @example {
          *       "id": 1,
          *       "name": "绝缘胶带",
@@ -20795,28 +20795,28 @@ export interface operations {
                      *         "key": "warehouse:read",
                      *         "module": "warehouse",
                      *         "action": "read",
-                     *         "label": "标准二级库与出入库查看",
+                     *         "label": "二级库 Pro 与出入库查看",
                      *         "bit": 2
                      *       },
                      *       {
                      *         "key": "warehouse:write",
                      *         "module": "warehouse",
                      *         "action": "write",
-                     *         "label": "标准二级库出入库与库存调整",
+                     *         "label": "二级库 Pro 出入库与库存调整",
                      *         "bit": 4
                      *       },
                      *       {
                      *         "key": "lite:read",
                      *         "module": "lite",
                      *         "action": "read",
-                     *         "label": "精简二级库查看",
+                     *         "label": "二级库 Lite 查看",
                      *         "bit": 8192
                      *       },
                      *       {
                      *         "key": "lite:write",
                      *         "module": "lite",
                      *         "action": "write",
-                     *         "label": "精简二级库导入",
+                     *         "label": "二级库 Lite 导入",
                      *         "bit": 16384
                      *       }
                      *     ]

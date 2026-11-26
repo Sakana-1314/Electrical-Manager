@@ -23,7 +23,7 @@ type HuaXingFilterOptions struct {
 	Purchasers          []string `json:"purchasers"`
 }
 
-// LiteInventoryRead 是管理端精简二级库行（Excel 一次性导入 + 只读查询）。
+// LiteInventoryRead 是管理端二级库 Lite 行（Excel 一次性导入 + 只读查询）。
 type LiteInventoryRead struct {
 	ID        int64          `json:"id"`
 	Name      string         `json:"name"`

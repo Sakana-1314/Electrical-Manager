@@ -1,4 +1,4 @@
-// Package lite 对应原 services/lite_inventory_service.py：精简二级库（Excel 一次性全量导入 + 只读查询）。
+// Package lite 对应原 services/lite_inventory_service.py：二级库 Lite（Excel 一次性全量导入 + 只读查询）。
 package lite
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/service/importjob"
 )
 
-// ExpectedHeaders 是精简二级库表格的必需列。
+// ExpectedHeaders 是二级库 Lite 表格的必需列。
 var ExpectedHeaders = []string{"物资名称", "型号规格", "单位", "数量", "备注"}
 
 const (
@@ -26,7 +26,7 @@ const (
 	JobType = "LITE_INVENTORY"
 )
 
-// Row 是解析出的一行精简库存。
+// Row 是解析出的一行Lite 库存。
 type Row struct {
 	Name      string
 	ModelSpec *string

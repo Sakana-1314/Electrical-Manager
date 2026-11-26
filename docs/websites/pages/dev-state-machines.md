@@ -23,7 +23,7 @@ flowchart LR
 
 | 枚举 | 取值（代码/API 层） | 数据库存储 | 说明 |
 | --- | --- | --- | --- |
-| 权限位 | `system:admin`、`warehouse:read|write`、`lite:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限；标准二级库（warehouse）与精简二级库（lite）是两套独立权限 |
+| 权限位 | `system:admin`、`warehouse:read|write`、`lite:read|write`、`purchase:read|write`、`huaxing:read`、`ledger:read|write`、`hazard:read|write`、`work:read|write` | `app_user.permissions`（BIGINT 位图） | 管理端与小程序端共用；功能是否展示与接口是否放行都按位判断，写权限自动包含同模块读权限；二级库 Pro（warehouse）与二级库 Lite（lite）是两套独立权限 |
 | `OperationType` | `INBOUND` / `OUTBOUND` | ENUM 同名 | 流水类型 |
 | `SourceType` | `MANUAL` / `MINI_PROGRAM` / `REVERSAL` / `INITIALIZATION` | ENUM 同名 | 来源类型；**无** `PURCHASE_RECEIPT` |
 | `PurchasePlanStatus` | `正常` / `暂不申购` / `已归档` | ENUM `NORMAL` / `DEFERRED` / `ARCHIVED` | DB 存枚举名，API 返回中文值 |
@@ -410,7 +410,7 @@ stateDiagram-v2
 
 ### 权限位
 
-功能是否展示与可写不再有配置：管理端与小程序端统一按 `app_user.permissions` 位图判断。小程序首页入口按各模块 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；网页侧栏主 tab 同理。标准二级库与精简二级库没有运行模式：两者是独立权限位，可以单独或同时授予；后端数据接口按同一权限位鉴权。
+功能是否展示与可写不再有配置：管理端与小程序端统一按 `app_user.permissions` 位图判断。小程序首页入口按各模块 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；网页侧栏主 tab 同理。二级库 Pro 与二级库 Lite 没有运行模式：两者是独立权限位，可以单独或同时授予；后端数据接口按同一权限位鉴权。
 
 ### 物资小程序码
 

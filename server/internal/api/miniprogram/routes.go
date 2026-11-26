@@ -50,7 +50,7 @@ func Register(r *web.Router) {
 	g.GET("/ledger-items/tag-options", ledgerTagOptions, user, readPerm(domain.PermLedgerRead))
 	g.GET("/ledger-items/{item_id}", ledgerItemDetail, user, readPerm(domain.PermLedgerRead))
 	g.GET("/purchase-plans/{material_id}", purchasePlanDetail, user, readPerm(domain.PermPurchaseRead))
-	// 出库与出入库流水属于标准二级库：按 warehouse 权限位门禁。
+	// 出库与出入库流水属于二级库 Pro：按 warehouse 权限位门禁。
 	g.POST("/outbound", outbound, user, readPerm(domain.PermWarehouseWrite))
 	g.GET("/outbound-reasons", outboundReasons, user, readPerm(domain.PermWarehouseWrite))
 	g.GET("/operations", operations, user, readPerm(domain.PermWarehouseRead))

@@ -302,7 +302,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     throw new Error('The huaxing inventory entry must come before the standard inventory entry.');
   }
   // 扫一扫是首页唯一的主动作，也是所有扫码类操作的统一入口（物资码 / 网页登录码）：
-  // 整卡可点、不能再嵌套「开始扫码」按钮，且不能按权限隐藏（精简二级库用户也要用它确认网页登录）。
+  // 整卡可点、不能再嵌套「开始扫码」按钮，且不能按权限隐藏（二级库 Lite 用户也要用它确认网页登录）。
   if (!homeMarkup.includes('aria-label="{{i18n.scanTitle}}"') ||
       !homeMarkup.includes('bind:tap="startScan"')) {
     throw new Error('The home scan card must be tappable as a whole.');

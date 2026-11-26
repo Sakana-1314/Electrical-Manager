@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 import type { ExcelImportJob, LastImport, LiteInventory, Page, PagedQueryParams } from './generated'
 
-/** 精简二级库列表查询 */
+/** 二级库 Lite 列表查询 */
 export interface LiteInventoryListQuery extends PagedQueryParams {
   name?: string
   model_spec?: string

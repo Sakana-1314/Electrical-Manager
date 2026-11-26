@@ -14,11 +14,11 @@ import type { Permission } from '@/types/navigation'
 export const NAV_FEATURES = [
   { key: 'dashboard', label: '工作台', route: 'dashboard', permission: null },
   { key: 'memos', label: '备忘录', route: 'memos', permission: null },
-  // 标准二级库（物资 / 出入库）与精简二级库（Excel 导入台账）是两套独立权限，可单独授予
-  { key: 'warehouse', label: '二级库', route: 'stock', permission: 'warehouse:read' },
+  // 二级库 Pro（物资 / 出入库）与二级库 Lite（Excel 导入台账）是两套独立权限，可单独授予
+  { key: 'warehouse', label: '二级库 Pro', route: 'stock', permission: 'warehouse:read' },
   {
     key: 'warehouse_lite',
-    label: '二级库',
+    label: '二级库 Lite',
     route: 'warehouse-lite',
     permission: 'lite:read',
   },
