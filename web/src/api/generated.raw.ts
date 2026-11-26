@@ -12333,12 +12333,24 @@ export interface components {
              */
             permissions?: string[];
         };
-        /** WebOpenTicketCreate */
+        /**
+         * WebOpenTicketCreate
+         * @example {
+         *       "path": "path-示例"
+         *     }
+         */
         WebOpenTicketCreate: {
             /** Path */
             path?: string;
         };
-        /** WebOpenTicketRead */
+        /**
+         * WebOpenTicketRead
+         * @example {
+         *       "ticket": "ticket-示例",
+         *       "expires_at": "2026-09-13T10:30:00+08:00",
+         *       "url": "https://img.hxni-electrical.com/files/images/01900010-0000-7000-8000-000000000001"
+         *     }
+         */
         WebOpenTicketRead: {
             /** Ticket */
             ticket: string;
@@ -12350,12 +12362,39 @@ export interface components {
             /** Url */
             url: string;
         };
-        /** WebOpenTicketRedeemRequest */
+        /**
+         * WebOpenTicketRedeemRequest
+         * @example {
+         *       "ticket": "ticket-示例"
+         *     }
+         */
         WebOpenTicketRedeemRequest: {
             /** Ticket */
             ticket: string;
         };
-        /** WebOpenTicketRedeemRead */
+        /**
+         * WebOpenTicketRedeemRead
+         * @example {
+         *       "access_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "refresh_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "token_type": "bearer",
+         *       "user": {
+         *         "id": 1,
+         *         "username": "warehouse",
+         *         "display_name": "孙浩宇",
+         *         "department_name": "department_name-示例",
+         *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
+         *         "created_at": "2026-09-13T10:30:00+08:00",
+         *         "last_used_at": "2026-09-13T10:30:00+08:00",
+         *         "permissions": [
+         *           "permissions_item-示例"
+         *         ],
+         *         "version": 1
+         *       },
+         *       "project_id": 1,
+         *       "path": "path-示例"
+         *     }
+         */
         WebOpenTicketRedeemRead: {
             /** Access Token */
             access_token: string;
