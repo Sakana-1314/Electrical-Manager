@@ -1,0 +1,81 @@
+<app-navbar title="{{i18n.stockMaterialsTitle}}" />
+<view class="page-shell list-page stock-materials-page">
+  <view class="list-tools">
+    <view class="search-row">
+      <t-search
+        value="{{keyword}}"
+        placeholder="{{i18n.stockMaterialSearchPlaceholder}}"
+        maxlength="255"
+        bind:change="onSearchChange"
+      />
+    </view>
+    <view wx:if="{{canWrite}}" class="toolbar-row">
+      <t-button theme="primary" size="small" icon="add" bind:tap="openCreate">
+        {{i18n.stockMaterialCreateTitle}}
+      </t-button>
+      <t-button theme="default" variant="outline" size="small" icon="download" bind:tap="openInbound">
+        {{i18n.stockInboundTitle}}
+      </t-button>
+    </view>
+  </view>
+
+  <view wx:if="{{items.length}}" class="result-count">{{resultCount}}</view>
+
+  <view wx:if="{{loading && !items.length}}" class="state-panel">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+  <view wx:elif="{{!items.length}}" class="state-panel empty-panel">
+    <t-empty
+      icon="search"
+      description="{{keyword ? i18n.stockMaterialEmptyFiltered : i18n.stockMaterialEmpty}}"
+    />
+  </view>
+
+  <view wx:else class="material-list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="list-card"
+      hover-class="list-card-active"
+      data-index="{{index}}"
+      bind:tap="openDetail"
+    >
+      <view class="card-topline">
+        <view class="topline-right">
+          <t-tag theme="{{item.stock_status_theme}}" variant="light" size="small">
+            {{item.stock_status_label}}
+          </t-tag>
+        </view>
+      </view>
+      <view class="card-heading">
+        <view class="material-name">{{item.name}}</view>
+      </view>
+      <view wx:if="{{item.model_spec}}" class="material-spec">{{item.model_spec}}</view>
+      <view class="card-divider"></view>
+      <view class="card-meta">
+        <view class="meta-item">
+          <view class="meta-label">{{i18n.stockMaterialQuantity}}</view>
+          <view class="quantity-value">
+            {{item.current_qty}}<text wx:if="{{item.unit_name}}" class="quantity-unit">{{item.unit_name}}</text>
+          </view>
+        </view>
+        <t-icon class="card-arrow" name="chevron-right" size="36rpx" />
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loadingMore}}" class="load-more">
+    <t-loading theme="circular" size="36rpx" text="{{i18n.loadMore}}" />
+  </view>
+  <view wx:elif="{{items.length && !hasMore}}" class="load-finished">{{i18n.noMore}}</view>
+
+  <t-toast id="stock-materials-toast" />
+  <button
+    wx:if="{{backTopVisible}}"
+    class="back-top-fab"
+    aria-label="{{i18n.backToTop}}"
+    bind:tap="scrollToTop"
+  >
+    <t-icon name="backtop" size="52rpx" />
+  </button>
+</view>

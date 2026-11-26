@@ -1,0 +1,120 @@
+<app-navbar title="{{isEdit ? i18n.stockMaterialEditTitle : i18n.stockMaterialCreateTitle}}" />
+<view class="page-shell stock-material-form-page">
+  <view wx:if="{{loading}}" class="section-card loading-card">
+    <t-loading theme="circular" size="48rpx" text="{{i18n.loadingGeneric}}" />
+  </view>
+
+  <block wx:else>
+    <view class="section-card form-card">
+      <view class="section-heading">
+        <view class="section-title">
+          {{isEdit ? i18n.stockMaterialEditTitle : i18n.stockMaterialCreateTitle}}
+        </view>
+      </view>
+      <view class="section-divider"></view>
+      <t-cell-group>
+        <t-input
+          label="{{i18n.stockMaterialName}}"
+          value="{{form.name}}"
+          placeholder="{{i18n.inputPlaceholder}}"
+          maxlength="128"
+          data-field="name"
+          bind:change="onFieldChange"
+        />
+        <t-input
+          label="{{i18n.stockMaterialNameId}}"
+          value="{{form.nameId}}"
+          placeholder="{{i18n.stockInboundOptional}}"
+          maxlength="128"
+          data-field="nameId"
+          bind:change="onFieldChange"
+        />
+        <t-input
+          label="{{i18n.stockMaterialAlias}}"
+          value="{{form.alias}}"
+          placeholder="{{i18n.stockInboundOptional}}"
+          maxlength="128"
+          data-field="alias"
+          bind:change="onFieldChange"
+        />
+        <t-input
+          label="{{i18n.stockMaterialModelSpec}}"
+          value="{{form.modelSpec}}"
+          placeholder="{{i18n.inputPlaceholder}}"
+          maxlength="255"
+          data-field="modelSpec"
+          bind:change="onFieldChange"
+        />
+        <t-input
+          label="{{i18n.stockMaterialUnit}}"
+          value="{{form.unitName}}"
+          placeholder="{{i18n.inputPlaceholder}}"
+          maxlength="32"
+          data-field="unitName"
+          bind:change="onFieldChange"
+        />
+        <t-textarea
+          label="{{i18n.stockMaterialRemark}}"
+          value="{{form.remark}}"
+          placeholder="{{i18n.stockInboundOptional}}"
+          maxlength="1000"
+          autosize
+          data-field="remark"
+          bind:change="onFieldChange"
+        />
+      </t-cell-group>
+    </view>
+
+    <!-- 图片：最多 9 张，点选后立即上传（提交只带 file id），与隐患登记同一交互。 -->
+    <view class="section-card form-card">
+      <view class="section-heading">
+        <view class="section-title">{{i18n.stockMaterialImages}}</view>
+        <view class="section-extra">{{images.length}}/9</view>
+      </view>
+      <view class="section-divider"></view>
+      <view class="image-grid">
+        <view
+          wx:for="{{images}}"
+          wx:key="id"
+          class="image-cell"
+          data-url="{{item.preview_url}}"
+          bind:tap="previewImage"
+        >
+          <image class="image-thumb" src="{{item.preview_url}}" mode="aspectFill" />
+          <view class="image-remove" data-index="{{index}}" catch:tap="removeImage">
+            <t-icon name="close" size="28rpx" />
+          </view>
+        </view>
+        <view
+          wx:if="{{canWrite && images.length < 9}}"
+          class="image-cell image-add"
+          bind:tap="chooseImage"
+        >
+          <t-icon name="{{uploading ? 'loading' : 'add'}}" size="44rpx" />
+        </view>
+      </view>
+    </view>
+
+    <view class="form-actions">
+      <t-button
+        wx:if="{{isEdit && canWrite}}"
+        class="danger-action"
+        theme="danger"
+        variant="outline"
+        size="large"
+        bind:tap="remove"
+      >{{i18n.delete}}</t-button>
+      <t-button
+        wx:if="{{canWrite}}"
+        class="primary-action"
+        theme="primary"
+        size="large"
+        loading="{{submitting}}"
+        disabled="{{submitting || uploading}}"
+        bind:tap="submit"
+      >{{i18n.save}}</t-button>
+    </view>
+  </block>
+
+  <t-toast id="stock-material-form-toast" />
+</view>
