@@ -4868,7 +4868,7 @@ export interface components {
          * MiniProgramStockMaterialRead
          * @example {
          *       "id": 1,
-         *       "uuid": "uuid-示例",
+         *       "uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
          *       "name": "交流接触器",
          *       "model_spec": "CJX2-2510 AC220V",
          *       "unit_name": "个",
@@ -4901,7 +4901,7 @@ export interface components {
          *       "items": [
          *         {
          *           "id": 1,
-         *           "uuid": "uuid-示例",
+         *           "uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
          *           "name": "交流接触器",
          *           "model_spec": "CJX2-2510 AC220V",
          *           "unit_name": "个",
@@ -4912,7 +4912,7 @@ export interface components {
          *       ],
          *       "page": 1,
          *       "page_size": 20,
-         *       "total": 20
+         *       "total": 1
          *     }
          */
         Page_MiniProgramStockMaterialRead_: {
@@ -4958,7 +4958,7 @@ export interface components {
          * @example {
          *       "operation_id": 3,
          *       "operation_no": "OUT20260706000003",
-         *       "material_uuid": "material_uuid-示例",
+         *       "material_uuid": "4472cf85-d9fc-4ab1-a362-eb7c4f5a18c4",
          *       "material_name": "交流接触器",
          *       "model_spec": "CJX2-2510 AC220V",
          *       "unit_name": "个",
@@ -12600,7 +12600,7 @@ export interface components {
         /**
          * WebOpenTicketCreate
          * @example {
-         *       "path": "path-示例"
+         *       "path": "/warehouse/stock"
          *     }
          */
         WebOpenTicketCreate: {
@@ -12610,7 +12610,7 @@ export interface components {
         /**
          * WebOpenTicketRead
          * @example {
-         *       "ticket": "ticket-示例",
+         *       "ticket": "9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11",
          *       "expires_at": "2026-09-13T10:30:00+08:00",
          *       "url": "https://img.hxni-electrical.com/files/images/01900010-0000-7000-8000-000000000001"
          *     }
@@ -12629,7 +12629,7 @@ export interface components {
         /**
          * WebOpenTicketRedeemRequest
          * @example {
-         *       "ticket": "ticket-示例"
+         *       "ticket": "9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11"
          *     }
          */
         WebOpenTicketRedeemRequest: {
@@ -12646,17 +12646,17 @@ export interface components {
          *         "id": 1,
          *         "username": "warehouse",
          *         "display_name": "孙浩宇",
-         *         "department_name": "department_name-示例",
+         *         "department_name": "电气自动化车间",
          *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
          *         "created_at": "2026-09-13T10:30:00+08:00",
          *         "last_used_at": "2026-09-13T10:30:00+08:00",
          *         "permissions": [
-         *           "permissions_item-示例"
+         *           "warehouse:read"
          *         ],
          *         "version": 1
          *       },
          *       "project_id": 1,
-         *       "path": "path-示例"
+         *       "path": "/warehouse/stock"
          *     }
          */
         WebOpenTicketRedeemRead: {
