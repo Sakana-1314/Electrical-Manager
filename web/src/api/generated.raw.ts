@@ -2562,7 +2562,7 @@ export interface components {
     schemas: {
         /**
          * AdvancedSettingsRead
-         * @description 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；二级库 Pro / Lite 没有运行模式，可见性由权限位决定。
+         * @description 管理端高级设置：小程序注册开关与默认用户权限。模型 / Webhook 走服务端环境变量，图片加速已移除；二级库两套权限。
          * @example {
          *       "mini_program_registration_enabled": true,
          *       "updated_at": "2026-09-13T10:30:00+08:00",
