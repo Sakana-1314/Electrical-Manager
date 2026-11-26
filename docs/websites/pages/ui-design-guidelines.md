@@ -197,6 +197,7 @@
 | 表格尺寸 | 表头 / 内容行的字号、行高、内边距、字重全部走 `--list-table-*` 令牌（表头字号 `--list-table-header-font-size`、行高 `--list-table-header-line-height`，内容行 `--list-table-font-size` / `--list-table-line-height`）；`n-data-table` 与 `n-table` 同一套，页面不再单独写 `:deep(.n-data-table-th/td)` |
 | 行悬停 | 淡蓝背景，不改文字颜色 |
 | 分页 | 卡片底部右侧，带顶部分隔线 |
+| 移动端形态 | ≤768px 时 `PersistentDataTable` 不再渲染宽表，改用 `components/MobileTableCards.vue`：一条记录一张卡，第一列做标题、其余列「标签 + 值」、操作列放卡片底部；与桌面表格共用同一份 `columns` / `data` / `row-key` / `row-props`，页面零改动，桌面端列宽拖动与横向滚动不变（折叠规则见 `utils/mobileCards.ts`） |
 | 操作列 | 行点击进详情时，仍保留明确文字操作或可感知的鼠标状态 |
 | 列宽 | 统一引用 `web/src/constants/table.ts`，见下表 |
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
