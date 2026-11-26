@@ -1,6 +1,6 @@
 // Package importfile 对应原 services/import_file_reader.py：按扩展名统一读取 xlsx/xlsm/xls/csv 为二维单元格值。
 //
-// 物料编码库、物料价格、华星库存与精简二级库共用底层读取器。这里只负责把文件解析成
+// 物料编码库、物料价格、华星库存与二级库 Lite 共用底层读取器。这里只负责把文件解析成
 // [][]any（每行是原始单元格值列表），表头定位、字段校验、日期/数量换算由各 service 负责。
 //
 // 单元格值的 Go 类型与原 openpyxl / xlrd 返回的 Python 类型一一对应，下游按这些类型做解析：

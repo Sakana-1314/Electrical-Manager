@@ -4,7 +4,7 @@
  * 用最小 wx / App / 组件桩加载页面与 filter-panel 组件，验证：
  *  - 页面把筛选面板的 sections / active 组装正确，面板确认后按 key 拼请求参数；
  *  - 面板内部：草稿、选中态、确定回传、胶囊删除、分享值补齐；
- *  - 首页扫码入口按标准二级库读权限渲染，描述随出库写权限变化。
+ *  - 首页扫码入口按二级库 Pro 读权限渲染，描述随出库写权限变化。
  * 只读产物，不发网络请求（request 模块被桩替换）。
  */
 const path = require('path');
@@ -746,7 +746,7 @@ async function run() {
     'scanning without outbound permission must open the material detail page',
   );
 
-  // 只有精简二级库权限：入口仍然展示（扫一扫也用于网页登录），物资码提示无标准二级库权限
+  // 只有二级库 Lite 权限：入口仍然展示（扫一扫也用于网页登录），物资码提示无二级库 Pro 权限
   globalUser.permissions = ['lite:read'];
   const liteHome = loadPage('pages/home/home.js');
   void liteHome.onLoad();
@@ -764,7 +764,7 @@ async function run() {
     'material codes without warehouse read must explain the missing permission',
   );
 
-  // 精简二级库用户同样能用扫一扫确认网页登录
+  // 二级库 Lite 用户同样能用扫一扫确认网页登录
   global.wx.scanCode = ({ success }) =>
     success({ path: 'pages/web-login/web-login?scene=550e8400e29b41d4a716446655440000' });
   await liteHome.startScan();

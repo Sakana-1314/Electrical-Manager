@@ -51,7 +51,7 @@ func TestPermissionCatalogBitsAreUniqueAndCoverAllPermissions(t *testing.T) {
 		t.Fatalf("AllPermissions = %d，目录并集 = %d", AllPermissions, all)
 	}
 	// 位值已经写进生产库（app_user.permissions），改位序会导致存量用户权限错位。
-	// 位 6 已退役（原 codes:read），保留空位；精简二级库使用位 13/14，华星导入使用位 15，全开值为 65471。
+	// 位 6 已退役（原 codes:read），保留空位；二级库 Lite 使用位 13/14，华星导入使用位 15，全开值为 65471。
 	if AllPermissions != 65471 {
 		t.Fatalf("权限位总数变化会破坏已有库的位图语义：AllPermissions = %d", AllPermissions)
 	}

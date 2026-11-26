@@ -395,7 +395,7 @@ func businessTools() []*businessTool {
 			pStr("model_spec", "型号规格", "query", ""),
 		),
 
-		// ---- 华星总库存 / 精简二级库 ----
+		// ---- 华星总库存 / 二级库 Lite ----
 		businessList(
 			"list_huaxing_inventory", "查询华星总库存", "list_huaxing_inventory_api_v1_huaxing_inventory_get",
 			"查询华星（平台）总库存，与网页端「华星总库存」页一致；默认每页 20 条。",
@@ -408,8 +408,8 @@ func businessTools() []*businessTool {
 			pDate("date_to", "入库结束日期", "query", ""),
 		),
 		businessList(
-			"list_lite_inventory", "查询精简二级库", "list_lite_inventory_api_v1_secondary_warehouse_get",
-			"查询精简二级库（Excel 导入的只读库存），与网页端「二级库」页一致；默认每页 20 条。",
+			"list_lite_inventory", "查询二级库 Lite", "list_lite_inventory_api_v1_secondary_warehouse_get",
+			"查询二级库 Lite（Excel 导入的只读库存），与网页端「二级库」页一致；默认每页 20 条。",
 			pStr("name", "物资名称", "query", ""),
 			pStr("model_spec", "型号规格", "query", ""),
 		),

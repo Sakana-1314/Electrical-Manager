@@ -20,7 +20,7 @@ func todayRange(now time.Time) (time.Time, time.Time) {
 	return start, start.Add(24 * time.Hour)
 }
 
-// Summary 对应 dashboard_summary：标准二级库与精简二级库同时计数，
+// Summary 对应 dashboard_summary：二级库 Pro 与二级库 Lite 同时计数，
 // 前端按用户权限位选择展示哪些卡片（两种二级库没有运行模式，可能并存）。
 //
 // 所有计数合并成一条带标量子查询的语句：工作台每次进入都会调用，原来 4~5 次往返各扫一遍，

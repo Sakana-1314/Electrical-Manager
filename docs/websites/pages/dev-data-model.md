@@ -29,8 +29,8 @@ flowchart LR
 | 术语 | 代码标识 | 定义 |
 | --- | --- | --- |
 | 二级库 | `stock_material` | 电气车间自管小库，物资档案不要求物料编码；每条记录有稳定 `uuid`（小程序码扫码用） |
-| 默认用户权限 | `runtime_settings.default_permissions` | 新建用户 / 小程序新注册用户的默认权限位（BIGINT）：在高级设置里勾选，写权限自动带同模块读权限；未配置时默认精简二级库只读 + 申购只读 + 华星总库存只读（8232） |
-| 精简库存表 | `lite_inventory` | 精简二级库的独立库存表（`lite:read` / `lite:write` 权限位）：物资名称/型号规格/单位/数量/备注，全量替换导入，与标准二级库并存、互不依赖 |
+| 默认用户权限 | `runtime_settings.default_permissions` | 新建用户 / 小程序新注册用户的默认权限位（BIGINT）：在高级设置里勾选，写权限自动带同模块读权限；未配置时默认二级库 Lite 只读 + 申购只读 + 华星总库存只读（8232） |
+| Lite 库存表 | `lite_inventory` | 二级库 Lite 的独立库存表（`lite:read` / `lite:write` 权限位）：物资名称/型号规格/单位/数量/备注，全量替换导入，与二级库 Pro 并存、互不依赖 |
 | 库存余额 / 库存流水 | `stock_balance.quantity`；`stock_operation` + `stock_operation_line` | 余额是查询加速数据，每物资一行，唯一合法写入口是流水重放（`service/inventory` 的 `replayMaterials`）；流水是出入库单据与明细，保存操作前后数量快照与物资快照，为审计依据 |
 | 入库 / 出库 | `OperationType.INBOUND` / `OUTBOUND` | 两种流水类型；单号形如 `IN20260717000001` / `OUT...` |
 | 冲销 | `SourceType.REVERSAL` + `reversal_of_id` | 以反向类型的新流水抵消原流水，按行记录 `remaining_qty`（剩余可冲数量），累计冲销不得超过原数量 |
@@ -77,7 +77,7 @@ flowchart LR
     end
     subgraph X["外部导入数量：DECIMAL(18,2)，保留原始精度"]
         X1["华星总库存"]
-        X2["精简库存"]
+        X2["Lite 库存"]
     end
     subgraph D["时间：DATETIME(6)，UTC 语义"]
         D1["默认取当前时间；写入侧统一取 UTC 当前时刻"]
@@ -94,7 +94,7 @@ flowchart TD
     M --> A["id 自增 + 三个审计列<br/>用户、小程序用户、申购计划、计划模板、申购记录与记录行、二级库物资、出入库单据与明细行、备忘录、台账记录与标签"]
     M --> B["id 为 UUID 字符串 + 三个审计列<br/>文件对象"]
     M --> C["id + 创建与更新时间，无乐观锁版本<br/>导入任务、导出任务、分享链接、Webhook 投递"]
-    M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、物料价格、华星总库存、精简库存"]
+    M --> D["id + 创建时间，无更新时间与乐观锁版本<br/>物料编码库、物料价格、华星总库存、Lite 库存"]
     M --> E["无独立 id，主键即业务键<br/>补库策略：主键为物资，含完整审计列<br/>库存余额、系统设置：主键为物资 / 设置键，有更新时间与乐观锁版本"]
     M --> F["无 id、无审计列，主键 = 父级 + 文件<br/>九张图片关联表"]
     M --> G["只有 id 与业务时间<br/>业务事件日志"]
@@ -219,7 +219,7 @@ flowchart TD
 | `stock_operation` | `StockOperation` | 出入库单据头 | 二级库（完整模式） |
 | `stock_operation_line` | `StockOperationLine` | 出入库单据明细行 | 二级库（完整模式） |
 | `stock_material_image` | `StockMaterialImage` | 二级库物资图片关联 | 二级库（完整模式） |
-| `lite_inventory` | `LiteInventory` | 精简二级库库存 | 二级库（精简模式） |
+| `lite_inventory` | `LiteInventory` | 二级库 Lite 库存 | 二级库（精简模式） |
 | `purchase_material` | `PurchaseMaterial` | 申购计划物资行 | 申购 |
 | `purchase_material_image` | `PurchaseMaterialImage` | 申购计划图片关联 | 申购 |
 | `purchase_plan_template` | `PurchasePlanTemplate` | 周期性申购计划模板 | 申购 |
@@ -269,7 +269,7 @@ erDiagram
     file_object ||--o{ stock_material_image : "被图片引用"
 ```
 
-精简库存是独立表，与完整模式的物资、余额、流水没有外键关系。
+Lite 库存是独立表，与完整模式的物资、余额、流水没有外键关系。
 
 ### 申购与采购跟踪
 
@@ -299,7 +299,7 @@ erDiagram
     file_object ||--o{ excel_export_job : "导出结果文件"
 ```
 
-物料编码库、物料价格、华星总库存、精简库存四张表是各自模块的全量替换导入结果，没有外键（物料价格靠 `material_code` 弱关联编码库，不做外键约束）。
+物料编码库、物料价格、华星总库存、Lite 库存四张表是各自模块的全量替换导入结果，没有外键（物料价格靠 `material_code` 弱关联编码库，不做外键约束）。
 
 ### Webhook、事件日志与设置
 
@@ -368,7 +368,7 @@ erDiagram
 | `app_user` | `display_name` | VARCHAR(128) | 否 | 无 | 显示名称 |
 | `app_user` | `department_name` | VARCHAR(128) | 否 | `''` | 部门单位 |
 | `app_user` | `wechat_openid` | VARCHAR(128) | 是 | NULL | 微信 OpenID（任意账号都可绑定；非空时唯一，一个小程序一个 openid） |
-| `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（含标准二级库 warehouse 与精简二级库 lite 两套位，见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
+| `app_user` | `permissions` | BIGINT | 否 | `0` | 权限位图（按位判断）：bit0 系统管理、其余位为各功能读写（含二级库 Pro warehouse 与二级库 Lite lite 两套位，见 `PermissionCatalog`）；写权限自动包含同模块读权限 |
 | `app_user` | `last_used_at` | TIMESTAMP | 是 | NULL | 最近登录时间（网页密码登录与小程序登录均刷新，不自增 version） |
 | `app_user` | *索引 / 外键* | — | — | — | 索引 `pk_app_user(id)`；唯一 `uq_app_user_username(username)`；部分唯一索引 `uq_app_user_api_token_hash(api_token_hash) WHERE api_token_hash <> ''`、`uq_app_user_wechat_openid(wechat_openid) WHERE wechat_openid IS NOT NULL`；外键：无 |
 | `system_setting` | `setting_key` | VARCHAR(64) | 否 | 无 | 设置键，主键 |
@@ -816,7 +816,7 @@ flowchart LR
     W["Webhook 环境变量开关"] --> W1["默认关闭；启用时必须配置地址，事件为空则不推送"]
     P["补库策略开关"] --> P1["默认开启；关闭后不计入低库存判定"]
     M["小程序注册开关"] --> M1["决定能否新绑定；新注册用户直接启用，权限取默认权限位"]
-    L["标准 / 精简二级库权限位"] --> L1["各自独立控制入口与写接口，两种库存可并存"]
+    L["标准 / 二级库 Lite 权限位"] --> L1["各自独立控制入口与写接口，两种库存可并存"]
 ```
 
 ### 凭证加密与回显
@@ -877,12 +877,12 @@ flowchart LR
 | `username` | `display_name` | 权限位（十进制） | `api_token_hash` |
 | --- | --- | --- | --- |
 | `admin` | 系统管理员 | 65471（系统管理 + 全部功能读写） | `sha256(gen_random_uuid())` |
-| `warehouse` | 仓库管理员 | 57382（标准 / 精简二级库读写 + 华星总库存查看与导入） | `sha256(gen_random_uuid())` |
+| `warehouse` | 仓库管理员 | 57382（标准 / 二级库 Lite 读写 + 华星总库存查看与导入） | `sha256(gen_random_uuid())` |
 | `purchase` | 申购管理员 | 24（申购读写） | `sha256(gen_random_uuid())` |
 | `hazard` | 隐患管理员 | 1536（隐患读写） | `sha256(gen_random_uuid())` |
 | `ledger` | 台账管理员 | 384（台账读写） | `sha256(gen_random_uuid())` |
 | `work` | 工作管理员 | 6144（工单读写） | `sha256(gen_random_uuid())` |
-| `readonly` | 只读用户 | 10922（各功能只读，含标准二级库查看） | `sha256(gen_random_uuid())` |
+| `readonly` | 只读用户 | 10922（各功能只读，含二级库 Pro 查看） | `sha256(gen_random_uuid())` |
 
 七个接口令牌由 `gen_random_uuid()` 生成，经 `sha256(...)` 计算后写入 `api_token_hash`；`api_token_enc` 未在种子语句中赋值，取默认空串，首次用令牌通过认证后被加密回写（`server/internal/auth` 的 `FindUserByAPIToken`）。除 `project`、`hazard_type` 与 `app_user` 三表外，其余 37 张表当前不含种子数据（含责任单位字典表），由运行期接口或导入任务写入。
 

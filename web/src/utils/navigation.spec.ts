@@ -35,7 +35,7 @@ describe('主 tab 可见性（utils/navigation）', () => {
     expect(keys).not.toContain('work')
   })
 
-  it('只有精简二级库权限时落到精简二级库 tab', () => {
+  it('只有二级库 Lite 权限时落到二级库 Lite tab', () => {
     expect(visibleNavFeatureKeys(can(['lite:read']))).toEqual([
       'dashboard',
       'memos',
