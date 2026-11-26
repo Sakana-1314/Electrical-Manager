@@ -2,13 +2,17 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { NDataTable } from 'naive-ui'
 import type { DataTableBaseColumn, DataTableColumns, DataTableRowData } from 'naive-ui'
+import { useMediaQuery } from '@vueuse/core'
+import MobileTableCards from '@/components/MobileTableCards.vue'
 
 /**
  * 可拖动列宽的数据表格：在 Naive DataTable 外包一层，按页面记住用户拖过的列宽。
  *
  * - 每列自动加 `resizable: true`（有宽度的列），拖动表头分隔线即可调整；
  * - 调整结果按 `storageKey` 写入 localStorage，刷新 / 切页返回仍生效；
- * - 横向滚动宽度按当前列宽实时求和，拖宽后不会被旧的 scroll-x 截断。
+ * - 横向滚动宽度按当前列宽实时求和，拖宽后不会被旧的 scroll-x 截断；
+ * - **移动端（≤768px）改渲染成「一条记录一张卡」**：第一列做标题、其余列做「标签 + 值」、
+ *   操作列放卡片底部；桌面端仍是宽表格，两种排版共用同一份 columns / data。
  *
  * 页面替换 `<n-data-table>` 为 `<PersistentDataTable storage-key="模块/页面">` 即可，其它 props 原样透传。
  */
@@ -83,6 +87,18 @@ const scrollX = computed(() =>
   resolvedColumns.value.reduce((total, column) => total + columnWidth(column), 0),
 )
 
+/** 移动端（与布局抽屉同一断点）：宽表切成卡片，避免横向拖表。 */
+const isMobile = useMediaQuery('(max-width: 768px)')
+const rows = computed(() => (props as unknown as { data?: DataTableRowData[] }).data ?? [])
+const rowKey = computed(
+  () => (props as unknown as { rowKey?: (row: DataTableRowData) => string | number }).rowKey,
+)
+const rowProps = computed(
+  () =>
+    (props as unknown as { rowProps?: (row: DataTableRowData) => Record<string, unknown> })
+      .rowProps,
+)
+
 /** 拖动中的宽度先攒着：每帧都重算列 / 写 localStorage 会卡，停手后再落一次。 */
 const pendingWidths = new Map<string, number>()
 let persistTimer: ReturnType<typeof setTimeout> | undefined
@@ -122,7 +138,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <MobileTableCards
+    v-if="isMobile"
+    :columns="resolvedColumns"
+    :data="rows"
+    :row-key="rowKey"
+    :row-props="rowProps"
+  />
   <n-data-table
+    v-else
     v-bind="$attrs"
     table-layout="fixed"
     :columns="resolvedColumns"

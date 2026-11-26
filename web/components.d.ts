@@ -23,6 +23,7 @@ declare module 'vue' {
     LoadingMask: typeof import('./src/components/LoadingMask.vue')['default']
     MaterialCodeSelector: typeof import('./src/components/MaterialCodeSelector.vue')['default']
     MaterialSelector: typeof import('./src/components/MaterialSelector.vue')['default']
+    MobileTableCards: typeof import('./src/components/MobileTableCards.vue')['default']
     NAlert: typeof import('naive-ui')['NAlert']
     NButton: typeof import('naive-ui')['NButton']
     NCard: typeof import('naive-ui')['NCard']

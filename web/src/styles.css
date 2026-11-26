@@ -430,6 +430,83 @@ a {
 .data-card:has(.n-data-table) > .n-card-content {
   padding: 0;
 }
+/* ============ 移动端表格 → 卡片 ============
+ * ≤768px 时 PersistentDataTable 不再渲染宽表，而是把同一份列定义 / 行数据折成一张张卡片
+ * （第一列做标题、其余列「标签 + 值」、操作列放卡片底部），桌面端表格与列宽拖动不受影响。
+ * 这里是卡片自身的排版，不修改任何 .n-data-table 规则。 */
+.mobile-table-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px var(--list-pagination-padding-x) 12px;
+}
+
+.mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.mobile-card-title {
+  color: var(--color-text-strong);
+  font-size: var(--list-card-title-size);
+  font-weight: var(--heading-weight);
+  line-height: var(--list-card-title-line-height);
+}
+
+/* 字段区：标签列固定宽度，值右对齐并允许换行，长文本不会把卡片撑出屏幕。 */
+.mobile-card-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-card-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--list-body-size);
+  line-height: var(--list-body-line-height);
+}
+
+.mobile-card-label {
+  flex: none;
+  width: 76px;
+  color: var(--color-text-muted);
+  font-size: var(--list-caption-size);
+  line-height: var(--list-body-line-height);
+}
+
+.mobile-card-value {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.mobile-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.mobile-card-action {
+  display: inline-flex;
+}
+
+.mobile-card-empty {
+  padding: var(--list-empty-padding);
+  color: var(--color-text-muted);
+  font-size: var(--list-body-size);
+  text-align: center;
+}
+
 .data-card:has(.n-data-table) .pagination-bar {
   padding-right: var(--list-pagination-padding-x);
   padding-bottom: var(--list-pagination-padding-bottom);
