@@ -1,0 +1,13 @@
+<app-navbar title="{{i18n.webViewTitle}}" />
+<view class="page-shell web-view-page">
+  <web-view wx:if="{{url && !failed}}" src="{{url}}" bind:error="onError"></web-view>
+
+  <view wx:else class="state-panel failed-panel">
+    <t-empty icon="error-circle" description="{{i18n.webOpenFailed}}" />
+    <t-button theme="primary" variant="outline" size="small" bind:tap="goBack">
+      {{i18n.backToTop}}
+    </t-button>
+  </view>
+
+  <t-toast id="web-view-toast" />
+</view>

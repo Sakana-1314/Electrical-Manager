@@ -394,6 +394,113 @@ paths:
       security:
       - HTTPBearer: []
       - APIKeyHeader: []
+  /api/v1/auth/web-open/tickets:
+    post:
+      tags:
+      - 认证
+      summary: 换取进入网页版的一次性票据
+      description: 小程序用登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
+      operationId: create_web_open_ticket_api_v1_auth_web_open_tickets_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebOpenTicketCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebOpenTicketRead'
+              example:
+                ticket: 9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11
+                expires_at: '2026-09-12T10:32:00+00:00'
+                url: https://electrical.example.com/web-open?ticket=9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11&path=/
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/auth/web-open/redeem:
+    post:
+      tags:
+      - 认证
+      summary: 用票据换取网页登录令牌
+      description: 网页 /web-open 页用小程序给的票据换回登录令牌（一次性，兑换后票据立即失效）。
+      operationId: redeem_web_open_ticket_api_v1_auth_web_open_redeem_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebOpenTicketRedeemRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebOpenTicketRedeemRead'
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access
+                refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh
+                token_type: bearer
+                user:
+                  id: 1
+                  username: admin
+                  display_name: 管理员
+                  department_name: 电气自动化车间
+                  permissions:
+                  - system:admin
+                  wechat_openid: null
+                  created_at: '2026-01-02T03:04:05+00:00'
+                  last_used_at: '2026-09-12T02:30:00+00:00'
+                  version: 1
+                project_id: 1
+                path: /
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/auth/qr-sessions:
     post:
       tags:
@@ -34962,6 +35069,100 @@ components:
         - warehouse:write
         - lite:read
         - lite:write
+    WebOpenTicketCreate:
+      properties:
+        path:
+          type: string
+          maxLength: 255
+          title: Path
+      additionalProperties: false
+      type: object
+      title: WebOpenTicketCreate
+      examples:
+      - path: path-示例
+    WebOpenTicketRead:
+      properties:
+        ticket:
+          type: string
+          title: Ticket
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        url:
+          type: string
+          title: Url
+      additionalProperties: false
+      type: object
+      required:
+      - ticket
+      - expires_at
+      - url
+      title: WebOpenTicketRead
+      examples:
+      - ticket: ticket-示例
+        expires_at: '2026-09-13T10:30:00+08:00'
+        url: https://img.hxni-electrical.com/files/images/01900010-0000-7000-8000-000000000001
+    WebOpenTicketRedeemRequest:
+      properties:
+        ticket:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Ticket
+      additionalProperties: false
+      type: object
+      required:
+      - ticket
+      title: WebOpenTicketRedeemRequest
+      examples:
+      - ticket: ticket-示例
+    WebOpenTicketRedeemRead:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+        refresh_token:
+          type: string
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+        user:
+          $ref: '#/components/schemas/UserRead'
+        project_id:
+          type: integer
+          title: Project Id
+        path:
+          type: string
+          title: Path
+      additionalProperties: false
+      type: object
+      required:
+      - access_token
+      - refresh_token
+      - token_type
+      - user
+      - project_id
+      - path
+      title: WebOpenTicketRedeemRead
+      examples:
+      - access_token: 0198f3a7-2c00-7000-8000-000000000001
+        refresh_token: 0198f3a7-2c00-7000-8000-000000000001
+        token_type: bearer
+        user:
+          id: 1
+          username: warehouse
+          display_name: 孙浩宇
+          department_name: department_name-示例
+          wechat_openid: oHXNI-9f3c1d2a8b7e4f5c
+          created_at: '2026-09-13T10:30:00+08:00'
+          last_used_at: '2026-09-13T10:30:00+08:00'
+          permissions:
+          - permissions_item-示例
+          version: 1
+        project_id: 1
+        path: path-示例
     UserRead:
       properties:
         id:

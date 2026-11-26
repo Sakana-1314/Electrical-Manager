@@ -96,6 +96,7 @@ web/src/
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
+| `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：用一次性票据（`/auth/web-open/redeem`，2 分钟、只能兑换一次）换回登录令牌并写入本地会话与当前项目，跳到落地路由；无效时给出「用账号密码登录」兜底 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部很矮导航条（页面名）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 二级库 Lite / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位，标准 / 二级库 Lite 可同时出现）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
@@ -248,7 +249,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 34 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 35 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -265,6 +266,7 @@ web/src/
 | `RouteProgress.vue` | 路由切换顶部进度条（无渲染输出，须放在 `n-loading-bar-provider` 内）：导航开始启动、结束收起、代码块加载失败标红；同路由只改 query 不触发 | 无 props / emits |
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
+| `MobileTableCards.vue` | 移动端「表格 → 卡片」渲染（≤768px 时由 `PersistentDataTable` 挂载）：第一列做标题、其余列「标签 + 值」、操作列放卡片底部，与桌面表格共用 columns / data / row-key / row-props | props：`columns`、`data`、`rowKey?`、`rowProps?` |
 | `PermissionMatrix.vue` | 权限位勾选矩阵（用户编辑弹窗与高级设置「默认用户权限」共用）：按模块分卡，权限做成「查看 / 读写 / 导入 / 可管理」胶囊；勾写自动带查看、取消查看同时取消写，支持模块级与全局全选 | props：`options: PermissionRead[]`、`modelValue: string[]`；emit：`update:modelValue` |
 | `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
 | `PinyinSelect.vue` | 带拼音筛选的 `n-select` 包装：`filterable` 时除原有文本匹配外，输入全拼（`luoshuan`）或首字母（`ls`）也能命中；其余 props / events / 插槽原样透传（远程搜索的下拉不套用） | props：`filter?: SelectFilter \| null`（调用方过滤先执行）；其它走 `$attrs` |
@@ -317,6 +319,8 @@ web/src/
 | `pinyinFilter.ts` | 下拉框拼音筛选：把选项文本转成「原文 + 全拼 + 首字母」索引并缓存（上限 5000 条）；`pinyinSelectFilter`、`pinyinTreeSelectFilter` 供 `PinyinSelect` / `PinyinTreeSelect` 使用，原文包含匹配保持不变 |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
 | `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（9 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；二级库 Pro 与二级库 Lite 是两个独立一级项；系统管理不参与）、`visibleNavFeatureKeys(can)`、`resolveLandingRouteName(can)`（落地页推导） |
+| `mobileCards.ts` | 移动端表格折叠逻辑：`buildMobileCards(columns, rows, rowKey?)` 把列定义与行数据折成「标题 + 字段 + 操作」卡片（选择列 / 展开列 / 无标题列跳过，空值显示 `—`，标题含「操作」的列进底部操作区） |
+| `userscriptHandoff.ts` | 油猴脚本的「弹窗登录 → 授权 → 回传登录态」协议：`handoffRequest(query)` 校验`?userscript=1` 的纯 origin 是否在白名单与 `window.opener` 存在，`deliverSession(request, session, apiBase)` 按 targetOrigin 把登录令牌与用户权限 `postMessage` 回发起窗口（消息类型 `hxni-userscript-session`，带脚本生成的 nonce） |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |

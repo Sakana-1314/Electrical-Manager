@@ -1,0 +1,13 @@
+/* web-view 自带原生容器，页面只保留错误态排版。 */
+.web-view-page {
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.failed-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24rpx;
+  padding: 120rpx 32rpx;
+}

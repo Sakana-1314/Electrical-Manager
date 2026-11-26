@@ -43,6 +43,13 @@ const router = createRouter({
       meta: { public: true, title: '登录' },
     },
     {
+      // 小程序「进入网页版」：用一次性票据换登录令牌，公开路由（不参与登录态与权限拦截）。
+      path: '/web-open',
+      name: 'web-open',
+      component: () => import('@/views/WebOpenView.vue'),
+      meta: { public: true, title: '正在进入' },
+    },
+    {
       path: '/',
       component: () => import('@/layouts/AppLayout.vue'),
       redirect: () => landingRoute(),
