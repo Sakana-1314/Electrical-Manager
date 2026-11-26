@@ -106,7 +106,7 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      // 精简二级库是独立权限位：只有 lite:read、没有 warehouse:read 的用户走精简数据源
+      // 二级库 Lite 是独立权限位：只有 lite:read、没有 warehouse:read 的用户走精简数据源
       //（独立表 + 只读，只按关键字搜索，展示最近导入时间）。
       const liteMode = inventoryUseLiteFlag();
 
@@ -203,7 +203,7 @@ Page({
     void this.loadInventory(true);
   },
 
-  /** 精简版二级库来自 Excel 导入：读取最近一次成功导入时间，非关键信息，失败静默。 */
+  /** 二级库 Lite 来自 Excel 导入：读取最近一次成功导入时间，非关键信息，失败静默。 */
   async loadLastImport() {
     try {
       const result = await request({ url: '/mini-program/lite-inventory/last-import' });

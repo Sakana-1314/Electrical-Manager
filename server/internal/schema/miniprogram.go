@@ -245,7 +245,7 @@ type MiniProgramPurchaseRecordFilterOptions struct {
 	PurchaseResponsibles []string `json:"purchase_responsibles"`
 }
 
-// ---------------- 编码库 / 华星库存 / 精简库存 / 台账 ----------------
+// ---------------- 编码库 / 华星库存 / Lite 库存 / 台账 ----------------
 
 // MiniProgramMaterialCodeRead 是小程序物料编码行（不含单价）。
 type MiniProgramMaterialCodeRead struct {
@@ -271,7 +271,7 @@ type MiniProgramHuaXingInventoryRead struct {
 	SubitemNoName      *string        `json:"subitem_no_name"`
 }
 
-// MiniProgramLiteInventoryItemRead 是小程序端精简二级库行（无出入库，仅查看）。
+// MiniProgramLiteInventoryItemRead 是小程序端二级库 Lite 行（无出入库，仅查看）。
 type MiniProgramLiteInventoryItemRead struct {
 	ID        int64          `json:"id"`
 	Name      string         `json:"name"`

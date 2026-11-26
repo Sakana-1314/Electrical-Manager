@@ -54,7 +54,7 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
     {
       key: 'warehouse',
       build: () => ({
-        label: '二级库',
+        label: '二级库 Pro',
         key: 'warehouse-group',
         icon: renderIcon(FileTrayStackedOutline),
         children: [
@@ -68,9 +68,9 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
       }),
     },
     {
-      // 精简二级库：独立权限位（lite:read），Excel 导入 + 只读查询，与标准二级库互不依赖。
+      // 二级库 Lite：独立权限位（lite:read），Excel 导入 + 只读查询，与二级库 Pro 互不依赖。
       key: 'warehouse_lite',
-      build: () => link('二级库', 'warehouse-lite', FileTrayStackedOutline),
+      build: () => link('二级库 Lite', 'warehouse-lite', FileTrayStackedOutline),
     },
     {
       key: 'huaxing_inventory',

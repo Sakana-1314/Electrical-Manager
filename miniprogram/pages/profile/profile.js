@@ -24,7 +24,7 @@ Page({
     loading: true,
     failed: false,
     user: null,
-    // 没有标准二级库读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
+    // 没有二级库 Pro 读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
     recordsVisible: false,
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
     // 切换项目走 t-picker 滚轮选择器（打开时定位到当前项目，确认后才切换）。

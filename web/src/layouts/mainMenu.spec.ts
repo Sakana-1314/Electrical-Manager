@@ -80,7 +80,7 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
     expect(topKeys(options)).not.toContain('settings-group')
   })
 
-  it('精简二级库是独立一级项：持有 lite:read 才渲染，标准二级库始终是分组', () => {
+  it('二级库 Lite 是独立一级项：持有 lite:read 才渲染，二级库 Pro 始终是分组', () => {
     expect(topKeys(buildMainMenu(context()))).toContain('warehouse-lite')
     expect(
       topKeys(buildMainMenu(context({ can: (permission) => permission !== 'lite:read' }))),

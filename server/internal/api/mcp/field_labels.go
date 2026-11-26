@@ -245,7 +245,7 @@ var defaultFieldLabels = map[string]string{
 	"after_qty":              "操作后数量",
 	"remaining_qty":          "剩余数量",
 	"reason":                 "原因",
-	// 物料编码库 / 华星总库存 / 精简二级库
+	// 物料编码库 / 华星总库存 / 二级库 Lite
 	"first_inbound_date":  "首次入库日期",
 	"warehouse":           "仓库",
 	"purchaser":           "申购人",
@@ -345,7 +345,7 @@ var defaultFieldLabels = map[string]string{
 	"finished_at":                       "完成时间",
 	// 工作台
 	"stock_material_count":            "库存物资",
-	"lite_inventory_count":            "精简库存",
+	"lite_inventory_count":            "Lite 库存",
 	"low_stock_count":                 "低库存",
 	"uncoded_purchase_material_count": "未编码物资",
 	"purchase_record_count":           "申购记录",

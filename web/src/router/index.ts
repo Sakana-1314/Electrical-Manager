@@ -63,7 +63,7 @@ const router = createRouter({
           path: 'warehouse/materials',
           name: 'stock-materials',
           component: () => import('@/views/warehouse/StockMaterialsView.vue'),
-          meta: { title: '物资档案', parent: '二级库', permission: 'warehouse:read' },
+          meta: { title: '物资档案', parent: '二级库 Pro', permission: 'warehouse:read' },
         },
         {
           // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开
@@ -78,20 +78,20 @@ const router = createRouter({
           name: 'inbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'INBOUND' },
-          meta: { title: '入库', parent: '二级库', permission: 'warehouse:write' },
+          meta: { title: '入库', parent: '二级库 Pro', permission: 'warehouse:write' },
         },
         {
           path: 'warehouse/outbound',
           name: 'outbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'OUTBOUND' },
-          meta: { title: '出库', parent: '二级库', permission: 'warehouse:write' },
+          meta: { title: '出库', parent: '二级库 Pro', permission: 'warehouse:write' },
         },
         {
           path: 'warehouse/stock',
           name: 'stock',
           component: () => import('@/views/warehouse/StockView.vue'),
-          meta: { title: '库存查询', parent: '二级库', permission: 'warehouse:read' },
+          meta: { title: '库存查询', parent: '二级库 Pro', permission: 'warehouse:read' },
         },
         {
           path: 'warehouse/hua-xing-stock',
@@ -100,17 +100,17 @@ const router = createRouter({
           meta: { title: '华星总库存' },
         },
         {
-          // 精简二级库（lite_inventory）：独立权限位，Excel 导入 + 只读查询
+          // 二级库 Lite（lite_inventory）：独立权限位，Excel 导入 + 只读查询
           path: 'warehouse/lite',
           name: 'warehouse-lite',
           component: () => import('@/views/warehouse/SecondaryWarehouseLiteView.vue'),
-          meta: { title: '二级库', permission: 'lite:read' },
+          meta: { title: '二级库 Lite', permission: 'lite:read' },
         },
         {
           path: 'warehouse/operations',
           name: 'operations',
           component: () => import('@/views/warehouse/OperationsView.vue'),
-          meta: { title: '操作记录', parent: '二级库', permission: 'warehouse:read' },
+          meta: { title: '操作记录', parent: '二级库 Pro', permission: 'warehouse:read' },
         },
         {
           // 旧详情链接兼容：详情已改为列表页弹窗，这里带 ?detail=<id> 回列表自动打开

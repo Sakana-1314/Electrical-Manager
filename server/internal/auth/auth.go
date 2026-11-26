@@ -220,7 +220,7 @@ var (
 	SystemAdmin     = RequirePermission(domain.PermSystemAdmin)
 	WarehouseReader = RequirePermission(domain.PermWarehouseRead)
 	WarehouseWriter = RequirePermission(domain.PermWarehouseWrite)
-	// LiteReader / LiteWriter 精简二级库（lite_inventory）读取与导入：与标准二级库是两套独立权限位。
+	// LiteReader / LiteWriter 二级库 Lite（lite_inventory）读取与导入：与二级库 Pro 是两套独立权限位。
 	LiteReader     = RequirePermission(domain.PermLiteRead)
 	LiteWriter     = RequirePermission(domain.PermLiteWrite)
 	PurchaseReader = RequirePermission(domain.PermPurchaseRead)

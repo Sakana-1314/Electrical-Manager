@@ -126,7 +126,7 @@ const dictionaries = {
     scanDescriptionView: '识别物资查看库存详情',
     scanDescriptionGeneric: '识别物资或网页登录二维码',
     scanUnrecognized: '未识别的二维码，请扫描物资码或网页登录码',
-    scanNoWarehousePermission: '无标准二级库权限，无法查看该物资',
+    scanNoWarehousePermission: '无二级库 Pro 权限，无法查看该物资',
     featureEntries: '功能入口',
     personalInfo: '个人信息',
     name: '姓名',
