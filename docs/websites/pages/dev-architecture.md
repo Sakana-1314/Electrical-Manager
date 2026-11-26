@@ -248,7 +248,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 33 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 34 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
@@ -265,6 +265,7 @@ web/src/
 | `RouteProgress.vue` | 路由切换顶部进度条（无渲染输出，须放在 `n-loading-bar-provider` 内）：导航开始启动、结束收起、代码块加载失败标红；同路由只改 query 不触发 | 无 props / emits |
 | `OperationLinesEditor.vue` | 出入库行编辑器（选物资 + 数量，出库多一列领用信息） | props：`lines: OperationLineModel[]`、`type: 'INBOUND' \| 'OUTBOUND'`、`disabled?`；emit：`update:lines` |
 | `StockMaterialFormModal.vue` | 二级库物资详情 / 新建 / 编辑弹窗（当前库存与建议申购数量只读、补库策略、出库小程序码预览与下载、删除；无写权限时只读） | props：`show: boolean`、`materialId?: number \| null`（默认 null，null 为新建）；emits：`update:show`、`saved` |
+| `PermissionMatrix.vue` | 权限位勾选矩阵（用户编辑弹窗与高级设置「默认用户权限」共用）：按模块分卡，权限做成「查看 / 读写 / 导入 / 可管理」胶囊；勾写自动带查看、取消查看同时取消写，支持模块级与全局全选 | props：`options: PermissionRead[]`、`modelValue: string[]`；emit：`update:modelValue` |
 | `PersistentDataTable.vue` | 可拖动列宽的数据表格包装：按页面 `storage-key` 把列宽写入 localStorage（`table-column-widths:v1:*`），刷新后恢复；`scroll-x` 按当前列宽实时求和 | props：`columns`（原样透传）、`storageKey: string`；其它 DataTable props / events 走 `$attrs` |
 | `PinyinSelect.vue` | 带拼音筛选的 `n-select` 包装：`filterable` 时除原有文本匹配外，输入全拼（`luoshuan`）或首字母（`ls`）也能命中；其余 props / events / 插槽原样透传（远程搜索的下拉不套用） | props：`filter?: SelectFilter \| null`（调用方过滤先执行）；其它走 `$attrs` |
 | `PinyinTreeSelect.vue` | 带拼音筛选的 `n-tree-select` 包装，规则与 `PinyinSelect` 相同 | props：`filter?: (pattern, option) => boolean \| null`；其它走 `$attrs` |
