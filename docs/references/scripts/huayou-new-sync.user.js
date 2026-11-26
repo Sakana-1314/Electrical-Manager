@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      3.8.1
-// @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。
+// @version      4.0.0
+// @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。登录态通过网页弹窗授权获取，无需手工粘贴令牌。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
@@ -23,7 +23,14 @@
 
   const PLATFORM_ORIGIN = "http://43.154.152.157:8080";
   const PLATFORM_BASE = `${PLATFORM_ORIGIN}/webroot/decision`;
-  const MATERIALS_API = "https://materials-manager.qcloud.19890605.xyz/api/v1";
+  // 网页端站点（授权弹窗与后续接口都用它）：登录态通过「网页弹窗授权」交接，
+  // 不再让用户手工粘贴接口令牌；`config.webUrl` 改了这里就跟着用新的。
+  const DEFAULT_WEB_URL = "https://materials-manager.qcloud.19890605.xyz";
+  // 与网页端 src/utils/userscriptHandoff.ts 的约定一致：弹窗登录完成后把登录态 postMessage 回来。
+  const AUTH_MESSAGE = "hxni-userscript-session";
+  const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
+  const AUTH_WINDOW_WIDTH = 460;
+  const AUTH_WINDOW_HEIGHT = 760;
   // 同步字段白名单：按后端支持能力动态拼装（见 activeSyncFields）。
   // 集港日期 / 集港港口是单据级字段，后端白名单早于本脚本支持，故直接放进基础字段。
   const BASE_SYNC_FIELDS =
@@ -82,7 +89,11 @@
   const defaults = {
     platformUsername: "huaxing_jianxiu",
     platformPassword: "",
-    apiToken: "",
+    // 网页端地址（授权弹窗与业务接口的 origin）；留空用 DEFAULT_WEB_URL。
+    webUrl: "",
+    // 网页弹窗授权拿到的会话（JWT）：只存脚本管理器私有存储，不写页面 localStorage。
+    sessionToken: "",
+    sessionUsername: "",
     // 当前项目 id（0 = 未选择）：后端按项目隔离数据，业务接口都要带 X-Project-Id。
     projectId: 0,
     intervalMinutes: 10,
@@ -725,6 +736,18 @@
   const logs = [];
   let stats = { scanned: 0, found: 0, updated: 0, skipped: 0, failed: 0 };
 
+  /** 业务接口的 origin：跟随网页端地址，换域后不用改代码。 */
+  const webOrigin = () => {
+    const raw = clean(config.webUrl) || DEFAULT_WEB_URL;
+    try {
+      return new URL(raw).origin;
+    } catch (_error) {
+      return DEFAULT_WEB_URL;
+    }
+  };
+  const apiBase = () => `${webOrigin()}/api/v1`;
+  /** 已登录授权：拿到 JWT 才算就绪。 */
+  const hasSession = () => Boolean(clean(config.sessionToken));
   const apiRequest = async (options) => {
     let result;
     try {
@@ -732,7 +755,7 @@
         ...options,
         headers: {
           "Content-Type": "application/json",
-          "X-API-Token": config.apiToken,
+          Authorization: `Bearer ${config.sessionToken}`,
           // 业务接口一律带当前项目（项目隔离）；未选择项目时不带，由后端返回 PROJECT_REQUIRED。
           ...(Number(config.projectId) > 0
             ? { "X-Project-Id": String(config.projectId) }
@@ -748,6 +771,108 @@
     }
     return result;
   };
+  // —— 网页弹窗授权（替代手工粘贴接口令牌）——
+  // 打开本系统登录页（带 userscript=1 / origin / nonce），用户在弹窗里正常登录（可扫码），
+  // 点「授权」后网页把登录态 postMessage 回来；这里只认刚打开的那个窗口 + 同一个 origin + nonce。
+  const randomNonce = () =>
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
+  const buildAuthUrl = (nonce) => {
+    const origin = webOrigin();
+    const params = new URLSearchParams({
+      userscript: "1",
+      origin: window.location.origin,
+      nonce,
+    });
+    return `${origin}/login?${params.toString()}`;
+  };
+  const rememberSession = (session) => {
+    saveField("sessionToken", clean(session?.token));
+    saveField(
+      "sessionUsername",
+      clean(session?.user?.display_name || session?.user?.username),
+    );
+  };
+  const renderAuthState = () => {
+    if (!ui?.authState) return;
+    const name = clean(config.sessionUsername);
+    ui.authState.textContent = hasSession()
+      ? name
+        ? `已授权：${name}`
+        : "已授权"
+      : "未授权";
+    ui.authState.dataset.kind = hasSession() ? "success" : "idle";
+  };
+  let pendingAuth = null;
+  /**
+   * 打开授权弹窗并等待回传。必须在用户点击的同步调用栈里调用（否则被浏览器拦截弹窗）。
+   * 成功后写入 sessionToken 并刷新项目列表；失败把原因抛给调用方。
+   */
+  const openWebAuth = () => {
+    if (pendingAuth) return pendingAuth;
+    const nonce = randomNonce();
+    let popup = null;
+    try {
+      popup = window.open(
+        buildAuthUrl(nonce),
+        // 名字带 nonce：保证每次都是新窗口，不会复用没有 opener 的旧同名窗口。
+        `hxni-userscript-auth-${nonce.slice(0, 8)}`,
+        `popup=yes,width=${AUTH_WINDOW_WIDTH},height=${AUTH_WINDOW_HEIGHT}`,
+      );
+    } catch (_error) {
+      popup = null;
+    }
+    if (!popup) {
+      return Promise.reject(new Error("浏览器拦截了授权弹窗：请允许本站弹窗后重试"));
+    }
+    const origin = webOrigin();
+    const state = { popup, settled: false };
+    state.promise = new Promise((resolve, reject) => {
+      const finish = (ok, value) => {
+        if (state.settled) return;
+        state.settled = true;
+        window.clearTimeout(state.timer);
+        window.clearInterval(state.watch);
+        window.removeEventListener("message", onMessage, false);
+        if (pendingAuth === state) pendingAuth = null;
+        try {
+          if (!popup.closed) popup.close();
+        } catch (_error) {
+          /* 关窗失败不影响结果 */
+        }
+        if (ok) resolve(value);
+        else reject(value);
+      };
+      const onMessage = (event) => {
+        if (state.settled) return;
+        if (event.origin !== origin) return;
+        // 个别浏览器下 event.source 可能为空；非空时必须就是刚打开的那个窗口。
+        if (event.source && event.source !== popup) return;
+        const data = event.data;
+        if (!data || data.type !== AUTH_MESSAGE) return;
+        if (String(data.nonce || "") !== nonce) return;
+        const session = data.session || {};
+        if (!session.token) {
+          finish(false, new Error("网页没有下发登录态，请重试"));
+          return;
+        }
+        rememberSession(session);
+        renderAuthState();
+        finish(true, session);
+      };
+      window.addEventListener("message", onMessage, false);
+      state.timer = setTimeout(
+        () => finish(false, new Error("等待网页授权超时，请重试")),
+        AUTH_TIMEOUT_MS,
+      );
+      state.watch = setInterval(() => {
+        if (popup.closed) finish(false, new Error("已取消网页授权"));
+      }, 500);
+    });
+    pendingAuth = state;
+    return state.promise;
+  };
   // —— 项目（多项目隔离）——
   // 项目列表接口本身不带 X-Project-Id；业务接口通过 apiRequest 统一带上。
   let projects = [];
@@ -760,13 +885,13 @@
   const activeProject = () =>
     projects.find((item) => Number(item.id) === Number(config.projectId)) || null;
   const fetchProjects = async () => {
-    if (!config.apiToken) return projects;
+    if (!hasSession()) return projects;
     const payload = await json({
       method: "GET",
-      url: `${MATERIALS_API}/projects`,
+      url: `${apiBase()}/projects`,
       headers: {
         "Content-Type": "application/json",
-        "X-API-Token": config.apiToken,
+        Authorization: `Bearer ${config.sessionToken}`,
       },
     });
     if (!Array.isArray(payload)) throw new Error("项目列表接口返回的不是数组");
@@ -776,7 +901,7 @@
   // 解析本次同步使用的项目：已保存的项目仍启用则沿用；否则回退到系统默认项目，
   // 再退到第一个启用项目，并把结果写回本地存储（与网页端右上角项目切换器一致）。
   const resolveProject = async () => {
-    if (!config.apiToken) return null;
+    if (!hasSession()) return null;
     if (!projects.length) await fetchProjects();
     const enabled = enabledProjects();
     const picked =
@@ -804,9 +929,9 @@
       option.value = "0";
       option.textContent = projects.length
         ? "（无已启用项目）"
-        : config.apiToken
+        : hasSession()
           ? "（项目未加载）"
-          : "（请先填写接口令牌）";
+          : "（请先点「网页授权登录」）";
       options.push(option);
     }
     const values = options.map((option) => option.value);
@@ -818,7 +943,7 @@
   };
   // 面板打开 / 保存设置后重新拉取项目列表并刷新下拉框；失败只提示，不影响其余功能。
   const refreshProjects = async () => {
-    if (config.apiToken) {
+    if (hasSession()) {
       try {
         await fetchProjects();
         await resolveProject();
@@ -844,7 +969,7 @@
     const cursor = readCursor();
     const minPo = clean(config.minPurchaseOrderNo);
     const targetsUrl = (fieldList) => {
-      const base = `${MATERIALS_API}/purchase-record-sync/order-targets?limit=${limit}&cursor=${cursor}&fields=${encodeURIComponent(fieldList)}`;
+      const base = `${apiBase()}/purchase-record-sync/order-targets?limit=${limit}&cursor=${cursor}&fields=${encodeURIComponent(fieldList)}`;
       return minPo ? `${base}&min_purchase_order_no=${encodeURIComponent(minPo)}` : base;
     };
     // 服务端尚未更新（不认识采购单价 / 合同签订日期）时逐个去掉新字段重试：
@@ -897,7 +1022,7 @@
       const payload = requireShape(
         await apiRequest({
           method: "POST",
-          url: `${MATERIALS_API}/purchase-record-sync/orders/${encodeURIComponent(orderNo)}/apply`,
+          url: `${apiBase()}/purchase-record-sync/orders/${encodeURIComponent(orderNo)}/apply`,
           data: JSON.stringify({ items }),
         }),
         "整单回写接口",
@@ -1052,7 +1177,7 @@
     // 平台查询优先复用浏览器现有平台会话，因此不强制要求平台密码；
     // 仅在 worker 报告未登录而需自动补登时才会用到平台账号密码。
     const missing = [];
-    if (!config.apiToken) missing.push("接口令牌");
+    if (!hasSession()) missing.push("网页授权登录");
     if (missing.length) throw new Error(`请先填写并保存：${missing.join("、")}`);
   };
   const summarize = (result) =>
@@ -1364,7 +1489,7 @@
   const formConfig = () => ({
     platformUsername: ui.platformUsername.value.trim(),
     platformPassword: ui.platformPassword.value,
-    apiToken: ui.apiToken.value.trim(),
+    webUrl: ui.webUrl.value.trim(),
     projectId: int(ui.project.value, config.projectId, 0, 2147483647),
     intervalMinutes: int(ui.interval.value, 10, 1, 1440),
     batchSize: int(ui.batch.value, 30, 1, 200),
@@ -1375,7 +1500,7 @@
   const fillForm = () => {
     ui.platformUsername.value = config.platformUsername;
     ui.platformPassword.value = config.platformPassword;
-    ui.apiToken.value = config.apiToken;
+    ui.webUrl.value = config.webUrl || DEFAULT_WEB_URL;
     ui.interval.value = config.intervalMinutes;
     ui.batch.value = config.batchSize;
     ui.minPurchaseOrderNo.value = config.minPurchaseOrderNo;
@@ -1387,6 +1512,7 @@
     ui.modalMask.hidden = !open;
     if (!open) return;
     fillForm();
+    renderAuthState();
     refreshProjects();
   };
   const debounce = (fn, milliseconds = 500) => {
@@ -1400,7 +1526,7 @@
     const textBindings = [
       [ui.platformUsername, "platformUsername", (value) => value.trim()],
       [ui.platformPassword, "platformPassword", (value) => value],
-      [ui.apiToken, "apiToken", (value) => value.trim()],
+      [ui.webUrl, "webUrl", (value) => value.trim()],
       [ui.minPurchaseOrderNo, "minPurchaseOrderNo", (value) => value.trim()],
       [ui.interval, "intervalMinutes", (value) => int(value, 10, 1, 1440)],
       [ui.batch, "batchSize", (value) => int(value, 30, 1, 200)],
@@ -1410,6 +1536,21 @@
         "input",
         debounce(() => saveField(name, normalize(String(input.value)))),
       );
+    }
+    if (ui.authButton) {
+      ui.authButton.addEventListener("click", async () => {
+        try {
+          status("等待网页授权…", "warn");
+          await openWebAuth();
+          await refreshProjects();
+          status("授权成功", "success");
+          log(`网页授权成功${clean(config.sessionUsername) ? `：${clean(config.sessionUsername)}` : ""}`);
+        } catch (error) {
+          status("授权失败", "error");
+          log(`网页授权失败：${error.message}`, "error");
+          renderAuthState();
+        }
+      });
     }
     ui.dryRun.addEventListener("change", () =>
       saveConfig({ dryRun: ui.dryRun.checked }),
@@ -1473,9 +1614,9 @@
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
 <style>
-:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#1f2937}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#176b5b;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:4px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:4px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save,.settings-open,.clear-cooldown{height:34px;border-radius:4px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#176b5b}.save,.settings-open{border:1px solid #cbd5e1;color:#334155;background:#fff}.clear-cooldown{border:1px solid #fecaca;color:#b91c1c;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#475569}.switch input,.check input{accent-color:#176b5b}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#475569;background:#f1f5f9;font-size:12px}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px}label{display:grid;gap:4px;color:#64748b;font-size:11px}input[type=text],input[type=number],select{width:100%;height:31px;border:1px solid #cbd5e1;border-radius:4px;padding:0 8px;background:#fff;color:#1f2937}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#cbd5e1;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}.modal-mask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#0f172a66}.modal-mask[hidden]{display:none}.modal{display:flex;flex-direction:column;width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid #cbd5e1;border-radius:8px;background:#fff;box-shadow:0 24px 60px #0f172a55}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:700}.modal-close{width:28px;height:28px;border:0;border-radius:4px;color:#475569;background:#f1f5f9;font-size:18px;line-height:1;cursor:pointer}.modal-body{padding:12px 14px}.modal-hint{padding:0 14px 12px;color:#92400e;font-size:11px;line-height:1.5}.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:0 14px 14px}
+:host{all:initial;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#12161d}*{box-sizing:border-box}.panel{width:380px;overflow:hidden;border:1px solid #e2e7ef;border-radius:10px;background:#fff;box-shadow:0 18px 45px #0f172a38}.head{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 14px;color:#fff;background:#3f63d8;cursor:move;user-select:none}.title{flex:1;font-size:14px;font-weight:700}.status{max-width:170px;overflow:hidden;padding:3px 8px;border-radius:6px;background:#ffffff2e;font-size:11px;text-overflow:ellipsis;white-space:nowrap}.status[data-kind=success]{background:#10b98155}.status[data-kind=warn]{background:#f59e0b66}.status[data-kind=error]{background:#ef444466}.mini{width:28px;height:28px;border:0;border-radius:6px;color:#fff;background:#ffffff22;cursor:pointer}.body{padding:12px}:host([data-minimized=true]) .body{display:none}:host([data-minimized=true]) .panel{width:260px}.toolbar{display:flex;align-items:center;gap:9px}.run,.save,.settings-open,.clear-cooldown{height:34px;border-radius:6px;padding:0 14px;font-weight:650;cursor:pointer}.run{border:0;color:#fff;background:#3f63d8}.save,.settings-open{border:1px solid #e2e7ef;color:#2b3340;background:#fff}.clear-cooldown{border:1px solid #fecaca;color:#b91c1c;background:#fff}.switch{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;color:#5b6472}.switch input,.check input{accent-color:#3f63d8}.stats{margin:10px 0;padding:8px 10px;border-radius:4px;color:#5b6472;background:#f7f9fc;font-size:12px}.settings{display:grid;grid-template-columns:1fr 1fr;gap:9px}label{display:grid;gap:4px;color:#6b7280;font-size:11px}input[type=text],input[type=number],select{width:100%;height:34px;border:1px solid #e2e7ef;border-radius:6px;padding:0 8px;background:#fff;color:#12161d}.full{grid-column:1/-1}.check{display:flex;align-items:center;gap:6px}.auth-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.auth-line{display:flex;align-items:center;gap:8px}.web-auth{height:30px;border:1px solid #3f63d8;border-radius:6px;padding:0 12px;color:#3f63d8;background:#fff;font-weight:650;cursor:pointer}.web-auth:hover{background:#eef2fd}.auth-state{color:#6b7280;font-size:11px}.auth-state[data-kind=success]{color:#0f9d58}.logs{height:170px;margin-top:10px;overflow:auto;border-radius:4px;padding:8px;color:#e2e7ef;background:#20252b;font:11px/1.55 Consolas,"Microsoft YaHei",monospace}.logs div{margin-bottom:2px;overflow-wrap:anywhere}.logs .success{color:#6ee7b7}.logs .warn{color:#fcd34d}.logs .error{color:#fca5a5}button:disabled{opacity:.55;cursor:wait}.modal-mask{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:#0f172a66}.modal-mask[hidden]{display:none}.modal{display:flex;flex-direction:column;width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;border:1px solid #e2e7ef;border-radius:10px;background:#fff;box-shadow:0 24px 60px #0f172a55}.modal-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eef1f6;font-size:14px;font-weight:700}.modal-close{width:28px;height:28px;border:0;border-radius:4px;color:#5b6472;background:#f7f9fc;font-size:18px;line-height:1;cursor:pointer}.modal-body{padding:12px 14px}.modal-hint{padding:0 14px 12px;color:#92400e;font-size:11px;line-height:1.5}.modal-foot{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:0 14px 14px}
 </style>
-<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label><button class="settings-open" title="连接与同步设置">设置</button></div><div class="stats">项目：未选择 · 申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><div class="logs"></div></div></section><div class="modal-mask" hidden><section class="modal" role="dialog" aria-modal="true" aria-label="连接与同步设置"><header class="modal-head"><span>连接与同步设置</span><button class="modal-close" title="关闭">×</button></header><div class="modal-body"><div class="settings"><label>项目<select class="project"></select></label><label>接口令牌<input class="api-token" type="text" autocomplete="off" placeholder="管理端 API Token"></label><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label class="full">申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label></div></div><div class="modal-hint">「清除冷却」会删除当前项目的 3 天去重记录并重置批次游标，下次同步会重新查询平台。</div><div class="modal-foot"><button class="clear-cooldown">清除冷却</button><button class="save">保存设置</button></div></section></div>`;
+<section class="panel"><header class="head"><div class="title">华友印尼数据平台同步</div><div class="status">待机</div><button class="mini" title="最小化">—</button></header><div class="body"><div class="toolbar"><button class="run">同步一次</button><label class="switch"><input class="auto" type="checkbox">自动模式</label><button class="settings-open" title="连接与同步设置">设置</button></div><div class="stats">项目：未选择 · 申购单 0 · 追溯号命中 0 · 更新 0 · 跳过 0 · 失败 0</div><div class="logs"></div></div></section><div class="modal-mask" hidden><section class="modal" role="dialog" aria-modal="true" aria-label="连接与同步设置"><header class="modal-head"><span>连接与同步设置</span><button class="modal-close" title="关闭">×</button></header><div class="modal-body"><div class="settings"><label>项目<select class="project"></select></label><label class="full">网页端地址<input class="web-url" type="text" autocomplete="off" placeholder="https://…（默认与脚本一致）"></label><label class="full auth-row"><span>登录态</span><div class="auth-line"><button class="web-auth" type="button">网页授权登录</button><span class="auth-state">未授权</span></div></label><label>物资平台账号<input class="platform-user" type="text"></label><label>物资平台密码<input class="platform-pass" type="text" autocomplete="off"></label><label>自动间隔<input class="interval" type="number" min="1" max="1440"></label><label>单次申购单数<input class="batch" type="number" min="1" max="200"></label><label class="full">申购单号起始<input class="min-po-no" type="text" placeholder="如 P05SG0300"></label><label class="check full"><input class="dry-run" type="checkbox">演练模式</label></div></div><div class="modal-hint">「清除冷却」会删除当前项目的 3 天去重记录并重置批次游标，下次同步会重新查询平台。</div><div class="modal-foot"><button class="clear-cooldown">清除冷却</button><button class="save">保存设置</button></div></section></div>`;
     document.documentElement.append(host);
     ui = {
       status: shadow.querySelector(".status"),
@@ -1490,7 +1631,9 @@
       clearCooldown: shadow.querySelector(".clear-cooldown"),
       platformUsername: shadow.querySelector(".platform-user"),
       platformPassword: shadow.querySelector(".platform-pass"),
-      apiToken: shadow.querySelector(".api-token"),
+      webUrl: shadow.querySelector(".web-url"),
+      authButton: shadow.querySelector(".web-auth"),
+      authState: shadow.querySelector(".auth-state"),
       project: shadow.querySelector(".project"),
       interval: shadow.querySelector(".interval"),
       batch: shadow.querySelector(".batch"),
