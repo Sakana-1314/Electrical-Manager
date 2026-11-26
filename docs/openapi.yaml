@@ -7178,6 +7178,473 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/stock-materials:
+    get:
+      tags:
+      - 小程序
+      summary: 物资档案列表
+      description: 小程序端二级库物资档案列表，与网页端同一查询与排序。
+      operationId: mini_program_stock_materials_api_v1_mini_program_stock_materials_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+          title: Page
+      - name: page_size
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 20
+          title: Page Size
+      - name: keyword
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 255
+          - type: 'null'
+          title: Keyword
+      - name: Accept-Language
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Accept-Language
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Page_MiniProgramStockMaterialRead_'
+              example:
+                items:
+                - id: 12
+                  uuid: f197715a-47e4-488d-aab6-43a5e2a76111
+                  name: 交流接触器
+                  model_spec: CJX2-2510 AC220V
+                  unit_name: 个
+                  current_qty: '6'
+                  stock_status: low_stock
+                  version: 3
+                page: 1
+                page_size: 20
+                total: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    post:
+      tags:
+      - 小程序
+      summary: 新建物资档案
+      description: 新建二级库物资并把余额初始化为 0；名称 + 型号规格 + 单位重复时返回 409 DUPLICATE_MATERIAL。
+      operationId: mini_program_create_stock_material_api_v1_mini_program_stock_materials_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniProgramStockMaterialCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramStockMaterialRead'
+              example:
+                id: 21
+                uuid: 5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11
+                name: 中间继电器
+                model_spec: MY4N-GS DC24V
+                unit_name: 个
+                current_qty: '0'
+                stock_status: out_of_stock
+                version: 1
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/stock-materials/{material_id}:
+    patch:
+      tags:
+      - 小程序
+      summary: 编辑物资档案
+      description: 按 id 编辑二级库物资（version 为乐观锁版本号）。image_ids 省略表示不改图片，显式传 [] 才清空。
+      operationId: mini_program_update_stock_material_api_v1_mini_program_stock_materials__material_id__patch
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: material_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Material Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniProgramStockMaterialUpdate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramStockMaterialRead'
+              example:
+                id: 21
+                uuid: 5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11
+                name: 中间继电器
+                model_spec: MY4N-GS DC24V
+                unit_name: 个
+                current_qty: '3'
+                stock_status: low_stock
+                version: 2
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+    delete:
+      tags:
+      - 小程序
+      summary: 删除物资档案
+      description: 删除二级库物资；有流水时 409，版本号走 If-Match。
+      operationId: mini_program_delete_stock_material_api_v1_mini_program_stock_materials__material_id__delete
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: material_id
+        in: path
+        required: true
+        schema:
+          type: integer
+          title: Material Id
+      - name: If-Match
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: If-Match
+      responses:
+        '204':
+          description: Successful Response
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/mini-program/inbound:
+    post:
+      tags:
+      - 小程序
+      summary: 扫码入库
+      description: 扫码入库（与管理端入库同一实现）：client_request_id 幂等，occurred_at 必须带时区。
+      operationId: mini_program_inbound_api_v1_mini_program_inbound_post
+      security:
+      - HTTPBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MiniProgramInboundCreate'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MiniProgramInboundRead'
+              example:
+                operation_id: 21
+                operation_no: IN20260912000021
+                material_uuid: 4472cf85-d9fc-4ab1-a362-eb7c4f5a18c4
+                material_name: 接线端子
+                model_spec: UK-2.5B 灰
+                unit_name: 个
+                quantity: '100'
+                before_qty: '750'
+                after_qty: '850'
+                occurred_at: '2026-09-12T16:10:00+08:00'
+                executed_by: 孙浩宇
+        '400':
+          description: 业务校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: NOT_FOUND
+                message: 二级库物资不存在
+                details: {}
+                request_id: 3e8bde7a-5efd-4970-a60e-3fc57a9f7654
+        '401':
+          description: 未认证或凭证无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: UNAUTHORIZED
+                message: 请先登录
+                details: {}
+                request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+        '403':
+          description: 权限不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: FORBIDDEN
+                message: 没有执行此操作的权限
+                details: {}
+                request_id: c14b4ca3-c239-4d97-a1ea-d2880f942054
+        '409':
+          description: 版本、状态或业务数据冲突
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VERSION_CONFLICT
+                message: 数据已被其他用户修改，请刷新后重试
+                details: {}
+                request_id: fde9fdd5-0168-4a03-afd0-eb8ae0526629
+        '422':
+          description: 请求参数校验失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/mini-program/inventory:
     get:
       tags:
@@ -26436,6 +26903,315 @@ components:
         receiver_name: 孙浩宇
         subitem_no: '305'
         executed_by: 孙浩宇
+    MiniProgramStockMaterialRead:
+      properties:
+        id:
+          type: integer
+          title: Id
+        uuid:
+          type: string
+          title: Uuid
+        name:
+          type: string
+          title: Name
+        model_spec:
+          type: string
+          title: Model Spec
+        unit_name:
+          type: string
+          title: Unit Name
+        current_qty:
+          type: string
+          title: Current Qty
+        stock_status:
+          type: string
+          title: Stock Status
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - id
+      - uuid
+      - name
+      - model_spec
+      - unit_name
+      - current_qty
+      - stock_status
+      - version
+      title: MiniProgramStockMaterialRead
+      examples:
+      - id: 1
+        uuid: uuid-示例
+        name: 交流接触器
+        model_spec: CJX2-2510 AC220V
+        unit_name: 个
+        current_qty: '6'
+        stock_status: low_stock
+        version: 1
+    Page_MiniProgramStockMaterialRead_:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MiniProgramStockMaterialRead'
+          type: array
+          title: Items
+        page:
+          type: integer
+          title: Page
+        page_size:
+          type: integer
+          title: Page Size
+        total:
+          type: integer
+          title: Total
+      additionalProperties: false
+      type: object
+      required:
+      - items
+      - page
+      - page_size
+      - total
+      title: Page[MiniProgramStockMaterialRead]
+      examples:
+      - items:
+        - id: 1
+          uuid: uuid-示例
+          name: 交流接触器
+          model_spec: CJX2-2510 AC220V
+          unit_name: 个
+          current_qty: '6'
+          stock_status: low_stock
+          version: 1
+        page: 1
+        page_size: 20
+        total: 20
+    MiniProgramInboundCreate:
+      properties:
+        client_request_id:
+          type: string
+          maxLength: 64
+          minLength: 1
+          title: Client Request Id
+        material_uuid:
+          type: string
+          format: uuid
+          title: Material Uuid
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        quantity:
+          anyOf:
+          - type: number
+            exclusiveMinimum: 0.0
+          - type: string
+          title: Quantity
+        business_reason:
+          type: string
+          maxLength: 500
+          title: Business Reason
+      additionalProperties: false
+      type: object
+      required:
+      - client_request_id
+      - material_uuid
+      - occurred_at
+      - quantity
+      title: MiniProgramInboundCreate
+      examples:
+      - client_request_id: 1
+        material_uuid: f197715a-47e4-488d-aab6-43a5e2a76111
+        occurred_at: '2026-09-13T10:30:00+08:00'
+        quantity: '4'
+        business_reason: 1#回转窑主电机控制柜检修更换
+    MiniProgramInboundRead:
+      properties:
+        operation_id:
+          type: integer
+          title: Operation Id
+        operation_no:
+          type: string
+          title: Operation No
+        material_uuid:
+          type: string
+          title: Material Uuid
+        material_name:
+          type: string
+          title: Material Name
+        model_spec:
+          type: string
+          title: Model Spec
+        unit_name:
+          type: string
+          title: Unit Name
+        quantity:
+          type: string
+          title: Quantity
+        before_qty:
+          type: string
+          title: Before Qty
+        after_qty:
+          type: string
+          title: After Qty
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        executed_by:
+          type: string
+          title: Executed By
+      additionalProperties: false
+      type: object
+      required:
+      - operation_id
+      - operation_no
+      - material_uuid
+      - material_name
+      - model_spec
+      - unit_name
+      - quantity
+      - before_qty
+      - after_qty
+      - occurred_at
+      - executed_by
+      title: MiniProgramInboundRead
+      examples:
+      - operation_id: 3
+        operation_no: OUT20260706000003
+        material_uuid: material_uuid-示例
+        material_name: 交流接触器
+        model_spec: CJX2-2510 AC220V
+        unit_name: 个
+        quantity: '4'
+        before_qty: '3'
+        after_qty: '2'
+        occurred_at: '2026-09-13T10:30:00+08:00'
+        executed_by: 孙浩宇
+    MiniProgramStockMaterialCreate:
+      properties:
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        name_id:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Name Id
+        alias:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Alias
+        model_spec:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Model Spec
+        unit_name:
+          type: string
+          maxLength: 32
+          minLength: 1
+          title: Unit Name
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Remark
+        image_ids:
+          items:
+            type: string
+            format: uuid
+          maxItems: 9
+          type: array
+          title: Image Ids
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - model_spec
+      - unit_name
+      title: MiniProgramStockMaterialCreate
+      examples:
+      - name: 交流接触器
+        name_id: E011-00237
+        alias: 接触器
+        model_spec: CJX2-2510 AC220V
+        unit_name: 个
+        remark: ''
+        image_ids:
+        - f197715a-47e4-488d-aab6-43a5e2a76111
+    MiniProgramStockMaterialUpdate:
+      properties:
+        name:
+          type: string
+          maxLength: 128
+          minLength: 1
+          title: Name
+        name_id:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Name Id
+        alias:
+          anyOf:
+          - type: string
+            maxLength: 128
+          - type: 'null'
+          title: Alias
+        model_spec:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Model Spec
+        unit_name:
+          type: string
+          maxLength: 32
+          minLength: 1
+          title: Unit Name
+        remark:
+          anyOf:
+          - type: string
+            maxLength: 1000
+          - type: 'null'
+          title: Remark
+        image_ids:
+          anyOf:
+          - items:
+              type: string
+              format: uuid
+            type: array
+            maxItems: 9
+          - type: 'null'
+          title: Image Ids
+        version:
+          type: integer
+          title: Version
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - model_spec
+      - unit_name
+      - version
+      title: MiniProgramStockMaterialUpdate
+      examples:
+      - name: 交流接触器
+        name_id: E011-00237
+        alias: 接触器
+        model_spec: CJX2-2510 AC220V
+        unit_name: 个
+        remark: ''
+        image_ids: []
+        version: 1
     MiniProgramOutboundCreate:
       properties:
         client_request_id:

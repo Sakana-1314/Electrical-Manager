@@ -30,6 +30,13 @@ func Register(r *web.Router) {
 	g.GET("/projects", projects, user)
 	g.POST("/profile", createProfile, auth.MiniProgramRegistration)
 	g.GET("/materials/{material_uuid}", scanMaterial, user, readPerm(domain.PermWarehouseRead))
+	// 二级库管理（物资档案）：列表按读权限，增删改按写权限，与管理端 /stock-materials 同一套服务逻辑。
+	g.GET("/stock-materials", stockMaterials, user, readPerm(domain.PermWarehouseRead))
+	g.POST("/stock-materials", createStockMaterial, user, readPerm(domain.PermWarehouseWrite))
+	g.PATCH("/stock-materials/{material_id}", updateStockMaterial, user, readPerm(domain.PermWarehouseWrite))
+	g.DELETE("/stock-materials/{material_id}", deleteStockMaterial, user, readPerm(domain.PermWarehouseWrite))
+	// 扫码入库：与管理端入库同一实现（小程序来源由服务层落成手工来源并记录操作人）。
+	g.POST("/inbound", inbound, user, readPerm(domain.PermWarehouseWrite))
 	g.GET("/inventory", inventoryList, user, readPerm(domain.PermWarehouseRead))
 	g.GET("/lite-inventory", liteInventory, user, readPerm(domain.PermLiteRead))
 	g.GET("/lite-inventory/last-import", lastImport("LITE_INVENTORY"), user, readPerm(domain.PermLiteRead))
@@ -253,6 +260,78 @@ func outboundByNo(c *web.Ctx) error {
 		return err
 	}
 	return c.OK(out)
+}
+
+// ---------------- 二级库管理 ----------------
+
+func stockMaterials(c *web.Ctx) error {
+	p := c.Params()
+	page, size := p.Page()
+	keyword := p.QueryStr("keyword", "max=255")
+	if err := p.Err(); err != nil {
+		return err
+	}
+	items, total, err := svc.ListStockMaterials(c.DB, keyword, page, size, acceptLanguage(c))
+	if err != nil {
+		return err
+	}
+	return c.OK(schema.NewPage(items, page, size, total))
+}
+
+func createStockMaterial(c *web.Ctx) error {
+	p := c.Params()
+	data := schema.NewMiniProgramStockMaterialCreate()
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	out, err := svc.CreateStockMaterial(c.DB, data, acceptLanguage(c))
+	if err != nil {
+		return err
+	}
+	return c.Created(out)
+}
+
+func updateStockMaterial(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("material_id")
+	var data schema.MiniProgramStockMaterialUpdate
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	out, err := svc.UpdateStockMaterial(c.DB, id, data, acceptLanguage(c))
+	if err != nil {
+		return err
+	}
+	return c.OK(out)
+}
+
+func deleteStockMaterial(c *web.Ctx) error {
+	p := c.Params()
+	id := p.PathInt("material_id")
+	ifMatch := p.IfMatch()
+	if err := p.Err(); err != nil {
+		return err
+	}
+	if err := svc.DeleteStockMaterial(c.DB, id, ifMatch); err != nil {
+		return err
+	}
+	return c.NoContent()
+}
+
+func inbound(c *web.Ctx) error {
+	p := c.Params()
+	data := schema.MiniProgramInboundCreate{}
+	p.Body(&data)
+	if err := p.Err(); err != nil {
+		return err
+	}
+	out, err := svc.CreateInbound(c.DB, data, auth.MiniUser(c))
+	if err != nil {
+		return err
+	}
+	return c.Created(out)
 }
 
 // ---------------- 申购计划 / 申购记录 ----------------

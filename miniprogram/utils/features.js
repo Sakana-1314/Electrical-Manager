@@ -36,6 +36,11 @@ function canOutbound() {
   return hasPermission('warehouse:write');
 }
 
+/** 二级库管理（物资档案增删改 / 扫码入库）：与出库同属二级库 Pro 写权限。 */
+function canManageStock() {
+  return hasPermission('warehouse:write');
+}
+
 // 隐患登记 / 整改（写操作）：用户持有隐患写权限位。
 function canWriteHazards() {
   return hasPermission('hazard:write');
@@ -66,5 +71,6 @@ module.exports = {
   inventoryUseLite,
   entryEnabled,
   canOutbound,
+  canManageStock,
   canWriteHazards,
 };

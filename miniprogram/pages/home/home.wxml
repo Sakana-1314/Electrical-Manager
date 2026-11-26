@@ -70,6 +70,14 @@
         <view class="action-description">{{i18n.inventoryDescription}}</view>
       </view>
 
+      <view wx:if="{{entryVisible.stockManage}}" class="action-card" hover-class="action-card-active" bind:tap="openStockManage">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="edit" size="38rpx" /></view>
+          <view class="action-title">{{i18n.stockManageTitle}}</view>
+        </view>
+        <view class="action-description">{{i18n.stockManageDescription}}</view>
+      </view>
+
       <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
         <view class="action-head">
           <view class="action-icon"><t-icon name="file-attachment" size="38rpx" /></view>
