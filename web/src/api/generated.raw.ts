@@ -4824,7 +4824,77 @@ export interface components {
             /** Executed By */
             executed_by?: string | null;
         };
-        /** MiniProgramInboundCreate */
+        /**
+         * MiniProgramStockMaterialRead
+         * @example {
+         *       "id": 1,
+         *       "uuid": "uuid-示例",
+         *       "name": "交流接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "current_qty": "6",
+         *       "stock_status": "low_stock",
+         *       "version": 1
+         *     }
+         */
+        MiniProgramStockMaterialRead: {
+            /** Id */
+            id: number;
+            /** Uuid */
+            uuid: string;
+            /** Name */
+            name: string;
+            /** Model Spec */
+            model_spec: string;
+            /** Unit Name */
+            unit_name: string;
+            /** Current Qty */
+            current_qty: string;
+            /** Stock Status */
+            stock_status: string;
+            /** Version */
+            version: number;
+        };
+        /**
+         * Page[MiniProgramStockMaterialRead]
+         * @example {
+         *       "items": [
+         *         {
+         *           "id": 1,
+         *           "uuid": "uuid-示例",
+         *           "name": "交流接触器",
+         *           "model_spec": "CJX2-2510 AC220V",
+         *           "unit_name": "个",
+         *           "current_qty": "6",
+         *           "stock_status": "low_stock",
+         *           "version": 1
+         *         }
+         *       ],
+         *       "page": 1,
+         *       "page_size": 20,
+         *       "total": 20
+         *     }
+         */
+        Page_MiniProgramStockMaterialRead_: {
+            /** Items */
+            items: components["schemas"]["MiniProgramStockMaterialRead"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * MiniProgramInboundCreate
+         * @example {
+         *       "client_request_id": 1,
+         *       "material_uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
+         *       "occurred_at": "2026-09-13T10:30:00+08:00",
+         *       "quantity": "4",
+         *       "business_reason": "1#回转窑主电机控制柜检修更换"
+         *     }
+         */
         MiniProgramInboundCreate: {
             /** Client Request Id */
             client_request_id: string;
@@ -4843,7 +4913,22 @@ export interface components {
             /** Business Reason */
             business_reason?: string;
         };
-        /** MiniProgramInboundRead */
+        /**
+         * MiniProgramInboundRead
+         * @example {
+         *       "operation_id": 3,
+         *       "operation_no": "OUT20260706000003",
+         *       "material_uuid": "material_uuid-示例",
+         *       "material_name": "交流接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "quantity": "4",
+         *       "before_qty": "3",
+         *       "after_qty": "2",
+         *       "occurred_at": "2026-09-13T10:30:00+08:00",
+         *       "executed_by": "孙浩宇"
+         *     }
+         */
         MiniProgramInboundRead: {
             /** Operation Id */
             operation_id: number;
@@ -4871,7 +4956,20 @@ export interface components {
             /** Executed By */
             executed_by: string;
         };
-        /** MiniProgramStockMaterialCreate */
+        /**
+         * MiniProgramStockMaterialCreate
+         * @example {
+         *       "name": "交流接触器",
+         *       "name_id": "E011-00237",
+         *       "alias": "接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "remark": "",
+         *       "image_ids": [
+         *         "f197715a-47e4-488d-aab6-43a5e2a76111"
+         *       ]
+         *     }
+         */
         MiniProgramStockMaterialCreate: {
             /** Name */
             name: string;
@@ -4891,7 +4989,19 @@ export interface components {
              */
             image_ids: string[];
         };
-        /** MiniProgramStockMaterialUpdate */
+        /**
+         * MiniProgramStockMaterialUpdate
+         * @example {
+         *       "name": "交流接触器",
+         *       "name_id": "E011-00237",
+         *       "alias": "接触器",
+         *       "model_spec": "CJX2-2510 AC220V",
+         *       "unit_name": "个",
+         *       "remark": "",
+         *       "image_ids": [],
+         *       "version": 1
+         *     }
+         */
         MiniProgramStockMaterialUpdate: {
             /** Name */
             name: string;
@@ -21806,12 +21916,14 @@ export interface operations {
                      * @example {
                      *       "items": [
                      *         {
+                     *           "id": 12,
                      *           "uuid": "f197715a-47e4-488d-aab6-43a5e2a76111",
                      *           "name": "交流接触器",
                      *           "model_spec": "CJX2-2510 AC220V",
                      *           "unit_name": "个",
                      *           "current_qty": "6",
-                     *           "stock_status": "low_stock"
+                     *           "stock_status": "low_stock",
+                     *           "version": 3
                      *         }
                      *       ],
                      *       "page": 1,
@@ -21819,7 +21931,7 @@ export interface operations {
                      *       "total": 1
                      *     }
                      */
-                    "application/json": components["schemas"]["Page_MiniProgramInventoryItemRead_"];
+                    "application/json": components["schemas"]["Page_MiniProgramStockMaterialRead_"];
                 };
             };
             /** @description 业务校验失败 */
@@ -21930,15 +22042,17 @@ export interface operations {
                 content: {
                     /**
                      * @example {
+                     *       "id": 21,
                      *       "uuid": "5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11",
                      *       "name": "中间继电器",
                      *       "model_spec": "MY4N-GS DC24V",
                      *       "unit_name": "个",
                      *       "current_qty": "0",
-                     *       "stock_status": "out_of_stock"
+                     *       "stock_status": "out_of_stock",
+                     *       "version": 1
                      *     }
                      */
-                    "application/json": components["schemas"]["MiniProgramInventoryItemRead"];
+                    "application/json": components["schemas"]["MiniProgramStockMaterialRead"];
                 };
             };
             /** @description 业务校验失败 */
@@ -22158,15 +22272,17 @@ export interface operations {
                 content: {
                     /**
                      * @example {
+                     *       "id": 21,
                      *       "uuid": "5b0f6f61-5f18-4f0e-9b0f-2a0b8e2c3a11",
                      *       "name": "中间继电器",
                      *       "model_spec": "MY4N-GS DC24V",
                      *       "unit_name": "个",
                      *       "current_qty": "3",
-                     *       "stock_status": "low_stock"
+                     *       "stock_status": "low_stock",
+                     *       "version": 2
                      *     }
                      */
-                    "application/json": components["schemas"]["MiniProgramInventoryItemRead"];
+                    "application/json": components["schemas"]["MiniProgramStockMaterialRead"];
                 };
             };
             /** @description 业务校验失败 */
