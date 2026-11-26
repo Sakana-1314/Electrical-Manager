@@ -11,6 +11,9 @@ const {
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
 const Toast = toastModule.default || toastModule;
 
+// 御坂学习中转小程序的 appId：半屏打开它，由它的 web-view 承载网页版（业务域名已配置）。
+const WEB_VERSION_APP_ID = 'wxb42fe32e6e071916';
+
 function formatDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -174,11 +177,15 @@ Page({
   },
 
   /**
-   * 进入网页版：用当前登录态换一次性票据，再半屏打开网页版（web-view 载入带票据的地址）。
+   * 进入网页版：用当前登录态换一次性票据，再半屏唤起**御坂学习中转小程序**的 web 页展示。
    *
-   * 票据 2 分钟有效、只能兑换一次；网页 /web-open 页兑换后写入登录态并跳到目标路由。
-   * `wx.openEmbeddedMiniProgram` 只能打开别的小程序，这里要打开的是 H5 页面，
-   * 因此直接 navigateTo 到本站的 web-view 页面（半屏 web-view，标题栏可返回）。
+   * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版与接口同域、
+   * 不在本小程序的业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意
+   * 已配置域名的 H5，因此用 `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带票据的
+   * `/web-open` 地址，网页兑换票据后即用本人身份登录。
+   *
+   * 票据 2 分钟有效、只能兑换一次；`openEmbeddedMiniProgram` 失败（未授权 / 目标小程序不可用）时
+   * 回落到本站 `pages/web-view`（业务域名已配置时同样可用），仍失败则提示。
    */
   async openWebVersion() {
     if (this.data.openingWeb) return;
@@ -190,6 +197,19 @@ Page({
         data: { path: '/' },
       });
       if (!result || !result.url) throw new Error(t('webOpenFailed'));
+      const webPath = `/packages/static-package/pages/web/web?url=${encodeURIComponent(result.url)}`;
+      const opened = await new Promise((resolve) => {
+        wx.openEmbeddedMiniProgram({
+          appId: WEB_VERSION_APP_ID,
+          path: webPath,
+          envVersion: 'release',
+          allowFullScreen: true,
+          success: () => resolve(true),
+          fail: () => resolve(false),
+        });
+      });
+      if (opened) return;
+      // 中转小程序不可用：回落到本站 web-view 页（票据仍有效，页面自己会再换一次）。
       wx.navigateTo({
         url: `/pages/web-view/web-view?url=${encodeURIComponent(result.url)}`,
       });
