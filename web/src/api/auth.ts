@@ -9,6 +9,10 @@ import type {
   TokenPairResponse,
   User,
   UserApiTokenRead,
+  WebOpenTicketCreate,
+  WebOpenTicketRead,
+  WebOpenTicketRedeemRead,
+  WebOpenTicketRedeemRequest,
 } from './generated'
 
 export const authApi = {
@@ -24,6 +28,12 @@ export const authApi = {
   /** 只能改密码，不能改姓名 / 部门等个人资料。 */
   changeMyPassword: (payload: PasswordChangeRequest) =>
     apiClient.patch<void>('/auth/me/password', payload),
+  /** 小程序「进入网页版」：用登录令牌换一次性票据（返回拼好的 web-view 地址）。 */
+  createWebOpenTicket: (payload: WebOpenTicketCreate) =>
+    apiClient.post<WebOpenTicketRead>('/auth/web-open/tickets', payload).then((r) => r.data),
+  /** 网页 /web-open 页兑换票据（匿名，一次性）：换回登录令牌与落地路由。 */
+  redeemWebOpenTicket: (payload: WebOpenTicketRedeemRequest) =>
+    apiClient.post<WebOpenTicketRedeemRead>('/auth/web-open/redeem', payload).then((r) => r.data),
   /** 创建扫码登录会话（匿名；会话只存在服务端内存）。 */
   createQrSession: () => apiClient.post<QrLoginSession>('/auth/qr-sessions').then((r) => r.data),
   /** 轮询扫码登录状态；confirmed 时返回一次性登录凭据。 */

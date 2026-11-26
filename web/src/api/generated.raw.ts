@@ -95,6 +95,46 @@ export interface paths {
         patch: operations["change_my_password_api_v1_auth_me_password_patch"];
         trace?: never;
     };
+    "/api/v1/auth/web-open/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 换取进入网页版的一次性票据
+         * @description 小程序用登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
+         */
+        post: operations["create_web_open_ticket_api_v1_auth_web_open_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/web-open/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 用票据换取网页登录令牌
+         * @description 网页 /web-open 页用小程序给的票据换回登录令牌（一次性，兑换后票据立即失效）。
+         */
+        post: operations["redeem_web_open_ticket_api_v1_auth_web_open_redeem_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/qr-sessions": {
         parameters: {
             query?: never;
@@ -12558,6 +12598,81 @@ export interface components {
             permissions?: string[];
         };
         /**
+         * WebOpenTicketCreate
+         * @example {
+         *       "path": "path-示例"
+         *     }
+         */
+        WebOpenTicketCreate: {
+            /** Path */
+            path?: string;
+        };
+        /**
+         * WebOpenTicketRead
+         * @example {
+         *       "ticket": "ticket-示例",
+         *       "expires_at": "2026-09-13T10:30:00+08:00",
+         *       "url": "https://img.hxni-electrical.com/files/images/01900010-0000-7000-8000-000000000001"
+         *     }
+         */
+        WebOpenTicketRead: {
+            /** Ticket */
+            ticket: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * WebOpenTicketRedeemRequest
+         * @example {
+         *       "ticket": "ticket-示例"
+         *     }
+         */
+        WebOpenTicketRedeemRequest: {
+            /** Ticket */
+            ticket: string;
+        };
+        /**
+         * WebOpenTicketRedeemRead
+         * @example {
+         *       "access_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "refresh_token": "0198f3a7-2c00-7000-8000-000000000001",
+         *       "token_type": "bearer",
+         *       "user": {
+         *         "id": 1,
+         *         "username": "warehouse",
+         *         "display_name": "孙浩宇",
+         *         "department_name": "department_name-示例",
+         *         "wechat_openid": "oHXNI-9f3c1d2a8b7e4f5c",
+         *         "created_at": "2026-09-13T10:30:00+08:00",
+         *         "last_used_at": "2026-09-13T10:30:00+08:00",
+         *         "permissions": [
+         *           "permissions_item-示例"
+         *         ],
+         *         "version": 1
+         *       },
+         *       "project_id": 1,
+         *       "path": "path-示例"
+         *     }
+         */
+        WebOpenTicketRedeemRead: {
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /** Token Type */
+            token_type: string;
+            user: components["schemas"]["UserRead"];
+            /** Project Id */
+            project_id: number;
+            /** Path */
+            path: string;
+        };
+        /**
          * UserRead
          * @example {
          *       "id": 1,
@@ -13647,6 +13762,151 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_web_open_ticket_api_v1_auth_web_open_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebOpenTicketCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "ticket": "9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11",
+                     *       "expires_at": "2026-09-12T10:32:00+00:00",
+                     *       "url": "https://electrical.example.com/web-open?ticket=9f1c2f26-6c6f-4b52-9d1f-5f1d8f4f0b11&path=/"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebOpenTicketRead"];
+                };
+            };
+            /** @description 未认证或凭证无效 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "UNAUTHORIZED",
+                     *       "message": "请先登录",
+                     *       "details": {},
+                     *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description 请求参数校验失败 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    redeem_web_open_ticket_api_v1_auth_web_open_redeem_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebOpenTicketRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.access",
+                     *       "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh",
+                     *       "token_type": "bearer",
+                     *       "user": {
+                     *         "id": 1,
+                     *         "username": "admin",
+                     *         "display_name": "管理员",
+                     *         "department_name": "电气自动化车间",
+                     *         "permissions": [
+                     *           "system:admin"
+                     *         ],
+                     *         "wechat_openid": null,
+                     *         "created_at": "2026-01-02T03:04:05+00:00",
+                     *         "last_used_at": "2026-09-12T02:30:00+00:00",
+                     *         "version": 1
+                     *       },
+                     *       "project_id": 1,
+                     *       "path": "/"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WebOpenTicketRedeemRead"];
                 };
             };
             /** @description 未认证或凭证无效 */

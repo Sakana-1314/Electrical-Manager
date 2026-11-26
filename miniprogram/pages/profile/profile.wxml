@@ -54,6 +54,20 @@
       </view>
     </view>
 
+    <!-- 进入网页版：用当前登录态换一次性票据，半屏 web-view 打开网页版（所有登录用户可用）。 -->
+    <view
+      class="records-entry"
+      hover-class="records-entry-active"
+      aria-role="button"
+      bind:tap="openWebVersion"
+    >
+      <view class="records-entry-main">
+        <t-icon class="records-entry-icon" name="desktop" size="36rpx" />
+        <view class="records-entry-text">{{i18n.enterWebVersion}}</view>
+      </view>
+      <t-icon class="records-entry-arrow" name="chevron-right" size="36rpx" />
+    </view>
+
     <view
       wx:if="{{recordsVisible}}"
       class="records-entry"

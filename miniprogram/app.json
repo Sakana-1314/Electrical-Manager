@@ -28,6 +28,7 @@
     "pages/hazard-create/hazard-create",
     "pages/bind/bind",
     "pages/web-login/web-login",
+    "pages/web-view/web-view",
     "pages/registration-closed/registration-closed"
   ],
   "window": {
