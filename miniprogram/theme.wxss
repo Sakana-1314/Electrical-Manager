@@ -65,7 +65,7 @@
         --td-brand-color: var(--td-brand-color-7);
         /* 项目补充令牌：品牌强底色面板（首页 / 绑定页头图、详情摘要卡）的渐变，明暗各给一组。 */
         --td-brand-strong-gradient: linear-gradient(145deg, var(--td-brand-color-7), var(--td-brand-color-6));
-        /* 圆形悬浮按钮：浅色沿用品牌蓝底白图标。 */
+        /* 圆形悬浮按钮：品牌蓝底白图标。 */
         --td-fab-bg: var(--td-brand-color-7);
         --td-fab-fg: var(--td-font-white-1);
         --td-warning-color: var(--td-warning-color-5);
@@ -195,19 +195,16 @@
         --td-font-gray-3: rgba(0, 0, 0, .4);
         --td-font-gray-4: rgba(0, 0, 0, .26);
         --td-brand-color: var(--td-brand-color-8);
-        /* 深色模式：大色块背景一律用黑灰，蓝色只保留在文字 / 图标等前景色上。 */
-        --td-brand-strong-gradient: linear-gradient(145deg, var(--td-gray-color-12), var(--td-gray-color-14));
-        --td-fab-bg: var(--td-gray-color-11);
-        --td-fab-fg: var(--td-brand-color-8);
-        /* 深色模式主按钮：黑灰底 + 蓝色文字（与页面上的自定义操作条同一套语言）。 */
-        --td-button-primary-bg-color: var(--td-gray-color-12);
-        --td-button-primary-border-color: var(--td-gray-color-11);
-        --td-button-primary-color: var(--td-brand-color-8);
-        --td-button-primary-active-bg-color: var(--td-gray-color-11);
-        --td-button-primary-active-border-color: var(--td-gray-color-10);
-        --td-button-primary-disabled-bg: var(--td-gray-color-12);
-        --td-button-primary-disabled-border-color: var(--td-gray-color-11);
-        --td-button-primary-disabled-color: var(--td-text-color-disabled);
+        /* 深色模式：页面与卡片容器用灰系，头图仍是品牌蓝——与浅色档同一组品牌蓝（brand-7 → brand-6），
+           不另换一种深海军蓝，保证明暗两档的品牌色一致。 */
+        --td-brand-strong-gradient: linear-gradient(145deg, #0052d9, #366ef4);
+        /* 实心蓝按钮 / 悬浮圆钮与浅色档用同一组品牌蓝；文字 / 图标仍用深色档更亮的 brand-8。 */
+        --td-fab-bg: #0052d9;
+        --td-fab-fg: var(--td-font-white-1);
+        --td-button-primary-bg-color: #0052d9;
+        --td-button-primary-border-color: #0052d9;
+        --td-button-primary-active-bg-color: #003cab;
+        --td-button-primary-active-border-color: #003cab;
         --td-warning-color: var(--td-warning-color-5);
         --td-error-color: var(--td-error-color-6);
         --td-success-color: var(--td-success-color-5);
