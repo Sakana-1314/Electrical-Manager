@@ -654,6 +654,9 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (!uploadScript.includes('PACKAGE_LIMIT_KB')) {
     throw new Error('scripts/upload.js must check the package size before uploading.');
   }
+  if (!uploadScript.includes('pruneUnusedTDesignComponents')) {
+    throw new Error('scripts/upload.js must prune unused TDesign components before checking package size.');
+  }
 }
 
 // 列表页筛选面板（.filter-panel）是页面里唯一的筛选入口：旧的常驻下拉必须彻底退场。

@@ -3,7 +3,7 @@ const { request } = require('../../utils/request');
 const { decorateStock } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
-const { resolveInventorySource } = require('../../utils/features');
+const { canManageStock, resolveInventorySource } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
@@ -74,6 +74,8 @@ Page({
     filterSections: [],
     filtered: false,
     liteMode: false,
+    /** 扫码入库：二级库 Pro 写权限位（与出库 / 物资档案同一位）。 */
+    canInbound: false,
     /** 页面标题：Pro / Lite 共用本页，按入口的数据源切换（见 resolveInventorySource）。 */
     pageTitle: t('inventoryTitle'),
     page: 1,
@@ -118,6 +120,7 @@ Page({
 
       this.setData({
         liteMode,
+        canInbound: !liteMode && canManageStock(),
         pageTitle: liteMode ? t('inventoryLiteTitle') : t('inventoryProTitle'),
         keyword: shared.keyword || '',
         fieldValues,
@@ -281,6 +284,11 @@ Page({
     wx.navigateTo({
       url: `/pages/material-detail/material-detail?uuid=${uuid}`,
     });
+  },
+
+  /** 扫码入库：二级库 Pro 写权限位；入口与出入库记录并列在 Pro 库存页顶部（Lite 不展示）。 */
+  openInbound() {
+    wx.navigateTo({ url: '/pages/stock-inbound/stock-inbound' });
   },
 
   /** 出入库记录：二级库 Pro 的流水页，入口挂在 Pro 库存页顶部工具条（Lite 不展示）。 */

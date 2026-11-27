@@ -550,6 +550,7 @@ async function run() {
   page = await mountPage('pages/inventory/inventory.js', { source: 'lite' });
   assert(page.data.liteMode === true, 'source=lite must use the Lite data source');
   assert(page.data.pageTitle === i18n.t('inventoryLiteTitle'), 'Lite source must switch the page title');
+  assert(page.data.canInbound === false, 'Lite source must not expose the inbound entry');
   assert(
     requests.some((item) => item.url === '/mini-program/lite-inventory'),
     'source=lite must call the lite inventory endpoint even when warehouse:read exists',
@@ -571,6 +572,16 @@ async function run() {
   // 没带 source 的旧链接按权限兜底：同时持有两套权限时用 Pro。
   page = await mountPage('pages/inventory/inventory.js');
   assert(page.data.liteMode === false, 'legacy links must fall back to Pro when available');
+  assert(page.data.canInbound === true, 'Pro + warehouse:write must expose the inbound entry');
+
+  // 只读用户能看到 Pro 库存与出入库记录，但不能看到扫码入库。
+  const inventoryUser = global.getApp().globalData.user;
+  const inventoryPermissions = inventoryUser.permissions;
+  inventoryUser.permissions = ['warehouse:read'];
+  page = await mountPage('pages/inventory/inventory.js');
+  assert(page.data.canInbound === false, 'read-only users must not see the inbound entry');
+  inventoryUser.permissions = inventoryPermissions;
+  page = await mountPage('pages/inventory/inventory.js');
 
   // 首次入库时间：Pro 卡片左上角显示格式化后的时间，空值不渲染。
   const { decorateStock } = require(path.join(root, 'utils/inventory.js'));
@@ -592,11 +603,16 @@ async function run() {
   const inventoryNavigated = [];
   global.wx.navigateTo = (options) => inventoryNavigated.push(options.url);
   page.openRecords();
-  global.wx.navigateTo = originalInventoryNavigate;
   assert(
     inventoryNavigated.pop() === '/pages/records/records',
     'the Pro inventory page must open the outbound records page',
   );
+  page.openInbound();
+  assert(
+    inventoryNavigated.pop() === '/pages/stock-inbound/stock-inbound',
+    'the Pro inventory page must open the inbound page',
+  );
+  global.wx.navigateTo = originalInventoryNavigate;
 
   // ===== 华星页 =====
   global.__cachedResponse = { purchase_departments: ['设备管理部'], purchasers: ['吴冰'] };
