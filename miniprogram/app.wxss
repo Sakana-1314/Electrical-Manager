@@ -38,7 +38,7 @@ page, .page {
   --app-on-brand-glow: var(--td-font-white-4);
   --app-on-brand-ring: var(--td-font-white-4);
   --app-on-brand-ring-soft: var(--td-font-white-4);
-  /* 圆形悬浮按钮：浅色沿用品牌蓝底白图标，深色改为黑灰底 + 蓝色图标。 */
+  /* 圆形悬浮按钮：明暗两档都用主题蓝，不随深色档变灰。 */
   --app-fab-bg: var(--td-fab-bg);
   --app-fab-fg: var(--td-fab-fg);
   /* 阴影：用官方 table 阴影色，深色自动加深 */
