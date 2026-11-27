@@ -43,6 +43,12 @@
   },
   "darkmode": true,
   "themeLocation": "theme.json",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于选择水印照片上的拍摄地点"
+    }
+  },
+  "requiredPrivateInfos": ["chooseLocation"],
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }
