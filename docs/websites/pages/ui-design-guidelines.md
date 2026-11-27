@@ -42,7 +42,6 @@
 | 半透明表面底 | `--color-surface-translucent` | `rgb(255 255 255 / 92%)` | `rgb(25 30 38 / 92%)` |
 | 页面底色光晕 | `--page-glow` | 主色 7% 径向光晕 | 主色 8% 径向光晕 |
 | 流水详情 Hero 底 | `--color-hero` | 白→浅蓝渐变 | 深灰→深蓝灰渐变 |
-| 工作管理时间线色块 | `--color-work-bar-0..5-bg` / `-fg` | 6 组浅底 + 同色系深字 | 6 组低饱和深底 + 亮字 |
 | 加载遮罩底 / 卡片 | `--color-mask-surface` / `--color-overlay-surface` | 半透明浅灰 / `#ffffff` | 半透明深灰 / `#1e242d` |
 
 | 项 | 值 |
@@ -207,7 +206,7 @@
 | 字段选择 | 列多且用户只关心其中几列时，筛选操作行放 `ColumnVisibilityPicker`（文案“已显示 N 个字段”）：列定义抽成 `availableColumns`（`key` + `label` + `column`），可见列用 `ref` 驱动 `computed` 过滤，`scroll-x` 用过滤后的列重算；默认全选、至少保留 1 列，勾选结果按 `storage-key="<模块>.<页面>.visible-columns.v<N>"` 存 localStorage，字段变动时递增 `v` 版本 |
 | 压缩控制 | 每列同时设 `width` 与相同 `minWidth`；`scroll-x` 按实际列宽计算，超宽时横向滚动，不靠等比压缩牺牲名称/型号列 |
 | 列宽调整 | 列表页统一用 `components/PersistentDataTable.vue` 包裹（`storage-key` 取 `模块/页面`）：有宽度的列自动可拖动，拖动结果按页面写入 localStorage，刷新 / 再次进入仍生效；页面不再手写 resize 逻辑 |
-| 表格贴边 | **所有视口**下，含表格的数据卡片内容区 `padding: 0`，表格四边直接贴着卡片；屏幕留白（`.app-content` 左右 14px）保持不变。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）、工作管理（甘特时间线）复用，写宽了会误伤；分页条单独补回左右 / 下内边距（`--list-pagination-padding-*`）。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
+| 表格贴边 | **所有视口**下，含表格的数据卡片内容区 `padding: 0`，表格四边直接贴着卡片；屏幕留白（`.app-content` 左右 14px）保持不变。选择器必须带 `:has(.n-data-table)` 限定——`.data-card` 也被「关于」页、台账标签 / 隐患类型（树）复用，写宽了会误伤；分页条单独补回左右 / 下内边距（`--list-pagination-padding-*`）。内容区类名是 naive-ui 实际产出的 `.n-card-content`（单短横线），写成 BEM 的 `.n-card__content` 是空选择器。**`padding: 0` 必须配套 `overflow: hidden`**：归零后表头（灰底）与行背景直接顶到卡片四角，卡片默认 `overflow: visible` 不裁剪子元素，圆角会被方形背景「盖」成直角；不要写成 `overflow: auto`/`scroll`，那会给卡片再套一层滚动条（表格自己已有横向滚动）。由 `web/src/views/mobileTableCard.spec.ts` 守住 |
 | 表格密度 | 单元格内边距 `--list-table-cell-padding-y/x`（8px / 12px）、字号 `--list-table-font-size`（13px）、行高 `--list-table-line-height`（1.5）、表头字重 `--list-table-header-weight`；页面不再单独写 `:deep(.n-data-table-th/td)` |
 | 单元格双行 | 物资名 / 型号等双行内容用 `--list-cell-title-line-height`（1.4）、`--list-cell-gap`（2px）；副行用 `--list-caption-size`（12px），不要页面各写 11px / 1.25 |
 | 普通表格 | `n-table` 必须放进 `table-scroll` 容器，并设符合字段数量的最小宽度 |
@@ -240,21 +239,6 @@
 | 样式 | 组件自带布局面向「可拖拽组织图」（外框白底、内容层绝对定位、内层 `height:100%`），放进卡片会高度塌陷且深色档露白底。`web/src/styles.css` 的「横向树（vue3-tree-org）」段已统一还原为文档流并映射 `--color-*` 令牌；新页面复用同一段（挂 `.org-tree-horizontal`），不要另写一套 |
 | 溢出 | 容器设 `overflow: auto`；树比卡片宽时容器内横向滚动，页面整体不出现横向滚动条 |
 
-### 半日时间线网格（`WorkTimelineGrid.vue`）
-
-工作管理模块的任务视图与人员视图共用同一个时间线组件：**一行一个任务 / 一个人**，右侧按天铺开，
-每天再分成「上午 / 下午」两个半天格——色块按起止的半天档精确跨列，所以「干到某天上午」这种
-边界不需要另外用文字表达。
-
-| 项 | 要求 |
-| --- | --- |
-| 结构 | 每行一个 CSS 网格：最左是**粘性名称列**（`position: sticky; left: 0`）＋每个半天一列（24px）；表头两行——第一行日期 + 星期（跨当天的两个半天列），第二行「上 / 下」 |
-| 泳道 | 同一行同一天可能有多个活（一人一天干多个活、一个活多人分时段），因此色块按泳道分层：贪婪打包，最多 3 层，放不下的只计数并在名称列显示「+N」（tooltip 说明还有几条没画出来）；行高随层数增长 |
-| 色板 | 用 `--color-work-bar-0..5-bg` / `-fg` 六组令牌（`utils/work.ts` 的 `workBarPaletteIndex` / `workBarHash` 取模，同一任务 / 同一姓名颜色稳定），明暗两档同名同义，不在页面里写死颜色 |
-| 底色 | 周末与今天用弱底色（`--color-surface-muted` / `--color-primary-soft`）标记；每天边界用 1px 弱边框勾出 |
-| 文字 | 色块上写「对方视角」的信息：任务视图写参与人员、人员视图写任务名；宽度不够时省略号，完整信息（任务 / 时间段 / 参与人员）放 `n-tooltip` |
-| 交互 | 点色块打开工作记录弹窗（无写权限时为只读详情）；行尾插槽放行级操作（编辑任务 / 排活），只在有写权限时渲染 |
-| 溢出 | 网格比卡片宽时容器内横向滚动，**页面整体不出现横向滚动条**；Shift + 滚轮横向滚动由组件自己处理（`n-data-table` 的滚动容器钩子不适用于自绘网格） |
 | 空态 | 无数据用 `n-empty`；加载中用 `LoadingMask`（宿主 `position: relative`） |
 
 ### 工作台（`DashboardView.vue`）
@@ -392,7 +376,7 @@
 | 直达链接 | 打开时把 id 写进列表页 URL 的 `?detail=<id>`，刷新 / 收藏 / Ctrl+点击新标签都能直接回到该弹窗；关闭时清掉该参数。列表页需在 `usePagedTable` 的 `urlSync.preservedQueryKeys` 里声明 `'detail'`，否则翻页 / 筛选会把它冲掉 |
 | keepAlive 隔离 | URL → 弹窗的 watcher 必须判 `route.name` 是不是自己这条路由再处理：`keepAlive` 列表页跳走时只是被停用、watcher 仍会跑，否则会拿对方的 id 查自己的数据，并把对方刚写进的 `?detail=` 改写成自己的 id（申购计划 ⇄ 申购记录这两页最容易踩） |
 | 旧链接兼容 | 原来的 4 条详情路径保留为 `redirect` 到对应列表页 + `?detail=<id>`，老链接不会 404 |
-| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「详情弹窗清单与 `data-detail-modal` 标记一一对应」「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；**新增详情弹窗必须同步接线并把文件加进该 spec 的清单**，否则漏接会静默失效。申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住；申购类详情弹窗的字段分组 tab 与「缺必填项时自动切 tab」由 `web/src/views/procurement/detailModalTabs.spec.ts` 守住；工作记录详情弹窗的关闭行为由 `web/src/components/WorkRecordFormModal.spec.ts` 守住 |
+| 接线守卫 | 以上关闭接线由 `web/src/views/detailModalClose.spec.ts` 扫源码守住（含「详情弹窗清单与 `data-detail-modal` 标记一一对应」「必须禁用组件库自身的遮罩/ESC 关闭」「三条路径都转发 requestClose」「@close 返回 false」「不再引用已移除的详情路由」）；**新增详情弹窗必须同步接线并把文件加进该 spec 的清单**，否则漏接会静默失效。申购计划 ⇄ 申购记录的单条互转（按钮、接口入参、跳转、无写权限只读）由 `web/src/views/procurement/purchaseConvertFromDetailModal.spec.ts` 守住；申购类详情弹窗的字段分组 tab 与「缺必填项时自动切 tab」由 `web/src/views/procurement/detailModalTabs.spec.ts` 守住 |
 
 > 历史：详情页曾用 `detail-toolbar`（返回入口）与 `detail-grid`（主信息 + 侧栏）两个全局类，
 > 现已随详情页一并删除；不要在新代码里引用这两个类名。

@@ -47,7 +47,7 @@ var (
 
 const instructions = "优先使用业务工具完成常见查询与操作（list_* / create_* / batch_update_*）：" +
 	"它们的筛选默认值与网页端一致（如 list_purchase_plans 默认只查「正常」且未转入申购记录的计划，" +
-	"list_work_overview 默认本月），查询默认每页 20 条，翻页传 page / page_size。" +
+	"list_work_tasks 按开始时间倒序且 tags 命中任意一个即可），查询默认每页 20 条，翻页传 page / page_size。" +
 	"业务工具覆盖不到的能力才走高级接口：先 find_api_operations 查找接口，再 describe_api_operation " +
 	"确认参数，最后用 call_api_operation 执行；describe_api_operation 的 call_arguments 说明每个参数该放进 " +
 	"path_params / query / headers / body / file 的哪一个；带乐观锁的写操作把版本号放进 " +

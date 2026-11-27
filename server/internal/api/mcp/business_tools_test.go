@@ -3,7 +3,7 @@ package mcp
 // 业务工具的约束校验：
 //  1. 工具名唯一且符合 MCP 命名（小写字母 / 数字 / 下划线）；
 //  2. 每个工具绑定的 operation_id 仍在契约目录里，路径 / 查询 / 请求体参数确实由该接口声明；
-//  3. 缺省值与网页端一致（申购计划、工作总览、新建表单等）；
+//  3. 缺省值与网页端一致（申购计划、工作任务、新建表单等）；
 //  4. 必填参数缺失时在本地就报错，不会把无效请求转给业务接口。
 
 import (
@@ -112,9 +112,14 @@ func TestBusinessToolDefaultsFollowWeb(t *testing.T) {
 		t.Fatalf("默认分页应为 1 / 20，实际 %#v / %#v", query["page"], query["page_size"])
 	}
 
-	_, query, _ = mustBuild(t, "list_work_overview", nil)
-	if query["start_date"] != shanghaiMonthStart() || query["end_date"] != shanghaiMonthEnd() {
-		t.Fatalf("工作总览默认区间应为本月，实际 %#v ~ %#v", query["start_date"], query["end_date"])
+	_, query, _ = mustBuild(t, "list_work_tasks", nil)
+	if query["page"] != 1 || query["page_size"] != 20 {
+		t.Fatalf("工作任务默认分页应为 1 / 20，实际 %#v / %#v", query["page"], query["page_size"])
+	}
+
+	_, _, body := mustBuild(t, "create_work_task", map[string]any{"name": "107 立磨定量给料机校称"})
+	if body["progress"] != 0 {
+		t.Fatalf("新增任务默认完成度应为 0，实际 %#v", body["progress"])
 	}
 
 	_, query, _ = mustBuild(t, "list_uncoded_materials", nil)
@@ -125,7 +130,7 @@ func TestBusinessToolDefaultsFollowWeb(t *testing.T) {
 		t.Fatalf("未编码物资默认状态应为 [正常]，实际 %#v", got)
 	}
 
-	_, _, body := mustBuild(t, "create_inventory_inbound", map[string]any{
+	_, _, body = mustBuild(t, "create_inventory_inbound", map[string]any{
 		"lines": []any{map[string]any{"stock_material_id": 1, "quantity": "2"}},
 	})
 	if body["source_type"] != "MANUAL" {
@@ -260,11 +265,11 @@ func TestBusinessToolUpdateHazardSendsPartialBody(t *testing.T) {
 }
 
 func TestBusinessToolJoinComma(t *testing.T) {
-	_, query, _ := mustBuild(t, "list_work_overview", map[string]any{
-		"task_ids": []any{3, 1}, "participants": []any{"李建军", "孙浩宇"},
+	_, query, _ := mustBuild(t, "list_work_tasks", map[string]any{
+		"tags": []any{"安全", "检修"},
 	})
-	if query["task_ids"] != "3,1" || query["participants"] != "李建军,孙浩宇" {
-		t.Fatalf("数组参数应拼成逗号分隔字符串，实际 %#v / %#v", query["task_ids"], query["participants"])
+	if query["tags"] != "安全,检修" {
+		t.Fatalf("标签应拼成逗号分隔字符串，实际 %#v", query["tags"])
 	}
 	_, query, _ = mustBuild(t, "list_ledger_items", map[string]any{"tag_ids": []any{2, 4}})
 	if query["tag_ids"] != "2,4" {

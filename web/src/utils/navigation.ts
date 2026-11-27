@@ -36,7 +36,7 @@ export const NAV_FEATURES = [
   },
   { key: 'hazards', label: '隐患管理', route: 'hazard-records', permission: 'hazard:read' },
   { key: 'ledger', label: '台账管理', route: 'ledger-items', permission: 'ledger:read' },
-  { key: 'work', label: '工作管理', route: 'work-overview', permission: 'work:read' },
+  { key: 'work', label: '工作管理', route: 'work-tasks', permission: 'work:read' },
 ] as const
 
 export type NavFeatureKey = (typeof NAV_FEATURES)[number]['key']

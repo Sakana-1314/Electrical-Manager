@@ -46,7 +46,7 @@ describe('表格卡片贴边的接线', () => {
     const nonTableCards = [
       'web/src/views/settings/AboutView.vue',
       'web/src/views/ledger/LedgerTagsView.vue',
-      'web/src/views/work/WorkWorkersView.vue',
+      'web/src/views/hazard/HazardTypesView.vue',
     ]
     for (const relative of nonTableCards) {
       const source = readFileSync(`${process.cwd()}/../${relative}`, 'utf8')

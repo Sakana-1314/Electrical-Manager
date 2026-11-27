@@ -69,8 +69,6 @@
 | `DUPLICATE_LEDGER_TAG` | 409 | 同一层级下已有同名标签 | `service/ledger` |
 | `LEDGER_TAG_HAS_CHILDREN` | 409 | 标签下还有子标签，不能删除 | `service/ledger` |
 | `LEDGER_TAG_IN_USE` | 409 | 标签（或其子标签）已被台账记录引用，不能删除 | `service/ledger` |
-| `DUPLICATE_WORK_TASK` | 409 | 任务名称已存在（同一项目内唯一，请直接编辑已有任务） | `service/work` |
-| `WORK_TASK_HAS_RECORDS` | 409 | 任务下还有工作记录，请先删除记录再删任务 | `service/work` |
 
 ## 请求与业务校验
 
@@ -89,9 +87,7 @@
 | `PURCHASE_APPROVAL_EXPORT_FIELDS_REQUIRED` | 409 | 导出申购审批表前需补全字段 | `service/material` |
 | `LEDGER_TAG_MAX_LEVEL` | 400 | 标签最多 3 层：不能在已到第 3 层的节点下新增子标签，也不能把标签移到会超过 3 层的位置或它自己的子孙下 | `service/ledger` |
 | `INVALID_TAG_ID` | 400 | 标签不存在（details 带 `tag_ids`） | `service/ledger` |
-| `WORK_DATE_RANGE` | 400 | 日期区间不合法：结束早于开始、同一天的结束时段早于开始时段，或任务计划结束早于开始 | `service/work` |
-| `WORK_RANGE_TOO_LONG` | 400 | 工作管理的查询区间最长 92 天，请缩小范围 | `service/work` |
-| `INVALID_WORK_TASK_ID` | 400 | 任务不存在（新增工作记录时引用了不存在的任务，details 带 `task_id`） | `service/work` |
+| `WORK_DATE_RANGE` | 400 | 完成时间早于开始时间（两者都填时校验） | `service/work` |
 | `HAZARD_UNIT_PERSON_REQUIRED` | 400 | 责任单位未配置责任人（单位与责任人一一对应） | `service/hazard` |
 
 ## 图片与文件

@@ -31,7 +31,7 @@ const MODULE_LABELS: Record<string, string> = {
   codes: '物料编码库',
   ledger: '台账',
   hazard: '隐患',
-  work: '工单',
+  work: '工作管理',
 }
 /** 模块的一句话说明：告诉使用者这组权限能打开哪些页面。 */
 const MODULE_HINTS: Record<string, string> = {
@@ -43,7 +43,7 @@ const MODULE_HINTS: Record<string, string> = {
   codes: '物料编码库',
   ledger: '台账条目与标签',
   hazard: '隐患登记、整改与复查',
-  work: '工单、参与人与工时',
+  work: '工作任务与图片',
 }
 /** 权限胶囊文案：导入型写权限与普通读写区分开。 */
 function actionLabel(item: PermissionRead): string {

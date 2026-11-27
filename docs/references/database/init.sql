@@ -81,20 +81,6 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END
 $$;
 
-DO $$
-BEGIN
-  CREATE TYPE worktaskstatus AS ENUM ('PENDING', 'IN_PROGRESS', 'DONE', 'PAUSED');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END
-$$;
-
-DO $$
-BEGIN
-  CREATE TYPE workhalfday AS ENUM ('AM', 'PM');
-EXCEPTION WHEN duplicate_object THEN NULL;
-END
-$$;
-
 -- 项目（业务数据隔离维度）：所有业务表都带 project_id，同一时刻只能看到当前项目的数据。
 -- 项目只对外显示名称，标识用自增 id（请求头 X-Project-Id / 链接参数 project_id 都用它，不外显编码）。
 -- is_default 标记唯一的默认项目：小程序 / MCP 未指定项目时用它兜底。
@@ -910,28 +896,30 @@ CREATE INDEX IF NOT EXISTS ix_ledger_image_project_id ON ledger_image (project_i
 -- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
 CREATE INDEX IF NOT EXISTS ix_ledger_image_file_id ON ledger_image (file_id);
 
--- 工作管理：任务（活）+ 任务图片 + 工作记录（谁在什么时候干哪个活）。
--- 任务名在项目内唯一：同一件活反复干都登记在同一个任务下，用工作记录的起止时间表达周期，
--- 任务视图因此能看到它的全周期；状态是人工维护的进度标记，不随计划或记录自动流转。
+-- 工作管理：一行一个任务，列与车间《任务详细计划》表一致
+-- （工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注）。
+-- 标签是英文逗号分隔的字符串（不做标签表），任务可附图片；任务名允许重复
+-- （同一件活可以在不同周重复登记），不再区分任务与人员视图。
 CREATE TABLE IF NOT EXISTS work_task (
   id BIGSERIAL NOT NULL,
   project_id BIGINT NOT NULL,
-  name VARCHAR(128) NOT NULL,
-  description VARCHAR(1000) NULL,
-  status worktaskstatus NOT NULL DEFAULT 'PENDING',
-  plan_start_date DATE NULL,
-  plan_end_date DATE NULL,
-  remark VARCHAR(500) NULL,
+  name VARCHAR(500) NOT NULL,
+  steps VARCHAR(1000) NULL,
+  start_date DATE NULL,
+  end_date DATE NULL,
+  owner VARCHAR(255) NULL,
+  progress SMALLINT NOT NULL DEFAULT 0,
+  remark VARCHAR(1000) NULL,
+  tags VARCHAR(500) NOT NULL DEFAULT '',
   created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
   version INTEGER NOT NULL DEFAULT 1,
   CONSTRAINT pk_work_task PRIMARY KEY (id),
-  CONSTRAINT uq_work_task_project_name UNIQUE (project_id, name),
   CONSTRAINT fk_work_task_project_id_project
     FOREIGN KEY (project_id) REFERENCES project (id)
 );
 
-CREATE INDEX IF NOT EXISTS ix_work_task_project_status ON work_task (project_id, status);
+CREATE INDEX IF NOT EXISTS ix_work_task_project_created ON work_task (project_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS ix_work_task_project_id ON work_task (project_id);
 
 CREATE TABLE IF NOT EXISTS work_task_image (
@@ -951,33 +939,6 @@ CREATE TABLE IF NOT EXISTS work_task_image (
 CREATE INDEX IF NOT EXISTS ix_work_task_image_project_id ON work_task_image (project_id);
 -- 附件引用计数、悬空清理与删除前预检都按 file_id 反查（主键以 owner_id 开头用不上）。
 CREATE INDEX IF NOT EXISTS ix_work_task_image_file_id ON work_task_image (file_id);
-
--- 工作记录：起止都精确到上午（AM）/ 下午（PM）；参与人员是「、」连接的姓名串
--- （最多 20 人 × 24 字（含分隔符）= 500 字符，正好等于列宽），人员视图按姓名拆分后分组。
--- 半日占用判定与「结束不早于开始」都由服务端校验，库里不加 CHECK，规则只有一处实现。
-CREATE TABLE IF NOT EXISTS work_record (
-  id BIGSERIAL NOT NULL,
-  project_id BIGINT NOT NULL,
-  task_id BIGINT NOT NULL,
-  start_date DATE NOT NULL,
-  start_half workhalfday NOT NULL,
-  end_date DATE NOT NULL,
-  end_half workhalfday NOT NULL,
-  participants VARCHAR(500) NOT NULL,
-  remark VARCHAR(500) NULL,
-  created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT now(),
-  version INTEGER NOT NULL DEFAULT 1,
-  CONSTRAINT pk_work_record PRIMARY KEY (id),
-  CONSTRAINT fk_work_record_task_id_work_task
-    FOREIGN KEY (task_id) REFERENCES work_task (id),
-  CONSTRAINT fk_work_record_project_id_project
-    FOREIGN KEY (project_id) REFERENCES project (id)
-);
-
-CREATE INDEX IF NOT EXISTS ix_work_record_task_id ON work_record (task_id);
-CREATE INDEX IF NOT EXISTS ix_work_record_start_date ON work_record (start_date);
-CREATE INDEX IF NOT EXISTS ix_work_record_project_id ON work_record (project_id);
 
 -- 默认项目（首次导入的既有数据都归它）。重复导入不改变已有项目的启用状态。
 INSERT INTO project (name, enabled, is_default, remark)
@@ -1153,7 +1114,7 @@ ON CONFLICT (project_id, major, minor) DO NOTHING;
 
 -- 首次登录账号，默认密码均为 123456。重复导入不会重置已有账号密码与权限位。
 -- 权限位（BIGINT）：bit0 系统管理、bit1-2 二级库读写、bit3-4 申购读写、bit5 华星只读、
--- bit6 退役（原编码库只读，已并入申购）、bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工单读写、
+-- bit6 退役（原编码库只读，已并入申购）、bit7-8 台账读写、bit9-10 隐患读写、bit11-12 工作管理读写、
 -- bit13-14 精简二级库读写、bit15 华星导入；全开 = 65471。
 -- API 令牌用 gen_random_uuid() 生成（32 位十六进制 + 连字符），只保存 SHA-256 哈希。
 INSERT INTO app_user (username, password_hash, api_token_hash, display_name, department_name, permissions)
@@ -1577,15 +1538,17 @@ COMMENT ON COLUMN ledger_image."ledger_id" IS '台账记录（与 `file_id` 组�
 COMMENT ON COLUMN ledger_image."project_id" IS '所属项目（业务数据按项目隔离）';
 COMMENT ON COLUMN ledger_image."file_id" IS '图片对象';
 COMMENT ON COLUMN ledger_image."sort_order" IS '展示顺序（按上传顺序，每条记录最多 9 张）';
-COMMENT ON TABLE work_task IS '工作任务（活）：名称 / 状态 / 计划起止 / 工作内容 / 备注';
+COMMENT ON TABLE work_task IS '工作任务：一行一个任务（工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注 / 标签）';
 COMMENT ON COLUMN work_task."id" IS '主键';
 COMMENT ON COLUMN work_task."project_id" IS '所属项目（业务数据按项目隔离）';
-COMMENT ON COLUMN work_task."name" IS '任务名称（同一项目内唯一，重名由服务端返回 409 `DUPLICATE_WORK_TASK`）';
-COMMENT ON COLUMN work_task."description" IS '工作内容（PATCH 传空串即清空）';
-COMMENT ON COLUMN work_task."status" IS '任务状态（接口按中文取值「未开始 / 进行中 / 已完成 / 已暂停」输出，人工维护、不做流转校验）';
-COMMENT ON COLUMN work_task."plan_start_date" IS '计划开始日期';
-COMMENT ON COLUMN work_task."plan_end_date" IS '计划结束日期';
-COMMENT ON COLUMN work_task."remark" IS '备注（备件、工作票、停机窗口等）';
+COMMENT ON COLUMN work_task."name" IS '工作任务（允许重名：同一件活可在不同周重复登记）';
+COMMENT ON COLUMN work_task."steps" IS '事项或步骤（PATCH 传空串即清空）';
+COMMENT ON COLUMN work_task."start_date" IS '开始时间';
+COMMENT ON COLUMN work_task."end_date" IS '完成时间；与开始时间都填时结束不得早于开始（400 `WORK_DATE_RANGE`）';
+COMMENT ON COLUMN work_task."owner" IS '责任人（文本，可多人）';
+COMMENT ON COLUMN work_task."progress" IS '完成度百分比（0~100，100 = 已完成）';
+COMMENT ON COLUMN work_task."remark" IS '备注';
+COMMENT ON COLUMN work_task."tags" IS '标签，英文逗号分隔（如 `''安全,检修''`），空串 = 无标签；写入时去空、去重、按英文逗号规范化，最多 20 个';
 COMMENT ON COLUMN work_task."created_at" IS '创建时间';
 COMMENT ON COLUMN work_task."updated_at" IS '更新时间';
 COMMENT ON COLUMN work_task."version" IS '乐观锁版本';
@@ -1594,16 +1557,3 @@ COMMENT ON COLUMN work_task_image."task_id" IS '任务（与 `file_id` 组合主
 COMMENT ON COLUMN work_task_image."project_id" IS '所属项目（业务数据按项目隔离）';
 COMMENT ON COLUMN work_task_image."file_id" IS '图片对象';
 COMMENT ON COLUMN work_task_image."sort_order" IS '展示顺序（按上传顺序，每个任务最多 9 张）';
-COMMENT ON TABLE work_record IS '工作记录：任务 + 起止（上午 / 下午）+ 参与人员 + 备注';
-COMMENT ON COLUMN work_record."id" IS '主键';
-COMMENT ON COLUMN work_record."project_id" IS '所属项目（业务数据按项目隔离）';
-COMMENT ON COLUMN work_record."task_id" IS '所属任务（外键 RESTRICT：删任务前必须先删记录）';
-COMMENT ON COLUMN work_record."start_date" IS '工作记录开始日期';
-COMMENT ON COLUMN work_record."start_half" IS '开始半日（AM / PM）';
-COMMENT ON COLUMN work_record."end_date" IS '工作记录结束日期';
-COMMENT ON COLUMN work_record."end_half" IS '结束半日（AM / PM）';
-COMMENT ON COLUMN work_record."participants" IS '参与人员姓名，以「、」连接（最多 20 人 × 24 字含分隔符 = 500 字符）；写入时服务端按顿号 / 逗号 / 分号 / 空格等分隔符拆分、去空、去重保序后规范化落库，读接口还原成姓名列表';
-COMMENT ON COLUMN work_record."remark" IS '这一步的具体内容、交接说明等';
-COMMENT ON COLUMN work_record."created_at" IS '创建时间';
-COMMENT ON COLUMN work_record."updated_at" IS '更新时间';
-COMMENT ON COLUMN work_record."version" IS '乐观锁版本';

@@ -1629,54 +1629,32 @@ def _build_schema_examples() -> dict[str, Any]:
             "version": 1,
         },
         "Page_LedgerItemRead_": _page(_LEDGER_ITEM_ROWS),
-        # —— 工作管理（任务 / 工作记录 / 工作总览 · 任务视图 · 人员视图）——
+        # —— 工作管理（一行一个任务）——
         "WorkTaskRead": _WORK_TASK_ROWS[0],
         "WorkTaskCreate": {
-            "name": "窑尾排风机电机轴承更换",
-            "description": "窑尾排风机电机运行异响，计划停机更换轴承",
-            "status": "未开始",
-            "plan_start_date": "2026-09-21",
-            "plan_end_date": "2026-09-25",
-            "remark": "备件待领用",
+            "name": "107立磨地坑定量给料机校称",
+            "steps": "重新标定零位与量程",
+            "start_date": "2026-11-03",
+            "end_date": "2026-11-03",
+            "owner": "郭子新",
+            "progress": 100,
+            "remark": "已完成",
+            "tags": "11月第一周,校称",
             "image_ids": [_file_id(405)],
         },
         "WorkTaskUpdate": {
-            "name": "1# 回转窑主电机轴承更换",
-            "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
-            "status": "已完成",
-            "plan_start_date": "2026-09-07",
-            "plan_end_date": "2026-09-16",
-            "remark": "动平衡复测合格，9 月 16 日恢复备用",
-            "image_ids": [_file_id(405)],
-            "version": 1,
+            "name": "32T行车竖井安装声光报警器",
+            "steps": "机修焊接支架后安装并放电源开关至 0 米",
+            "start_date": "2026-11-05",
+            "end_date": "2026-11-07",
+            "owner": "赵玉军",
+            "progress": 100,
+            "remark": "已完成，调试正常",
+            "tags": "11月第一周,安全",
+            "image_ids": [_file_id(403)],
+            "version": 2,
         },
         "Page_WorkTaskRead_": _page(_WORK_TASK_ROWS),
-        "WorkRecordRead": _WORK_RECORD_ROWS[0],
-        "WorkRecordCreate": {
-            "task_id": 1,
-            "start_date": "2026-09-15",
-            "start_half": "PM",
-            "end_date": "2026-09-16",
-            "end_half": "AM",
-            "participants": ["李建军", "孙浩宇"],
-            "remark": "动平衡复测与收尾",
-        },
-        "WorkRecordUpdate": {
-            "task_id": 1,
-            "start_date": "2026-09-15",
-            "start_half": "PM",
-            "end_date": "2026-09-16",
-            "end_half": "PM",
-            "participants": ["李建军", "孙浩宇"],
-            "remark": "动平衡复测合格，多用了半个下午",
-            "version": 1,
-        },
-        "WorkTaskTimelineRead": _WORK_TASK_TIMELINE_ROWS[0],
-        "Page_WorkTaskTimelineRead_": _page(_WORK_TASK_TIMELINE_ROWS),
-        "WorkWorkerTimelineRead": _WORK_WORKER_TIMELINE_ROWS[0],
-        "Page_WorkWorkerTimelineRead_": _page(_WORK_WORKER_TIMELINE_ROWS),
-        "WorkOverviewRowRead": _WORK_OVERVIEW_ROWS[0],
-        "Page_WorkOverviewRowRead_": _page(_WORK_OVERVIEW_ROWS),
         "AdvancedSettingsRead": {
             "mini_program_registration_enabled": True,
             "updated_at": _LATEST_STAMP,
@@ -2981,128 +2959,75 @@ _LEDGER_ITEM_ROWS = _ledger_item_rows()
 
 
 # ===========================================================================
-# 工作管理台账（任务 / 工作记录 / 三个视图）
+# 工作管理台账（一行一个任务）
 # ===========================================================================
-# 任务名在项目内唯一：同一件活反复干都挂在同一个任务下，用工作记录的起止表达周期。
-# 工作记录的时间锚在 _LATEST_DATE（2026-09-13）那一周及其前一周，覆盖「跨天、含上下午、
-# 只干半天」几种形态；三个视图的示例都由 `_WORK_RECORDS` 推导，不另写一份假数据。
+# 列与车间《任务详细计划》表一致；标签是英文逗号分隔字符串，图片按任务挂。
 _WORK_TASKS: list[dict[str, Any]] = [
     {
-        "name": "1# 回转窑主电机轴承更换",
-        "description": "窑尾主传动备用电机轴承异响，利用停机窗口更换并做动平衡复测",
-        "status": "进行中",
-        "plan_start_date": "2026-09-07",
-        "plan_end_date": "2026-09-18",
-        "remark": "备件已到货（NU228 轴承 2 套）",
+        "name": "302空压机停机时电流异常波动原因调查",
+        "steps": "停机过程中有向上翘的波形",
+        "start_date": "2026-10-31",
+        "end_date": "2026-11-01",
+        "owner": "高振华",
+        "progress": 100,
+        "remark": "怀疑断电后电机惯性自转残余电流通过互感器二次反映至数显表",
+        "tags": "11月第一周,重点工作",
         "image_seeds": (405,),
     },
     {
-        "name": "窑尾高温风机变频器参数校验",
-        "description": "停机检修后恢复变频器参数并做空载试车",
-        "status": "已完成",
-        "plan_start_date": "2026-09-01",
-        "plan_end_date": "2026-09-03",
-        "remark": "参数已备份到车间共享盘",
+        "name": "304 1号脱硫风机生产时跳闸原因调查",
+        "steps": "调节变频器变压器抽头",
+        "start_date": "2026-11-01",
+        "end_date": "2026-11-02",
+        "owner": "李成，王杰",
+        "progress": 100,
+        "remark": "调节变频器变压器抽头至 +5%，已完成",
+        "tags": "11月第一周,脱硫",
         "image_seeds": (),
     },
     {
-        "name": "201 低压配电室抽屉柜清灰紧固",
-        "description": "MNS 抽屉单元逐台清灰、紧固一次接线并测量接触电阻",
-        "status": "未开始",
-        "plan_start_date": "2026-09-14",
-        "plan_end_date": "2026-09-20",
-        "remark": "需提前办理工作票与停电申请",
+        "name": "32T行车竖井安装声光报警器",
+        "steps": "待机修焊接支架",
+        "start_date": "2026-11-05",
+        "end_date": None,
+        "owner": "赵玉军",
+        "progress": 10,
+        "remark": "待机修焊接支架，安装声光报警器",
+        "tags": "11月第一周,安全",
         "image_seeds": (403,),
     },
     {
-        "name": "现场压力变送器校验",
-        "description": "现场 12 只压力变送器送检与回装",
-        "status": "已暂停",
-        "plan_start_date": "2026-09-08",
-        "plan_end_date": "2026-09-12",
-        "remark": "检定站排期调整，已完成的先回装",
-        "image_seeds": (),
-    },
-    {
-        "name": "6kV 高压开关柜绝缘测试",
-        "description": "6kV 高压室馈出柜停电做绝缘电阻与耐压测试",
-        "status": "已完成",
-        "plan_start_date": "2026-08-31",
-        "plan_end_date": "2026-09-02",
-        "remark": "测试报告已归档",
+        "name": "107立磨1号粉煤仓校称",
+        "steps": "重新标定零位与量程",
+        "start_date": "2026-11-02",
+        "end_date": "2026-11-02",
+        "owner": "苏炯焘",
+        "progress": 100,
+        "remark": "重新标零、量程，已完成",
+        "tags": "11月第一周,校称",
         "image_seeds": (),
     },
 ]
-_WORK_RECORDS: list[dict[str, Any]] = [
-    {
-        "task_id": 1,
-        "start_date": "2026-09-07",
-        "start_half": "AM",
-        "end_date": "2026-09-09",
-        "end_half": "PM",
-        "participants": ["李建军", "王海涛"],
-        "remark": "拆卸端盖、取出旧轴承",
-    },
-    {
-        "task_id": 1,
-        "start_date": "2026-09-10",
-        "start_half": "AM",
-        "end_date": "2026-09-12",
-        "end_half": "AM",
-        "participants": ["李建军", "陈志远"],
-        "remark": "新轴承回装与对中",
-    },
-    {
-        "task_id": 2,
-        "start_date": "2026-09-02",
-        "start_half": "AM",
-        "end_date": "2026-09-02",
-        "end_half": "PM",
-        "participants": ["刘振华", "杨明辉"],
-        "remark": "参数回读、空载试车",
-    },
-    {
-        "task_id": 4,
-        "start_date": "2026-09-08",
-        "start_half": "AM",
-        "end_date": "2026-09-09",
-        "end_half": "AM",
-        "participants": ["陈志远"],
-        "remark": "拆检 6 只，其余等排期",
-    },
-    {
-        "task_id": 5,
-        "start_date": "2026-09-01",
-        "start_half": "AM",
-        "end_date": "2026-09-02",
-        "end_half": "PM",
-        "participants": ["李建军", "刘振华", "杨明辉"],
-        "remark": "停电测试，恢复送电",
-    },
-]
-# 三个视图示例的查询区间（覆盖上面全部记录）。
-_WORK_OVERVIEW_START = "2026-09-01"
-_WORK_OVERVIEW_END = "2026-09-12"
-_WORK_CREATED_AT = "2026-09-01T08:30:00+08:00"
-_WORK_UPDATED_AT = "2026-09-12T17:20:00+08:00"
+_WORK_CREATED_AT = "2026-11-01T08:30:00+08:00"
+_WORK_UPDATED_AT = "2026-11-01T17:20:00+08:00"
 
 
 def _work_task_rows() -> list[dict[str, Any]]:
-    """任务读模型：`record_count` 是任务下工作记录的总条数（与查询区间无关）。"""
     return [
         {
             "id": index,
             "name": item["name"],
-            "description": item["description"],
-            "status": item["status"],
-            "plan_start_date": item["plan_start_date"],
-            "plan_end_date": item["plan_end_date"],
+            "steps": item["steps"],
+            "start_date": item["start_date"],
+            "end_date": item["end_date"],
+            "owner": item["owner"],
+            "progress": item["progress"],
             "remark": item["remark"],
+            "tags": item["tags"],
             "images": [
                 _file_row(seed, f"{item['name']}-现场照片.jpg", 486912)
                 for seed in item["image_seeds"]
             ],
-            "record_count": sum(1 for record in _WORK_RECORDS if record["task_id"] == index),
             "created_at": _WORK_CREATED_AT,
             "updated_at": _WORK_UPDATED_AT,
             "version": 1,
@@ -3111,128 +3036,8 @@ def _work_task_rows() -> list[dict[str, Any]]:
     ]
 
 
-def _work_record_rows() -> list[dict[str, Any]]:
-    rows = []
-    for index, item in enumerate(_WORK_RECORDS, start=1):
-        task = _WORK_TASKS[item["task_id"] - 1]
-        rows.append(
-            {
-                "id": index,
-                "task_id": item["task_id"],
-                "task_name": task["name"],
-                "task_status": task["status"],
-                "start_date": item["start_date"],
-                "start_half": item["start_half"],
-                "end_date": item["end_date"],
-                "end_half": item["end_half"],
-                "participants": item["participants"],
-                "remark": item["remark"],
-                "created_at": _WORK_CREATED_AT,
-                "updated_at": _WORK_UPDATED_AT,
-                "version": 1,
-            }
-        )
-    return rows
-
-
-def _work_slot(record: dict[str, Any], day: str) -> str | None:
-    """某天占用的时段（口径与 `app/services/work_service.record_slots` 一致）。
-
-    - 起始日之后全天；起始日只在上午档时占上午；
-    - 结束日之前全天；结束日只在下午档时占下午。
-    """
-    if day < record["start_date"] or day > record["end_date"]:
-        return None
-    morning = day > record["start_date"] or record["start_half"] == "AM"
-    afternoon = day < record["end_date"] or record["end_half"] == "PM"
-    if morning and afternoon:
-        return "全天"
-    if morning:
-        return "上午"
-    if afternoon:
-        return "下午"
-    return None
-
-
-def _work_day_range(start: str, end: str) -> list[str]:
-    first = date.fromisoformat(start)
-    last = date.fromisoformat(end)
-    days: list[str] = []
-    while first <= last:
-        days.append(first.isoformat())
-        first += timedelta(days=1)
-    return days
-
-
-def _work_overview_rows() -> list[dict[str, Any]]:
-    """工作总览行：区间内的记录按天展开，一行 = 日期 + 任务 + 时段。
-
-    排序与接口一致（日期倒序 → 任务名 → 时段 → 记录 id）。
-    """
-    slot_order = {"全天": 0, "上午": 1, "下午": 2}
-    rows: list[dict[str, Any]] = []
-    for record in _WORK_RECORD_ROWS:
-        for day in _work_day_range(_WORK_OVERVIEW_START, _WORK_OVERVIEW_END):
-            slot = _work_slot(record, day)
-            if slot is None:
-                continue
-            rows.append(
-                {
-                    "date": day,
-                    "record_id": record["id"],
-                    "task_id": record["task_id"],
-                    "task_name": record["task_name"],
-                    "task_status": record["task_status"],
-                    "slot": slot,
-                    "participants": record["participants"],
-                    "remark": record["remark"],
-                }
-            )
-    rows.sort(
-        key=lambda row: (row["date"], row["task_name"], slot_order[row["slot"]], row["record_id"]),
-        reverse=True,
-    )
-    return rows
-
-
-def _work_task_timeline_rows() -> list[dict[str, Any]]:
-    """任务视图行：任务 + 查询区间内它的工作记录。"""
-    return [
-        {
-            "task": task,
-            "records": [
-                record
-                for record in _WORK_RECORD_ROWS
-                if record["task_id"] == task["id"]
-                and record["start_date"] <= _WORK_OVERVIEW_END
-                and record["end_date"] >= _WORK_OVERVIEW_START
-            ],
-        }
-        for task in _WORK_TASK_ROWS
-    ]
-
-
-def _work_worker_timeline_rows() -> list[dict[str, Any]]:
-    """人员视图行：按参与人姓名分组（一人一行），组内记录按开始日期升序。"""
-    groups: dict[str, list[dict[str, Any]]] = {}
-    for record in _WORK_RECORD_ROWS:
-        for name in record["participants"]:
-            groups.setdefault(name, []).append(record)
-    return [
-        {"name": name, "record_count": len(records), "records": records}
-        for name, records in sorted(groups.items())
-    ]
-
-
 _WORK_TASK_ROWS = _work_task_rows()
-_WORK_RECORD_ROWS = _work_record_rows()
-_WORK_OVERVIEW_ROWS = _work_overview_rows()
-_WORK_TASK_TIMELINE_ROWS = _work_task_timeline_rows()
-_WORK_WORKER_TIMELINE_ROWS = _work_worker_timeline_rows()
-# 参与人姓名清单：`GET /work-participants` 按项目内历史姓名去重升序返回。
-_WORK_PARTICIPANTS = sorted(
-    {name for record in _WORK_RECORDS for name in record["participants"]}
-)
+
 
 _SCHEMA_EXAMPLES: dict[str, Any] = _build_schema_examples()
 
@@ -3248,10 +3053,10 @@ _ERROR_BY_STATUS: dict[str, tuple[str, str]] = {
 
 _OPERATION_METHODS = {"get", "post", "put", "patch", "delete"}
 
-# 纯标量数组的响应（如参与人姓名清单）无法从 schema 推出业务示例，
+# 纯标量数组的响应（如工作任务标签清单）无法从 schema 推出业务示例，
 # 这里按路径显式登记；其余响应一律由所属 schema 的示例或错误码表给出。
 _PATH_RESPONSE_EXAMPLES: dict[str, Any] = {
-    "/api/v1/work-participants": _WORK_PARTICIPANTS,
+    "/api/v1/work-task-tags": ["11月第一周", "安全", "校称", "脱硫"],
 }
 
 

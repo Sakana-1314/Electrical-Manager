@@ -55,7 +55,7 @@ const permissionLabel = computed(() => {
     ['codes', '编码库'],
     ['ledger', '台账'],
     ['hazard', '隐患'],
-    ['work', '工单'],
+    ['work', '工作管理'],
   ]
   const writable = modules.filter(([key]) => perms.includes(`${key}:write`))
   if (writable.length > 0) return writable.map(([, label]) => `${label}读写`).join(' / ')

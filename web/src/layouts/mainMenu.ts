@@ -116,18 +116,9 @@ export function buildMainMenu(context: MainMenuContext): MenuOption[] {
       }),
     },
     {
-      // 工作管理：三个子 tab 都是读取开放（写操作在页面内按 work:write 隐藏）。
+      // 工作管理：一行一个任务（标签筛选 + 图片），读取开放、写操作在页面内按 work:write 隐藏。
       key: 'work',
-      build: () => ({
-        label: '工作管理',
-        key: 'work-group',
-        icon: renderIcon(CalendarOutline),
-        children: [
-          link('工作总览', 'work-overview'),
-          link('任务视图', 'work-tasks'),
-          link('人员视图', 'work-workers'),
-        ],
-      }),
+      build: () => link('工作管理', 'work-tasks', CalendarOutline),
     },
   ]
 

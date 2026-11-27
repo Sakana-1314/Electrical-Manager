@@ -122,18 +122,10 @@ export type LedgerTag = components['schemas']['LedgerTagRead']
 export type LedgerTagWrite = components['schemas']['LedgerTagCreate']
 export type LedgerTagUpdate = components['schemas']['LedgerTagUpdate']
 export type LedgerTagRef = components['schemas']['LedgerTagRefRead']
-/* 工作管理：任务（活）+ 工作记录（谁在什么时候干哪个活）+ 三个视图读模型。 */
-export type WorkTaskStatus = components['schemas']['WorkTaskStatus']
-export type WorkHalfDay = components['schemas']['WorkHalfDay']
+/* 工作管理：一行一个任务（工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注 / 标签 / 图片）。 */
 export type WorkTask = components['schemas']['WorkTaskRead']
 export type WorkTaskWrite = components['schemas']['WorkTaskCreate']
 export type WorkTaskUpdate = components['schemas']['WorkTaskUpdate']
-export type WorkRecord = components['schemas']['WorkRecordRead']
-export type WorkRecordWrite = components['schemas']['WorkRecordCreate']
-export type WorkRecordUpdate = components['schemas']['WorkRecordUpdate']
-export type WorkTaskTimeline = components['schemas']['WorkTaskTimelineRead']
-export type WorkWorkerTimeline = components['schemas']['WorkWorkerTimelineRead']
-export type WorkOverviewRow = components['schemas']['WorkOverviewRowRead']
 
 /* ===== 前端自建视图模型 / 泛型 / Literal（openapi 无对应 schema，手写保留） ===== */
 

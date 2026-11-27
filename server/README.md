@@ -27,9 +27,9 @@ https://<服务域名>/api/v1/mcp/?token=<接口令牌>
   `list_purchase_plans`、`list_purchase_records`、`list_purchase_templates`、`list_uncoded_materials`、`create_purchase_plan`、
   `move_purchase_plans_to_record`、`batch_update_purchase_plans`、`batch_update_purchase_records`、
   `list_material_codes`、`list_huaxing_inventory`、`list_lite_inventory`、`list_hazards`、
-  `create_hazard`、`update_hazard`、`list_ledger_items`、`list_work_overview`、`list_memos`、`create_memo`、
-  `get_dashboard_summary`。参数默认值与网页端一致（如申购计划默认只看「正常 + 未转入」、
-  工作总览默认本月、新建默认今天）。
+  `create_hazard`、`update_hazard`、`list_ledger_items`、`list_work_tasks`、`create_work_task`、
+  `update_work_task`、`list_memos`、`create_memo`、`get_dashboard_summary`。参数默认值与网页端一致
+  （如申购计划默认只看「正常 + 未转入」、工作任务按开始时间倒序、新建默认今天）。
 - 基础 / 高级工具：`get_current_user`（当前用户与项目）、`list_projects`（全部项目）、
   `find_api_operations`（按标签或关键字查管理端接口）、`describe_api_operation`（接口参数与响应契约）、
   `call_api_operation`（调用任意已登记接口；文件上传和下载使用 Base64）。业务工具覆盖不到时使用这一档。
