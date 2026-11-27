@@ -333,7 +333,7 @@ const summary = computed(() => {
       size="small"
       :disabled="loading || readonly"
     >
-      <n-grid :cols="2" :x-gap="20">
+      <n-grid :cols="2" :x-gap="20" :y-gap="20">
         <n-grid-item :span="2">
           <n-form-item label="任务" path="taskId">
             <pinyin-select

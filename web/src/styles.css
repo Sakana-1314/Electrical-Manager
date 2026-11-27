@@ -676,9 +676,14 @@ a {
     :has(.n-form-item-label .n-checkbox)
   ) {
   position: relative;
+  /* 栅格双列里同一行的字段高度可能不同：第一个字段带 20px 下边距，行高会被撑到
+   * 「控件 + 下边距」；末列字段（:last-child 无边距）若跟着拉伸，内部的 1fr 行会吃掉
+   * 这段差额、把输入框往下推（用户详情「显示名称」比「用户名」低 20px 的实测原因）。
+   * 钉在行首后字段高度只由自身内容决定，标签始终压在输入框上边框。 */
+  align-self: start;
   --floating-field-height: var(--control-height);
-  /* 标签绝对定位后不再占网格行，行高只剩控件本身 */
-  grid-template-rows: 1fr;
+  /* 标签绝对定位后不再占网格行，输入行放 1fr，与弹窗的标签行折叠规则一致 */
+  grid-template-rows: minmax(0, auto) 1fr;
 }
 .n-form-item--top-labelled:has(.n-input, .n-base-selection):not(
     :has(.n-form-item-label .n-checkbox)

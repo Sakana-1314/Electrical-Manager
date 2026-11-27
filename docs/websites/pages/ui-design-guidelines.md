@@ -296,6 +296,7 @@
 - 值判定：输入 / 日期 / 数字 / 文本域看原生 `input:placeholder-shown` / `textarea:placeholder-shown`；选择器（含多选）看 Naive 的 `.n-base-selection--selected`。多控件表单项（数量 + 单位）任一有值即浮起。
 - 表单字段（`n-form-item` 的 top 标签）与筛选字段（`.filter-field`）共用同一套标签定位；所有控件统一按 `--control-height`（34px）计算框内垂直中心，弹窗 / 登录页 / 列表页不再分档。
 - 非输入类表单项保持原标签行：开关、纯展示、复选框作为 label 的批量修改字段（`:has(label .n-checkbox)` 排除）。
+- **栅格双列里的字段钉在行首**：同一行里第一个字段带 20px 下边距（`.n-card.n-modal .n-form-item`），栅格行高会被撑到「控件 + 下边距」；末列字段（`:last-child` 下边距为 0）若跟着拉伸，内部的 `1fr` 行会吃掉这段差额、把输入框往下推，看起来像标签还在旧版标签行（用户详情「显示名称」比「用户名」低 20px 的实测原因）。浮动字段因此显式 `align-self: start`，字段高度只由自身内容决定。
 - 令牌：`--floating-label-size`（浮起字号 11px）、`--floating-label-line-height`（14px）、
   `--floating-label-color`（有值时 `--color-text-strong` 深色）、`--floating-label-focus-color`（聚焦时 `--color-primary` 主题色）、
   `--floating-label-weight`（`400`，不加粗）、`--floating-label-top`（`0`，标签中心压在框线上）、`--floating-label-bg`（断开框线的底色）、
@@ -359,6 +360,7 @@
 | 字号层级 | 弹窗标题 `--dialog-title-size`（16px）；正文、表单标签、描述列表、表格、提示统一 `--dialog-body-size` / `--dialog-label-size`（13px）；辅助说明、更新时间、上传状态统一 `--dialog-caption-size`（12px）。不要再出现 11px / 14px / 15px 等弹窗内字号 |
 | 行高 | 标题 `--dialog-title-line-height`（1.4）；正文 `--dialog-body-line-height`（1.6）；标签 `--dialog-label-line-height`（20px）；辅助说明 `--dialog-caption-line-height`（1.5）；展示型大数字用 `--dialog-metric-*` |
 | 表单项与标签 | 输入 / 下拉 / 日期 / 文本域使用浮动标签（见「浮动标签」）：标签不占独立一行，未输入时在框内、聚焦或有值后缩到框线上并断开框线；表单项之间仍 `--dialog-field-gap`（20px，窄屏 16px，末行归零）。非输入项（开关 / 复选标签）保留原标签行，标签到控件 `--dialog-label-gap`（4px）。标签行不保留 Naive 默认的 24px 空态占位；反馈区 `min-height: 0`，校验报错出现时按内容自然撑开，报错仍然可见 |
+| 旧版 n-grid 表单 | 工作 / 隐患 / 台账的新增编辑弹窗仍用 `n-grid :cols="2"`：每个字段是 `n-grid-item` 的唯一子元素，会命中 `.n-form-item:last-child` 丢掉下边距，必须显式 `:y-gap="20"` 补行距（否则字段与浮在框线上方的标签挤在一起、校验提示压到下一行）。新表单一律用 `.form-grid`（≤768px 自动单列） |
 | 外框 | header `--dialog-header-padding`、content `--dialog-content-padding`、footer `--dialog-footer-padding`（桌面 `16px 22px 12px` / `14px 22px 18px` / `12px 22px 18px`）；嵌套卡片（如流水摘要块）用 `--dialog-block-radius` / `--dialog-block-padding` |
 | 分组与区块 | 弹窗内区块标题统一挂全局类 `dialog-section-title`（13px / 600 / 下间距 8px）；辅助说明挂 `dialog-hint`（12px / 弱色）。`n-alert` 的下间距、`n-divider` 的上下间距、`n-collapse` 头部字号分别走 `--dialog-block-gap` / `--dialog-section-gap` / 正文令牌 |
 | tabs | 弹窗内 tab 字号 `--dialog-tab-size`（13px）、标签间距 `--dialog-tab-gap`（桌面 32px / 窄屏 18px）、tab 与内容间距 `--dialog-tab-content-gap`（桌面 16px / 窄屏 12px）。详情字段分组的行距与普通弹窗相同，不再单独写一套 |

@@ -218,7 +218,7 @@ function confirmDelete(): void {
       size="small"
       :disabled="loading"
     >
-      <n-grid :cols="2" :x-gap="20">
+      <n-grid :cols="2" :x-gap="20" :y-gap="20">
         <n-grid-item>
           <n-form-item label="名称" path="name">
             <n-input v-model:value="form.name" placeholder="如：低压抽屉柜" />
