@@ -125,9 +125,11 @@ func wechatLogin(c *web.Ctx) error {
 		})
 	}
 	token := security.CreateMiniProgramAccessToken(u.ID)
+	webToken := security.CreateAccessToken(u.ID)
 	read := svc.UserRead(c.DB, u)
 	return c.OK(schema.MiniProgramLoginResponse{
 		AccessToken:     &token,
+		WebAccessToken:  &webToken,
 		TokenType:       "bearer",
 		User:            &read,
 		RequiresProfile: false,
@@ -168,9 +170,11 @@ func createProfile(c *web.Ctx) error {
 		return err
 	}
 	t := security.CreateMiniProgramAccessToken(u.ID)
+	webToken := security.CreateAccessToken(u.ID)
 	read := svc.UserRead(c.DB, u)
 	return c.OK(schema.MiniProgramLoginResponse{
 		AccessToken:     &t,
+		WebAccessToken:  &webToken,
 		TokenType:       "bearer",
 		User:            &read,
 		RequiresProfile: false,

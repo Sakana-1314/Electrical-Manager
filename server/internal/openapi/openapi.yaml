@@ -399,7 +399,8 @@ paths:
       tags:
       - 认证
       summary: 换取进入网页版的一次性票据（兼容接口）
-      description: 兼容接口：小程序通常把本地 JWT 直接带到 /web-open?token=…；仅在未配置 APP_WEB_BASE_URL 或旧版客户端时，用小程序登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
+      description: 兼容接口：小程序通常把本地 JWT 直接带到 /web-open?token=…；仅在未配置 APP_WEB_BASE_URL
+        或旧版客户端时，用小程序登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
       operationId: create_web_open_ticket_api_v1_auth_web_open_tickets_post
       security:
       - HTTPBearer: []
@@ -447,7 +448,8 @@ paths:
       tags:
       - 认证
       summary: 用票据换取网页登录令牌（兼容接口）
-      description: 兼容接口：网页 /web-open 页在 ?ticket= 链路上用票据换回登录令牌（一次性，兑换后票据立即失效）；新链路直接使用 ?token=（小程序本地 JWT）。
+      description: 兼容接口：网页 /web-open 页在 ?ticket= 链路上用票据换回登录令牌（一次性，兑换后票据立即失效）；新链路直接使用
+        ?token=（小程序本地 JWT）。
       operationId: redeem_web_open_ticket_api_v1_auth_web_open_redeem_post
       requestBody:
         content:
@@ -6650,6 +6652,7 @@ paths:
                 $ref: '#/components/schemas/MiniProgramLoginResponse'
               example:
                 access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
+                web_access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
                 registration_token: null
                 token_type: bearer
                 user:
@@ -6995,6 +6998,7 @@ paths:
                 $ref: '#/components/schemas/MiniProgramLoginResponse'
               example:
                 access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
+                web_access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
                 registration_token: null
                 token_type: bearer
                 user:
@@ -26696,6 +26700,11 @@ components:
           - type: string
           - type: 'null'
           title: Registration Token
+        web_access_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Web Access Token
         token_type:
           type: string
           const: bearer
@@ -26718,6 +26727,7 @@ components:
       title: MiniProgramLoginResponse
       examples:
       - access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
+        web_access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q
         registration_token: null
         token_type: bearer
         user:

@@ -25,7 +25,7 @@ const miniUser = {
   bound: true,
 } as unknown as User
 
-describe('auth store 小程序直传令牌', () => {
+describe('auth store 小程序直传网页令牌', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()

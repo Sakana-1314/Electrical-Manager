@@ -36,8 +36,11 @@ type MiniProgramLoginResponse struct {
 	TokenType         string               `json:"token_type"`
 	User              *MiniProgramUserRead `json:"user"`
 	RequiresProfile   bool                 `json:"requires_profile"`
-	// WebBaseURL 是网页端站点地址（APP_WEB_BASE_URL）：小程序「进入网页版」直接拼
-	// `/web-open?token=<本地 JWT>` 用，不再额外换票。为空时小程序回退到一次性票据。
+	// WebAccessToken 是给网页端用的管理 JWT（token_type=management_access，与网页登录同款）：
+	// 小程序「进入网页版」把它直接带到 /web-open，不再额外换票；小程序自身仍用 mini_program 令牌。
+	WebAccessToken *string `json:"web_access_token"`
+	// WebBaseURL 是网页端站点地址（APP_WEB_BASE_URL）：小程序拼 `/web-open?token=<WebAccessToken>` 用。
+	// 为空时小程序回退到一次性票据。
 	WebBaseURL string `json:"web_base_url"`
 }
 

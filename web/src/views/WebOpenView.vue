@@ -33,7 +33,7 @@ function targetPath(raw: unknown, fallback: string): string {
 }
 
 /**
- * 小程序直传的 JWT 只用于本次登录：地址栏里的 token 越快清掉越好，
+ * 小程序直传的网页令牌只用于本次登录：地址栏里的 token 越快清掉越好，
  * 避免被浏览器历史、Referer 或截图带出去。页面本身仍用内存里的会话工作。
  */
 function stripTokenFromAddressBar() {
@@ -55,7 +55,7 @@ onMounted(async () => {
   const token = queryValue(route.query.token)
   const ticket = queryValue(route.query.ticket)
 
-  // 新链路：小程序把本地 JWT 直接带过来（小程序与网页同一套签名），不再换票。
+  // 新链路：小程序把登录响应里的网页令牌（management_access）直接带过来，不再换票。
   if (token) {
     // 先丢掉浏览器里可能残留的旧会话，避免旧用户的权限快照混进来。
     auth.logout()

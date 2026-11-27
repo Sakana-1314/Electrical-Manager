@@ -4700,6 +4700,7 @@ export interface components {
          * MiniProgramLoginResponse
          * @example {
          *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+         *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
          *       "registration_token": null,
          *       "token_type": "bearer",
          *       "user": {
@@ -4729,6 +4730,8 @@ export interface components {
             access_token?: string | null;
             /** Registration Token */
             registration_token?: string | null;
+            /** Web Access Token */
+            web_access_token?: string | null;
             /**
              * Token Type
              * @default bearer
@@ -21426,6 +21429,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+                     *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
                      *       "registration_token": null,
                      *       "token_type": "bearer",
                      *       "user": {
@@ -21920,6 +21924,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+                     *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
                      *       "registration_token": null,
                      *       "token_type": "bearer",
                      *       "user": {

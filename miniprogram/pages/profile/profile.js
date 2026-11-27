@@ -170,14 +170,15 @@ Page({
   },
 
   /**
-   * 进入网页版：把小程序本地 JWT 直接交给 `/web-open`，不再额外换票。
+   * 进入网页版：把登录响应里的网页端 JWT（`web_access_token`）直接交给 `/web-open`，不再额外换票。
    *
-   * 小程序与网页共用同一套 JWT 签名与用户体系，网页拿到 token 后直接当管理端登录态用
-   * （用户信息仍由网页 `/auth/me` 拉取）。网页地址来自登录响应里的 `web_base_url`
-   * （后端 `APP_WEB_BASE_URL`），所以这里不需要为了拿地址再请求一次接口。
+   * 小程序登录时后端同时下发两枚令牌：小程序自己用的 `mini_program` 令牌，以及给网页端用的
+   * `management_access` 令牌（与网页密码登录同款、同一用户与权限位）。网页拿到后者后直接当
+   * 管理端登录态用（用户信息仍由网页 `/auth/me` 拉取）。网页地址也来自登录响应
+   * （`web_base_url`，后端 `APP_WEB_BASE_URL`），所以这里不需要为了拿地址再请求一次接口。
    *
-   * 兼容：后端未配置 `APP_WEB_BASE_URL`（或旧版登录响应没有该字段）时，回退到
-   * `/auth/web-open/tickets` 一次性票据，票据 2 分钟有效、只能兑换一次。
+   * 兼容：后端未配置 `APP_WEB_BASE_URL`、或旧版登录响应没有 `web_access_token` / `web_base_url`
+   * 时，回退到 `/auth/web-open/tickets` 一次性票据，票据 2 分钟有效、只能兑换一次。
    *
    * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版不在本小程序的
    * 业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意已配置域名的 H5，
@@ -189,12 +190,12 @@ Page({
     this.setData({ openingWeb: true });
     try {
       const session = await getApp().globalData.authPromise;
-      const token = wx.getStorageSync('miniProgramAccessToken');
+      const webToken = String((session && session.web_access_token) || '');
       const webBaseUrl = String((session && session.web_base_url) || '').replace(/\/+$/, '');
       let url = '';
-      if (token && webBaseUrl) {
+      if (webToken && webBaseUrl) {
         const projectId = getCurrentProjectId();
-        const query = [`token=${encodeURIComponent(token)}`, 'path=/'];
+        const query = [`token=${encodeURIComponent(webToken)}`, 'path=/'];
         if (projectId) query.push(`project_id=${projectId}`);
         url = `${webBaseUrl}/web-open?${query.join('&')}`;
       } else {

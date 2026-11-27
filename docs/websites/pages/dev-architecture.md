@@ -98,7 +98,7 @@ web/src/
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
-| `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：优先直接读取 `?token=`（小程序本地 JWT，与网页同一套签名），写入本地会话并调 `/auth/me` 补齐用户后跳落地路由；兼容旧链路的 `?ticket=`（`/auth/web-open/redeem`，2 分钟、只能兑换一次）。令牌读取后立即从地址栏清除；无效时给出「用账号密码登录」兜底 |
+| `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：优先直接读取 `?token=`（小程序登录响应下发的 `web_access_token`，即 management_access 网页令牌），写入本地会话并调 `/auth/me` 补齐用户后跳落地路由；兼容旧链路的 `?ticket=`（`/auth/web-open/redeem`，2 分钟、只能兑换一次）。令牌读取后立即从地址栏清除；无效时给出「用账号密码登录」兜底 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部标签栏（`layouts/AppTabs.vue`，也是导航条本身）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 二级库 Lite / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位，标准 / 二级库 Lite 可同时出现）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |

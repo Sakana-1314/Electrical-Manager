@@ -90,18 +90,6 @@ func authenticateAPIToken(c *web.Ctx, token string) (*model.User, error) {
 	return u, nil
 }
 
-// isManagementTokenType 判断 JWT 的 token_type 能否用于管理端接口。
-// 网页与小程序共用同一套签名密钥；小程序令牌（mini_program）可直接作为网页端登录态，
-// 这样小程序把本地 JWT 交给 /web-open 后，网页无需再换票即可调用管理端接口。
-// 缺失 token_type 视为旧版管理端令牌；其它类型（refresh / registration 等）一律拒绝。
-func isManagementTokenType(tt any) bool {
-	if tt == nil {
-		return true
-	}
-	s, ok := tt.(string)
-	return ok && (s == "management" || s == "management_access" || s == "mini_program")
-}
-
 // AuthenticateManagementUser 支持 X-API-Token、Bearer 接口令牌（≤36 字符）与 Bearer JWT。
 func AuthenticateManagementUser(c *web.Ctx) (*model.User, error) {
 	apiToken := c.GetHeader("X-API-Token")
@@ -127,8 +115,11 @@ func AuthenticateManagementUser(c *web.Ctx) (*model.User, error) {
 	if err != nil {
 		return nil, invalid
 	}
-	if !isManagementTokenType(claims["token_type"]) {
-		return nil, invalid
+	if tt, ok := claims["token_type"]; ok && tt != nil {
+		s, isStr := tt.(string)
+		if !isStr || (s != "management" && s != "management_access") {
+			return nil, invalid
+		}
 	}
 	userID, ok := security.ClaimInt(claims, "sub")
 	if !ok {

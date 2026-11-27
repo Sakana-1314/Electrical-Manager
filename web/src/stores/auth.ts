@@ -31,8 +31,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 小程序直传 JWT 登录：小程序与网页共用同一套签名密钥，直接把小程序令牌当网页 access token。
-   * 小程序没有 refresh token，必须清掉上一位网页用户可能留下的续期令牌，避免 401 时续到别人会话；
+   * 小程序直传网页令牌登录：小程序登录响应里的 `web_access_token` 就是 management_access
+   * （与网页密码登录同款、同一用户与权限位），直接写入本地会话即可。
+   * 它没有配套 refresh token，必须清掉上一位网页用户可能留下的续期令牌，避免 401 时续到别人会话；
    * 用户信息（含权限位）仍以 /auth/me 为准，不能信任 URL 里的任何用户资料。
    */
   async function adoptAccessToken(accessToken: string) {
