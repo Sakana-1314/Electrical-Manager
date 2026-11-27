@@ -73,7 +73,12 @@ function invalidate(key: string) {
 
 /** 路由变化 → 打开 / 更新对应标签。 */
 export function trackRoute(route: RouteLocationNormalizedLoaded) {
-  if (!isTabRoute(route) || typeof route.name !== 'string') return
+  if (!isTabRoute(route) || typeof route.name !== 'string') {
+    // 离开到不是标签页的页面（入库 / 出库单据）：取消所有标签的激活态，
+    // 否则导航条上会同时出现「上一个标签」和「当前页签」两条激活下划线。
+    activeKey.value = null
+    return
+  }
   const before = tabs.value
   tabs.value = upsertTab(before, {
     key: route.name,

@@ -2,9 +2,11 @@
 /**
  * 顶部导航条接线守卫。
  *
- * 页面名只在布局的 `.app-topbar` 里出现（桌面 40px / 移动端 48px），各视图不再渲染
- * `.page-title` 大标题。导航条一旦被改回 `v-if="isMobile"`、或某个页面又重新长出大标题，
- * 桌面端与移动端的页面名就会出现零次 / 两次，且不会报错——这里直接扫源码守住。
+ * 导航条本体就是标签栏：当前页由激活标签呈现，**不再单独写页面名**，
+ * 避免同一页面名在标题与标签上出现两次。导航条在桌面与移动端都渲染同一条
+ * （桌面 40px / 移动端 48px），标签撑满整条高度、上下不留白；
+ * 各视图也不再渲染 `.page-title` 大标题。
+ * 这些约定被改回旧结构时不会报错，只会静默出现「零次 / 两次页面名」，所以直接扫源码守住。
  * 纯读文件，因此用 node 环境。
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -12,6 +14,7 @@ import { describe, expect, it } from 'vitest'
 
 const WEB_ROOT = process.cwd()
 const layout = readFileSync(`${WEB_ROOT}/src/layouts/AppLayout.vue`, 'utf8')
+const tabs = readFileSync(`${WEB_ROOT}/src/layouts/AppTabs.vue`, 'utf8')
 const styles = readFileSync(`${WEB_ROOT}/src/styles.css`, 'utf8')
 
 function vueFiles(dir: string): string[] {
@@ -23,18 +26,23 @@ function vueFiles(dir: string): string[] {
 }
 
 describe('顶部导航条', () => {
-  it('桌面端与移动端都渲染同一条导航条，标题取自路由', () => {
+  it('导航条本体就是标签栏，不再重复显示页面名', () => {
     expect(layout).toContain('class="app-topbar"')
-    expect(layout).toMatch(/<div class="topbar-title">\{\{ route\.meta\.title \}\}<\/div>/)
+    expect(layout).toMatch(/<n-layout-header[^>]*class="app-topbar"[^>]*>[\s\S]*?<AppTabs \/>/)
+    // 标题行已删除：同一页面名只在标签上出现一次
+    expect(layout).not.toContain('topbar-title')
     // 菜单按钮只在移动端出现，导航条本身不能被 isMobile 条件包住
     expect(layout).not.toMatch(/<n-layout-header[^>]*v-if="isMobile"/)
     expect(layout).toMatch(/<button\s+v-if="isMobile"/)
   })
 
-  it('导航条高度很矮：桌面 40px、移动端 48px', () => {
+  it('导航条高度很矮：桌面 40px、移动端 48px；标签撑满整条高度、上下不留白', () => {
     expect(layout).toMatch(/\.app-topbar \{[^}]*height: 40px;/)
     expect(layout).toMatch(/\.app-topbar\.is-mobile \{[^}]*height: 48px;/)
-    expect(layout).toMatch(/\.topbar-title \{[^}]*font-size: 13px;/)
+    expect(tabs).toMatch(/\.app-tabs \{[^}]*height: 100%;/)
+    // 扁平标签：纵向不留白（padding 必须是 `0 …` 形式），激活态靠 2px 下划线
+    expect(tabs).toMatch(/\.app-tab \{[^}]*padding: 0 [^;]*;/)
+    expect(tabs).toContain('.app-tab.is-active::after')
   })
 
   it('视图不再渲染页面大标题', () => {
