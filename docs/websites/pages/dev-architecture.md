@@ -79,6 +79,7 @@ web/src/
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
 ├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限位与二级库模式过滤（纯逻辑，有单测）
+├── layouts/menuAccordion.ts 侧边菜单手风琴：最多展开一个分组，进入页面时自动展开当前页所在组（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
