@@ -73,7 +73,8 @@ web/src/
 ├── env.d.ts                ImportMetaEnv 声明 + __BUILD_TIME__
 ├── index.html              含两段入口脚本：首屏预置界面外观（读 theme.mode → html[data-theme] + color-scheme）、演示站深链回退
 ├── api/client.ts           axios 实例、拦截器、AppError
-├── layouts/AppLayout.vue   唯一布局：顶部很矮导航条 + 侧边菜单/移动端抽屉 + 左下角用户菜单
+├── layouts/AppLayout.vue   唯一布局：顶部标签栏（即导航条）+ 侧边菜单/移动端抽屉 + 左下角用户菜单
+├── layouts/AppTabs.vue     顶部标签栏：等宽标签切换 / 关闭 / 中键关闭，非标签页补不可关闭的当前页签
 ├── layouts/UserMenu.vue    左下角用户菜单（外观 / 线路 / 项目切换 / 用户设置 / 退出登录），桌面侧栏与移动端抽屉共用
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
@@ -97,7 +98,7 @@ web/src/
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
 | `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：用一次性票据（`/auth/web-open/redeem`，2 分钟、只能兑换一次）换回登录令牌并写入本地会话与当前项目，跳到落地路由；无效时给出「用账号密码登录」兜底 |
-| `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部很矮导航条（页面名）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
+| `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部标签栏（`layouts/AppTabs.vue`，也是导航条本身）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 二级库 Lite / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位，标准 / 二级库 Lite 可同时出现）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
 | `/warehouse/materials` | `stock-materials` | `views/warehouse/StockMaterialsView.vue` | 需登录 | 物资档案列表；行点击/编辑/新建都打开 `StockMaterialFormModal`（详情、档案与补库策略、出库小程序码、删除） |
@@ -289,7 +290,7 @@ web/src/
 | `WorkTaskFormModal.vue` | 任务新增 / 编辑弹窗（名称 / 状态 / 计划起止 / 工作内容 / 备注 / 图片，删除入口在页脚） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `WorkRecordFormModal.vue` | 工作记录新增 / 编辑弹窗（任务可搜索下拉、起止日期 + 上午 / 下午、参与人员可输入新姓名、备注；`readonly` 时变成只读详情） | props：`show`、`recordId?`、`presetTaskId?`、`presetDate?`、`presetParticipants?`、`readonly?`；emits：`update:show`、`saved` |
 ### Composable 清单
-`web/src/composables/` 下 6 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
+`web/src/composables/` 下 7 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
 | Composable | 职责 | 关键返回项 | 典型使用位置 |
 | --- | --- | --- | --- |
@@ -299,6 +300,7 @@ web/src/
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
 | `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 5 个详情弹窗（物资 / 流水 / 工作记录 / 计划 / 记录） |
 | `useShiftWheelHorizontalScroll.ts` | 在表格滚动容器上支持 Shift+滚轮横向滚动 | 无返回值（内部挂/卸 `wheel` 监听，`passive: false`） | 申购 3 个列表页 |
+| `useAppTabs.ts` | 顶部标签页状态：标签按路由名去重、记录每页最后一次的完整地址（切回连筛选一起还原）；关闭 / 淘汰标签时切换实例代号强制重新挂载；标签列表存 sessionStorage（刷新与发版自愈后保留）；`isTabRoute` 排除登录 / 分享 / 404 与 `meta.noTab` 单据页 | `tabs`、`activeKey`、`useAppTabs()`、`trackRoute`、`activateTab`、`closeAppTab`、`isTabRoute` | `layouts/AppTabs.vue`、`layouts/AppLayout.vue` |
 
 
 
@@ -318,6 +320,8 @@ web/src/
 | `purchase.ts` | 申购默认值辅助：`defaultPurchaseOrderNo`、`getLastPurchaseResponsible`、`rememberPurchaseResponsible`（本地记住上次填写人） |
 | `pinyinFilter.ts` | 下拉框拼音筛选：把选项文本转成「原文 + 全拼 + 首字母」索引并缓存（上限 5000 条）；`pinyinSelectFilter`、`pinyinTreeSelectFilter` 供 `PinyinSelect` / `PinyinTreeSelect` 使用，原文包含匹配保持不变 |
 | `routeQuery.ts` | 路由 query 读写辅助：`routeQueryString`、`routeQueryPositiveInteger`、`compactRouteQuery`（压缩空值） |
+| `appTabs.ts` | 顶部标签页纯逻辑（无 Vue 依赖）：`upsertTab`（按路由名去重、超限 FIFO 淘汰）、`closeTab`、`activeKeyAfterClose`（优先右邻居）、`evictedKeys`；`MAX_APP_TABS` 上限 8 |
+| `staleChunk.ts` | 发版后旧代码块 404 自愈：`isStaleChunkError` 识别动态 import / 预加载 CSS 失败，`installStaleChunkRecovery` 记住目标路由后整页刷新、`resumePendingRoute` 刷新后继续跳转；15s 闸门防循环刷新，被拦下时广播 `STALE_CHUNK_BLOCKED_EVENT` |
 | `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（9 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；二级库 Pro 与二级库 Lite 是两个独立一级项；系统管理不参与）、`visibleNavFeatureKeys(can)`、`resolveLandingRouteName(can)`（落地页推导） |
 | `mobileCards.ts` | 移动端表格折叠逻辑：`buildMobileCards(columns, rows, rowKey?)` 把列定义与行数据折成「标题 + 字段 + 操作」卡片（选择列 / 展开列 / 无标题列跳过，空值显示 `—`，标题含「操作」的列进底部操作区） |
 | `userscriptHandoff.ts` | 油猴脚本的「弹窗登录 → 授权 → 回传登录态」协议：`handoffRequest(query)` 校验`?userscript=1` 的纯 origin 是否在白名单与 `window.opener` 存在，`deliverSession(request, session, apiBase)` 按 targetOrigin 把登录令牌与用户权限 `postMessage` 回发起窗口（消息类型 `hxni-userscript-session`，带脚本生成的 nonce） |
@@ -338,7 +342,7 @@ web/src/
 | `theme.ts` | Naive UI `themeOverrides`（主题色 `#3f63d8`、圆角与阴影等），由 `App.vue` 传给 `n-config-provider` |
 | `styles.css` | 全局样式与 CSS 变量：字体栈、`--color-primary/-success/-warning/-danger`、文本/边框/表面色、`--radius-control`、局部加载遮罩底色等 |
 #### `web/src/layouts/`
-页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：顶部一条很矮的导航条（`.app-topbar`，桌面 40px、移动端 48px，标题取路由 `meta.title`，页面内不再渲染大标题）；左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位过滤：工作台、备忘录、二级库分组、二级库 Lite、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「用户设置」（打开 `components/AccountSettingsModal.vue`，个人资料只读，可复制自己的 MCP 地址 / 令牌并修改密码）与「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，导航条左侧额外显示菜单按钮作为抽屉入口（不放用户信息），账号入口在抽屉左下角。
+页面文件与职责见「路由表」的职责列。`layouts/AppLayout.vue` 是唯一布局：顶部标签栏（`layouts/AppTabs.vue`，就是导航条本身，页面名显示在标签上，页面内不再渲染大标题；标签按路由名去重、等宽 8 个中文字宽、最多 8 个，切标签走 keep-alive 不重新请求数据，关闭 / 淘汰后下次打开是全新实例，标签列表存 sessionStorage；入库 / 出库这类单据页不进标签，末尾补一枚不可关闭的当前页签）；左侧 `n-layout-sider` 分三段——品牌行、菜单区（`menuOptions` 由 `layouts/mainMenu.ts` 的 `buildMainMenu()` 拼装，按 `auth.can()` 权限位过滤：工作台、备忘录、二级库分组、二级库 Lite、华星总库存、申购管理、隐患管理、台账管理、工作管理、系统管理；无读权限的主 tab 整个分组不渲染，系统管理按 `system:admin` 显示）、**左下角用户菜单** `layouts/UserMenu.vue`；菜单区独立滚动，用户菜单固定在底部。`UserMenu.vue` 从下往上弹出：「外观」二级菜单（悬浮父项向右展开自动/浅色/深色三档）、「线路：<当前线路名>」二级菜单（由 `layouts/backendMenu.ts` 的 `buildBackendMenuSubmenu()` 生成、`backendIndexFromMenuKey()` 解析选中项；只有配置了多条后端地址才显示，当前线路前显示对勾，切换后整页刷新）、「项目：<当前项目名>」二级菜单（由 `layouts/projectMenu.ts` 的 `buildProjectMenuSubmenu()` 生成、`projectIdFromMenuKey()` 解析选中项，切换后整页刷新），分隔线之后是「用户设置」（打开 `components/AccountSettingsModal.vue`，个人资料只读，可复制自己的 MCP 地址 / 令牌并修改密码）与「退出登录」（调 `auth.logout()` + 跳 `login`）；界面不放独立的明暗切换图标。`useMediaQuery('(max-width: 768px)')` 时侧栏切换为抽屉（桌面 sider 与移动抽屉共用同一份 `menuOptions` 与同一个 `UserMenu`，可见性一处生效）；移动端没有侧栏，导航条左侧额外显示菜单按钮作为抽屉入口（不放用户信息），账号入口在抽屉左下角。
 
 
 
