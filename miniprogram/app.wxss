@@ -38,6 +38,9 @@ page, .page {
   --app-on-brand-glow: var(--td-font-white-4);
   --app-on-brand-ring: var(--td-font-white-4);
   --app-on-brand-ring-soft: var(--td-font-white-4);
+  /* 圆形悬浮按钮：浅色沿用品牌蓝底白图标，深色改为黑灰底 + 蓝色图标。 */
+  --app-fab-bg: var(--td-fab-bg);
+  --app-fab-fg: var(--td-fab-fg);
   /* 阴影：用官方 table 阴影色，深色自动加深 */
   --app-shadow-color: var(--td-table-shadow-color);
   --app-shadow-color-strong: var(--td-table-shadow-color);
@@ -318,6 +321,62 @@ page {
   margin-bottom: 20rpx;
 }
 
+/* ===== 列表页顶部操作条：与首页功能卡同一套版式 =====
+ * 一个动作占满整行，两个动作各占一半；图标方片 + 标题 + 右侧箭头，
+ * 背景 / 边框 / 图标底色全部取自 --app-* 令牌，明暗模式自动跟随。 */
+.action-bar {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.action-chip {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 14rpx;
+  padding: 20rpx 22rpx;
+  border: 2rpx solid var(--app-brand-border);
+  border-radius: 22rpx;
+  background: var(--app-surface-gradient);
+  box-shadow: 0 10rpx 24rpx var(--app-brand-shadow-color-soft);
+  transition: transform 120ms ease;
+}
+
+.action-chip-active {
+  transform: scale(0.98);
+}
+
+.action-chip-icon {
+  display: flex;
+  flex: none;
+  width: 56rpx;
+  height: 56rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16rpx;
+  background: var(--app-brand-soft);
+  color: var(--app-brand);
+}
+
+.action-chip-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text-title);
+  font-size: 26rpx;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-chip-arrow {
+  flex: none;
+  color: var(--app-text-muted);
+}
+
 .result-count {
   margin: 0 8rpx 14rpx;
   color: var(--app-text-muted);
@@ -365,8 +424,8 @@ page {
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--app-brand);
-  color: var(--app-on-brand);
+  background: var(--app-fab-bg);
+  color: var(--app-fab-fg);
   box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color-strong);
   line-height: 1;
 }

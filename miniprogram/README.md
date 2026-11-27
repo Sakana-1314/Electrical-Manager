@@ -4,7 +4,7 @@
 
 ## 权限位与功能可见性
 
-功能入口与写操作只看账号的权限位（`utils/features.js`，登录会话返回的 `permissions`）：入口按对应模块的 `:read` 位显示，写操作（出库、隐患登记 / 整改）按 `:write` 位显示；二级库 Pro（`warehouse:*`）与二级库 Lite（`lite:*`）是两套独立权限。**同时持有两套权限时，首页「二级库 Pro」与「二级库 Lite」两个入口都展示**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`resolveInventorySource`），页面标题分别是「二级库 Pro」/「二级库 Lite」；没带 `source` 的旧分享链接按权限兜底（有 Pro 用 Pro）。**出入库记录**（`pages/records`）是 Pro 能力，入口在 Pro 库存页顶部工具条（个人信息页不再提供）；持 `warehouse:write` 的用户在同一工具条还能直接「扫码入库」（`pages/stock-inbound`）；Pro 列表卡左上角显示该物资的**首次入库时间**（`first_inbound_at`，最早一笔入库流水、排除冲销来源，无入库流水时不显示）。首页「扫一扫」例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。权限位只做前端入口拦截，后端数据接口按同一权限位鉴权。
+功能入口与写操作只看账号的权限位（`utils/features.js`，登录会话返回的 `permissions`）：入口按对应模块的 `:read` 位显示，写操作（出库、隐患登记 / 整改）按 `:write` 位显示；二级库 Pro（`warehouse:*`）与二级库 Lite（`lite:*`）是两套独立权限。**同时持有两套权限时，首页「二级库 Pro」与「二级库 Lite」两个入口都展示**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`resolveInventorySource`），页面标题分别是「二级库 Pro」/「二级库 Lite」；没带 `source` 的旧分享链接按权限兜底（有 Pro 用 Pro）。**出入库记录**（`pages/records`）是 Pro 能力，入口在 Pro 库存页顶部操作条（个人信息页不再提供）；**扫码入库**（`pages/stock-inbound`）入口在二级库管理（`pages/stock-materials`，持 `warehouse:write` 可见），不在库存页重复放；Pro 列表卡左上角显示该物资的**首次入库时间**（`first_inbound_at`，最早一笔入库流水、排除冲销来源，无入库流水时不显示）。首页「扫一扫」例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。权限位只做前端入口拦截，后端数据接口按同一权限位鉴权。
 
 ## 本地运行
 
@@ -31,7 +31,8 @@
 
 | 层 | 位置 | 约定 |
 | --- | --- | --- |
-| 官方主题 | `theme.wxss` | TDesign 官方浅 / 深两套 `--td-*` 令牌，靠 `prefers-color-scheme` 自动切换；不要手改其中的色值 |
+| 官方主题 | `theme.wxss` | TDesign 官方浅 / 深两套 `--td-*` 令牌，靠 `prefers-color-scheme` 自动切换；除深色档的品牌背景令牌外不要手改官方色值 |
+| 深色背景 | `theme.wxss` 深色档 | **深色档不拿蓝色当背景**：品牌浅底 `--td-brand-color-1/2`、品牌强底渐变、主按钮（`--td-button-primary-*`）与悬浮圆钮（`--td-fab-*`）改成黑灰；蓝色只留文字 / 图标 / 边框等前景色 |
 | 项目别名 | `app.wxss` | 第一行 `@import "theme.wxss";`；`page, .page` 把 `--app-*` 语义别名全部指向官方 `--td-*`（如 `--app-bg: var(--td-bg-color-page)`） |
 | 原生外观 | `theme.json` | 窗口底色与官方页面底色一致（浅色 `#f3f3f3` / 深色 `#181818`），`darkmode` 自动切换状态栏与下拉区域 |
 | 导航栏 | `components/app-navbar` | 内部用 `t-navbar`，底色 / 标题色引用 `--app-*`，自动跟随主题 |

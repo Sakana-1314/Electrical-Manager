@@ -252,10 +252,10 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--app-brand);
+  background: var(--app-fab-bg);
   box-shadow: 0 12rpx 28rpx var(--app-brand-shadow-color-strong);
   line-height: 1;
-  color: var(--app-on-brand);
+  color: var(--app-fab-fg);
 }
 
 .share-fab::after {

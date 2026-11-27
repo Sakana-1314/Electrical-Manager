@@ -83,10 +83,10 @@
   height: 76rpx;
   align-items: center;
   justify-content: center;
+  border: 2rpx solid var(--app-card-border);
   border-radius: 22rpx;
-  background: var(--app-brand);
-  color: var(--app-on-brand);
-  box-shadow: 0 10rpx 22rpx var(--app-brand-shadow-color);
+  background: var(--app-surface);
+  color: var(--app-brand);
 }
 
 .inventory-entry-content {
