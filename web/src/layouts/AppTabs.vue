@@ -96,11 +96,15 @@ function onAuxClick(event: MouseEvent, key: string) {
   --app-tab-text-width: 8em;
   /* 左右装饰：左内边距 12px + 关闭按钮 18px + 右内边距 4px */
   --app-tab-decoration-width: 34px;
+  /* 标签之间的横向间距 */
+  --app-tab-gap: 4px;
   display: flex;
   flex: 1;
   min-width: 0;
   height: 100%;
   align-items: stretch;
+  /* 标签之间留横向间距：相邻色块不相连，激活标签的「贴页」形状也看得清 */
+  gap: var(--app-tab-gap);
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
@@ -108,8 +112,9 @@ function onAuxClick(event: MouseEvent, key: string) {
 .app-tabs::-webkit-scrollbar {
   display: none;
 }
-/* 扁平标签：无边框无圆角，激活态只做颜色变化（主题色文字 + 浅主题色底），
-   不画下划线、不加边框，纵向仍撑满导航条 */
+/* 标签形状：上方两角圆、底部两角是直角——激活标签贴着页面，不是四角圆角块。
+   激活态靠颜色区分：底色取页面背景（与下方内容区同色），文字用主题色。
+   底部再用 1px 同色阴影盖住导航条的下边框，激活标签与页面背景无缝连成一片。 */
 .app-tab {
   display: flex;
   flex: none;
@@ -117,7 +122,7 @@ function onAuxClick(event: MouseEvent, key: string) {
   align-items: center;
   gap: 4px;
   padding: 0 4px 0 12px;
-  border-radius: 6px;
+  border-radius: 8px 8px 0 0;
   color: var(--color-text-muted);
   font-size: var(--app-tab-font-size);
   line-height: 1;
@@ -135,7 +140,8 @@ function onAuxClick(event: MouseEvent, key: string) {
   outline-offset: -2px;
 }
 .app-tab.is-active {
-  background: var(--color-primary-soft);
+  background: var(--color-bg);
+  box-shadow: 0 1px 0 var(--color-bg);
   color: var(--color-primary);
   font-weight: 600;
 }
