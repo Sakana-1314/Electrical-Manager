@@ -40,11 +40,14 @@ const IGNORES = [
 
 /**
  * TDesign 的共享目录：组件裁剪时必须保留（组件 JS 会跨目录引用 common / mixins / locale 等）。
+ * `config-provider` 是 `mixins/using-config` 的 JS 依赖（不是 usingComponents 组件），
+ * 少保留它会让 t-picker 等组件在真机上加载失败。
  * 根 `index.js` 还直接导出 ActionSheet / Dialog / Message / Toast，保留它们的目录，
  * 避免编译器解析根入口时找不到被裁剪的组件。
  */
 const TD_SHARED_DIRS = new Set([
   'common',
+  'config-provider',
   'mixins',
   'locale',
   'miniprogram_npm',
@@ -102,13 +105,32 @@ function directorySize(dir) {
   return total;
 }
 
+/** 递归列出目录下的 JS 文件（用于跟随组件之间的 import / require 依赖）。 */
+function listJsFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  const files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listJsFiles(full));
+    else if (entry.isFile() && entry.name.endsWith('.js')) files.push(full);
+  }
+  return files;
+}
+
+/** TDesign 源码是 ESM（`import ... from "..."`），npm 构建后也可能出现 require / 动态 import。 */
+const MODULE_SPEC_RE = /(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
+
 /**
  * 裁剪 TDesign 未使用的组件目录。
  *
  * `ci.packNpm` 会把 tdesign-miniprogram 的整包（所有组件）复制进 miniprogram_npm，
  * 而项目实际只引用其中十几个组件；整包约 1.4MB，未使用部分会把主包顶到 2MB 上限。
  * 这里从页面 / 组件的 `usingComponents` 出发做一次依赖闭包，只保留实际用到的组件；
- * `common` / `mixins` / `locale` / `miniprogram_npm` 是组件共享目录，始终保留。
+ * `common` / `config-provider` / `mixins` / `locale` / `miniprogram_npm` 是组件共享目录，始终保留。
+ *
+ * 闭包不只看 `usingComponents`：组件的 JS 还会 import 其它目录（如 `t-picker` 通过
+ * `mixins/using-config` 依赖 `config-provider/use-config`），这些不是组件节点，
+ * 漏跟就会在真机上报「Component is not found in path」。
  */
 function pruneUnusedTDesignComponents() {
   const tdRoot = path.join(projectPath, 'miniprogram_npm', 'tdesign-miniprogram');
@@ -119,28 +141,47 @@ function pruneUnusedTDesignComponents() {
   while (queue.length) {
     const name = queue.pop();
     const configPath = path.join(tdRoot, name, `${name}.json`);
-    if (!fs.existsSync(configPath)) continue;
-    try {
-      const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      for (const value of Object.values(data.usingComponents || {})) {
-        if (typeof value !== 'string') continue;
+    if (fs.existsSync(configPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        for (const value of Object.values(data.usingComponents || {})) {
+          if (typeof value !== 'string') continue;
+          let target = '';
+          if (value.startsWith('tdesign-miniprogram/')) {
+            target = value.split('/')[1];
+          } else if (value.startsWith('.')) {
+            // 相对路径先规范化：`.././icon/icon` → `../icon/icon`（跨组件，取顶层组件名）；
+            // `./draggable/draggable` 是组件自己的子目录，不映射成顶层组件。
+            const normalized = path.posix.normalize(value);
+            if (normalized.startsWith('../')) target = normalized.split('/')[1];
+          }
+          if (target && !keep.has(target)) {
+            keep.add(target);
+            queue.push(target);
+          }
+        }
+      } catch (_error) {
+        // 组件配置解析失败时保留它，宁可少裁一点，不能裁掉实际依赖。
+        keep.add(name);
+      }
+    }
+    // 再跟随 JS import / require：组件共享目录不一定出现在 usingComponents 里。
+    for (const file of listJsFiles(path.join(tdRoot, name))) {
+      const source = fs.readFileSync(file, 'utf8');
+      for (const match of source.matchAll(MODULE_SPEC_RE)) {
+        const spec = match[1];
         let target = '';
-        if (value.startsWith('tdesign-miniprogram/')) {
-          target = value.split('/')[1];
-        } else if (value.startsWith('.')) {
-          // 相对路径先规范化：`.././icon/icon` → `../icon/icon`（跨组件，取顶层组件名）；
-          // `./draggable/draggable` 是组件自己的子目录，不映射成顶层组件。
-          const normalized = path.posix.normalize(value);
-          if (normalized.startsWith('../')) target = normalized.split('/')[1];
+        if (spec.startsWith('tdesign-miniprogram/')) {
+          target = spec.split('/')[1];
+        } else if (spec.startsWith('.')) {
+          const rel = path.relative(tdRoot, path.resolve(path.dirname(file), spec));
+          if (!rel.startsWith('..')) target = rel.split(path.sep)[0];
         }
         if (target && !keep.has(target)) {
           keep.add(target);
           queue.push(target);
         }
       }
-    } catch (_error) {
-      // 组件配置解析失败时保留它，宁可少裁一点，不能裁掉实际依赖。
-      keep.add(name);
     }
   }
   for (const name of TD_SHARED_DIRS) keep.add(name);
