@@ -11,9 +11,14 @@ import {
 } from '@/composables/useAppTabs'
 
 /**
- * 顶部标签页栏：每个打开过的页面一枚标签，宽度完全一致（8 个中文字宽），
- * 标题超长省略。页面实例由 AppLayout 的 keep-alive 保留，切标签不重新请求数据。
+ * 顶部标签栏（就是导航条本身，不再单独显示页面名）。
+ *
+ * 每个打开过的页面一枚等宽标签（文字区 8 个中文字宽），标题超长省略；
+ * 页面实例由 AppLayout 的 keep-alive 保留，切标签不重新请求数据。
  * 交互：点击切换、点「×」关闭（只剩一枚时不可关闭）、鼠标中键关闭。
+ *
+ * 当前页不是标签页（入库 / 出库这类单据页）时，在末尾补一枚不可关闭的当前页签，
+ * 导航条才不会出现「没有任何标签是激活的」而看不出自己在哪。
  */
 const route = useRoute()
 const router = useRouter()
@@ -26,8 +31,12 @@ watch(
   { immediate: true },
 )
 
-/** 有标签、或当前页本身是标签页时才显示标签栏（登录 / 分享页不显示）。 */
-const visible = computed(() => tabs.value.length > 0 || isTabRoute(route))
+/** 当前页不是标签页时，它的页面名（作为不可关闭的临时签显示）。 */
+const currentChip = computed(() => {
+  if (isTabRoute(route)) return null
+  const title = route.meta.title
+  return typeof title === 'string' && title ? title : null
+})
 
 function onAuxClick(event: MouseEvent, key: string) {
   if (event.button !== 1) return
@@ -37,7 +46,7 @@ function onAuxClick(event: MouseEvent, key: string) {
 </script>
 
 <template>
-  <div v-if="visible" class="app-tabs" role="tablist" aria-label="已打开的页面">
+  <div class="app-tabs" role="tablist" aria-label="已打开的页面">
     <div
       v-for="tab in tabs"
       :key="tab.key"
@@ -63,66 +72,83 @@ function onAuxClick(event: MouseEvent, key: string) {
         <n-icon :size="12"><CloseOutline /></n-icon>
       </button>
     </div>
+    <!-- 当前页不是标签页（单据页）：临时签，不可关闭、不参与标签列表 -->
+    <div
+      v-if="currentChip"
+      class="app-tab app-tab--current is-active"
+      :title="currentChip"
+      :aria-current="'page'"
+    >
+      <span class="app-tab-label">{{ currentChip }}</span>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* 标签栏紧贴顶部导航条下方，左右内边距与内容区对齐。
+/* 导航条本体即标签栏：不设背景、不在上下方向留内边距，标签撑满整条高度（扁平样式）。
    等宽：标签宽度押在「文字区正好放下 8 个中文字」上——1 个中文字 = 1em（= 标签字号 13px），
-   所以文字区 8em = 104px，再加左侧 10px、右侧关闭按钮 18px 与其内边距，
+   所以文字区 8em = 104px，再加右侧关闭按钮 18px 与左右内边距，
    用固定 width 保证每枚完全一致；标题过长一律省略号，绝不被内容撑宽。
    字号变了只需改 --app-tab-font-size，宽度与文字区会一起跟着变。 */
 .app-tabs {
   --app-tab-font-size: var(--list-body-size);
   /* 文字区：8 个中文字宽 */
   --app-tab-text-width: 8em;
-  /* 左右装饰：左内边距 10px + 关闭按钮 18px + 左右内边距 5px */
-  --app-tab-decoration-width: 33px;
+  /* 左右装饰：左内边距 12px + 关闭按钮 18px + 右内边距 4px */
+  --app-tab-decoration-width: 34px;
   display: flex;
-  flex: none;
-  gap: 4px;
-  padding: 0 28px 8px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  align-items: stretch;
   overflow-x: auto;
   overflow-y: hidden;
-  background: var(--color-surface-translucent);
-  backdrop-filter: blur(12px);
   scrollbar-width: none;
 }
 .app-tabs::-webkit-scrollbar {
   display: none;
 }
+/* 扁平标签：无边框无圆角，激活态用一条 2px 下划线 + 深色文字，不占纵向留白 */
 .app-tab {
+  position: relative;
   display: flex;
   flex: none;
   width: calc(var(--app-tab-text-width) + var(--app-tab-decoration-width));
   align-items: center;
   gap: 4px;
-  padding: 0 5px 0 10px;
-  border: 1px solid transparent;
-  border-radius: 7px;
+  padding: 0 4px 0 12px;
   color: var(--color-text-muted);
   font-size: var(--app-tab-font-size);
-  line-height: 26px;
+  line-height: 1;
   cursor: pointer;
   transition:
     background-color 0.16s ease,
-    border-color 0.16s ease,
     color 0.16s ease;
 }
 .app-tab:hover {
-  border-color: var(--color-border-subtle);
   background: var(--color-panel);
   color: var(--color-text);
 }
 .app-tab:focus-visible {
   outline: 2px solid var(--color-primary);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 .app-tab.is-active {
-  border-color: var(--color-primary-border);
-  background: var(--color-primary-soft);
   color: var(--color-text-strong);
   font-weight: 600;
+}
+.app-tab.is-active::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--color-primary);
+  content: '';
+}
+/* 单据页的临时签：与标签同宽同高，不可关闭、不参与标签列表 */
+.app-tab--current {
+  cursor: default;
 }
 .app-tab-label {
   flex: 1;
@@ -143,15 +169,10 @@ function onAuxClick(event: MouseEvent, key: string) {
   color: inherit;
   background: transparent;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 .app-tab-close:hover {
   background: rgb(127 139 158 / 18%);
   opacity: 1;
-}
-@media (max-width: 768px) {
-  .app-tabs {
-    padding: 0 12px 6px;
-  }
 }
 </style>

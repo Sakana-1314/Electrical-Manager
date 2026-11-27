@@ -21,15 +21,12 @@ const closeDrawer = () => {
   drawerOpen.value = false
 }
 
-const { tabCacheKey, tabs } = useAppTabs()
+const { tabCacheKey } = useAppTabs()
 
 /** 当前页是否作为标签页打开（决定走 keep-alive 还是每次重新挂载）。 */
 function isTabPage(current: RouteLocationNormalizedLoaded): boolean {
   return isTabRoute(current) && typeof current.name === 'string'
 }
-
-/** 已经有标签（或当前页本身是标签页）就显示标签栏；登录 / 分享等公共页不显示。 */
-const tabbed = computed(() => tabs.value.length > 0 || isTabPage(route))
 
 /**
  * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
@@ -84,9 +81,9 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
       </div>
     </n-layout-sider>
     <n-layout>
-      <!-- 顶部导航条：所有视口共用一条很矮的标题条（桌面 40px / 移动端 48px），
-           页面名只在这里出现，各视图不再渲染大标题；移动端没有侧栏，
-           导航条左侧额外提供抽屉入口。 -->
+      <!-- 顶部导航条：所有视口共用一条很矮的条（桌面 40px / 移动端 48px）。
+           导航条本体就是标签栏（AppTabs），当前页由激活标签呈现，不再单独写页面名，
+           避免同一页面名在标题与标签上出现两次；移动端没有侧栏，左侧额外放抽屉入口。 -->
       <n-layout-header bordered class="app-topbar" :class="{ 'is-mobile': isMobile }">
         <button
           v-if="isMobile"
@@ -97,10 +94,8 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
         >
           <n-icon :size="18"><MenuOutline /></n-icon>
         </button>
-        <div class="topbar-title">{{ route.meta.title }}</div>
+        <AppTabs />
       </n-layout-header>
-      <!-- 顶部标签页：每个打开过的页面一枚等宽标签，切标签走 keep-alive 不重新加载数据 -->
-      <AppTabs v-if="tabbed" />
       <n-layout-content class="app-content" :native-scrollbar="false">
         <!-- 标签页里的页面全部 keep-alive（上限与标签数一致，均为 8）：
              切标签只做激活 / 停用，不重新挂载、不重新请求数据；
@@ -231,12 +226,12 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
   border-top: 1px solid var(--color-border-subtle);
 }
-/* 顶部导航条：很矮的一条，只展示当前页标题；桌面端与内容区左右内边距对齐。
-   内容区在导航条下方独立滚动，因此标题始终可见。 */
+/* 顶部导航条：很矮的一条，本体就是标签栏（AppTabs 撑满整条高度，标签上下不留白）；
+   桌面端与内容区左右内边距对齐，内容区在导航条下方独立滚动。 */
 .app-topbar {
   display: flex;
   height: 40px;
-  align-items: center;
+  align-items: stretch;
   gap: 8px;
   padding: 0 28px;
   background: var(--color-surface-translucent);
@@ -245,6 +240,7 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
 .menu-toggle {
   display: grid;
   flex: none;
+  align-self: center;
   width: 36px;
   height: 36px;
   place-items: center;
@@ -263,16 +259,6 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   background: var(--color-primary-soft);
   outline: none;
 }
-.topbar-title {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-strong);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 /* 移动端（≤768px）内容区适配 */
 @media (max-width: 768px) {
   /* 触摸目标留 40px，导航条只比桌面高 8px */
@@ -283,9 +269,6 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
   .menu-toggle {
     width: 40px;
     height: 40px;
-  }
-  .topbar-title {
-    font-size: 15px;
   }
   .app-content {
     padding: 12px 14px 24px;
