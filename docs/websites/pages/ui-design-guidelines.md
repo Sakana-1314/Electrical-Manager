@@ -303,6 +303,19 @@
   浮到框线上时下沿压进控件内部、盖住输入值的首行（出库页「发生时间」实测压入 13px）。规则里必须显式
   `min-height: 0; height: auto;`，让底色只包住文字本身；`floatingLabels.spec.ts` 有对应守卫。
 
+### 发版后旧代码块 404 的自愈
+
+前端发版后带哈希的代码块会整体换名，停在旧页面的浏览器点菜单会去拉已不存在的 JS，表现为「点了没反应」。
+`utils/staleChunk.ts` 接管这类失败：
+
+- 只认代码块类错误（`Failed to fetch dynamically imported module` / `Importing a module script failed` /
+  `Unable to preload CSS` 等），普通网络抖动与业务报错不刷新——否则用户会莫名丢掉正在填的内容。
+- 命中后记住用户想去的那一页（`sessionStorage`，只接受站内绝对路径，`//host` 协议相对地址一并拒绝），
+  整页刷新拿到新 `index.html` 与新哈希，挂载后自动跳到该页（`resumePendingRoute`）。
+- 刷新带闸门：同一页面生命周期内只刷新一次，且两次自愈刷新至少间隔 15 秒（`RELOAD_GUARD_MS`）；
+  被拦下时广播 `stale-chunk-blocked` 事件，界面提示手动刷新，避免代码块真坏掉时无限刷新。
+- 接线在 `main.ts`（`installStaleChunkRecovery` 必须在首次导航前装上），由 `utils/staleChunk.spec.ts` 守住。
+
 ### 弹窗统一排版
 
 所有 `preset="card"` 弹窗（表单 / 详情 / 批量 / 设置）共用一套设计令牌，数值只定义在
