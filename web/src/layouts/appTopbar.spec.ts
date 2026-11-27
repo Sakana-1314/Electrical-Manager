@@ -42,10 +42,15 @@ describe('顶部导航条', () => {
     expect(tabs).toMatch(/\.app-tabs \{[^}]*height: 100%;/)
     // 扁平标签：纵向不留白（padding 必须是 `0 …` 形式）
     expect(tabs).toMatch(/\.app-tab \{[^}]*padding: 0 [^;]*;/)
-    // 激活态只做颜色变化（浅主题色底 + 主题色文字），不画下划线
+    // 标签之间有横向间距（不是连成一片的色块）
+    expect(tabs).toMatch(/\.app-tabs \{[^}]*gap: var\(--app-tab-gap\);/)
+    expect(tabs).toMatch(/--app-tab-gap: [1-9][0-9]*px;/)
+    // 激活态：页面背景色 + 主题色文字，底部 1px 同色阴影盖住导航条下边框，与页面融合
     expect(tabs).toMatch(
-      /\.app-tab\.is-active \{[^}]*background: var\(--color-primary-soft\);[^}]*color: var\(--color-primary\);/,
+      /\.app-tab\.is-active \{[^}]*background: var\(--color-bg\);[^}]*box-shadow: 0 1px 0 var\(--color-bg\);[^}]*color: var\(--color-primary\);/,
     )
+    // 形状：上方两角圆、底部直角（不是四角圆角块）；不画下划线
+    expect(tabs).toMatch(/\.app-tab \{[^}]*border-radius: 8px 8px 0 0;/)
     expect(tabs).not.toContain('.app-tab.is-active::after')
   })
 
