@@ -681,6 +681,13 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (!uploadScript.includes('pruneUnusedTDesignComponents')) {
     throw new Error('scripts/upload.js must prune unused TDesign components before checking package size.');
   }
+  // 组件 JS 的 import 依赖不在 usingComponents 里：config-provider 是 picker 的 JS 依赖，
+  // 只按 usingComponents 裁剪会让 t-picker 在真机上加载失败（项目切换弹不出来）。
+  for (const snippet of ["'config-provider'", 'MODULE_SPEC_RE', 'listJsFiles']) {
+    if (!uploadScript.includes(snippet)) {
+      throw new Error(`scripts/upload.js must keep the JS dependency closure for TDesign pruning: ${snippet}`);
+    }
+  }
 }
 
 // 列表页筛选面板（.filter-panel）是页面里唯一的筛选入口：旧的常驻下拉必须彻底退场。
