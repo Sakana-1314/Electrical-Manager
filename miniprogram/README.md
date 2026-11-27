@@ -91,6 +91,7 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 - 拍摄页顶部的「水印设置」进入 `pages/watermark-setting`：**置顶常用词**（点右侧图钉置顶，置顶的词排在拍摄页最前）与**启用的水印项目**（时间 / 日期 / 星期 / 地点 / 文案，至少保留一项）。
 - 水印项目的开关**只在设置页提供**，拍摄页不再重复一套开关；拍摄页只写地点与文案，输入卡按紧凑口径（26rpx 字号、文案框按内容长高、上限约四行）。
 - 设置只存本机（`utils/watermark.js` 的 `watermarkSettings`，含常用词、置顶列表与开关），不落服务端；拍摄页进入与从设置页返回时重读。
+- 「地图选点」用 `wx.chooseLocation`，属于地理位置接口：`app.json` 已声明 `requiredPrivateInfos: ["chooseLocation"]` 与 `permission.scope.userLocation.desc`（`npm run check` 会校验声明与调用一致）；小程序后台还需在「用户隐私保护指引」里声明位置信息用途，并按平台提示在「开发管理 → 接口设置」申请开通对应地理位置接口，否则真机调用会失败。
 
 ## 当前项目（项目隔离）
 

@@ -110,6 +110,30 @@ for (const [key, name] of themeVariables) {
   }
 }
 
+// 地理位置接口必须在 app.json 声明 requiredPrivateInfos，否则真机调用直接失败（开发者工具只告警）。
+const locationApiNames = [
+  'getFuzzyLocation',
+  'getLocation',
+  'onLocationChange',
+  'startLocationUpdateBackground',
+  'startLocationUpdate',
+  'chooseLocation',
+  'choosePoi',
+];
+const declaredPrivateInfos = appConfig.requiredPrivateInfos || [];
+for (const page of pages) {
+  const pageScript = read(`pages/${page}.js`);
+  const missing = locationApiNames.filter(
+    (name) =>
+      new RegExp(`wx\\.${name}\\s*\\(`).test(pageScript) && !declaredPrivateInfos.includes(name),
+  );
+  if (missing.length) {
+    throw new Error(
+      `app.json requiredPrivateInfos is missing ${missing.join(', ')} used by pages/${page}.js.`,
+    );
+  }
+}
+
 /** 取出选择器对应的样式块内容（选择器顶格书写、块以顶格 `}` 结束）。 */
 function styleBlock(styles, selector) {
   const start = styles.indexOf(`\n${selector} {`);
