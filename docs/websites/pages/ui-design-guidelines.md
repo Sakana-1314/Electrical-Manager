@@ -132,6 +132,8 @@
 <n-layout-header bordered class="app-topbar" :class="{ 'is-mobile': isMobile }">
   <div class="topbar-title">{{ route.meta.title }}</div>
 </n-layout-header>
+<!-- 标签页栏：紧贴导航条下方，等宽标签（见「顶部标签页」） -->
+<AppTabs v-if="tabbed" />
 
 <!-- 视图：仅当页面还有页级操作或统计标签时保留一条紧凑行 -->
 <div class="page-header">
@@ -315,6 +317,24 @@
 - 刷新带闸门：同一页面生命周期内只刷新一次，且两次自愈刷新至少间隔 15 秒（`RELOAD_GUARD_MS`）；
   被拦下时广播 `stale-chunk-blocked` 事件，界面提示手动刷新，避免代码块真坏掉时无限刷新。
 - 接线在 `main.ts`（`installStaleChunkRecovery` 必须在首次导航前装上），由 `utils/staleChunk.spec.ts` 守住。
+
+### 顶部标签页
+
+桌面与移动端都有一条顶部标签页栏（`layouts/AppTabs.vue` + `composables/useAppTabs.ts`），
+贴在很矮的顶部导航条下方：
+
+- **等宽**：每枚标签宽度完全一致，文字区固定 8 个中文字宽（`--app-tab-text-width: 8em`，`1em` 即标签字号 13px，
+  合计 104px），再加固定装饰宽度（`--app-tab-decoration-width: 33px`：左内边距 + 关闭按钮）。标签 `flex: none`，
+  标题过长一律省略号，**不允许内容把标签撑宽或收窄**。字号变了只改 `--app-tab-font-size`。
+- **一页一标签**：按路由名去重——详情（`?detail=`）、翻页、筛选都只更新当前标签记录的地址，不新增标签；
+  上限 8 枚（`MAX_APP_TABS`，与 keep-alive 槽位同一个数），超出按打开顺序淘汰最早的。
+- **切标签不重载**：标签页统一走 `<keep-alive :max="MAX_APP_TABS">`，切走只是停用、切回只是激活，
+  不重新挂载、不重新请求数据；关闭标签或被淘汰时把该页的实例代号 +1，下次打开是干净的新实例。
+  标签列表存 `sessionStorage`，整页刷新（含发版自愈刷新）后仍然保留。
+- **哪些页不进标签**：`meta.public`（登录 / 分享 / 404）与 `meta.noTab`（入库 / 出库单据——有离开确认，
+  进标签会在切标签时弹「放弃未提交的单据」）。退出登录时清空全部标签，避免换账号后还留着上一个账号的页面。
+- 交互：点击切换、点「×」关闭（只剩一枚时不可关闭）、鼠标中键关闭；关闭当前标签落到右邻居、其次左邻居。
+- 由 `web/src/layouts/appTabs.spec.ts`（样式与接线）与 `web/src/utils/appTabs.spec.ts`（纯逻辑）守住。
 
 ### 弹窗统一排版
 

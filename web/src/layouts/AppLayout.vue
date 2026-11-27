@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, type RouteLocationNormalizedLoaded } from 'vue-router'
 import { type MenuOption } from 'naive-ui'
 import { MenuOutline } from '@vicons/ionicons5'
 import { useMediaQuery } from '@vueuse/core'
 import { useAuthStore } from '@/stores/auth'
 import { buildMainMenu } from '@/layouts/mainMenu'
+import AppTabs from '@/layouts/AppTabs.vue'
 import UserMenu from '@/layouts/UserMenu.vue'
 import { LOGO_MARK_URL } from '@/constants/branding'
+import { isTabRoute, MAX_APP_TABS, useAppTabs } from '@/composables/useAppTabs'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -18,6 +20,16 @@ const drawerOpen = ref(false)
 const closeDrawer = () => {
   drawerOpen.value = false
 }
+
+const { tabCacheKey, tabs } = useAppTabs()
+
+/** 当前页是否作为标签页打开（决定走 keep-alive 还是每次重新挂载）。 */
+function isTabPage(current: RouteLocationNormalizedLoaded): boolean {
+  return isTabRoute(current) && typeof current.name === 'string'
+}
+
+/** 已经有标签（或当前页本身是标签页）就显示标签栏；登录 / 分享等公共页不显示。 */
+const tabbed = computed(() => tabs.value.length > 0 || isTabPage(route))
 
 /**
  * 导航项在 `layouts/mainMenu.ts` 里拼装（纯逻辑，有单测）：
@@ -87,22 +99,25 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
         </button>
         <div class="topbar-title">{{ route.meta.title }}</div>
       </n-layout-header>
+      <!-- 顶部标签页：每个打开过的页面一枚等宽标签，切标签走 keep-alive 不重新加载数据 -->
+      <AppTabs v-if="tabbed" />
       <n-layout-content class="app-content" :native-scrollbar="false">
-        <!-- keepAlive 列表页最多缓存 6 个（两个申购列表页各约 2000 行、表格数据量大），超出按最久未用淘汰；
-             筛选与页码都在 URL 里，被淘汰的页重新进入时可完整恢复。
-             非缓存页同样按路由名加 key：入库 / 出库共用 OperationEditorView，不加 key 时侧栏从入库切到出库
-             会复用同一实例，入库草稿（明细、用途、时间）原样带进出库表单。 -->
+        <!-- 标签页里的页面全部 keep-alive（上限与标签数一致，均为 8）：
+             切标签只做激活 / 停用，不重新挂载、不重新请求数据；
+             关闭标签或超限淘汰时把实例代号 +1，下次打开是干净的新实例。
+             非标签页（登录、分享、入库 / 出库单据）不进缓存，保持原有每次进入重新初始化。
+             缓存键按「页面名 + 实例代号」：入库 / 出库共用 OperationEditorView 时也不会互相串数据。 -->
         <router-view v-slot="{ Component, route: currentRoute }">
-          <keep-alive :max="6">
+          <keep-alive :max="MAX_APP_TABS">
             <component
               :is="Component"
-              v-if="currentRoute.meta.keepAlive"
-              :key="String(currentRoute.name)"
+              v-if="isTabPage(currentRoute)"
+              :key="tabCacheKey(String(currentRoute.name))"
             />
           </keep-alive>
           <component
             :is="Component"
-            v-if="!currentRoute.meta.keepAlive"
+            v-if="!isTabPage(currentRoute)"
             :key="String(currentRoute.name)"
           />
         </router-view>
