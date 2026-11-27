@@ -54,6 +54,33 @@ describe('切标签不重新加载数据', () => {
   })
 })
 
+describe('标签页批量操作', () => {
+  it('首个标签前有「⋯」菜单，支持关闭其他 / 关闭所有', () => {
+    expect(tabsComponent).toContain("label: '关闭其他标签页'")
+    expect(tabsComponent).toContain("label: '关闭所有标签页'")
+    expect(tabsComponent).toMatch(/class="app-tabs-more"/)
+    // 菜单位于第一个标签之前
+    expect(tabsComponent.indexOf('app-tabs-more')).toBeLessThan(
+      tabsComponent.indexOf('v-for="tab in tabs"'),
+    )
+    expect(composable).toContain('export function closeOtherTabs()')
+    expect(composable).toContain('export function closeAllTabs(router: Router)')
+  })
+
+  it('关闭所有后当前页仍是标签页时回落地页，导航条不会空掉', () => {
+    expect(composable).toMatch(/closeAllTabs[\s\S]*?router\.replace\('\/'\)/)
+  })
+})
+
+describe('左侧分组手风琴', () => {
+  it('菜单受控 expanded-keys，分组同时只展开一个', () => {
+    expect(layout).toContain(':expanded-keys="expandedKeys"')
+    expect(layout).toContain('@update:expanded-keys="onUpdateExpandedKeys"')
+    expect(layout).toContain('accordionExpandedKeys')
+    expect(layout).toContain('groupKeyForRoute')
+  })
+})
+
 describe('标签页的入口边界', () => {
   it('公共页与单据页不进标签', () => {
     expect(composable).toContain('!route.meta.public && !route.meta.noTab')

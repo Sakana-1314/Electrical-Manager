@@ -125,6 +125,33 @@ export function closeAppTab(router: Router, key: string) {
   void (nextTab ? router.push(nextTab.path) : Promise.resolve()).finally(() => invalidate(key))
 }
 
+/** 关闭其他标签：只留当前激活的那一枚；当前页不是标签（单据页）时关掉全部标签。 */
+export function closeOtherTabs() {
+  const keep = activeKey.value
+  const removed = tabs.value.filter((tab) => tab.key !== keep)
+  if (!removed.length) return
+  tabs.value = tabs.value.filter((tab) => tab.key === keep)
+  for (const tab of removed) invalidate(tab.key)
+}
+
+/**
+ * 关闭全部标签：
+ * - 当前页本身是标签页 → 回到落地页（路由守卫会把它作为新标签打开），导航条不会空掉；
+ * - 当前页是单据页（noTab）→ 留在原页，导航条末尾仍显示当前页签。
+ */
+export function closeAllTabs(router: Router) {
+  const keys = tabs.value.map((tab) => tab.key)
+  if (!keys.length) return
+  const stayingOnTab = keys.includes(String(router.currentRoute.value.name ?? ''))
+  tabs.value = []
+  activeKey.value = null
+  for (const key of keys) invalidate(key)
+  if (!stayingOnTab) return
+  // 回到落地页；已经停在落地页时这次导航是「重复导航」，标签不会自动重开，
+  // 所以结束后统一按当前路由补一次标签，保证导航条不会空掉。
+  void router.replace('/').finally(() => trackRoute(router.currentRoute.value))
+}
+
 /** 退出登录 / 换项目：标签全部作废。 */
 export function resetAppTabs() {
   for (const tab of tabs.value) invalidate(tab.key)

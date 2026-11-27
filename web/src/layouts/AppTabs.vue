@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { CloseOutline } from '@vicons/ionicons5'
+import { CloseOutline, EllipsisHorizontal } from '@vicons/ionicons5'
 import {
   activateTab,
+  closeAllTabs,
   closeAppTab,
+  closeOtherTabs,
   isTabRoute,
   trackRoute,
   useAppTabs,
@@ -43,10 +45,26 @@ function onAuxClick(event: MouseEvent, key: string) {
   event.preventDefault()
   closeAppTab(router, key)
 }
+
+/** 首个标签前的「⋯」菜单：批量关闭标签。 */
+const menuOptions = computed(() => [
+  { label: '关闭其他标签页', key: 'others', disabled: tabs.value.length <= 1 },
+  { label: '关闭所有标签页', key: 'all', disabled: tabs.value.length === 0 },
+])
+
+function onMenuSelect(key: string) {
+  if (key === 'others') closeOtherTabs()
+  else if (key === 'all') closeAllTabs(router)
+}
 </script>
 
 <template>
   <div class="app-tabs" role="tablist" aria-label="已打开的页面">
+    <n-dropdown trigger="click" :options="menuOptions" @select="onMenuSelect">
+      <button type="button" class="app-tabs-more" aria-label="标签页操作">
+        <n-icon :size="16"><EllipsisHorizontal /></n-icon>
+      </button>
+    </n-dropdown>
     <div
       v-for="tab in tabs"
       :key="tab.key"
@@ -111,6 +129,28 @@ function onAuxClick(event: MouseEvent, key: string) {
 }
 .app-tabs::-webkit-scrollbar {
   display: none;
+}
+/* 首个标签前的「⋯」批量操作入口：与标签同高同形（上圆下直），不参与标签列表 */
+.app-tabs-more {
+  display: grid;
+  flex: none;
+  width: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+.app-tabs-more:hover,
+.app-tabs-more:focus-visible {
+  background: var(--color-panel);
+  color: var(--color-text);
+  outline: none;
 }
 /* 标签形状：上方两角圆、底部两角是直角——激活标签贴着页面，不是四角圆角块。
    激活态靠颜色区分：底色取页面背景（与下方内容区同色），文字用主题色。
