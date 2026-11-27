@@ -1,6 +1,5 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { request } = require('../../utils/request');
-const { hasStandardInventory } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const {
   ensureProject,
@@ -28,8 +27,6 @@ Page({
     loading: true,
     failed: false,
     user: null,
-    // 没有二级库 Pro 读权限时不展示「查看出入库记录」入口（流水是标准库能力）。
-    recordsVisible: false,
     // 「进入网页版」按钮的请求中态
     openingWeb: false,
     // 当前项目：`currentProjectId` 为 0 表示还没解析出来（显示「未选择」）；
@@ -87,7 +84,6 @@ Page({
           registered_at: formatDateTime(user.created_at),
         },
         permissionCountLabel,
-        recordsVisible: hasStandardInventory(),
         loading: false,
       });
     } catch (_error) {
@@ -170,10 +166,6 @@ Page({
     this.setData({ projectPickerVisible: false });
     if (!projectId || projectId === this.data.currentProjectId) return;
     switchProject(projectId);
-  },
-
-  openRecords() {
-    wx.navigateTo({ url: '/pages/records/records' });
   },
 
   /**

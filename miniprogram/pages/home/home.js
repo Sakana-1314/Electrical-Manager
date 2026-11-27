@@ -25,7 +25,9 @@ Page({
     // 首页入口是否展示：只看用户权限位（登录会话的 permissions），无读权限的入口不渲染。
     // 这些值只在 featureReady 置位时一并写入，渲染入口前已是最终结果。
     entryVisible: {
-      inventory: true,
+      // 二级库 Pro / Lite 是两套独立权限：同时持有时两个入口都展示，互不遮挡。
+      inventoryPro: true,
+      inventoryLite: true,
       stockManage: true,
       huaxing: true,
       purchasePlans: true,
@@ -70,7 +72,9 @@ Page({
         featureReady: true,
         // 入口 = 用户权限位里有对应模块的读权限（管理端与小程序端同一套权限）。
         entryVisible: {
-          inventory: entryEnabled('inventory'),
+          // 二级库 Pro / Lite 分别在各自权限位下展示：同时持有时两个入口都能进。
+          inventoryPro: entryEnabled('inventoryPro'),
+          inventoryLite: entryEnabled('inventoryLite'),
           // 二级库管理（物资档案 / 扫码入库）按写权限出现，与出库同一个权限位。
           stockManage: canManageStock(),
           huaxing: entryEnabled('huaxing'),
@@ -136,8 +140,14 @@ Page({
     }
   },
 
-  openInventory() {
-    wx.navigateTo({ url: '/pages/inventory/inventory' });
+  /** 二级库 Pro：库存查询 / 扫码出库 / 出入库记录（warehouse:read）。 */
+  openInventoryPro() {
+    wx.navigateTo({ url: '/pages/inventory/inventory?source=pro' });
+  },
+
+  /** 二级库 Lite：Excel 导入的只读台账（lite:read）。 */
+  openInventoryLite() {
+    wx.navigateTo({ url: '/pages/inventory/inventory?source=lite' });
   },
 
   /** 二级库管理：物资档案 + 扫码入库（写权限位才出现）。 */

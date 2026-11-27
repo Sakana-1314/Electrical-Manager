@@ -2,6 +2,7 @@ package miniprogram
 
 import (
 	"strings"
+	"time"
 
 	"github.com/shopspring/decimal"
 
@@ -141,6 +142,53 @@ func ListInventory(s *db.Session, f MiniProgramInventoryFilter, page, pageSize i
 	return items, total, nil
 }
 
+// FirstInboundMap 批量取「首次入库时间」：物资 id → 最早一笔入库流水的 occurred_at。
+//
+// 口径：只算入库流水（operation_type = INBOUND），且排除冲销来源（source_type = REVERSAL）——
+// 冲销入库是为了抵消原出库而生成的补偿流水，不是真正的首次入库。没有入库流水的物资不在返回的
+// map 里（读模型输出 null）。按 IN 一次聚合查询，列表页不产生 N+1。
+func FirstInboundMap(s *db.Session, materialIDs []int64) (map[int64]time.Time, error) {
+	out := map[int64]time.Time{}
+	ids := make([]int64, 0, len(materialIDs))
+	seen := map[int64]bool{}
+	for _, id := range materialIDs {
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	lscope, largs, err := scopeAnd(s, "l.")
+	if err != nil {
+		return nil, err
+	}
+	oscope, oargs, err := scopeAnd(s, "o.")
+	if err != nil {
+		return nil, err
+	}
+	type row struct {
+		MaterialID int64     `db:"stock_material_id"`
+		FirstAt    time.Time `db:"first_at"`
+	}
+	// 参数顺序必须与 SQL 里的占位符严格一致：IN (?) 对应 ids 这个切片（由 SelectIn / sqlx.In 展开），
+	// 其余占位符对应后面的标量。
+	args := append(append(append(append([]any{}, oargs...), ids), domain.OperationInbound), domain.SourceReversal)
+	args = append(args, largs...)
+	var rows []row
+	if err := s.SelectIn(&rows, "SELECT l.stock_material_id, MIN(o.occurred_at) AS first_at"+
+		" FROM stock_operation_line l JOIN stock_operation o ON o.id = l.operation_id"+oscope+
+		" WHERE l.stock_material_id IN (?) AND o.operation_type = ? AND o.source_type != ?"+lscope+
+		" GROUP BY l.stock_material_id", args...); err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		out[r.MaterialID] = r.FirstAt
+	}
+	return out, nil
+}
+
 // LocalizedMaterialName 对应 localized_material_name：印尼语（id / in）显示印尼语名称，
 // 其它语言显示中文名称，有别名时附在中文名称后面。
 func LocalizedMaterialName(item *model.StockMaterial, language *string) string {
@@ -171,11 +219,18 @@ func currentQty(item *material.Stock) jtype.Decimal {
 	return zero
 }
 
-// InventoryItemRead 对应 inventory_item_read。
-func InventoryItemRead(item *material.Stock, language *string) schema.MiniProgramInventoryItemRead {
+// InventoryItemRead 对应 inventory_item_read。firstInbound 取 FirstInboundMap 的结果，
+// 没有入库流水时传 zero 值（读模型输出 null）。
+func InventoryItemRead(item *material.Stock, language *string, firstInbound time.Time) schema.MiniProgramInventoryItemRead {
+	var first *schema.AwareTime
+	if !firstInbound.IsZero() {
+		t := schema.NewAwareTime(firstInbound)
+		first = &t
+	}
 	return schema.MiniProgramInventoryItemRead{
 		UUID: item.UUID, Name: LocalizedMaterialName(&item.StockMaterial, language), ModelSpec: item.ModelSpec,
 		UnitName: item.UnitName, CurrentQty: currentQty(item), StockStatus: StockStatus(item),
+		FirstInboundAt: first,
 	}
 }
 

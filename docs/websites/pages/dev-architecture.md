@@ -1004,7 +1004,7 @@ flowchart LR
 | 选项加载失败 | 页面把 `optionsFailed` 传给组件，面板顶部显示一行可点重试的提示并发 `retryoptions`；页面只需重拉选项（`onRetryOptions` → `loadFilterOptions`），不重新登录、不重查列表。**不弹 toast**：列表可用，弹错误提示会让人以为整页坏了且无重试入口。`check.js` 会拦住对这一行为的回退 |
 | 页面侧 | 各页维护 `filters` / `fieldConditions` / `filtered`，`onFilterChange` 用 `utils/filters.js` 的 `normalizeFilters` / `hasActiveFilter` 归一；`sameFilters` 为真时直接返回，不重复请求 |
 | 请求拼装 | `utils/filters.js` 统一把状态换算成参数：`buildSearchQuery`（综合 → `keyword`）、`buildFieldQuery`（每个非空字段落到自己的参数，多字段 AND）、`buildFilterQuery`（多选 `\|` 连接、区间拆 `from` / `to`）、`buildFieldShare` / `readFieldShare`（分享往返） |
-| 精简数据源 | 只有 `lite:read`（无 `warehouse:read`）的用户库存页走精简接口：`filterSections` 为空，组件退化为纯搜索栏（不显示筛选按钮与已选条件） |
+| Lite 数据源 | 入口带 `source=lite`（或只有 `lite:read` 的旧链接按权限兜底）时库存页走 Lite 接口：`filterSections` 为空，组件退化为纯搜索栏（不显示筛选按钮与已选条件）；同时持有 Pro 权限时也能从「二级库 Lite」入口进入该数据源 |
 
 ### 分享带搜索 / 筛选（`utils/share.js`）
 
@@ -1014,7 +1014,7 @@ flowchart LR
 | --- | --- |
 | 写 | 各页重写 `sharePath()`，用 `buildSharePath(route, params)` 拼 query：空值 / `null` / `undefined` 一律省略，其余逐个 `encodeURIComponent`（中文与 `&` `=` `#` 都不会破坏结构） |
 | 读 | 小程序 `onLoad(options)` 的 query **不会自动解码**，统一走 `readShareParams(options, SHARE_PARAMS)`：按白名单 key 取值并解码，对已解码 / 含裸 `%` 的值做兜底，不抛错 |
-| 携带范围 | 各页的 `SHARE_PARAMS` 与网页端筛选项一一对应：申购计划 `keyword`/`searchField`/`urgency`/`category`/`actualDemandPerson`/`purchaseResponsible`/`demandDepartment`/`subitemNo`/`name`/`modelSpec`/`materialCode`/`planDateFrom`/`planDateTo`；申购记录再加 `traceNo`/`purchaseOrderNo`/`usage`；隐患 `keyword`/`searchField`/`status`/`level`/`rectifyPerson`/`overdue`/`hazardTypeId`/`hazardUnitId`/`inspectionDateFrom`/`inspectionDateTo`；二级库库存 `keyword`/`searchField`/`stockStatus`/`stockQtyFrom`/`stockQtyTo`/`name`/`modelSpec`；华星总库存 `keyword`/`searchField`/`purchaseDepartment`/`purchaser`/`name`/`modelSpec`/`materialCode`/`inboundFrom`/`inboundTo`；物料编码 `keyword`/`searchField`/`name`/`modelSpec`/`materialCode`；台账 `keyword`/`tagId` |
+| 携带范围 | 各页的 `SHARE_PARAMS` 与网页端筛选项一一对应：申购计划 `keyword`/`searchField`/`urgency`/`category`/`actualDemandPerson`/`purchaseResponsible`/`demandDepartment`/`subitemNo`/`name`/`modelSpec`/`materialCode`/`planDateFrom`/`planDateTo`；申购记录再加 `traceNo`/`purchaseOrderNo`/`usage`；隐患 `keyword`/`searchField`/`status`/`level`/`rectifyPerson`/`overdue`/`hazardTypeId`/`hazardUnitId`/`inspectionDateFrom`/`inspectionDateTo`；二级库库存 `source`/`keyword`/`searchField`/`stockStatus`/`stockQtyFrom`/`stockQtyTo`/`name`/`modelSpec`；华星总库存 `keyword`/`searchField`/`purchaseDepartment`/`purchaser`/`name`/`modelSpec`/`materialCode`/`inboundFrom`/`inboundTo`；物料编码 `keyword`/`searchField`/`name`/`modelSpec`/`materialCode`；台账 `keyword`/`tagId` |
 | 回填时机 | 带筛选的页面先 `loadFilterOptions()` 再回填——面板要靠选项才能把当前值解析成文案，早于选项写入会显示成原值 |
 | 值已不在候选项 | 页面 `buildSection()` 把缺失值补成一项，避免面板看不到「筛了什么」而列表其实仍在过滤 |
 | 固定枚举 | 隐患状态 / 等级、库存状态是固定档位，用 `isAllowedShareValue()` 校验，非法值直接忽略（不能凭空造出选项）；「仅逾期」只接受 `overdue` |
@@ -1161,15 +1161,15 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    U["登录会话：app_user.permissions"] --> R1["warehouse:read → 二级库入口（标准库存页）"]
-    U --> R1b["lite:read → 二级库 Lite 数据源（仅 lite 时库存页切精简接口）"]
+    U["登录会话：app_user.permissions"] --> R1["warehouse:read → 二级库 Pro 入口（库存 / 出入库记录）"]
+    U --> R1b["lite:read → 二级库 Lite 入口（Excel 只读台账）"]
     U --> R2["purchase:read → 申购计划 / 记录"]
     U --> R3["huaxing:read / ledger:read / hazard:read → 对应入口"]
     U --> W1["warehouse:write → 扫到物资码进入出库确认"]
     U --> W2["hazard:write → 登记隐患、更新整改状态"]
 ```
 
-功能是否展示与可写**只看权限位**：入口按对应模块的 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；首页「扫一扫」是例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。管理端与小程序端共用同一套权限，不再有 `*_mode` 功能开关，也没有公开运行模式端点。二级库 Pro 与二级库 Lite 是两套独立权限：两种读权限都在时库存页优先标准数据源，只有 `lite:read` 才切精简接口；权限来自登录会话返回的 `permissions`（后端按位展开），后端数据接口按同一权限位鉴权。
+功能是否展示与可写**只看权限位**：入口按对应模块的 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；首页「扫一扫」是例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。管理端与小程序端共用同一套权限，不再有 `*_mode` 功能开关，也没有公开运行模式端点。二级库 Pro 与二级库 Lite 是两套独立权限，**同时持有时首页两个入口都展示、两套数据都能进**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`utils/features.js` 的 `resolveInventorySource`；没带 `source` 的旧链接按权限兜底优先 Pro），页面标题随数据源切换。出入库记录是 Pro 能力，入口挂在 Pro 库存页顶部工具条；Pro 列表卡左上角展示该物资的首次入库时间（`/mini-program/inventory` 的 `first_inbound_at`，取最早一笔入库流水、排除冲销来源）。权限来自登录会话返回的 `permissions`（后端按位展开），后端数据接口按同一权限位鉴权。
 
 ### 构建与上传
 

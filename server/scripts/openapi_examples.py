@@ -763,6 +763,17 @@ def _material_rows() -> list[dict[str, Any]]:
                 "unit_name": item["unit_name"],
                 "remark": item["remark"] or None,
                 "current_qty": _qty(_LEDGER["balances"][item["code"]]),
+                # 首次入库时间：该物资最早一笔入库流水（排除冲销来源）。
+                # 台账里没有入库流水的物资，其库存来自期初导入，按期初导入时间（建档时间）计。
+                "first_inbound_at": min(
+                    (
+                        row["occurred_at"]
+                        for row in _LEDGER["rows"]
+                        if row["operation_type"] == "INBOUND" and row["source_type"] != "REVERSAL"
+                        and any(line["stock_material_id"] == index for line in row["lines"])
+                    ),
+                    default=_STOCK_CREATED_AT,
+                ),
                 "images": images,
                 "replenishment_policy": {
                     "minimum_qty": item["minimum_qty"],
@@ -1792,6 +1803,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "unit_name": material["unit_name"],
             "current_qty": material["current_qty"],
             "stock_status": "low_stock",
+            "first_inbound_at": material["first_inbound_at"],
         },
         "Page_MiniProgramInventoryItemRead_": _page(
             [
@@ -1809,6 +1821,7 @@ def _build_schema_examples() -> dict[str, Any]:
                         <= _decimal(row["replenishment_policy"]["minimum_qty"])
                         else "normal"
                     ),
+                    "first_inbound_at": row["first_inbound_at"],
                 }
                 for row in _MATERIAL_ROWS[:8]
             ]

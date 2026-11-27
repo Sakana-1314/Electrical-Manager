@@ -62,12 +62,21 @@
         <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
       </view>
 
-      <view wx:if="{{entryVisible.inventory}}" class="action-card" hover-class="action-card-active" bind:tap="openInventory">
+      <!-- 二级库 Pro / Lite 是两套独立权限、各自一个入口：同时持有时都能进（互不遮挡）。 -->
+      <view wx:if="{{entryVisible.inventoryPro}}" class="action-card" hover-class="action-card-active" bind:tap="openInventoryPro">
         <view class="action-head">
           <view class="action-icon"><t-icon name="view-list" size="38rpx" /></view>
-          <view class="action-title">{{i18n.allInventory}}</view>
+          <view class="action-title">{{i18n.inventoryProTitle}}</view>
         </view>
-        <view class="action-description">{{i18n.inventoryDescription}}</view>
+        <view class="action-description">{{i18n.inventoryProDescription}}</view>
+      </view>
+
+      <view wx:if="{{entryVisible.inventoryLite}}" class="action-card" hover-class="action-card-active" bind:tap="openInventoryLite">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="file" size="38rpx" /></view>
+          <view class="action-title">{{i18n.inventoryLiteTitle}}</view>
+        </view>
+        <view class="action-description">{{i18n.inventoryLiteDescription}}</view>
       </view>
 
       <view wx:if="{{entryVisible.stockManage}}" class="action-card" hover-class="action-card-active" bind:tap="openStockManage">

@@ -67,20 +67,6 @@
       </view>
       <t-icon class="records-entry-arrow" name="chevron-right" size="36rpx" />
     </view>
-
-    <view
-      wx:if="{{recordsVisible}}"
-      class="records-entry"
-      hover-class="records-entry-active"
-      aria-role="button"
-      bind:tap="openRecords"
-    >
-      <view class="records-entry-main">
-        <t-icon class="records-entry-icon" name="time" size="36rpx" />
-        <view class="records-entry-text">{{i18n.viewRecords}}</view>
-      </view>
-      <t-icon class="records-entry-arrow" name="chevron-right" size="36rpx" />
-    </view>
   </block>
 
   <!-- 当前项目切换：滚轮选择器，默认停在当前项目，确认后才切换（取消不改动）。 -->

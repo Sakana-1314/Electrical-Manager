@@ -597,7 +597,16 @@ async def test_mini_program_inventory_search_filters_pagination_and_detail(
         "unit_name",
         "current_qty",
         "stock_status",
+        "first_inbound_at",
     }
+    # 首次入库时间取该物资最早一笔入库流水（列表卡左上角展示）；没有入库流水的物资为 null。
+    items_by_name = {
+        item["name"]: item
+        for item in first_page.json()["items"] + second_page.json()["items"]
+    }
+    assert items_by_name["低库存继电器"]["first_inbound_at"] == "2026-07-26T01:00:00Z"
+    assert items_by_name["库存充足电机"]["first_inbound_at"] == "2026-07-26T01:00:00Z"
+    assert items_by_name["零库存接触器"]["first_inbound_at"] is None
 
     indonesian_inventory = await client.get(
         "/api/v1/mini-program/inventory",

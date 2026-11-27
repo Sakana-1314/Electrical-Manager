@@ -188,9 +188,18 @@ func inventoryList(c *web.Ctx) error {
 	if err != nil {
 		return err
 	}
+	// 首次入库时间：按本页物资 id 一次聚合查询（列表页不做 N+1）。
+	materialIDs := make([]int64, len(items))
+	for i, it := range items {
+		materialIDs[i] = it.ID
+	}
+	firstInbounds, err := svc.FirstInboundMap(c.DB, materialIDs)
+	if err != nil {
+		return err
+	}
 	reads := make([]schema.MiniProgramInventoryItemRead, len(items))
 	for i, it := range items {
-		reads[i] = svc.InventoryItemRead(it, language)
+		reads[i] = svc.InventoryItemRead(it, language, firstInbounds[it.ID])
 	}
 	return c.OK(schema.NewPage(reads, page, size, total))
 }

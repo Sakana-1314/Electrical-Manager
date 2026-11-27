@@ -297,9 +297,36 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (homeMarkup.indexOf('class="action-card scan-card"') > homeMarkup.indexOf('entryVisible.huaxing')) {
     throw new Error('The home scan card must be the first entry in the action grid.');
   }
-  // 华星总库存排在二级库库存之前；两列网格的显示顺序就是标记顺序。
-  if (homeMarkup.indexOf('entryVisible.huaxing') > homeMarkup.indexOf('entryVisible.inventory')) {
-    throw new Error('The huaxing inventory entry must come before the standard inventory entry.');
+  // 华星总库存排在二级库 Pro / Lite 之前；两列网格的显示顺序就是标记顺序。
+  if (homeMarkup.indexOf('entryVisible.huaxing') > homeMarkup.indexOf('entryVisible.inventoryPro') ||
+      homeMarkup.indexOf('entryVisible.huaxing') > homeMarkup.indexOf('entryVisible.inventoryLite')) {
+    throw new Error('The huaxing inventory entry must come before the secondary warehouse entries.');
+  }
+  // 二级库 Pro / Lite 是两套独立权限，各自一个入口、可同时展示：
+  // 分别导航到同一库存页的不同数据源，不能合并成一个入口。
+  for (const snippet of [
+    'entryVisible.inventoryPro',
+    'entryVisible.inventoryLite',
+    'bind:tap="openInventoryPro"',
+    'bind:tap="openInventoryLite"',
+  ]) {
+    if (!homeMarkup.includes(snippet)) {
+      throw new Error(`The home page must keep separate Pro / Lite warehouse entries: ${snippet}`);
+    }
+  }
+  for (const snippet of [
+    "entryEnabled('inventoryPro')",
+    "entryEnabled('inventoryLite')",
+    "'/pages/inventory/inventory?source=pro'",
+    "'/pages/inventory/inventory?source=lite'",
+  ]) {
+    if (!homeScript.includes(snippet)) {
+      throw new Error(`The home warehouse entries must map to their own permissions and sources: ${snippet}`);
+    }
+  }
+  if (!read('utils/features.js').includes("inventoryPro: 'warehouse:read'") ||
+      !read('utils/features.js').includes("inventoryLite: 'lite:read'")) {
+    throw new Error('utils/features.js must map the Pro / Lite entries to warehouse:read / lite:read.');
   }
   // 扫一扫是首页唯一的主动作，也是所有扫码类操作的统一入口（物资码 / 网页登录码）：
   // 整卡可点、不能再嵌套「开始扫码」按钮，且不能按权限隐藏（二级库 Lite 用户也要用它确认网页登录）。
@@ -345,6 +372,55 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     if (!components.includes(component)) {
       throw new Error(`pages/home/home.json must register ${component} for the loading panel.`);
     }
+  }
+}
+
+// 二级库 Pro / Lite 共用库存页：由入口的 source 参数决定数据源（resolveInventorySource），
+// 页面标题随之切换；出入库记录是 Pro 能力，入口挂在 Pro 库存页、个人信息页不再保留。
+{
+  const featuresScript = read('utils/features.js');
+  for (const snippet of ['function resolveInventorySource', "source === 'lite'", "source === 'pro'"]) {
+    if (!featuresScript.includes(snippet)) {
+      throw new Error(`utils/features.js must resolve the inventory source from the entry: ${snippet}`);
+    }
+  }
+  const inventoryScript = read('pages/inventory/inventory.js');
+  for (const snippet of [
+    'resolveInventorySource(shared.source)',
+    "t('inventoryProTitle')",
+    "t('inventoryLiteTitle')",
+    'openRecords',
+    "'/pages/records/records'",
+  ]) {
+    if (!inventoryScript.includes(snippet)) {
+      throw new Error(`pages/inventory/inventory.js must wire the Pro / Lite shared page: ${snippet}`);
+    }
+  }
+  // 首次入库时间在 utils/inventory.js 的 decorateStock 里格式化（Pro 卡片左上角）。
+  const inventoryUtil = read('utils/inventory.js');
+  for (const snippet of ['first_inbound_at', 'first_inbound_label', 'formatDateTime']) {
+    if (!inventoryUtil.includes(snippet)) {
+      throw new Error(`utils/inventory.js must format the first inbound time: ${snippet}`);
+    }
+  }
+  const inventoryMarkup = read('pages/inventory/inventory.wxml');
+  for (const snippet of [
+    'first_inbound_label',
+    'bind:tap="openRecords"',
+    'wx:if="{{!liteMode}}"',
+    'title="{{pageTitle}}"',
+  ]) {
+    if (!inventoryMarkup.includes(snippet)) {
+      throw new Error(`pages/inventory/inventory.wxml must render the Pro / Lite shared page: ${snippet}`);
+    }
+  }
+  if (!inventoryScript.includes("SHARE_PARAMS = ['source'") && !inventoryScript.includes("'source',")) {
+    throw new Error('pages/inventory/inventory.js must retain the source param in share links.');
+  }
+  const profileScript = read('pages/profile/profile.js');
+  const profileMarkup = read('pages/profile/profile.wxml');
+  if (profileScript.includes('openRecords') || profileMarkup.includes('recordsVisible')) {
+    throw new Error('The outbound records entry must live on the Pro inventory page, not the profile page.');
   }
 }
 
