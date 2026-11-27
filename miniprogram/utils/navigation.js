@@ -1,8 +1,17 @@
 const REDIRECT_KEY = 'bindRedirect';
 
 /**
+ * 回跳目标只允许小程序内的页面路径：主包 `/pages/...` 与分包 `/packages/<组>/pages/...`。
+ * 校验前缀，防止篡改跳转到任意路径或外部页面。
+ * @param {string} path 页面路径（以 / 开头）
+ */
+function isRedirectTarget(path) {
+  return typeof path === 'string' && (path.startsWith('/pages/') || path.startsWith('/packages/'));
+}
+
+/**
  * 把当前页面 url（含 query）编码为回跳参数。
- * @param {string} url 形如 "/pages/outbound/outbound?uuid=..."
+ * @param {string} url 形如 "/pages/outbound/outbound?uuid=..." 或分包页面路径
  */
 function buildRedirectQuery(url) {
   return encodeURIComponent(url);
@@ -10,13 +19,12 @@ function buildRedirectQuery(url) {
 
 /**
  * 从 bind 页读取暂存的回跳目标并清除。
- * 校验以 /pages/ 开头，防止篡改跳转到任意路径。
  * @returns {string} 合法回跳 url，否则返回空字符串。
  */
 function takeRedirect() {
   const target = wx.getStorageSync(REDIRECT_KEY);
   wx.removeStorageSync(REDIRECT_KEY);
-  return typeof target === 'string' && target.startsWith('/pages/') ? target : '';
+  return isRedirectTarget(target) ? target : '';
 }
 
 /**
@@ -29,7 +37,7 @@ function extractRedirect(options = {}) {
   if (!raw) return '';
   try {
     const target = decodeURIComponent(raw);
-    return target.startsWith('/pages/') ? target : '';
+    return isRedirectTarget(target) ? target : '';
   } catch (_error) {
     return '';
   }
@@ -37,7 +45,7 @@ function extractRedirect(options = {}) {
 
 /**
  * 获取当前页面完整路径（含 query），用于 401 重登发现未绑定时回跳原页面。
- * @returns {string} 形如 "/pages/material-detail/material-detail?uuid=..."；无页面时返回空串。
+ * @returns {string} 形如 "/packages/warehouse/pages/material-detail/material-detail?uuid=..."；无页面时返回空串。
  */
 function getCurrentPageUrl() {
   const pages = getCurrentPages();

@@ -48,8 +48,12 @@ Page({
       return '';
     }
     const path = launch && launch.path ? `/${launch.path}` : '';
+    // 分包页面的启动路径是 /packages/<组>/pages/...，同样可作为回跳目的地；
+    // 首页 / 绑定页自身不算目的地。
+    const inMainPackage = path.startsWith('/pages/');
+    const inSubPackage = path.startsWith('/packages/');
     if (
-      !path.startsWith('/pages/') ||
+      (!inMainPackage && !inSubPackage) ||
       path.startsWith('/pages/home/') ||
       path.startsWith('/pages/bind/')
     ) {

@@ -39,168 +39,12 @@ const IGNORES = [
 ];
 
 /**
- * TDesign 的共享目录：组件裁剪时必须保留（组件 JS 会跨目录引用 common / mixins / locale 等）。
- * `config-provider` 是 `mixins/using-config` 的 JS 依赖（不是 usingComponents 组件），
- * 少保留它会让 t-picker 等组件在真机上加载失败。
- * 根 `index.js` 还直接导出 ActionSheet / Dialog / Message / Toast，保留它们的目录，
- * 避免编译器解析根入口时找不到被裁剪的组件。
+ * 上传前用 `ci.packNpm` 构建完整的 TDesign 组件库，不再按页面引用裁剪组件目录：
+ * 之前按 `usingComponents` 做依赖闭包时漏掉了组件 JS 里的 import 依赖
+ * （`t-picker` 经 `mixins/using-config` 引用 `config-provider/use-config`），
+ * 真机上组件加载失败、项目切换弹窗弹不出来。分包把页面挪出主包后，
+ * 主包装得下完整组件库，这里不再做任何裁剪。
  */
-const TD_SHARED_DIRS = new Set([
-  'common',
-  'config-provider',
-  'mixins',
-  'locale',
-  'miniprogram_npm',
-  'transition',
-  'action-sheet',
-  'dialog',
-  'message',
-  'message-item',
-]);
-
-/** 递归列出目录下的 JSON 文件（用于收集页面 / 组件声明的 usingComponents）。 */
-function listJsonFiles(dir) {
-  if (!fs.existsSync(dir)) return [];
-  const files = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...listJsonFiles(full));
-    else if (entry.isFile() && entry.name.endsWith('.json')) files.push(full);
-  }
-  return files;
-}
-
-/** 页面 / 组件 JSON 里实际引用到的 TDesign 组件名（如 t-button → button）。 */
-function collectUsedTDesignComponents() {
-  const used = new Set();
-  const jsonFiles = [
-    ...listJsonFiles(path.join(projectPath, 'pages')),
-    ...listJsonFiles(path.join(projectPath, 'components')),
-    path.join(projectPath, 'app.json'),
-  ];
-  for (const file of jsonFiles) {
-    if (!fs.existsSync(file)) continue;
-    try {
-      const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      for (const value of Object.values(data.usingComponents || {})) {
-        if (typeof value === 'string' && value.startsWith('tdesign-miniprogram/')) {
-          const name = value.split('/')[1];
-          if (name) used.add(name);
-        }
-      }
-    } catch (_error) {
-      // 单个 JSON 解析失败不影响其它页面；上传前的 check.js 会兜底结构问题。
-    }
-  }
-  return used;
-}
-
-function directorySize(dir) {
-  let total = 0;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) total += directorySize(full);
-    else if (entry.isFile()) total += fs.statSync(full).size;
-  }
-  return total;
-}
-
-/** 递归列出目录下的 JS 文件（用于跟随组件之间的 import / require 依赖）。 */
-function listJsFiles(dir) {
-  if (!fs.existsSync(dir)) return [];
-  const files = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) files.push(...listJsFiles(full));
-    else if (entry.isFile() && entry.name.endsWith('.js')) files.push(full);
-  }
-  return files;
-}
-
-/** TDesign 源码是 ESM（`import ... from "..."`），npm 构建后也可能出现 require / 动态 import。 */
-const MODULE_SPEC_RE = /(?:\bfrom\s*|\brequire\(\s*|\bimport\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
-
-/**
- * 裁剪 TDesign 未使用的组件目录。
- *
- * `ci.packNpm` 会把 tdesign-miniprogram 的整包（所有组件）复制进 miniprogram_npm，
- * 而项目实际只引用其中十几个组件；整包约 1.4MB，未使用部分会把主包顶到 2MB 上限。
- * 这里从页面 / 组件的 `usingComponents` 出发做一次依赖闭包，只保留实际用到的组件；
- * `common` / `config-provider` / `mixins` / `locale` / `miniprogram_npm` 是组件共享目录，始终保留。
- *
- * 闭包不只看 `usingComponents`：组件的 JS 还会 import 其它目录（如 `t-picker` 通过
- * `mixins/using-config` 依赖 `config-provider/use-config`），这些不是组件节点，
- * 漏跟就会在真机上报「Component is not found in path」。
- */
-function pruneUnusedTDesignComponents() {
-  const tdRoot = path.join(projectPath, 'miniprogram_npm', 'tdesign-miniprogram');
-  if (!fs.existsSync(tdRoot)) return;
-
-  const keep = collectUsedTDesignComponents();
-  const queue = [...keep];
-  while (queue.length) {
-    const name = queue.pop();
-    const configPath = path.join(tdRoot, name, `${name}.json`);
-    if (fs.existsSync(configPath)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        for (const value of Object.values(data.usingComponents || {})) {
-          if (typeof value !== 'string') continue;
-          let target = '';
-          if (value.startsWith('tdesign-miniprogram/')) {
-            target = value.split('/')[1];
-          } else if (value.startsWith('.')) {
-            // 相对路径先规范化：`.././icon/icon` → `../icon/icon`（跨组件，取顶层组件名）；
-            // `./draggable/draggable` 是组件自己的子目录，不映射成顶层组件。
-            const normalized = path.posix.normalize(value);
-            if (normalized.startsWith('../')) target = normalized.split('/')[1];
-          }
-          if (target && !keep.has(target)) {
-            keep.add(target);
-            queue.push(target);
-          }
-        }
-      } catch (_error) {
-        // 组件配置解析失败时保留它，宁可少裁一点，不能裁掉实际依赖。
-        keep.add(name);
-      }
-    }
-    // 再跟随 JS import / require：组件共享目录不一定出现在 usingComponents 里。
-    for (const file of listJsFiles(path.join(tdRoot, name))) {
-      const source = fs.readFileSync(file, 'utf8');
-      for (const match of source.matchAll(MODULE_SPEC_RE)) {
-        const spec = match[1];
-        let target = '';
-        if (spec.startsWith('tdesign-miniprogram/')) {
-          target = spec.split('/')[1];
-        } else if (spec.startsWith('.')) {
-          const rel = path.relative(tdRoot, path.resolve(path.dirname(file), spec));
-          if (!rel.startsWith('..')) target = rel.split(path.sep)[0];
-        }
-        if (target && !keep.has(target)) {
-          keep.add(target);
-          queue.push(target);
-        }
-      }
-    }
-  }
-  for (const name of TD_SHARED_DIRS) keep.add(name);
-
-  let removed = 0;
-  let freed = 0;
-  for (const entry of fs.readdirSync(tdRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory() || keep.has(entry.name)) continue;
-    const full = path.join(tdRoot, entry.name);
-    freed += directorySize(full);
-    fs.rmSync(full, { recursive: true, force: true });
-    removed += 1;
-  }
-  console.log(
-    `已裁剪 ${removed} 个未使用的 TDesign 组件（约 ${(freed / 1024).toFixed(1)}KB），` +
-      `保留 ${keep.size} 个组件目录`,
-  );
-}
-
 async function main() {
   const project = new ci.Project({
     appid,
@@ -212,17 +56,21 @@ async function main() {
 
   console.log('正在构建小程序 npm 依赖...');
   await ci.packNpm(project, { ignores: [] });
-  pruneUnusedTDesignComponents();
   project.updateFileAndDirs();
 
-  // 上传前先量一遍解包体积：超过 2MB 时微信侧会直接报 80051，
-  // 在 CI 里提前失败并指出超了多少，比等上传接口返回更清楚。
-  const sizeKb = packageSizeKb(project);
-  console.log(`小程序包体积：${sizeKb.toFixed(1)}KB（上限 2048KB）`);
-  if (sizeKb > PACKAGE_LIMIT_KB) {
+  // 上传前按包量一遍解包体积：微信的 2MB 上限是「主包 / 每个分包各自 ≤ 2048KB」，
+  // 分包后总量可以超过 2MB，所以分开校验并指出哪个包、超了多少。
+  const sizes = packageSizes(project);
+  let oversized = null;
+  for (const [name, kb] of sizes) {
+    const label = name === 'main' ? '主包' : name;
+    console.log(`包体积（${label}）：${kb.toFixed(1)}KB / ${PACKAGE_LIMIT_KB}KB`);
+    if (kb > PACKAGE_LIMIT_KB && !oversized) oversized = { name: label, kb };
+  }
+  if (oversized) {
     throw new Error(
-      `小程序包体积 ${sizeKb.toFixed(1)}KB 超过 ${PACKAGE_LIMIT_KB}KB 上限，` +
-        `超出 ${(sizeKb - PACKAGE_LIMIT_KB).toFixed(1)}KB；请精简页面或图片资源`,
+      `${oversized.name} 解包体积 ${oversized.kb.toFixed(1)}KB 超过 ${PACKAGE_LIMIT_KB}KB 上限，` +
+        `超出 ${(oversized.kb - PACKAGE_LIMIT_KB).toFixed(1)}KB；请精简页面或图片资源`,
     );
   }
 
@@ -239,21 +87,26 @@ async function main() {
   console.log('微信小程序代码上传完成。');
 }
 
-/** 小程序主包上限（KB）：微信侧 errcode 80051 的判定口径。 */
+/** 单包上限（KB）：微信侧 errcode 80051 的判定口径（主包 / 每个分包各自 ≤ 2MB）。 */
 const PACKAGE_LIMIT_KB = 2048;
 
-/** 汇总待打包文件的字节数（与打包器同一份文件清单）。 */
-function packageSizeKb(project) {
-  let total = 0;
+/** 按包（主包 / 各分包）汇总待打包文件的字节数（与打包器同一份文件清单）。 */
+function packageSizes(project) {
+  const sizes = new Map([['main', 0]]);
   project._fileSet.forEach((file) => {
+    let bytes = 0;
     try {
-      const info = fs.statSync(path.join(projectPath, file));
-      if (info.isFile()) total += info.size;
+      bytes = fs.statSync(path.join(projectPath, file)).size;
     } catch (_error) {
       // 清单里的文件在打包前被删掉时忽略，不影响体积判断。
+      return;
     }
+    // 分包文件都在 packages/<组>/ 下，其余归主包。
+    const bucket = file.startsWith('packages/') ? `packages/${file.split('/')[1]}` : 'main';
+    sizes.set(bucket, (sizes.get(bucket) || 0) + bytes);
   });
-  return total / 1024;
+  for (const [name, bytes] of sizes) sizes.set(name, bytes / 1024);
+  return sizes;
 }
 
 main().catch((error) => {

@@ -1,35 +1,77 @@
 {
   "pages": [
     "pages/home/home",
-    "pages/watermark-camera/watermark-camera",
-    "pages/watermark-setting/watermark-setting",
-    "pages/outbound/outbound",
-    "pages/outbound-success/outbound-success",
-    "pages/inventory/inventory",
-    "pages/material-detail/material-detail",
-    "pages/purchase-plans/purchase-plans",
-    "pages/purchase-records/purchase-records",
-    "pages/material-codes/material-codes",
-    "pages/material-code-detail/material-code-detail",
-    "pages/ledger/ledger",
-    "pages/ledger-detail/ledger-detail",
-    "pages/huaxing-inventory/huaxing-inventory",
-    "pages/huaxing-inventory-detail/huaxing-inventory-detail",
-    "pages/material-purchase-records/material-purchase-records",
-    "pages/purchase-plan-detail/purchase-plan-detail",
-    "pages/purchase-record-detail/purchase-record-detail",
-    "pages/records/records",
-    "pages/stock-materials/stock-materials",
-    "pages/stock-material-form/stock-material-form",
-    "pages/stock-inbound/stock-inbound",
-    "pages/profile/profile",
-    "pages/hazards/hazards",
-    "pages/hazard-detail/hazard-detail",
-    "pages/hazard-create/hazard-create",
     "pages/bind/bind",
     "pages/web-login/web-login",
-    "pages/web-view/web-view",
+    "pages/outbound/outbound",
+    "pages/outbound-success/outbound-success",
     "pages/registration-closed/registration-closed"
+  ],
+  "subPackages": [
+    {
+      "root": "packages/warehouse",
+      "pages": [
+        "pages/inventory/inventory",
+        "pages/material-detail/material-detail",
+        "pages/stock-materials/stock-materials",
+        "pages/stock-material-form/stock-material-form",
+        "pages/stock-inbound/stock-inbound",
+        "pages/records/records"
+      ]
+    },
+    {
+      "root": "packages/procurement",
+      "pages": [
+        "pages/purchase-plans/purchase-plans",
+        "pages/purchase-plan-detail/purchase-plan-detail",
+        "pages/purchase-records/purchase-records",
+        "pages/purchase-record-detail/purchase-record-detail",
+        "pages/material-codes/material-codes",
+        "pages/material-code-detail/material-code-detail",
+        "pages/material-purchase-records/material-purchase-records"
+      ]
+    },
+    {
+      "root": "packages/ledger",
+      "pages": [
+        "pages/ledger/ledger",
+        "pages/ledger-detail/ledger-detail"
+      ]
+    },
+    {
+      "root": "packages/hazard",
+      "pages": [
+        "pages/hazards/hazards",
+        "pages/hazard-detail/hazard-detail",
+        "pages/hazard-create/hazard-create"
+      ]
+    },
+    {
+      "root": "packages/huaxing",
+      "pages": [
+        "pages/huaxing-inventory/huaxing-inventory",
+        "pages/huaxing-inventory-detail/huaxing-inventory-detail"
+      ]
+    },
+    {
+      "root": "packages/tools",
+      "pages": [
+        "pages/watermark-camera/watermark-camera",
+        "pages/watermark-setting/watermark-setting"
+      ]
+    },
+    {
+      "root": "packages/account",
+      "pages": [
+        "pages/profile/profile"
+      ]
+    },
+    {
+      "root": "packages/web",
+      "pages": [
+        "pages/web-view/web-view"
+      ]
+    }
   ],
   "window": {
     "backgroundColor": "@bgColor",
