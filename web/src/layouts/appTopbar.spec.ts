@@ -40,9 +40,13 @@ describe('顶部导航条', () => {
     expect(layout).toMatch(/\.app-topbar \{[^}]*height: 40px;/)
     expect(layout).toMatch(/\.app-topbar\.is-mobile \{[^}]*height: 48px;/)
     expect(tabs).toMatch(/\.app-tabs \{[^}]*height: 100%;/)
-    // 扁平标签：纵向不留白（padding 必须是 `0 …` 形式），激活态靠 2px 下划线
+    // 扁平标签：纵向不留白（padding 必须是 `0 …` 形式）
     expect(tabs).toMatch(/\.app-tab \{[^}]*padding: 0 [^;]*;/)
-    expect(tabs).toContain('.app-tab.is-active::after')
+    // 激活态只做颜色变化（浅主题色底 + 主题色文字），不画下划线
+    expect(tabs).toMatch(
+      /\.app-tab\.is-active \{[^}]*background: var\(--color-primary-soft\);[^}]*color: var\(--color-primary\);/,
+    )
+    expect(tabs).not.toContain('.app-tab.is-active::after')
   })
 
   it('视图不再渲染页面大标题', () => {
