@@ -70,6 +70,12 @@ describe('表格卡片贴边的接线', () => {
     expect(styles).toMatch(
       /\.data-card:has\(\.mobile-table-cards\) > \.n-card-content \{[^}]*padding: 0;/,
     )
+    // 内层卡片横向对齐页面其它卡片：卡片列表左右不留内边距
+    expect(styles).toMatch(/\.mobile-table-cards \{[^}]*padding: 10px 0 12px;/)
+    // 分页条也随卡片对齐，不再单独补左右内边距
+    expect(styles).not.toMatch(
+      /\.data-card:has\(\.mobile-table-cards\) \.pagination-bar \{[^}]*padding-left: var\(--list-pagination-padding-x\)/,
+    )
     // 记录卡片自己那层边框和白底仍然保留
     expect(globalPart).toMatch(
       /\.mobile-card \{[^}]*border: 1px solid var\(--color-border-subtle\);/,

@@ -438,7 +438,8 @@ a {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px var(--list-pagination-padding-x) 12px;
+  /* 横向不留内边距：卡片与页面其它卡片（筛选卡片等）左右对齐，只留上下留白 */
+  padding: 10px 0 12px;
 }
 
 .mobile-card {
@@ -1195,11 +1196,6 @@ a {
   }
   .data-card:has(.mobile-table-cards) > .n-card-content {
     padding: 0;
-  }
-  /* 外层内边距归零后，分页条自己补回左右留白，不贴屏幕边缘 */
-  .data-card:has(.mobile-table-cards) .pagination-bar {
-    padding-right: var(--list-pagination-padding-x);
-    padding-left: var(--list-pagination-padding-x);
   }
   /* 筛选折叠（手机端 ≤768px）：收起时只保留前 2 个筛选项（列宽只够一个，两个条件已占满一屏）；
      数量超过 2 个时折叠开关必须可见，否则后面的条件在手机端无法展开。 */
