@@ -131,6 +131,14 @@ describe('浮动标签接线', () => {
     expect(styles).toMatch(/\.filter-field > span \{[\s\S]*?z-index: 3;/)
   })
 
+  it('标签绝对定位后清零 Naive 的 min-height，白底不压进控件盖住输入值', () => {
+    // Naive 的 .n-form-item-label 带 min-height（26px），绝对定位后仍在生效：
+    // 白底比文字高 12px，浮到框线上时下沿会压进控件内部（出库页「发生时间」实测压入 13px）。
+    expect(floating).toMatch(
+      /\.n-form-item-label \{[\s\S]*?position: absolute;[\s\S]*?min-height: 0;[\s\S]*?height: auto;/,
+    )
+  })
+
   it('非输入类表单项（复选标签 / 开关）保持原标签行', () => {
     expect(floating).toMatch(/\.n-form-item-label \.n-checkbox/)
   })

@@ -689,6 +689,11 @@ a {
   top: calc(var(--floating-field-height) / 2);
   left: var(--floating-label-inset-x);
   max-width: calc(100% - var(--floating-label-inset-x) * 2);
+  /* Naive 给标签写了 min-height（26px / 有小尺寸还有别的高度），绝对定位后它仍在起作用：
+   * 标签白底会比文字高出 6px 上下，浮到框线上时下沿压进控件里，把输入值的首行盖掉
+   * （出库页「发生时间」实测压入 13px）。这里必须显式清零，让底色只包住文字本身。 */
+  min-height: 0;
+  height: auto;
   padding: 0;
   overflow: hidden;
   border-radius: 3px;
