@@ -22,7 +22,8 @@ export const authApi = {
     apiClient
       .post<TokenPairResponse>('/auth/refresh', { refresh_token: refreshToken })
       .then((r) => r.data),
-  me: () => apiClient.get<User>('/auth/me').then((r) => r.data),
+  me: (options?: { skipAuthRedirect?: boolean }) =>
+    apiClient.get<User>('/auth/me', options).then((r) => r.data),
   /** 自己的接口令牌：用于复制 MCP 地址；首次读取时后端自动生成，之后不轮换。 */
   myApiToken: () => apiClient.get<UserApiTokenRead>('/auth/me/api-token').then((r) => r.data),
   /** 只能改密码，不能改姓名 / 部门等个人资料。 */
@@ -32,8 +33,13 @@ export const authApi = {
   createWebOpenTicket: (payload: WebOpenTicketCreate) =>
     apiClient.post<WebOpenTicketRead>('/auth/web-open/tickets', payload).then((r) => r.data),
   /** 网页 /web-open 页兑换票据（匿名，一次性）：换回登录令牌与落地路由。 */
-  redeemWebOpenTicket: (payload: WebOpenTicketRedeemRequest) =>
-    apiClient.post<WebOpenTicketRedeemRead>('/auth/web-open/redeem', payload).then((r) => r.data),
+  redeemWebOpenTicket: (
+    payload: WebOpenTicketRedeemRequest,
+    options?: { skipAuthRedirect?: boolean },
+  ) =>
+    apiClient
+      .post<WebOpenTicketRedeemRead>('/auth/web-open/redeem', payload, options)
+      .then((r) => r.data),
   /** 创建扫码登录会话（匿名；会话只存在服务端内存）。 */
   createQrSession: () => apiClient.post<QrLoginSession>('/auth/qr-sessions').then((r) => r.data),
   /** 轮询扫码登录状态；confirmed 时返回一次性登录凭据。 */

@@ -3,6 +3,13 @@ import { activeBackendUrl, installBackendSwitchInterceptor, withBackendFallback 
 import { installRetryInterceptor, REQUEST_TIMEOUT_MS } from './retry'
 import type { ApiError, TokenPairResponse } from './generated'
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    /** 公开入口页自行处理 401：不清会话、不跳登录页（如 /web-open 校验直传令牌）。 */
+    skipAuthRedirect?: boolean
+  }
+}
+
 type RetryableRequestConfig = InternalAxiosRequestConfig & { _authRetry?: boolean }
 
 let refreshRequest: Promise<string> | null = null
@@ -87,8 +94,16 @@ apiClient.interceptors.response.use(
     // 重放会重新走一遍拦截器链，已归一化的错误直接透传，避免层层包装把 code / request_id 洗掉。
     if (error instanceof AppError) return Promise.reject(error)
     const originalRequest = error.config as RetryableRequestConfig | undefined
+    // 公开入口页（/web-open）自己展示令牌无效的提示，不要被全局 401 逻辑带去登录页。
+    const skipAuthRedirect = Boolean(originalRequest?.skipAuthRedirect)
+    // 失败的是“上一个会话”的请求（令牌已被 /web-open 换掉）：不能拿旧请求的 401 清掉新会话。
+    const sentAuthorization = String(originalRequest?.headers?.Authorization ?? '')
+    const currentAuthorization = `Bearer ${localStorage.getItem('access_token') || ''}`
+    const sessionChanged = Boolean(sentAuthorization) && sentAuthorization !== currentAuthorization
     if (
       error.response?.status === 401 &&
+      !skipAuthRedirect &&
+      !sessionChanged &&
       error.response.data?.code === 'INVALID_TOKEN' &&
       originalRequest &&
       !originalRequest._authRetry &&
@@ -106,7 +121,7 @@ apiClient.interceptors.response.use(
         clearSession()
         redirectToLogin()
       }
-    } else if (error.response?.status === 401) {
+    } else if (error.response?.status === 401 && !skipAuthRedirect && !sessionChanged) {
       clearSession()
       redirectToLogin()
     }

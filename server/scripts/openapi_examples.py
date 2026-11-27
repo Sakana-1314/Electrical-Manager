@@ -1182,6 +1182,7 @@ def _build_schema_examples() -> dict[str, Any]:
             "token_type": "bearer",
             "user": mini,
             "requires_profile": False,
+            "web_base_url": "https://electrical.example.com",
         },
         "Page_MiniProgramUserRead_": _page(_MINI_PROGRAM_USER_ROWS),
         # —— 二级库物资与库存 ——

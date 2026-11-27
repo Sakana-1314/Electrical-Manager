@@ -36,6 +36,9 @@ type MiniProgramLoginResponse struct {
 	TokenType         string               `json:"token_type"`
 	User              *MiniProgramUserRead `json:"user"`
 	RequiresProfile   bool                 `json:"requires_profile"`
+	// WebBaseURL 是网页端站点地址（APP_WEB_BASE_URL）：小程序「进入网页版」直接拼
+	// `/web-open?token=<本地 JWT>` 用，不再额外换票。为空时小程序回退到一次性票据。
+	WebBaseURL string `json:"web_base_url"`
 }
 
 // MiniProgramWechatLoginRequest 是微信登录请求（app_id 省略时用第一个已配置的小程序）。

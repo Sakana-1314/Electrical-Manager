@@ -1,7 +1,8 @@
-// 半屏 web-view：把小程序换到的一次性票据地址交给网页版，网页自己完成登录。
+// 半屏 web-view：把进入网页版的地址交给网页版，网页自己完成登录。
 //
 // 为什么需要这一页：web-view 只能加载配置在业务域名里的地址，且小程序不能直接改网页的
-// localStorage；票据地址（`/web-open?ticket=…`）由后端拼好，本页只负责「打开 + 出错兜底」。
+// localStorage；地址由 profile 页拼好（新链路 `/web-open?token=…`，兼容链路 `/web-open?ticket=…`），
+// 本页只负责「打开 + 出错兜底」。
 const toastModule = require('tdesign-miniprogram/toast/index');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { getMessages, t } = require('../../utils/i18n');
