@@ -41,7 +41,7 @@ const FIELD_DEFS = [
   { key: 'modelSpec', labelKey: 'filterSearchModelSpec', param: 'model_spec' },
   { key: 'materialCode', labelKey: 'filterSearchMaterialCode', param: 'material_code' },
 ];
-const PAGE_ROUTE = '/packages/huaxing/pages/huaxing-inventory/huaxing-inventory';
+const PAGE_ROUTE = '/packages/warehouse/pages/huaxing-inventory/huaxing-inventory';
 
 /** 分享里的多选值用 | 分隔（与后端「任一」匹配一致），还原成数组。 */
 function splitSharedList(value) {
@@ -304,7 +304,7 @@ Page({
     const item = this.data.items[event.currentTarget.dataset.index];
     if (!item) return;
     wx.navigateTo({
-      url: `/packages/huaxing/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${item.id}`,
+      url: `/packages/warehouse/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${item.id}`,
     });
   },
 

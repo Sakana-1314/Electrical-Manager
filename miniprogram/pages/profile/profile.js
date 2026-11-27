@@ -1,14 +1,14 @@
 const toastModule = require('tdesign-miniprogram/toast/index');
-const { request } = require('../../../../utils/request');
-const { getMessages, t } = require('../../../../utils/i18n');
+const { request } = require('../../utils/request');
+const { getMessages, t } = require('../../utils/i18n');
 const {
   ensureProject,
   getEnabledProjects,
   getCurrentProject,
   getCurrentProjectId,
   switchProject,
-} = require('../../../../utils/project');
-const { uploadTime: buildUploadTime } = require('../../../../config/build-info');
+} = require('../../utils/project');
+const { uploadTime: buildUploadTime } = require('../../config/build-info');
 const Toast = toastModule.default || toastModule;
 
 // 御坂学习中转小程序的 appId：半屏打开它，由它的 web-view 承载网页版（业务域名已配置）。
@@ -180,10 +180,10 @@ Page({
    * 兼容：后端未配置 `APP_WEB_BASE_URL`、或旧版登录响应没有 `web_access_token` / `web_base_url`
    * 时，回退到 `/auth/web-open/tickets` 一次性票据，票据 2 分钟有效、只能兑换一次。
    *
-   * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版不在本小程序的
-   * 业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意已配置域名的 H5，
-   * 因此用 `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带 token 的 `/web-open` 地址。
-   * `openEmbeddedMiniProgram` 失败时回落到本站分包 `packages/web` 的 web-view 页，仍失败则提示。
+   * 为什么走中转小程序：本小程序的主体类型不支持 `web-view` 组件，没法自己内嵌网页；
+   * 御坂学习小程序专门用 `web-view` 承载任意已配置域名的 H5，因此用
+   * `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带 token 的 `/web-open` 地址。
+   * 中转小程序不可用时直接提示失败（没有 web-view 兜底页）。
    */
   async openWebVersion() {
     if (this.data.openingWeb) return;
@@ -219,11 +219,7 @@ Page({
           fail: () => resolve(false),
         });
       });
-      if (opened) return;
-      // 中转小程序不可用：回落到本站 web-view 页（token / 票据仍在有效期内）。
-      wx.navigateTo({
-        url: `/packages/web/pages/web-view/web-view?url=${encodeURIComponent(url)}`,
-      });
+      if (!opened) throw new Error(t('webOpenFailed'));
     } catch (error) {
       Toast({
         context: this,

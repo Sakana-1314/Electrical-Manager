@@ -26,15 +26,12 @@
 
 | 包 | 页面 |
 | --- | --- |
-| 主包 `pages/` | 首页、绑定、网页登录确认、扫码出库、出库成功、注册关闭 |
+| 主包 `pages/` | 首页、绑定、网页登录确认、个人信息、扫码出库、出库成功、注册关闭 |
 | `packages/warehouse` | 二级库库存、物资详情、物资档案、物资表单、扫码入库、出入库记录 |
 | `packages/procurement` | 申购计划 / 计划详情、申购记录 / 记录详情、物料编码 / 编码详情、该物料的申购记录 |
 | `packages/ledger` | 台账查看、台账详情 |
 | `packages/hazard` | 隐患管理、隐患详情、隐患登记 |
-| `packages/huaxing` | 华星总库存、华星库存详情 |
 | `packages/tools` | 水印相机、水印设置 |
-| `packages/account` | 个人信息 |
-| `packages/web` | 网页版 web-view 兜底页 |
 
 主包页面是**小程序码的固定落点**：物资码指向 `pages/outbound/outbound`、网页登录码指向
 `pages/web-login/web-login`（`server/internal/service/miniprogram/wechat.go`），已打印的历史码
@@ -134,7 +131,7 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 | --- | --- | --- |
 | 项目状态 | `utils/project.js` | 当前项目 id 与项目对象缓存在本机 storage；项目列表一次会话只拉一次，拉取失败不阻塞业务（后端有默认项目兜底）；停用项目不展示、不能被选中 |
 | 请求头 | `utils/request.js` | 请求与图片上传都带 `X-Project-Id`（每次重试都重新读取）；收到 `PROJECT_DISABLED` / `PROJECT_NOT_FOUND` 时清掉本地项目、重新解析后重试一次 |
-| 切换入口 | `packages/account` 的个人信息页 | 单行触发器打开 `t-picker` + `t-picker-item`：选项用组件约定的 `{ label, value }`（`value` 即项目 id），`value` 属性传 `[当前项目 id]` 以定位当前项；取消 / 确认按钮文案取自 `utils/i18n.js`（不沿用组件库的 zh_CN 词典）；确认后整页重启回首页（`wx.reLaunch`） |
+| 切换入口 | `pages/profile` 个人信息页 | 单行触发器打开 `t-picker` + `t-picker-item`：选项用组件约定的 `{ label, value }`（`value` 即项目 id），`value` 属性传 `[当前项目 id]` 以定位当前项；取消 / 确认按钮文案取自 `utils/i18n.js`（不沿用组件库的 zh_CN 词典）；确认后整页重启回首页（`wx.reLaunch`） |
 
 ## GitHub Actions 自动上传
 

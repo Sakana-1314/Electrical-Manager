@@ -3,6 +3,7 @@
     "pages/home/home",
     "pages/bind/bind",
     "pages/web-login/web-login",
+    "pages/profile/profile",
     "pages/outbound/outbound",
     "pages/outbound-success/outbound-success",
     "pages/registration-closed/registration-closed"
@@ -16,7 +17,9 @@
         "pages/stock-materials/stock-materials",
         "pages/stock-material-form/stock-material-form",
         "pages/stock-inbound/stock-inbound",
-        "pages/records/records"
+        "pages/records/records",
+        "pages/huaxing-inventory/huaxing-inventory",
+        "pages/huaxing-inventory-detail/huaxing-inventory-detail"
       ]
     },
     {
@@ -47,29 +50,10 @@
       ]
     },
     {
-      "root": "packages/huaxing",
-      "pages": [
-        "pages/huaxing-inventory/huaxing-inventory",
-        "pages/huaxing-inventory-detail/huaxing-inventory-detail"
-      ]
-    },
-    {
       "root": "packages/tools",
       "pages": [
         "pages/watermark-camera/watermark-camera",
         "pages/watermark-setting/watermark-setting"
-      ]
-    },
-    {
-      "root": "packages/account",
-      "pages": [
-        "pages/profile/profile"
-      ]
-    },
-    {
-      "root": "packages/web",
-      "pages": [
-        "pages/web-view/web-view"
       ]
     }
   ],

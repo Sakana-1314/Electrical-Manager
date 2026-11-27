@@ -110,7 +110,7 @@ Page({
    * 保证当前项目已解析（业务请求要带 X-Project-Id）。
    *
    * 等静默登录完成再请求，避免冷启动时无 token 触发重复登录；解析失败静默降级：
-   * 请求由后端落到默认项目。项目详情 / 切换在「个人信息」页（packages/account），
+   * 请求由后端落到默认项目。项目详情 / 切换在「个人信息」页（pages/profile），
    * 用户与功能模式经 getApp().globalData 共享，不经页面参数传递。
    */
   async syncCurrentProject() {
@@ -161,7 +161,7 @@ Page({
   },
 
   openHuaXingInventory() {
-    wx.navigateTo({ url: '/packages/huaxing/pages/huaxing-inventory/huaxing-inventory' });
+    wx.navigateTo({ url: '/packages/warehouse/pages/huaxing-inventory/huaxing-inventory' });
   },
 
   openHazards() {
@@ -194,7 +194,7 @@ Page({
 
   /** 操作员徽章：整块跳转「个人信息」页（原弹窗改为独立页面）。 */
   openProfile() {
-    wx.navigateTo({ url: '/packages/account/pages/profile/profile' });
+    wx.navigateTo({ url: '/pages/profile/profile' });
   },
 
   /**
