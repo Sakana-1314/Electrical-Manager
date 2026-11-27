@@ -55,19 +55,25 @@ describe('表格卡片贴边的接线', () => {
     }
   })
 
-  it('手机端边框只留一层：外层 data-card 去掉边框与阴影，记录卡片保留白底与边框', () => {
+  it('手机端只留记录卡片一层：外层 data-card 整层去掉（无边框 / 阴影 / 圆角 / 底色）', () => {
     const rule = styles.match(/\.data-card:has\(\.mobile-table-cards\) \{[^}]*\}/)?.[0] ?? ''
     expect(rule, '未找到手机端外层 data-card 的覆盖规则').not.toBe('')
     expect(rule).toMatch(/border: 0;/)
+    expect(rule).toMatch(/border-radius: 0;/)
+    expect(rule).toMatch(/background: transparent;/)
     expect(rule).toMatch(/box-shadow: none;/)
-    // 内容仍是白底：外层不能被改成透明背景
-    expect(rule).not.toContain('background')
-    // 必须限定在 ≤768px 断点内（桌面端仍保留外层卡片边框）
+    // 必须限定在 ≤768px 断点内（桌面端仍保留外层卡片边框与白底）
     const ruleIndex = styles.indexOf('.data-card:has(.mobile-table-cards)')
     const mediaIndex = styles.lastIndexOf('@media', ruleIndex)
     expect(styles.slice(mediaIndex, ruleIndex)).toContain('max-width: 768px')
+    // 外层不再提供内边距，卡片留白交给 .mobile-table-cards 自己
+    expect(styles).toMatch(
+      /\.data-card:has\(\.mobile-table-cards\) > \.n-card-content \{[^}]*padding: 0;/,
+    )
     // 记录卡片自己那层边框和白底仍然保留
-    expect(globalPart).toMatch(/\.mobile-card \{[^}]*border: 1px solid var\(--color-border-subtle\);/)
+    expect(globalPart).toMatch(
+      /\.mobile-card \{[^}]*border: 1px solid var\(--color-border-subtle\);/,
+    )
     expect(globalPart).toMatch(/\.mobile-card \{[^}]*background: var\(--color-surface\);/)
   })
 
