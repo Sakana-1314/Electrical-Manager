@@ -18,9 +18,9 @@ function hasShareValue(value) {
 
 /**
  * 组装分享路径：过滤空值并逐项编码。
- * @param {string} route 形如 "/pages/ledger/ledger"
+ * @param {string} route 形如 "/packages/ledger/pages/ledger/ledger"
  * @param {Record<string, unknown>} [params] 搜索 / 筛选状态
- * @returns {string} 形如 "/pages/ledger/ledger?keyword=%E7%86%94%E6%96%AD"；无有效参数时返回 route
+ * @returns {string} 形如 "/packages/ledger/pages/ledger/ledger?keyword=%E7%86%94%E6%96%AD"；无有效参数时返回 route
  */
 function buildSharePath(route, params = {}) {
   const query = Object.keys(params)

@@ -7,11 +7,11 @@ const {
   hasStandardInventory,
 } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
+const { shareLogoUrl } = require('../../utils/assets');
 const { ensureProject, takeProjectSwitchNotice } = require('../../utils/project');
 const Toast = toastModule.default || toastModule;
 
-// 分享卡片图放在代码包里，不依赖接口域名（接口域名只提供 API，不保证有 /logo.png）。
-const SHARE_IMAGE_URL = '/assets/share-logo.png';
+// 分享卡片图放在网页前端（EdgeOne）按地址引用，不再占用小程序包体积。
 
 Page({
   data: {
@@ -110,7 +110,7 @@ Page({
    * 保证当前项目已解析（业务请求要带 X-Project-Id）。
    *
    * 等静默登录完成再请求，避免冷启动时无 token 触发重复登录；解析失败静默降级：
-   * 请求由后端落到默认项目。项目详情 / 切换在「个人信息」页（pages/profile），
+   * 请求由后端落到默认项目。项目详情 / 切换在「个人信息」页（packages/account），
    * 用户与功能模式经 getApp().globalData 共享，不经页面参数传递。
    */
   async syncCurrentProject() {
@@ -142,59 +142,59 @@ Page({
 
   /** 二级库 Pro：库存查询 / 扫码出库 / 出入库记录（warehouse:read）。 */
   openInventoryPro() {
-    wx.navigateTo({ url: '/pages/inventory/inventory?source=pro' });
+    wx.navigateTo({ url: '/packages/warehouse/pages/inventory/inventory?source=pro' });
   },
 
   /** 二级库 Lite：Excel 导入的只读台账（lite:read）。 */
   openInventoryLite() {
-    wx.navigateTo({ url: '/pages/inventory/inventory?source=lite' });
+    wx.navigateTo({ url: '/packages/warehouse/pages/inventory/inventory?source=lite' });
   },
 
   /** 二级库管理：物资档案 + 扫码入库（写权限位才出现）。 */
   openStockManage() {
-    wx.navigateTo({ url: '/pages/stock-materials/stock-materials' });
+    wx.navigateTo({ url: '/packages/warehouse/pages/stock-materials/stock-materials' });
   },
 
   /** 水印相机：现场拍照工具，所有已登录用户都可用，不看权限位。 */
   openWatermark() {
-    wx.navigateTo({ url: '/pages/watermark-camera/watermark-camera' });
+    wx.navigateTo({ url: '/packages/tools/pages/watermark-camera/watermark-camera' });
   },
 
   openHuaXingInventory() {
-    wx.navigateTo({ url: '/pages/huaxing-inventory/huaxing-inventory' });
+    wx.navigateTo({ url: '/packages/huaxing/pages/huaxing-inventory/huaxing-inventory' });
   },
 
   openHazards() {
-    wx.navigateTo({ url: '/pages/hazards/hazards' });
+    wx.navigateTo({ url: '/packages/hazard/pages/hazards/hazards' });
   },
 
   openPurchasePlans() {
-    wx.navigateTo({ url: '/pages/purchase-plans/purchase-plans' });
+    wx.navigateTo({ url: '/packages/procurement/pages/purchase-plans/purchase-plans' });
   },
 
   openPurchaseRecords() {
-    wx.navigateTo({ url: '/pages/purchase-records/purchase-records' });
+    wx.navigateTo({ url: '/packages/procurement/pages/purchase-records/purchase-records' });
   },
 
   openMaterialCodes() {
-    wx.navigateTo({ url: '/pages/material-codes/material-codes' });
+    wx.navigateTo({ url: '/packages/procurement/pages/material-codes/material-codes' });
   },
 
   openLedger() {
-    wx.navigateTo({ url: '/pages/ledger/ledger' });
+    wx.navigateTo({ url: '/packages/ledger/pages/ledger/ledger' });
   },
 
   onShareAppMessage() {
     return {
       title: t('shareHome'),
       path: '/pages/home/home',
-      imageUrl: SHARE_IMAGE_URL,
+      imageUrl: shareLogoUrl(),
     };
   },
 
   /** 操作员徽章：整块跳转「个人信息」页（原弹窗改为独立页面）。 */
   openProfile() {
-    wx.navigateTo({ url: '/pages/profile/profile' });
+    wx.navigateTo({ url: '/packages/account/pages/profile/profile' });
   },
 
   /**
@@ -227,7 +227,7 @@ Page({
         return;
       }
       if (hasStandardInventory()) {
-        wx.navigateTo({ url: `/pages/material-detail/material-detail?uuid=${materialUuid}` });
+        wx.navigateTo({ url: `/packages/warehouse/pages/material-detail/material-detail?uuid=${materialUuid}` });
         return;
       }
       this.showError(new Error(t('scanNoWarehousePermission')));

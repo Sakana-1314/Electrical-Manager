@@ -4,7 +4,7 @@
 
 ## 权限位与功能可见性
 
-功能入口与写操作只看账号的权限位（`utils/features.js`，登录会话返回的 `permissions`）：入口按对应模块的 `:read` 位显示，写操作（出库、隐患登记 / 整改）按 `:write` 位显示；二级库 Pro（`warehouse:*`）与二级库 Lite（`lite:*`）是两套独立权限。**同时持有两套权限时，首页「二级库 Pro」与「二级库 Lite」两个入口都展示**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`resolveInventorySource`），页面标题分别是「二级库 Pro」/「二级库 Lite」；没带 `source` 的旧分享链接按权限兜底（有 Pro 用 Pro）。**出入库记录**（`pages/records`）是 Pro 能力，入口在 Pro 库存页顶部操作条（个人信息页不再提供）；**扫码入库**（`pages/stock-inbound`）入口在二级库管理（`pages/stock-materials`，持 `warehouse:write` 可见），不在库存页重复放；Pro 列表卡左上角显示该物资的**首次入库时间**（`first_inbound_at`，最早一笔入库流水、排除冲销来源，无入库流水时不显示）。首页「扫一扫」例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。权限位只做前端入口拦截，后端数据接口按同一权限位鉴权。
+功能入口与写操作只看账号的权限位（`utils/features.js`，登录会话返回的 `permissions`）：入口按对应模块的 `:read` 位显示，写操作（出库、隐患登记 / 整改）按 `:write` 位显示；二级库 Pro（`warehouse:*`）与二级库 Lite（`lite:*`）是两套独立权限。**同时持有两套权限时，首页「二级库 Pro」与「二级库 Lite」两个入口都展示**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`resolveInventorySource`），页面标题分别是「二级库 Pro」/「二级库 Lite」；没带 `source` 的旧分享链接按权限兜底（有 Pro 用 Pro）。**出入库记录**（`packages/warehouse` 的 records 页）是 Pro 能力，入口在 Pro 库存页顶部操作条（个人信息页不再提供）；**扫码入库**入口在二级库管理（`packages/warehouse` 的 stock-materials 页，持 `warehouse:write` 可见），不在库存页重复放；Pro 列表卡左上角显示该物资的**首次入库时间**（`first_inbound_at`，最早一笔入库流水、排除冲销来源，无入库流水时不显示）。首页「扫一扫」例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。权限位只做前端入口拦截，后端数据接口按同一权限位鉴权。
 
 ## 本地运行
 
@@ -16,6 +16,38 @@
 6. 在小程序后台把 `config/index.js` 里的域名配置为 request 与 uploadFile 合法域名。
 
 提交前执行 `npm run check`（静态结构检查，含官方主题令牌、接线与接口域名配置校验）与 `npm test`（页面逻辑冒烟测试，用最小 wx 桩加载页面，不需要开发者工具）。
+
+## 分包与目录结构
+
+页面按功能分组拆成独立分包（目录风格与御坂学习中转小程序一致：`packages/<组>/pages/<页面>/<页面>`），
+主包只保留启动与扫码直达页，加上完整的 TDesign 组件库（约 1.5MB，**不做组件裁剪**——
+按 `usingComponents` 裁剪会漏掉组件 JS 的 import 依赖，`t-picker` 曾因此真机加载失败）。
+上传前 `scripts/upload.js` 会用 `ci.packNpm` 构建完整组件库并校验主包 ≤ 2048KB（当前约 1.72MB，余量 ~320KB）。
+
+| 包 | 页面 |
+| --- | --- |
+| 主包 `pages/` | 首页、绑定、网页登录确认、扫码出库、出库成功、注册关闭 |
+| `packages/warehouse` | 二级库库存、物资详情、物资档案、物资表单、扫码入库、出入库记录 |
+| `packages/procurement` | 申购计划 / 计划详情、申购记录 / 记录详情、物料编码 / 编码详情、该物料的申购记录 |
+| `packages/ledger` | 台账查看、台账详情 |
+| `packages/hazard` | 隐患管理、隐患详情、隐患登记 |
+| `packages/huaxing` | 华星总库存、华星库存详情 |
+| `packages/tools` | 水印相机、水印设置 |
+| `packages/account` | 个人信息 |
+| `packages/web` | 网页版 web-view 兜底页 |
+
+主包页面是**小程序码的固定落点**：物资码指向 `pages/outbound/outbound`、网页登录码指向
+`pages/web-login/web-login`（`server/internal/service/miniprogram/wechat.go`），已打印的历史码
+依赖这两个路径，所以它们不挪分包；分包页面的启动 / 回跳路径 `/packages/<组>/pages/...`
+由 `pages/bind` 与 `utils/navigation.js` 统一放行。
+
+## 静态资源（网页前端引用）
+
+代码包里不放图片等静态资源：`assets/` 已删除，分享卡片图等统一放到网页前端
+（仓库 `web/public/miniprogram/` 目录，随 EdgeOne 自动构建发布），小程序端通过
+`utils/assets.js` 的 `shareLogoUrl()` 等拼接 `https://electrical.yangrucheng.top/miniprogram/<文件名>`
+直接引用。新增静态资源时把文件放进 `web/public/miniprogram/` 并在 `utils/assets.js` 里加对应
+取值函数；小程序后台需把 `electrical.yangrucheng.top` 加入 downloadFile 合法域名。
 
 ## 接口域名配置
 
@@ -89,7 +121,7 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 首页「水印相机」入口（所有已登录用户可用，不看权限位）：拍照后把时间 / 日期星期 / 地点 / 文案四行叠加到成品照片，存进相册。两种拍摄方式——**先拍后写**（定格一张再写文案，所见即所得）与**先写后拍**（文案定稿后实时叠在取景画面上）。
 
 - 合成在离屏 `canvas`（`<canvas type="2d">`）里完成，字号与行距都以照片宽度的 1% 为单位，任何分辨率、横竖比例下相对排版一致；成品长边压到 1440px，避免整张原图解压进画布。
-- 拍摄页顶部的「水印设置」进入 `pages/watermark-setting`：**置顶常用词**（点右侧图钉置顶，置顶的词排在拍摄页最前）与**启用的水印项目**（时间 / 日期 / 星期 / 地点 / 文案，至少保留一项）。
+- 拍摄页顶部的「水印设置」进入 `packages/tools` 的水印设置页：**置顶常用词**（点右侧图钉置顶，置顶的词排在拍摄页最前）与**启用的水印项目**（时间 / 日期 / 星期 / 地点 / 文案，至少保留一项）。
 - 水印项目的开关**只在设置页提供**，拍摄页不再重复一套开关；拍摄页只写地点与文案，输入卡按紧凑口径（26rpx 字号、文案框按内容长高、上限约四行）。
 - 设置只存本机（`utils/watermark.js` 的 `watermarkSettings`，含常用词、置顶列表与开关），不落服务端；拍摄页进入与从设置页返回时重读。
 - 「地图选点」用 `wx.chooseLocation`，属于地理位置接口：`app.json` 已声明 `requiredPrivateInfos: ["chooseLocation"]` 与 `permission.scope.userLocation.desc`（`npm run check` 会校验声明与调用一致）；小程序后台还需在「用户隐私保护指引」里声明位置信息用途，并按平台提示在「开发管理 → 接口设置」申请开通对应地理位置接口，否则真机调用会失败。
@@ -102,7 +134,7 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 | --- | --- | --- |
 | 项目状态 | `utils/project.js` | 当前项目 id 与项目对象缓存在本机 storage；项目列表一次会话只拉一次，拉取失败不阻塞业务（后端有默认项目兜底）；停用项目不展示、不能被选中 |
 | 请求头 | `utils/request.js` | 请求与图片上传都带 `X-Project-Id`（每次重试都重新读取）；收到 `PROJECT_DISABLED` / `PROJECT_NOT_FOUND` 时清掉本地项目、重新解析后重试一次 |
-| 切换入口 | `pages/home/home.wxml`（个人信息弹窗） | 单行触发器打开 `t-picker` + `t-picker-item`：选项用组件约定的 `{ label, value }`（`value` 即项目 id），`value` 属性传 `[当前项目 id]` 以定位当前项；取消 / 确认按钮文案取自 `utils/i18n.js`（不沿用组件库的 zh_CN 词典）；确认后整页重启回首页（`wx.reLaunch`） |
+| 切换入口 | `packages/account` 的个人信息页 | 单行触发器打开 `t-picker` + `t-picker-item`：选项用组件约定的 `{ label, value }`（`value` 即项目 id），`value` 属性传 `[当前项目 id]` 以定位当前项；取消 / 确认按钮文案取自 `utils/i18n.js`（不沿用组件库的 zh_CN 词典）；确认后整页重启回首页（`wx.reLaunch`） |
 
 ## GitHub Actions 自动上传
 

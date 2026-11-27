@@ -411,7 +411,7 @@ async function run() {
     categories: ['备品备件'],
   };
   requests.length = 0;
-  let page = await mountPage('pages/purchase-plans/purchase-plans.js');
+  let page = await mountPage('packages/procurement/pages/purchase-plans/purchase-plans.js');
   assertSections(page, 'purchase-plans');
   const planSections = page.data.filterSections.map((section) => section.key);
   assert.deepStrictEqual(planSections, [
@@ -478,7 +478,7 @@ async function run() {
   // 分享值不在选项里：补进分区
   requests.length = 0;
   global.__cachedResponse = { actual_demand_persons: ['李建军'], subitem_nos: [], urgencies: ['正常'], categories: [] };
-  page = await mountPage('pages/purchase-plans/purchase-plans.js', { urgency: '非常紧急' });
+  page = await mountPage('packages/procurement/pages/purchase-plans/purchase-plans.js', { urgency: '非常紧急' });
   assert(
     page.data.filterSections[0].options.some((option) => option.value === '非常紧急'),
     'shared value must be appended to options',
@@ -494,7 +494,7 @@ async function run() {
     actual_demand_persons: ['李建军'],
   };
   requests.length = 0;
-  page = await mountPage('pages/purchase-records/purchase-records.js');
+  page = await mountPage('packages/procurement/pages/purchase-records/purchase-records.js');
   assertSections(page, 'purchase-records');
   requests.length = 0;
   page.onFilterChange({
@@ -510,7 +510,7 @@ async function run() {
   // ===== 隐患页：固定枚举 + 仅逾期 =====
   global.__cachedResponse = { rectify_persons: ['孙浩宇'] };
   requests.length = 0;
-  page = await mountPage('pages/hazards/hazards.js', { status: '待整改', level: '一般隐患', overdue: 'overdue' });
+  page = await mountPage('packages/hazard/pages/hazards/hazards.js', { status: '待整改', level: '一般隐患', overdue: 'overdue' });
   assertSections(page, 'hazards');
   assert(page.data.filters.status === '待整改', 'shared status applied');
   assert(page.data.filters.level === '一般隐患', 'shared level applied');
@@ -524,13 +524,13 @@ async function run() {
   assert(hazardRequest.data.overdue === true, 'overdue must be sent as boolean');
   assert(hazardRequest.data.status === undefined, 'empty status must be omitted');
   // 非法分享值被忽略
-  page = await mountPage('pages/hazards/hazards.js', { status: '不存在的状态', overdue: 'yes' });
+  page = await mountPage('packages/hazard/pages/hazards/hazards.js', { status: '不存在的状态', overdue: 'yes' });
   assert(page.data.filters.status === '', 'invalid shared status must be dropped');
   assert(page.data.filters.overdue === '', 'invalid overdue must be dropped');
 
   // ===== 库存页：固定三档 + 精简模式无分区 =====
   requests.length = 0;
-  page = await mountPage('pages/inventory/inventory.js', { stockStatus: 'out_of_stock' });
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js', { stockStatus: 'out_of_stock' });
   assertSections(page, 'inventory');
   assert(page.data.filters.stockStatus === 'out_of_stock', 'shared stock status applied');
   requests.length = 0;
@@ -542,12 +542,12 @@ async function run() {
   assert(inventoryRequest.data.stock_status === 'low_stock', 'stock_status must be sent');
   assert(inventoryRequest.data.min_qty === '1' && inventoryRequest.data.max_qty === '10', 'qty range must be sent');
   // 非法分享值被忽略
-  page = await mountPage('pages/inventory/inventory.js', { stockStatus: 'weird' });
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js', { stockStatus: 'weird' });
   assert(page.data.filters.stockStatus === '', 'invalid shared stock status must fall back to all');
 
   // 数据源由入口的 source 参数决定：Pro / Lite 同时持有时两个入口都能进各自的数据源。
   requests.length = 0;
-  page = await mountPage('pages/inventory/inventory.js', { source: 'lite' });
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js', { source: 'lite' });
   assert(page.data.liteMode === true, 'source=lite must use the Lite data source');
   assert(page.data.pageTitle === i18n.t('inventoryLiteTitle'), 'Lite source must switch the page title');
   assert(page.openInbound === undefined, 'the inbound entry must live in stock management, not inventory');
@@ -561,7 +561,7 @@ async function run() {
   );
 
   requests.length = 0;
-  page = await mountPage('pages/inventory/inventory.js', { source: 'pro' });
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js', { source: 'pro' });
   assert(page.data.liteMode === false, 'source=pro must use the Pro data source');
   assert(page.data.pageTitle === i18n.t('inventoryProTitle'), 'Pro source must switch the page title');
   assert(
@@ -570,29 +570,29 @@ async function run() {
   );
 
   // 没带 source 的旧链接按权限兜底：同时持有两套权限时用 Pro。
-  page = await mountPage('pages/inventory/inventory.js');
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js');
   assert(page.data.liteMode === false, 'legacy links must fall back to Pro when available');
   assert(page.openInbound === undefined, 'the inventory page must not expose the inbound entry');
 
   // 扫码入库改挂二级库管理：有写权限才显示入口，只读用户看不到。
   const inventoryUser = global.getApp().globalData.user;
   const inventoryPermissions = inventoryUser.permissions;
-  page = await mountPage('pages/stock-materials/stock-materials.js');
+  page = await mountPage('packages/warehouse/pages/stock-materials/stock-materials.js');
   assert(page.data.canWrite === true, 'stock management must expose write actions for warehouse:write');
   const stockNavigate = global.wx.navigateTo;
   const stockNavigated = [];
   global.wx.navigateTo = (options) => stockNavigated.push(options.url);
   page.openInbound();
   assert(
-    stockNavigated.pop() === '/pages/stock-inbound/stock-inbound',
+    stockNavigated.pop() === '/packages/warehouse/pages/stock-inbound/stock-inbound',
     'stock management must open the inbound page',
   );
   global.wx.navigateTo = stockNavigate;
   inventoryUser.permissions = ['warehouse:read'];
-  page = await mountPage('pages/stock-materials/stock-materials.js');
+  page = await mountPage('packages/warehouse/pages/stock-materials/stock-materials.js');
   assert(page.data.canWrite === false, 'read-only users must not see stock management write actions');
   inventoryUser.permissions = inventoryPermissions;
-  page = await mountPage('pages/inventory/inventory.js');
+  page = await mountPage('packages/warehouse/pages/inventory/inventory.js');
 
   // 首次入库时间：Pro 卡片左上角显示格式化后的时间，空值不渲染。
   const { decorateStock } = require(path.join(root, 'utils/inventory.js'));
@@ -615,7 +615,7 @@ async function run() {
   global.wx.navigateTo = (options) => inventoryNavigated.push(options.url);
   page.openRecords();
   assert(
-    inventoryNavigated.pop() === '/pages/records/records',
+    inventoryNavigated.pop() === '/packages/warehouse/pages/records/records',
     'the Pro inventory page must open the outbound records page',
   );
   global.wx.navigateTo = originalInventoryNavigate;
@@ -623,7 +623,7 @@ async function run() {
   // ===== 华星页 =====
   global.__cachedResponse = { purchase_departments: ['设备管理部'], purchasers: ['吴冰'] };
   requests.length = 0;
-  page = await mountPage('pages/huaxing-inventory/huaxing-inventory.js');
+  page = await mountPage('packages/huaxing/pages/huaxing-inventory/huaxing-inventory.js');
   assertSections(page, 'huaxing');
   requests.length = 0;
   // 多选：部门 / 申购人各选一项，用 | 连接发给后端。
@@ -656,14 +656,14 @@ async function run() {
   page.openDetail({ currentTarget: { dataset: { index: 0 } } });
   global.wx.navigateTo = originalNavigateTo;
   assert(
-    huaxingDetailUrl.includes('/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=1'),
+    huaxingDetailUrl.includes('/packages/huaxing/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=1'),
     'huaxing inventory row must open its detail page',
   );
 
   // 「该物料的申购记录」独立页：按物料编码查记录，行点击进入申购记录详情页
   requests.length = 0;
   const huaxingRecords = await mountPage(
-    'pages/material-purchase-records/material-purchase-records.js',
+    'packages/procurement/pages/material-purchase-records/material-purchase-records.js',
     { material_code: 'L012-05048', name: '内丝三通' },
   );
   const huaxingRecordRequest = requests.find(
@@ -683,7 +683,7 @@ async function run() {
   assert(detailUrl.includes('line_id=99'), 'record detail navigation must carry line id');
 
   // 物料编码行 → 打开独立编码详情页
-  page = await mountPage('pages/material-codes/material-codes.js');
+  page = await mountPage('packages/procurement/pages/material-codes/material-codes.js');
   page.data.items = [{ id: 7, name: '交流接触器', material_code: 'E011' }];
   let codeDetailUrl = '';
   originalNavigateTo = global.wx.navigateTo;
@@ -693,13 +693,13 @@ async function run() {
   page.openDetail({ currentTarget: { dataset: { index: 0 } } });
   global.wx.navigateTo = originalNavigateTo;
   assert(
-    codeDetailUrl.includes('/pages/material-code-detail/material-code-detail?id=7'),
+    codeDetailUrl.includes('/packages/procurement/pages/material-code-detail/material-code-detail?id=7'),
     'material code row must open its detail page',
   );
 
   // ===== 重置后角标归零并重查（页面侧） =====
   requests.length = 0;
-  page = await mountPage('pages/purchase-records/purchase-records.js');
+  page = await mountPage('packages/procurement/pages/purchase-records/purchase-records.js');
   page.onFilterChange({
     detail: { values: { status: '已入库', category: '备品备件' }, fields: { name: '接触器' } },
   });
@@ -724,7 +724,7 @@ async function run() {
   global.__cachedResponse = {};
   requests.length = 0;
   toasts.length = 0;
-  page = await mountPage('pages/hazards/hazards.js');
+  page = await mountPage('packages/hazard/pages/hazards/hazards.js');
   assert(page.data.optionsFailed === true, 'hazard option failure must set optionsFailed');
   // 不该再弹「筛选选项加载失败」这类打断式提示
   assert(
@@ -757,7 +757,7 @@ async function run() {
   global.__cachedFail = { '/mini-program/huaxing-inventory/filter-options': true };
   global.__cachedResponse = {};
   requests.length = 0;
-  page = await mountPage('pages/huaxing-inventory/huaxing-inventory.js');
+  page = await mountPage('packages/huaxing/pages/huaxing-inventory/huaxing-inventory.js');
   assert(page.data.optionsFailed === true, 'huaxing option failure must set optionsFailed');
   assertSections(page, 'huaxing(failed options)');
   delete global.__cachedFail;
@@ -765,7 +765,7 @@ async function run() {
   // 台账：标签候选失败时列表照常
   global.__cachedFail = { '/mini-program/ledger-items/tag-options': true };
   global.__cachedResponse = {};
-  page = await mountPage('pages/ledger/ledger.js');
+  page = await mountPage('packages/ledger/pages/ledger/ledger.js');
   assert(page.data.optionsFailed === true, 'ledger option failure must set optionsFailed');
   delete global.__cachedFail;
 
@@ -822,7 +822,7 @@ async function run() {
     success({ path: 'pages/outbound/outbound?scene=550e8400e29b41d4a716446655440000' });
   await readOnlyHome.startScan();
   assert(
-    navigatedTo.pop() === '/pages/material-detail/material-detail?uuid=550e8400-e29b-41d4-a716-446655440000',
+    navigatedTo.pop() === '/packages/warehouse/pages/material-detail/material-detail?uuid=550e8400-e29b-41d4-a716-446655440000',
     'scanning without outbound permission must open the material detail page',
   );
 
@@ -872,7 +872,7 @@ async function run() {
 
   // ===== 个人信息页：用户 / 功能模式走 getApp().globalData，项目选择器在此页 =====
   global.__cachedResponse = {};
-  page = await mountPage('pages/profile/profile.js');
+  page = await mountPage('packages/account/pages/profile/profile.js');
   assert(
     page.data.user && page.data.user.display_name === '张三',
     'profile must read the user from globalData session',
@@ -907,21 +907,21 @@ async function run() {
   assert(!storage.get('bindRedirect'), 'no redirect in, no redirect stored');
   // 启动参数兜底：分享卡片冷启动落在详情页时，启动路径就是接收方要去的页面
   global.wx.getLaunchOptionsSync = () => ({
-    path: 'pages/material-detail/material-detail',
+    path: 'packages/warehouse/pages/material-detail/material-detail',
     query: { uuid: 'abc' },
   });
   void bindPage.onLoad({});
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert(
-    storage.get('bindRedirect') === '/pages/material-detail/material-detail?uuid=abc',
+    storage.get('bindRedirect') === '/packages/warehouse/pages/material-detail/material-detail?uuid=abc',
     'launch options must feed the redirect target',
   );
   assert(bindPage.data.buttonLabel === 'continueAfterBind', 'button label must follow the redirect');
   // 显式 redirect 优先于启动参数；首页 / 绑定页自身不算目的地
-  void bindPage.onLoad({ redirect: encodeURIComponent('/pages/ledger-detail/ledger-detail?id=3') });
+  void bindPage.onLoad({ redirect: encodeURIComponent('/packages/ledger/pages/ledger-detail/ledger-detail?id=3') });
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert(
-    storage.get('bindRedirect') === '/pages/ledger-detail/ledger-detail?id=3',
+    storage.get('bindRedirect') === '/packages/ledger/pages/ledger-detail/ledger-detail?id=3',
     'explicit redirect must win over launch options',
   );
   global.wx.getLaunchOptionsSync = () => ({ path: 'pages/home/home', query: {} });
@@ -1015,7 +1015,7 @@ async function run() {
     pinned: ['检修完成'],
     fields: watermark.defaultFieldEnabled(),
   });
-  const cameraPage = loadPage('pages/watermark-camera/watermark-camera.js');
+  const cameraPage = loadPage('packages/tools/pages/watermark-camera/watermark-camera.js');
   cameraPage.applySettings();
   cameraPage.refreshClock();
   assert(
@@ -1106,7 +1106,7 @@ async function run() {
     pinned: ['乙'],
     fields: watermark.defaultFieldEnabled(),
   });
-  const settingPage = loadPage('pages/watermark-setting/watermark-setting.js');
+  const settingPage = loadPage('packages/tools/pages/watermark-setting/watermark-setting.js');
   settingPage.loadSettings();
   assert(
     settingPage.data.words.map((item) => item.word).join(',') === '乙,甲',

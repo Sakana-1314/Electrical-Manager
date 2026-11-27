@@ -33,7 +33,7 @@ Electrical-Manager/
 ├── server/ Dockerfile（多阶段 Go 构建）、go.mod、Makefile、cmd/server/（入口）、internal/（见「后端目录结构」）、templates/（Excel 布局 JSON）、
 │           data/（uploads/imports/exports、logs/）、scripts/（openapi_examples.py、e2e_simulation.py）、tools/run_contract_tests.sh、tests/（黑盒契约测试）
 ├── web/    Dockerfile（node:22-alpine → nginx:1.27-alpine）、nginx.conf、vite.config.ts、vitest.config.ts、src/（api、router、stores、views、components、composables…）
-└── miniprogram/  app.json（18 个页面）、pages/、components/、utils/、scripts/（check.js / upload.js）
+└── miniprogram/  app.json（主包 6 页 + 8 个分包）、pages/、packages/（分包）、components/、utils/、scripts/（check.js / test-pages.js / upload.js）
 ```
 
 <Tabs :tabs="[
@@ -971,18 +971,30 @@ flowchart LR
 
 原生微信小程序（WXML / WXSS / CommonJS JS），组件库 TDesign Mini Program，通过 `wx.login` 静默登录后使用。
 
-### 页面构成（`miniprogram/app.json`，20 页）
+### 页面构成（`miniprogram/app.json`：主包 6 页 + 8 个分包）
 
-| 分组 | 页面 |
+页面按功能分组拆成独立分包（目录风格与御坂学习中转小程序一致：`packages/<组>/pages/<页面>/<页面>`）。
+主包只保留启动与扫码直达页——物资小程序码固定指向 `pages/outbound/outbound`、网页登录码固定指向
+`pages/web-login/web-login`（见 `server/internal/service/miniprogram/wechat.go`），已打印的历史码依赖
+这两个路径，因此不挪分包；分包页面的启动 / 回跳路径 `/packages/<组>/pages/...` 由绑定页与
+`utils/navigation.js` 统一放行。主包装有**完整的 TDesign 组件库**：上传脚本用 `ci.packNpm` 构建后
+**不做组件裁剪**（按 `usingComponents` 裁剪会漏掉组件 JS 的 import 依赖，`t-picker` 曾因此真机加载失败），
+并校验主包 ≤ 2048KB（当前约 1.72MB）。静态资源不在代码包里：分享卡片图等放在网页前端
+`https://electrical.yangrucheng.top/miniprogram/`（仓库 `web/public/miniprogram/`），由 `utils/assets.js` 拼地址引用。
+
+| 包 | 页面 |
 | --- | --- |
-| 入口与身份 | `pages/home/home`、`pages/profile/profile`、`pages/bind/bind`、`pages/web-login/web-login`（微信扫码登录确认）、`pages/disabled/disabled`、`pages/registration-closed/registration-closed` |
-| 库存与出库 | `pages/inventory/inventory`、`pages/material-detail/material-detail`、`pages/outbound/outbound`、`pages/outbound-success/outbound-success` |
-| 申购与记录 | `pages/purchase-plans/purchase-plans`、`pages/purchase-plan-detail/purchase-plan-detail`、`pages/purchase-records/purchase-records`、`pages/purchase-record-detail/purchase-record-detail`、`pages/records/records` |
-| 隐患管理 | `pages/hazards/hazards`、`pages/hazard-detail/hazard-detail`、`pages/hazard-create/hazard-create` |
-| 参照数据 | `pages/material-codes/material-codes`、`pages/huaxing-inventory/huaxing-inventory` |
-| 台账查看 | `pages/ledger/ledger`（列表、搜索、分页）、`pages/ledger-detail/ledger-detail`（按 id 看详情） |
+| 主包 `pages/` | `pages/home/home`（首页）、`pages/bind/bind`（绑定，回跳中转）、`pages/web-login/web-login`（网页扫码登录确认）、`pages/outbound/outbound`（扫码出库）、`pages/outbound-success/outbound-success`、`pages/registration-closed/registration-closed` |
+| `packages/warehouse` | 二级库库存（Pro / Lite 同页，`source=pro|lite`）、物资详情、物资档案、物资表单、扫码入库、出入库记录 |
+| `packages/procurement` | 申购计划 / 计划详情、申购记录 / 记录详情、物料编码 / 编码详情、该物料的申购记录 |
+| `packages/ledger` | 台账查看、台账详情 |
+| `packages/hazard` | 隐患管理、隐患详情、隐患登记 |
+| `packages/huaxing` | 华星总库存、华星库存详情 |
+| `packages/tools` | 水印相机、水印设置 |
+| `packages/account` | 个人信息（当前项目切换） |
+| `packages/web` | web-view 兜底页（中转小程序不可用时回落） |
 
-公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（权限位与功能可见性）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`i18n.js`、`theme.js`（界面外观）。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（权限位与功能可见性）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`assets.js`（网页前端静态资源地址）、`i18n.js`。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 列表页筛选面板（`components/filter-panel`）
 

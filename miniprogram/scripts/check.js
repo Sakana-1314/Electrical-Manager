@@ -38,13 +38,24 @@ JSON.parse(read('project.config.json'));
 // 页面清单以 app.json 为准，避免检查清单与实际页面漂移。
 const pages = appConfig.pages.map((page) => page.replace(/^pages\//, ''));
 const requiredFiles = ['app.js', 'app.json', 'app.wxss', 'theme.wxss'];
+const mainPages = appConfig.pages;
+const subPages = (appConfig.subPackages || []).flatMap((sub) => sub.pages.map((page) => `${sub.root}/${page}`));
+const allPages = [...mainPages, ...subPages];
+const pageDirs = {};
+for (const page of allPages) pageDirs[page.split('/').slice(-2).join('/')] = page;
+/** 页面 key（`inventory/inventory` 或完整 `pages/home/home`）→ 相对小程序根的目录。 */
+function pageDir(key) {
+  const dir = pageDirs[key.split('/').slice(-2).join('/')];
+  if (!dir) throw new Error(`Unknown page key: ${key}`);
+  return dir;
+}
 const sharedComponents = [
   'app-navbar/app-navbar',
   'material-summary-card/material-summary-card',
 ];
-for (const page of pages) {
+for (const page of allPages) {
   for (const extension of ['js', 'json', 'wxml', 'wxss']) {
-    requiredFiles.push(`pages/${page}.${extension}`);
+    requiredFiles.push(`${page}.${extension}`);
   }
 }
 for (const component of sharedComponents) {
@@ -59,7 +70,7 @@ for (const file of requiredFiles) {
   }
 }
 
-const pageConfigs = pages.map((page) => JSON.parse(read(`pages/${page}.json`)));
+const pageConfigs = allPages.map((page) => JSON.parse(read(`${page}.json`)));
 
 if (appConfig.pages[0] !== 'pages/home/home') {
   throw new Error('Mini Program home page must be pages/home/home.');
@@ -121,8 +132,8 @@ const locationApiNames = [
   'choosePoi',
 ];
 const declaredPrivateInfos = appConfig.requiredPrivateInfos || [];
-for (const page of pages) {
-  const pageScript = read(`pages/${page}.js`);
+for (const page of allPages) {
+  const pageScript = read(`${page}.js`);
   const missing = locationApiNames.filter(
     (name) =>
       new RegExp(`wx\\.${name}\\s*\\(`).test(pageScript) && !declaredPrivateInfos.includes(name),
@@ -232,7 +243,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
 // 滚轮选择器切换到其它启用项目（切换后整页重启回首页）；用户与功能模式经 getApp().globalData
 // 同步，不经页面参数传递。
 {
-  const profileScript = read('pages/profile/profile.js');
+  const profileScript = read('packages/account/pages/profile/profile.js');
   for (const snippet of [
     'ensureProject',
     'getEnabledProjects',
@@ -245,10 +256,10 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'getApp().globalData.authPromise',
   ]) {
     if (!profileScript.includes(snippet)) {
-      throw new Error(`pages/profile/profile.js must wire the current project picker: ${snippet}`);
+      throw new Error(`packages/account/pages/profile/profile.js must wire the current project picker: ${snippet}`);
     }
   }
-  const profileMarkup = read('pages/profile/profile.wxml');
+  const profileMarkup = read('packages/account/pages/profile/profile.wxml');
   for (const snippet of [
     'i18n.currentProject',
     'projectOptions',
@@ -259,7 +270,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'options="{{projectOptions}}"',
   ]) {
     if (!profileMarkup.includes(snippet)) {
-      throw new Error(`pages/profile/profile.wxml must render the current project picker: ${snippet}`);
+      throw new Error(`packages/account/pages/profile/profile.wxml must render the current project picker: ${snippet}`);
     }
   }
   if (profileMarkup.includes('projectsExpanded') || profileScript.includes('projectsExpanded')) {
@@ -275,18 +286,18 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (profileMarkup.includes('keys="{{projectPickerKeys}}"') || profileScript.includes('projectPickerKeys')) {
     throw new Error('The project picker must not remap option keys; use label/value instead.');
   }
-  const profileConfig = JSON.parse(read('pages/profile/profile.json'));
+  const profileConfig = JSON.parse(read('packages/account/pages/profile/profile.json'));
   const profileComponents = Object.values(profileConfig.usingComponents || {});
   for (const component of ['tdesign-miniprogram/picker/picker', 'tdesign-miniprogram/picker-item/picker-item']) {
     if (!profileComponents.includes(component)) {
-      throw new Error(`pages/profile/profile.json must register ${component} for the project picker.`);
+      throw new Error(`packages/account/pages/profile/profile.json must register ${component} for the project picker.`);
     }
   }
   // 首页只保留入口：操作员徽标整块跳转个人信息页，弹窗与页面内选择器退场；
   // 项目解析与「已切换项目」提示仍由首页 onShow 承担。
   const homeScript = read('pages/home/home.js');
   const homeMarkup = read('pages/home/home.wxml');
-  if (!homeMarkup.includes('bind:tap="openProfile"') || !homeScript.includes('/pages/profile/profile')) {
+  if (!homeMarkup.includes('bind:tap="openProfile"') || !homeScript.includes('/packages/account/pages/profile/profile')) {
     throw new Error('The home operator badge must navigate to the profile page.');
   }
   if (homeMarkup.includes('user-profile-popup') || homeMarkup.includes('<t-popup') || homeMarkup.includes('<t-picker')) {
@@ -341,8 +352,8 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   for (const snippet of [
     "entryEnabled('inventoryPro')",
     "entryEnabled('inventoryLite')",
-    "'/pages/inventory/inventory?source=pro'",
-    "'/pages/inventory/inventory?source=lite'",
+    "'/packages/warehouse/pages/inventory/inventory?source=pro'",
+    "'/packages/warehouse/pages/inventory/inventory?source=lite'",
   ]) {
     if (!homeScript.includes(snippet)) {
       throw new Error(`The home warehouse entries must map to their own permissions and sources: ${snippet}`);
@@ -408,16 +419,16 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
       throw new Error(`utils/features.js must resolve the inventory source from the entry: ${snippet}`);
     }
   }
-  const inventoryScript = read('pages/inventory/inventory.js');
+  const inventoryScript = read('packages/warehouse/pages/inventory/inventory.js');
   for (const snippet of [
     'resolveInventorySource(shared.source)',
     "t('inventoryProTitle')",
     "t('inventoryLiteTitle')",
     'openRecords',
-    "'/pages/records/records'",
+    "'/packages/warehouse/pages/records/records'",
   ]) {
     if (!inventoryScript.includes(snippet)) {
-      throw new Error(`pages/inventory/inventory.js must wire the Pro / Lite shared page: ${snippet}`);
+      throw new Error(`packages/warehouse/pages/inventory/inventory.js must wire the Pro / Lite shared page: ${snippet}`);
     }
   }
   // 首次入库时间在 utils/inventory.js 的 decorateStock 里格式化（Pro 卡片左上角）。
@@ -427,7 +438,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
       throw new Error(`utils/inventory.js must format the first inbound time: ${snippet}`);
     }
   }
-  const inventoryMarkup = read('pages/inventory/inventory.wxml');
+  const inventoryMarkup = read('packages/warehouse/pages/inventory/inventory.wxml');
   for (const snippet of [
     'first_inbound_label',
     'bind:tap="openRecords"',
@@ -435,14 +446,14 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'title="{{pageTitle}}"',
   ]) {
     if (!inventoryMarkup.includes(snippet)) {
-      throw new Error(`pages/inventory/inventory.wxml must render the Pro / Lite shared page: ${snippet}`);
+      throw new Error(`packages/warehouse/pages/inventory/inventory.wxml must render the Pro / Lite shared page: ${snippet}`);
     }
   }
   if (!inventoryScript.includes("SHARE_PARAMS = ['source'") && !inventoryScript.includes("'source',")) {
-    throw new Error('pages/inventory/inventory.js must retain the source param in share links.');
+    throw new Error('packages/warehouse/pages/inventory/inventory.js must retain the source param in share links.');
   }
-  const profileScript = read('pages/profile/profile.js');
-  const profileMarkup = read('pages/profile/profile.wxml');
+  const profileScript = read('packages/account/pages/profile/profile.js');
+  const profileMarkup = read('packages/account/pages/profile/profile.wxml');
   if (profileScript.includes('openRecords') || profileMarkup.includes('recordsVisible')) {
     throw new Error('The outbound records entry must live on the Pro inventory page, not the profile page.');
   }
@@ -489,7 +500,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'purchase-records/purchase-records',
     'hazards/hazards',
   ]) {
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     // 用定义签名定位（`buildSection(key, ...` 会命中调用处，所以要求前面是方法名声明形式）。
     const def = script.indexOf('  buildSection(key, title');
     if (def < 0) continue;
@@ -566,7 +577,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'purchase-records/purchase-records',
     'ledger/ledger',
   ]) {
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     if (!script.includes('optionsFailed')) {
       throw new Error(`pages/${page}.js must surface filter option failures to the panel.`);
     }
@@ -582,7 +593,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'purchase-records/purchase-records',
     'hazards/hazards',
   ]) {
-    const markup = read(`pages/${page}.wxml`);
+    const markup = read(`${pageDir(page)}.wxml`);
     if (!markup.includes('<filter-panel')) {
       throw new Error(`pages/${page}.wxml must use the shared filter panel.`);
     }
@@ -594,11 +605,11 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     if (markup.includes('<t-dropdown-menu')) {
       throw new Error(`pages/${page}.wxml must not keep the always-visible dropdown menu.`);
     }
-    const config = JSON.parse(read(`pages/${page}.json`));
+    const config = JSON.parse(read(`${pageDir(page)}.json`));
     if (!Object.values(config.usingComponents || {}).includes('/components/filter-panel/filter-panel')) {
       throw new Error(`pages/${page}.json must register the shared filter panel.`);
     }
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     for (const snippet of ['FILTER_SECTIONS', 'onFilterChange', 'filterSections']) {
       if (!script.includes(snippet)) {
         throw new Error(`pages/${page}.js must feed the filter panel: ${snippet}`);
@@ -624,18 +635,18 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
 
   // 物料编码 / 台账同样用共享面板（前者只有分字段搜索，后者只有标签筛选）。
   for (const page of ['material-codes/material-codes', 'ledger/ledger']) {
-    const markup = read(`pages/${page}.wxml`);
+    const markup = read(`${pageDir(page)}.wxml`);
     if (!markup.includes('<filter-panel')) {
       throw new Error(`pages/${page}.wxml must use the shared filter panel.`);
     }
     if (markup.includes('<t-search')) {
       throw new Error(`pages/${page}.wxml must not keep a bare t-search outside the panel.`);
     }
-    const config = JSON.parse(read(`pages/${page}.json`));
+    const config = JSON.parse(read(`${pageDir(page)}.json`));
     if (!Object.values(config.usingComponents || {}).includes('/components/filter-panel/filter-panel')) {
       throw new Error(`pages/${page}.json must register the shared filter panel.`);
     }
-    if (!read(`pages/${page}.js`).includes('onFilterChange')) {
+    if (!read(`${pageDir(page)}.js`).includes('onFilterChange')) {
       throw new Error(`pages/${page}.js must handle filter panel changes.`);
     }
   }
@@ -653,10 +664,10 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'hazards/hazards',
     'huaxing-inventory/huaxing-inventory',
   ]) {
-    const script = read(`pages/${page}.js`);
-    for (const snippet of ["require('../../utils/filters')", 'sameFilters(this.data.filters']) {
+    const script = read(`${pageDir(page)}.js`);
+    for (const snippet of ["require('../../../../utils/filters')", 'sameFilters(this.data.filters']) {
       if (!script.includes(snippet)) {
-        throw new Error(`pages/${page}.js must reuse utils/filters: ${snippet}`);
+        throw new Error(`${pageDir(page)}.js must reuse utils/filters: ${snippet}`);
       }
     }
   }
@@ -678,15 +689,11 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (!uploadScript.includes('PACKAGE_LIMIT_KB')) {
     throw new Error('scripts/upload.js must check the package size before uploading.');
   }
-  if (!uploadScript.includes('pruneUnusedTDesignComponents')) {
-    throw new Error('scripts/upload.js must prune unused TDesign components before checking package size.');
-  }
-  // 组件 JS 的 import 依赖不在 usingComponents 里：config-provider 是 picker 的 JS 依赖，
-  // 只按 usingComponents 裁剪会让 t-picker 在真机上加载失败（项目切换弹不出来）。
-  for (const snippet of ["'config-provider'", 'MODULE_SPEC_RE', 'listJsFiles']) {
-    if (!uploadScript.includes(snippet)) {
-      throw new Error(`scripts/upload.js must keep the JS dependency closure for TDesign pruning: ${snippet}`);
-    }
+  // TDesign 组件库不再裁剪：按 usingComponents 裁剪漏掉组件 JS 的 import 依赖
+  // （config-provider 曾因此被裁，t-picker 在真机上报 Component is not found，
+  // 项目切换弹窗失效）。主包在分包后装得下完整组件库，这里守住「不再裁剪」。
+  if (uploadScript.includes('pruneUnusedTDesignComponents')) {
+    throw new Error('scripts/upload.js must not prune the TDesign component library.');
   }
 }
 
@@ -699,7 +706,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'purchase-records/purchase-records',
     'hazards/hazards',
   ]) {
-    const styles = read(`pages/${page}.wxss`);
+    const styles = read(`${pageDir(page)}.wxss`);
     for (const legacy of ['.filter-menu', 't-dropdown']) {
       if (styles.includes(legacy)) {
         throw new Error(`pages/${page}.wxss must not keep the legacy dropdown styles: ${legacy}`);
@@ -722,7 +729,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     throw new Error('Feature-mode gating is gone: entries must be gated by permissions only.');
   }
 
-  const listScript = read('pages/ledger/ledger.js');
+  const listScript = read('packages/ledger/pages/ledger/ledger.js');
   for (const snippet of [
     "'/mini-program/ledger-items'",
     'onSearchChange',
@@ -732,20 +739,20 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'openDetail',
   ]) {
     if (!listScript.includes(snippet)) {
-      throw new Error(`pages/ledger/ledger.js must support list browsing: ${snippet}`);
+      throw new Error(`packages/ledger/pages/ledger/ledger.js must support list browsing: ${snippet}`);
     }
   }
-  const listMarkup = read('pages/ledger/ledger.wxml');
+  const listMarkup = read('packages/ledger/pages/ledger/ledger.wxml');
   for (const snippet of ['filter-panel', 'i18n.ledgerSearchPlaceholder', 'resultCount', 't-empty']) {
     if (!listMarkup.includes(snippet)) {
-      throw new Error(`pages/ledger/ledger.wxml must render search and results: ${snippet}`);
+      throw new Error(`packages/ledger/pages/ledger/ledger.wxml must render search and results: ${snippet}`);
     }
   }
-  if (!listScript.includes('/pages/ledger-detail/ledger-detail?id=')) {
+  if (!listScript.includes('/packages/ledger/pages/ledger-detail/ledger-detail?id=')) {
     throw new Error('The ledger list must open the detail page by id.');
   }
 
-  const detailScript = read('pages/ledger-detail/ledger-detail.js');
+  const detailScript = read('packages/ledger/pages/ledger-detail/ledger-detail.js');
   for (const snippet of [
     '/mini-program/ledger-items/${id}',
     'invalidLedger',
@@ -753,19 +760,19 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'retry',
   ]) {
     if (!detailScript.includes(snippet)) {
-      throw new Error(`pages/ledger-detail/ledger-detail.js must support the detail view: ${snippet}`);
+      throw new Error(`packages/ledger/pages/ledger-detail/ledger-detail.js must support the detail view: ${snippet}`);
     }
   }
-  const detailMarkup = read('pages/ledger-detail/ledger-detail.wxml');
+  const detailMarkup = read('packages/ledger/pages/ledger-detail/ledger-detail.wxml');
   for (const snippet of ['i18n.ledgerInfo', 'i18n.ledgerTags', 'i18n.imageAttachments']) {
     if (!detailMarkup.includes(snippet)) {
-      throw new Error(`pages/ledger-detail/ledger-detail.wxml must render: ${snippet}`);
+      throw new Error(`packages/ledger/pages/ledger-detail/ledger-detail.wxml must render: ${snippet}`);
     }
   }
   // 台账只有查看能力：列表页与详情页都不应出现写入口。
   for (const [file, markup] of [
-    ['pages/ledger/ledger.wxml', listMarkup],
-    ['pages/ledger-detail/ledger-detail.wxml', detailMarkup],
+    ['packages/ledger/pages/ledger/ledger.wxml', listMarkup],
+    ['packages/ledger/pages/ledger-detail/ledger-detail.wxml', detailMarkup],
   ]) {
     if (markup.includes('t-fab')) {
       throw new Error(`${file} must stay read-only (no t-fab write entry).`);
@@ -868,14 +875,14 @@ function checkProjectResolution() {
 }
 
 for (const page of pages) {
-  const pageScript = read(`pages/${page}.js`);
+  const pageScript = read(`${pageDir(page)}.js`);
   if (!pageScript.includes('Page({')) {
     throw new Error(`pages/${page}.js must define a Page({...}) config.`);
   }
   if (pageScript.includes('withTheme') || pageScript.includes('themeClass')) {
     throw new Error(`pages/${page}.js must not keep manual theme wiring.`);
   }
-  const markup = read(`pages/${page}.wxml`);
+  const markup = read(`${pageDir(page)}.wxml`);
   // 全站使用 navigationStyle: custom，导航栏由共享 app-navbar 承担；
   // 外观由 theme.wxss 的 prefers-color-scheme 自动切换，页面不再绑定主题类。
   const lines = markup.split('\n');
@@ -958,7 +965,7 @@ for (const pageConfig of pageConfigs) {
 }
 
 for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
-  const markup = read(`pages/${page}.wxml`);
+  const markup = read(`${pageDir(page)}.wxml`);
   if (!markup.includes('<material-summary-card')) {
     throw new Error(`${page} must reuse the shared material summary card.`);
   }
@@ -968,8 +975,8 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
 {
   const share = require(path.join(root, 'utils/share.js'));
   // 编解码：中文与 & = # 必须编码；解码对已解码 / 裸 % 都要容错。
-  const encoded = share.buildSharePath('/pages/ledger/ledger', { keyword: '熔断 & 芯=1#2' });
-  if (!encoded.startsWith('/pages/ledger/ledger?keyword=') || encoded.includes('熔断')) {
+  const encoded = share.buildSharePath('/packages/ledger/pages/ledger/ledger', { keyword: '熔断 & 芯=1#2' });
+  if (!encoded.startsWith('/packages/ledger/pages/ledger/ledger?keyword=') || encoded.includes('熔断')) {
     throw new Error('Share paths must percent-encode search keywords.');
   }
   if (share.readShareParams({ keyword: '熔断' }, ['keyword']).keyword !== '熔断') {
@@ -1006,12 +1013,12 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     { page: 'hazards/hazards', params: ['keyword', 'status', 'level', 'rectifyPerson', 'overdue'] },
   ];
   for (const { page, params } of shareablePages) {
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     if (script.includes('onShareAppMessage') || script.includes('sharePath()')) {
       throw new Error(`pages/${page}.js must not support sharing; the share entry lives on detail pages.`);
     }
     for (const snippet of [
-      "require('../../utils/share')",
+      "require('../../../../utils/share')",
       'readShareParams(options, SHARE_PARAMS)',
       'buildRedirectQuery(buildSharePath(PAGE_ROUTE, shared))',
     ]) {
@@ -1040,7 +1047,7 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     { page: 'hazard-detail/hazard-detail', param: 'id' },
   ];
   for (const { page, param } of detailSharePages) {
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     if (!script.includes('onShareAppMessage()')) {
       throw new Error(`pages/${page}.js must support sharing.`);
     }
@@ -1065,20 +1072,20 @@ for (const page of ['material-detail/material-detail', 'outbound/outbound']) {
     'hazards/hazards',
     'ledger/ledger',
   ]) {
-    const script = read(`pages/${page}.js`);
+    const script = read(`${pageDir(page)}.js`);
     // 补选项的写法可以是 buildSection（统一入口）或 section 内 splice（台账只有一维）。
     if (!script.includes('buildSection(') && !script.includes('options.splice(1, 0')) {
       throw new Error(`pages/${page}.js must append missing shared filter options.`);
     }
   }
-  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
-    throw new Error('pages/inventory/inventory.js must validate the shared stock status enum.');
+  if (!read('packages/warehouse/pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
+    throw new Error('packages/warehouse/pages/inventory/inventory.js must validate the shared stock status enum.');
   }
-  if (!read('pages/hazards/hazards.js').includes('isAllowedShareValue(shared[key]')) {
-    throw new Error('pages/hazards/hazards.js must validate the shared status / level enums.');
+  if (!read('packages/hazard/pages/hazards/hazards.js').includes('isAllowedShareValue(shared[key]')) {
+    throw new Error('packages/hazard/pages/hazards/hazards.js must validate the shared status / level enums.');
   }
-  if (!read('pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
-    throw new Error('pages/inventory/inventory.js must validate the shared stock status enum.');
+  if (!read('packages/warehouse/pages/inventory/inventory.js').includes('isAllowedShareValue(shared.stockStatus')) {
+    throw new Error('packages/warehouse/pages/inventory/inventory.js must validate the shared stock status enum.');
   }
 }
 
