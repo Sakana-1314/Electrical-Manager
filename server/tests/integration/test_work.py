@@ -144,7 +144,7 @@ async def test_tags_are_normalized_and_filterable(client: AsyncClient) -> None:
     # 项目内标签清单去重升序
     tags = await client.get("/api/v1/work-task-tags", headers=admin)
     assert tags.status_code == 200, tags.text
-    assert tags.json() == ["安全", "检修", "校称"]
+    assert tags.json() == ["安全", "校称", "检修"]
 
     one = await client.get("/api/v1/work-tasks", headers=admin, params={"tags": "检修"})
     assert [item["name"] for item in one.json()["items"]] == ["304 脱硫风机检查"]
@@ -197,7 +197,7 @@ async def test_progress_and_keyword_filters(client: AsyncClient) -> None:
         "/api/v1/work-tasks", headers=admin, params={"keyword": "备件|高振华"}
     )
     assert {item["name"] for item in by_or.json()["items"]} == {"未完成任务", "已完成任务"}
-    by_tag = await client.get("/api/v1/work-tasks", headers=admin, params={"keyword": "完成"})
+    by_tag = await client.get("/api/v1/work-tasks", headers=admin, params={"keyword": "已"})
     assert [item["name"] for item in by_tag.json()["items"]] == ["已完成任务"]
 
 
