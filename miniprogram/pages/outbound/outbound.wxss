@@ -83,8 +83,9 @@
   height: 76rpx;
   align-items: center;
   justify-content: center;
+  border: 2rpx solid var(--app-card-border);
   border-radius: 22rpx;
-  background: var(--app-brand-soft);
+  background: var(--app-surface);
   color: var(--app-brand);
 }
 
