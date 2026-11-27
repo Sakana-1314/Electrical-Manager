@@ -5,7 +5,6 @@
   "usingComponents": {
     "app-navbar": "/components/app-navbar/app-navbar",
     "filter-panel": "/components/filter-panel/filter-panel",
-    "t-button": "tdesign-miniprogram/button/button",
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-loading": "tdesign-miniprogram/loading/loading",

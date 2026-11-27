@@ -14,15 +14,14 @@
       bind:change="onFilterChange"
     />
     <!-- 出入库记录：二级库 Pro 的能力（warehouse:read），入口挂在 Pro 库存页；
-         Lite 是 Excel 导入的只读台账、没有出入库流水，不展示。 -->
-    <view wx:if="{{!liteMode}}" class="toolbar-row">
-      <!-- 扫码入库：二级库 Pro 写权限位；与出入库记录并列在列表上方。 -->
-      <t-button wx:if="{{canInbound}}" theme="primary" size="small" icon="download" bind:tap="openInbound">
-        {{i18n.stockInboundTitle}}
-      </t-button>
-      <t-button theme="default" variant="outline" size="small" icon="time" bind:tap="openRecords">
-        {{i18n.viewRecords}}
-      </t-button>
+         Lite 是 Excel 导入的只读台账、没有出入库流水，不展示。
+         扫码入库不在这里：它是二级库管理（pages/stock-materials）的入口。 -->
+    <view wx:if="{{!liteMode}}" class="action-bar">
+      <view class="action-chip" hover-class="action-chip-active" bind:tap="openRecords">
+        <view class="action-chip-icon"><t-icon name="time" size="32rpx" /></view>
+        <view class="action-chip-label">{{i18n.viewRecords}}</view>
+        <t-icon class="action-chip-arrow" name="chevron-right" size="28rpx" />
+      </view>
     </view>
   </view>
 

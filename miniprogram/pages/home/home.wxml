@@ -45,15 +45,8 @@
         <view class="action-description">{{scanDescription}}</view>
       </view>
 
-      <!-- 水印相机：现场拍照自动叠加时间地点，所有人可用（不按权限隐藏）。 -->
-      <view class="action-card" hover-class="action-card-active" bind:tap="openWatermark">
-        <view class="action-head">
-          <view class="action-icon"><t-icon name="camera" size="38rpx" /></view>
-          <view class="action-title">{{i18n.watermarkTitle}}</view>
-        </view>
-        <view class="action-description">{{i18n.watermarkDescription}}</view>
-      </view>
-
+      <!-- 库存与物资：华星总库存排在最前，其后是二级库 Pro / Lite（两套独立权限、
+           各自一个入口，同时持有时都展示）与二级库管理（物资档案 + 扫码入库）。 -->
       <view wx:if="{{entryVisible.huaxing}}" class="action-card" hover-class="action-card-active" bind:tap="openHuaXingInventory">
         <view class="action-head">
           <view class="action-icon"><t-icon name="layers" size="38rpx" /></view>
@@ -62,7 +55,6 @@
         <view class="action-description">{{i18n.huaxingInventoryDescription}}</view>
       </view>
 
-      <!-- 二级库 Pro / Lite 是两套独立权限、各自一个入口：同时持有时都能进（互不遮挡）。 -->
       <view wx:if="{{entryVisible.inventoryPro}}" class="action-card" hover-class="action-card-active" bind:tap="openInventoryPro">
         <view class="action-head">
           <view class="action-icon"><t-icon name="view-list" size="38rpx" /></view>
@@ -87,6 +79,7 @@
         <view class="action-description">{{i18n.stockManageDescription}}</view>
       </view>
 
+      <!-- 申购协同：计划、记录与编码库。 -->
       <view wx:if="{{entryVisible.purchasePlans}}" class="action-card" hover-class="action-card-active" bind:tap="openPurchasePlans">
         <view class="action-head">
           <view class="action-icon"><t-icon name="file-attachment" size="38rpx" /></view>
@@ -103,6 +96,15 @@
         <view class="action-description">{{i18n.purchaseRecordsDescription}}</view>
       </view>
 
+      <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
+        <view class="action-head">
+          <view class="action-icon"><t-icon name="tag" size="38rpx" /></view>
+          <view class="action-title">{{i18n.materialCodesTitle}}</view>
+        </view>
+        <view class="action-description">{{i18n.materialCodesDescription}}</view>
+      </view>
+
+      <!-- 台账与隐患：查看类入口。 -->
       <view wx:if="{{entryVisible.ledger}}" class="action-card" hover-class="action-card-active" bind:tap="openLedger">
         <view class="action-head">
           <view class="action-icon"><t-icon name="folder" size="38rpx" /></view>
@@ -119,12 +121,13 @@
         <view class="action-description">{{i18n.hazardsDescription}}</view>
       </view>
 
-      <view wx:if="{{entryVisible.materialCodes}}" class="action-card" hover-class="action-card-active" bind:tap="openMaterialCodes">
+      <!-- 现场工具：水印相机不按权限隐藏，固定在功能列表末尾。 -->
+      <view class="action-card" hover-class="action-card-active" bind:tap="openWatermark">
         <view class="action-head">
-          <view class="action-icon"><t-icon name="tag" size="38rpx" /></view>
-          <view class="action-title">{{i18n.materialCodesTitle}}</view>
+          <view class="action-icon"><t-icon name="camera" size="38rpx" /></view>
+          <view class="action-title">{{i18n.watermarkTitle}}</view>
         </view>
-        <view class="action-description">{{i18n.materialCodesDescription}}</view>
+        <view class="action-description">{{i18n.watermarkDescription}}</view>
       </view>
     </view>
   </block>

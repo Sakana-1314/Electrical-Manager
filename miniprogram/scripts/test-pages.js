@@ -550,7 +550,7 @@ async function run() {
   page = await mountPage('pages/inventory/inventory.js', { source: 'lite' });
   assert(page.data.liteMode === true, 'source=lite must use the Lite data source');
   assert(page.data.pageTitle === i18n.t('inventoryLiteTitle'), 'Lite source must switch the page title');
-  assert(page.data.canInbound === false, 'Lite source must not expose the inbound entry');
+  assert(page.openInbound === undefined, 'the inbound entry must live in stock management, not inventory');
   assert(
     requests.some((item) => item.url === '/mini-program/lite-inventory'),
     'source=lite must call the lite inventory endpoint even when warehouse:read exists',
@@ -572,14 +572,25 @@ async function run() {
   // 没带 source 的旧链接按权限兜底：同时持有两套权限时用 Pro。
   page = await mountPage('pages/inventory/inventory.js');
   assert(page.data.liteMode === false, 'legacy links must fall back to Pro when available');
-  assert(page.data.canInbound === true, 'Pro + warehouse:write must expose the inbound entry');
+  assert(page.openInbound === undefined, 'the inventory page must not expose the inbound entry');
 
-  // 只读用户能看到 Pro 库存与出入库记录，但不能看到扫码入库。
+  // 扫码入库改挂二级库管理：有写权限才显示入口，只读用户看不到。
   const inventoryUser = global.getApp().globalData.user;
   const inventoryPermissions = inventoryUser.permissions;
+  page = await mountPage('pages/stock-materials/stock-materials.js');
+  assert(page.data.canWrite === true, 'stock management must expose write actions for warehouse:write');
+  const stockNavigate = global.wx.navigateTo;
+  const stockNavigated = [];
+  global.wx.navigateTo = (options) => stockNavigated.push(options.url);
+  page.openInbound();
+  assert(
+    stockNavigated.pop() === '/pages/stock-inbound/stock-inbound',
+    'stock management must open the inbound page',
+  );
+  global.wx.navigateTo = stockNavigate;
   inventoryUser.permissions = ['warehouse:read'];
-  page = await mountPage('pages/inventory/inventory.js');
-  assert(page.data.canInbound === false, 'read-only users must not see the inbound entry');
+  page = await mountPage('pages/stock-materials/stock-materials.js');
+  assert(page.data.canWrite === false, 'read-only users must not see stock management write actions');
   inventoryUser.permissions = inventoryPermissions;
   page = await mountPage('pages/inventory/inventory.js');
 
@@ -606,11 +617,6 @@ async function run() {
   assert(
     inventoryNavigated.pop() === '/pages/records/records',
     'the Pro inventory page must open the outbound records page',
-  );
-  page.openInbound();
-  assert(
-    inventoryNavigated.pop() === '/pages/stock-inbound/stock-inbound',
-    'the Pro inventory page must open the inbound page',
   );
   global.wx.navigateTo = originalInventoryNavigate;
 

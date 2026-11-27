@@ -9,13 +9,17 @@
         bind:change="onSearchChange"
       />
     </view>
-    <view wx:if="{{canWrite}}" class="toolbar-row">
-      <t-button theme="primary" size="small" icon="add" bind:tap="openCreate">
-        {{i18n.stockMaterialCreateTitle}}
-      </t-button>
-      <t-button theme="default" variant="outline" size="small" icon="download" bind:tap="openInbound">
-        {{i18n.stockInboundTitle}}
-      </t-button>
+    <view wx:if="{{canWrite}}" class="action-bar">
+      <view class="action-chip" hover-class="action-chip-active" bind:tap="openCreate">
+        <view class="action-chip-icon"><t-icon name="add" size="32rpx" /></view>
+        <view class="action-chip-label">{{i18n.stockMaterialCreateTitle}}</view>
+        <t-icon class="action-chip-arrow" name="chevron-right" size="28rpx" />
+      </view>
+      <view class="action-chip" hover-class="action-chip-active" bind:tap="openInbound">
+        <view class="action-chip-icon"><t-icon name="download" size="32rpx" /></view>
+        <view class="action-chip-label">{{i18n.stockInboundTitle}}</view>
+        <t-icon class="action-chip-arrow" name="chevron-right" size="28rpx" />
+      </view>
     </view>
   </view>
 

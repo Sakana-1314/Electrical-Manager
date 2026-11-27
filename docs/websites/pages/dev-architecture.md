@@ -1165,7 +1165,7 @@ flowchart LR
     U --> W2["hazard:write → 登记隐患、更新整改状态"]
 ```
 
-功能是否展示与可写**只看权限位**：入口按对应模块的 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；首页「扫一扫」是例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。管理端与小程序端共用同一套权限，不再有 `*_mode` 功能开关，也没有公开运行模式端点。二级库 Pro 与二级库 Lite 是两套独立权限，**同时持有时首页两个入口都展示、两套数据都能进**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`utils/features.js` 的 `resolveInventorySource`；没带 `source` 的旧链接按权限兜底优先 Pro），页面标题随数据源切换。出入库记录是 Pro 能力，入口挂在 Pro 库存页顶部工具条；持 `warehouse:write` 的用户在同一工具条还能直接扫码入库；Pro 列表卡左上角展示该物资的首次入库时间（`/mini-program/inventory` 的 `first_inbound_at`，取最早一笔入库流水、排除冲销来源）。权限来自登录会话返回的 `permissions`（后端按位展开），后端数据接口按同一权限位鉴权。
+功能是否展示与可写**只看权限位**：入口按对应模块的 `:read` 权限显示，写操作（出库、隐患登记 / 整改）按 `:write` 权限显示；首页「扫一扫」是例外，它是物资码与网页登录码的统一入口，所有已登录用户都展示。管理端与小程序端共用同一套权限，不再有 `*_mode` 功能开关，也没有公开运行模式端点。二级库 Pro 与二级库 Lite 是两套独立权限，**同时持有时首页两个入口都展示、两套数据都能进**：两个入口打开同一个库存页，用 `source=pro` / `source=lite` 决定数据源（`utils/features.js` 的 `resolveInventorySource`；没带 `source` 的旧链接按权限兜底优先 Pro），页面标题随数据源切换。出入库记录是 Pro 能力，入口挂在 Pro 库存页顶部操作条；扫码入库不放在库存页，入口在二级库管理页（`pages/stock-materials`，`warehouse:write` 可见）；Pro 列表卡左上角展示该物资的首次入库时间（`/mini-program/inventory` 的 `first_inbound_at`，取最早一笔入库流水、排除冲销来源）。权限来自登录会话返回的 `permissions`（后端按位展开），后端数据接口按同一权限位鉴权。
 
 ### 构建与上传
 
