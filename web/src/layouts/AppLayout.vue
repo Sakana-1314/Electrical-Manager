@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, type RouteLocationNormalizedLoaded } from 'vue-router'
 import { type MenuOption } from 'naive-ui'
 import { MenuOutline } from '@vicons/ionicons5'
@@ -10,6 +10,7 @@ import AppTabs from '@/layouts/AppTabs.vue'
 import UserMenu from '@/layouts/UserMenu.vue'
 import { LOGO_MARK_URL } from '@/constants/branding'
 import { isTabRoute, MAX_APP_TABS, useAppTabs } from '@/composables/useAppTabs'
+import { accordionExpandedKeys, groupKeyForRoute } from '@/layouts/menuAccordion'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -37,6 +38,23 @@ const menuOptions = computed<MenuOption[]>(() =>
     can: (permission) => auth.can(permission),
     onNavigate: closeDrawer,
   }),
+)
+
+/**
+ * 折叠分组做成手风琴：左侧菜单同时只展开一个分组。
+ * 用户点开另一个分组时前一个自动收起；进入某个页面时自动展开它所在的分组。
+ */
+const expandedKeys = ref<string[]>([])
+function onUpdateExpandedKeys(keys: string[]) {
+  expandedKeys.value = accordionExpandedKeys(expandedKeys.value, keys)
+}
+watch(
+  () => route.name,
+  (name) => {
+    const group = groupKeyForRoute(menuOptions.value, typeof name === 'string' ? name : null)
+    if (group) expandedKeys.value = [group]
+  },
+  { immediate: true },
 )
 
 /**
@@ -74,6 +92,8 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
         :collapsed-icon-size="18"
         :options="menuOptions"
         :value="String(route.name || '')"
+        :expanded-keys="expandedKeys"
+        @update:expanded-keys="onUpdateExpandedKeys"
       />
       <!-- 用户菜单固定在侧栏左下角：外观（自动 / 浅色 / 深色）+ 项目切换 + 退出登录 -->
       <div class="sider-user">
@@ -138,6 +158,8 @@ const panelColumnStyle = { display: 'flex', flexDirection: 'column', overflow: '
       :icon-size="16"
       :options="menuOptions"
       :value="String(route.name || '')"
+      :expanded-keys="expandedKeys"
+      @update:expanded-keys="onUpdateExpandedKeys"
       @update:value="closeDrawer"
     />
     <div class="drawer-user">
