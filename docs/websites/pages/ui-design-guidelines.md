@@ -299,6 +299,9 @@
   `--floating-label-inside-size`（13px）、`--floating-label-inside-line-height`（20px）。
 - 页面结构：用户详情表单改为 top 标签；附件筛选改为 `filter-grid` + `filter-field`；备忘录标题 / 正文包成
   `filter-field`（`标题` / `正文` 标签），不再只靠 placeholder。由 `web/src/views/floatingLabels.spec.ts` 守住接线。
+- **浮起后白底不能压进控件**：标签绝对定位后仍带着 Naive 的 `min-height`（26px），白底会比文字高出十几像素，
+  浮到框线上时下沿压进控件内部、盖住输入值的首行（出库页「发生时间」实测压入 13px）。规则里必须显式
+  `min-height: 0; height: auto;`，让底色只包住文字本身；`floatingLabels.spec.ts` 有对应守卫。
 
 ### 弹窗统一排版
 
