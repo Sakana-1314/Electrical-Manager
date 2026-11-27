@@ -121,6 +121,6 @@
   gap: 16rpx;
 }
 
-.empty-actions > * {
+.empty-action {
   flex: 1;
 }

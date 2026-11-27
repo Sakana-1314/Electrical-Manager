@@ -95,10 +95,10 @@
     <view wx:if="{{!material && !result}}" class="section-card empty-card">
       <t-empty icon="scan" description="{{i18n.stockChooseMaterial}}" />
       <view class="empty-actions">
-        <t-button theme="primary" size="large" icon="scan" loading="{{scanning}}" bind:tap="scanMaterial">
+        <t-button class="empty-action" theme="primary" size="large" icon="scan" loading="{{scanning}}" bind:tap="scanMaterial">
           {{i18n.scanTitle}}
         </t-button>
-        <t-button theme="default" variant="outline" size="large" bind:tap="chooseMaterial">
+        <t-button class="empty-action" theme="default" variant="outline" size="large" bind:tap="chooseMaterial">
           {{i18n.stockMaterialsTitle}}
         </t-button>
       </view>
