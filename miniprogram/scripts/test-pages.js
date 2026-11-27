@@ -623,7 +623,7 @@ async function run() {
   // ===== 华星页 =====
   global.__cachedResponse = { purchase_departments: ['设备管理部'], purchasers: ['吴冰'] };
   requests.length = 0;
-  page = await mountPage('packages/huaxing/pages/huaxing-inventory/huaxing-inventory.js');
+  page = await mountPage('packages/warehouse/pages/huaxing-inventory/huaxing-inventory.js');
   assertSections(page, 'huaxing');
   requests.length = 0;
   // 多选：部门 / 申购人各选一项，用 | 连接发给后端。
@@ -656,7 +656,7 @@ async function run() {
   page.openDetail({ currentTarget: { dataset: { index: 0 } } });
   global.wx.navigateTo = originalNavigateTo;
   assert(
-    huaxingDetailUrl.includes('/packages/huaxing/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=1'),
+    huaxingDetailUrl.includes('/packages/warehouse/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=1'),
     'huaxing inventory row must open its detail page',
   );
 
@@ -757,7 +757,7 @@ async function run() {
   global.__cachedFail = { '/mini-program/huaxing-inventory/filter-options': true };
   global.__cachedResponse = {};
   requests.length = 0;
-  page = await mountPage('packages/huaxing/pages/huaxing-inventory/huaxing-inventory.js');
+  page = await mountPage('packages/warehouse/pages/huaxing-inventory/huaxing-inventory.js');
   assert(page.data.optionsFailed === true, 'huaxing option failure must set optionsFailed');
   assertSections(page, 'huaxing(failed options)');
   delete global.__cachedFail;
@@ -872,7 +872,7 @@ async function run() {
 
   // ===== 个人信息页：用户 / 功能模式走 getApp().globalData，项目选择器在此页 =====
   global.__cachedResponse = {};
-  page = await mountPage('packages/account/pages/profile/profile.js');
+  page = await mountPage('pages/profile/profile.js');
   assert(
     page.data.user && page.data.user.display_name === '张三',
     'profile must read the user from globalData session',

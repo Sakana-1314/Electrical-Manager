@@ -243,7 +243,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
 // 滚轮选择器切换到其它启用项目（切换后整页重启回首页）；用户与功能模式经 getApp().globalData
 // 同步，不经页面参数传递。
 {
-  const profileScript = read('packages/account/pages/profile/profile.js');
+  const profileScript = read('pages/profile/profile.js');
   for (const snippet of [
     'ensureProject',
     'getEnabledProjects',
@@ -256,10 +256,10 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'getApp().globalData.authPromise',
   ]) {
     if (!profileScript.includes(snippet)) {
-      throw new Error(`packages/account/pages/profile/profile.js must wire the current project picker: ${snippet}`);
+      throw new Error(`pages/profile/profile.js must wire the current project picker: ${snippet}`);
     }
   }
-  const profileMarkup = read('packages/account/pages/profile/profile.wxml');
+  const profileMarkup = read('pages/profile/profile.wxml');
   for (const snippet of [
     'i18n.currentProject',
     'projectOptions',
@@ -270,7 +270,7 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
     'options="{{projectOptions}}"',
   ]) {
     if (!profileMarkup.includes(snippet)) {
-      throw new Error(`packages/account/pages/profile/profile.wxml must render the current project picker: ${snippet}`);
+      throw new Error(`pages/profile/profile.wxml must render the current project picker: ${snippet}`);
     }
   }
   if (profileMarkup.includes('projectsExpanded') || profileScript.includes('projectsExpanded')) {
@@ -286,18 +286,18 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (profileMarkup.includes('keys="{{projectPickerKeys}}"') || profileScript.includes('projectPickerKeys')) {
     throw new Error('The project picker must not remap option keys; use label/value instead.');
   }
-  const profileConfig = JSON.parse(read('packages/account/pages/profile/profile.json'));
+  const profileConfig = JSON.parse(read('pages/profile/profile.json'));
   const profileComponents = Object.values(profileConfig.usingComponents || {});
   for (const component of ['tdesign-miniprogram/picker/picker', 'tdesign-miniprogram/picker-item/picker-item']) {
     if (!profileComponents.includes(component)) {
-      throw new Error(`packages/account/pages/profile/profile.json must register ${component} for the project picker.`);
+      throw new Error(`pages/profile/profile.json must register ${component} for the project picker.`);
     }
   }
   // 首页只保留入口：操作员徽标整块跳转个人信息页，弹窗与页面内选择器退场；
   // 项目解析与「已切换项目」提示仍由首页 onShow 承担。
   const homeScript = read('pages/home/home.js');
   const homeMarkup = read('pages/home/home.wxml');
-  if (!homeMarkup.includes('bind:tap="openProfile"') || !homeScript.includes('/packages/account/pages/profile/profile')) {
+  if (!homeMarkup.includes('bind:tap="openProfile"') || !homeScript.includes('/pages/profile/profile')) {
     throw new Error('The home operator badge must navigate to the profile page.');
   }
   if (homeMarkup.includes('user-profile-popup') || homeMarkup.includes('<t-popup') || homeMarkup.includes('<t-picker')) {
@@ -452,8 +452,8 @@ for (const file of ['app.wxss'].concat(listStyles('pages'), listStyles('componen
   if (!inventoryScript.includes("SHARE_PARAMS = ['source'") && !inventoryScript.includes("'source',")) {
     throw new Error('packages/warehouse/pages/inventory/inventory.js must retain the source param in share links.');
   }
-  const profileScript = read('packages/account/pages/profile/profile.js');
-  const profileMarkup = read('packages/account/pages/profile/profile.wxml');
+  const profileScript = read('pages/profile/profile.js');
+  const profileMarkup = read('pages/profile/profile.wxml');
   if (profileScript.includes('openRecords') || profileMarkup.includes('recordsVisible')) {
     throw new Error('The outbound records entry must live on the Pro inventory page, not the profile page.');
   }

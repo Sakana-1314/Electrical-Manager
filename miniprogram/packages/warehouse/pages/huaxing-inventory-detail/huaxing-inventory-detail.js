@@ -34,7 +34,7 @@ Page({
       }
       if (session.requires_profile) {
         const redirect = buildRedirectQuery(
-          `/packages/huaxing/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${this.detailId}`,
+          `/packages/warehouse/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${this.detailId}`,
         );
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
@@ -109,7 +109,7 @@ Page({
     const detail = this.data.detail;
     return {
       title: detail ? `${t('shareHuaxingInventoryDetail')} · ${detail.name || detail.material_code}` : t('shareHuaxingInventoryDetail'),
-      path: `/packages/huaxing/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${this.detailId}`,
+      path: `/packages/warehouse/pages/huaxing-inventory-detail/huaxing-inventory-detail?id=${this.detailId}`,
     };
   },
 
