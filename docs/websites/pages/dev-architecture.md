@@ -123,9 +123,7 @@ web/src/
 | `/hazard-units` | `hazard-units` | `views/hazard/HazardUnitsView.vue` | 需登录 | 责任单位：单位与责任人一一对应、行内启停 |
 | `/ledger/items` | `ledger-items` | `views/ledger/LedgerItemsView.vue`（`keepAlive`） | 需登录 | 台账总览：固定列（子项号 / 名称 + 型号（合并一列两行展示）/ 标签 / 数量（合并单位展示）/ 用途 / 备注 / 图片）、关键字与标签多选筛选（命中选中标签及其全部子孙标签）、分页/列显隐与 URL 同步、整行点击编辑弹窗 |
 | `/ledger/tags` | `ledger-tags` | `views/ledger/LedgerTagsView.vue` | 需登录 | 标签管理：横向树（至多 3 层，`vue3-tree-org`）、节点上的数字是「使用该标签的台账记录数」（`item_count`，只算直接引用，不含子标签的使用量，含 0）、节点悬停浮层看备注与图片、按「孤立标签 / 树标签」筛选、节点上新增子标签与编辑 |
-| `/work/overview` | `work-overview` | `views/work/WorkOverviewView.vue`（`keepAlive`） | 需登录 | 工作总览：一行 = 日期 + 任务 + 时段（全天 / 上午 / 下午）并列出当天参与人员；日期区间（必填、≤92 天，`WorkRangePicker` 快捷档）/ 任务 / 参与人员 / 关键字筛选、分页与列显隐、URL 同步；点行打开记录弹窗（无写权限为只读详情） |
-| `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 任务视图：半日格时间线（一行一个任务，色块 = 该任务的一段工作并显示参与人员），点色块编辑记录、行尾编辑任务 / 排活、点任务名看该任务的时间段明细；任务 CRUD 按 `work:write` 隐藏 |
-| `/work/workers` | `work-workers` | `views/work/WorkWorkersView.vue`（`keepAlive`） | 需登录 | 人员视图：半日格时间线（一行一个人，色块 = 该人干的任务，按任务固定配色），姓名由工作记录的参与人员派生并按拼音排序；点色块编辑记录、行尾给该人排活 |
+| `/work/tasks` | `work-tasks` | `views/work/WorkTasksView.vue`（`keepAlive`） | 需登录 | 工作管理：一行一个任务（工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注 / 标签 / 图片），按标签 / 完成状态 / 关键字筛选，分页 / 列显隐与 URL 同步，整行点击编辑弹窗（无写权限为只读详情） |
 | `/settings/advanced` | `advanced-settings` | `views/settings/AdvancedSettingsView.vue` | `system:admin` | 小程序注册开关 + 默认用户权限勾选矩阵（含标准 / 二级库 Lite 位） |
 | `/settings/projects` | `projects` | `views/settings/ProjectsView.vue` | `system:admin` | 项目管理：项目列表、新增/编辑（名称、启停）、默认项目标记、删除（有数据的项目不可删） |
 | `/settings/users` | `users` | `views/settings/UsersView.vue` | `system:admin` | 用户管理：权限位勾选、启停、部门、令牌回显/重置、MCP 链接（统一用户，不区分来源） |
@@ -156,7 +154,7 @@ web/src/
 | 权限点 | `can(permission)` 查登录用户 `permissions`（后端按位展开的权限键）：`system:admin`、各模块 `:read` / `:write`；`read` 通配命中任一读权限 | `types/navigation.ts`、`stores/auth.ts` |
 | 无权限时 | 静默重定向到落地页（当前权限下可见的第一个主 tab，默认工作台）；无独立 403 页、无全局拦截，页面内用 `auth.can()` 自行隐藏入口 | `router/index.ts`、`layouts/AppLayout.vue` |
 | 功能可见性 | 管理端与小程序端统一按权限位：有 `warehouse:read` 才显示二级库、`huaxing:read` 显示华星总库存等；系统管理按 `system:admin` 显示。**不再有「后台可见功能」配置**；可见性只影响侧栏与落地页推导，不拦路由，接口按同一权限位返回 403 | `utils/navigation.ts`、`layouts/mainMenu.ts` |
-| keep-alive | `meta.keepAlive` 只在 8 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`、`work-overview`、`work-tasks`、`work-workers`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
+| keep-alive | `meta.keepAlive` 只在 6 个列表路由（`purchase-materials`、`purchase-plan-templates`、`purchase-records`、`hazard-records`、`ledger-items`、`work-tasks`）声明，由 `<keep-alive>` 使用，路由守卫不读该字段 | 同上 |
 ### 状态管理
 `web/src/stores/` 下只有 3 个 store，均为 setup 语法（`defineStore(id, () => {...})`）。
 
@@ -242,7 +240,7 @@ web/src/
 | `memos.ts` | `/memos*` | 个人备忘录 CRUD |
 | `hazards.ts` | `/hazards*`、`/hazard-types*`、`/hazard-units*` | 隐患台账 CRUD、概览统计与筛选项（整改员工）、隐患类型与责任单位字典维护 |
 | `ledger.ts` | `/ledger-items*`、`/ledger-tags*` | 台账记录 CRUD 与分层标签维护（含孤立 / 树标签筛选、标签多选） |
-| `work.ts` | `/work-tasks*`、`/work-records*`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | 任务与工作记录 CRUD、三个视图查询、参与人历史姓名（表单下拉辅助输入与筛选共用） |
+| `work.ts` | `/work-tasks*`、`/work-task-tags` | 工作任务 CRUD（一行一个任务）与项目内标签清单（筛选下拉与标签输入辅助共用） |
 | `files.ts` | `/files/images*` | 图片上传与删除、上传前摘要查重（`dedup-check`）、附件列表、未引用附件软删除与撤销 |
 | `retry.ts` | —（axios 拦截器） | 弱网自动重试：可重放方法判定、退避与抖动（见下文「弱网自动重试」） |
 | `version.ts` | `/version` | 版本信息（关于页） |
@@ -286,10 +284,7 @@ web/src/
 | `HazardStatusTag.vue` | 整改状态标签（待整改 / 整改受阻 / 已整改），色值取自 `hazardStatusTypes` | props：`status: HazardStatus` |
 | `LedgerItemFormModal.vue` | 台账记录新增 / 编辑弹窗（标签多选树 + 图片上传，删除入口在页脚） | props：`show: boolean`、`itemId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
 | `LedgerTagFormModal.vue` | 标签新增 / 编辑弹窗（上级标签选择、备注、图片；新增子标签时预填上级） | props：`show: boolean`、`tag?: LedgerTag \| null`、`parentId?: number \| null`（组件自行加载全量标签）；emits：`update:show`、`saved` |
-| `WorkRangePicker.vue` | 工作管理的日期区间选择器：日期区间 + 今天 / 本周 / 下周 / 本月 / 上月快捷档，超过 92 天就地收窄并提示 | props：`modelValue: WorkRange`、`disabled?`；emit：`update:modelValue` |
-| `WorkTimelineGrid.vue` | 半日格时间线网格：粘性名称列 + 每天两个半天列，色块按泳道分层（最多 3 层，超出显示「+N」），Shift + 滚轮横向滚动；任务视图与人员视图共用 | props：`labelTitle`、`days`、`columns`、`rows`、`loading?`、`emptyText?`、`labelOf`、`titleOf`、`colorOf`；emit：`selectInterval`；插槽：`label`、`actions` |
-| `WorkTaskFormModal.vue` | 任务新增 / 编辑弹窗（名称 / 状态 / 计划起止 / 工作内容 / 备注 / 图片，删除入口在页脚） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）；emits：`update:show`、`saved` |
-| `WorkRecordFormModal.vue` | 工作记录新增 / 编辑弹窗（任务可搜索下拉、起止日期 + 上午 / 下午、参与人员可输入新姓名、备注；`readonly` 时变成只读详情） | props：`show`、`recordId?`、`presetTaskId?`、`presetDate?`、`presetParticipants?`、`readonly?`；emits：`update:show`、`saved` |
+| `WorkTaskFormModal.vue` | 工作任务新增 / 编辑弹窗（工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注 / 标签 / 图片，删除入口在页脚；`readonly` 时变成只读详情） | props：`show: boolean`、`taskId?: number \| null`（默认 null，null 为新增）、`readonly?`；emits：`update:show`、`saved` |
 ### Composable 清单
 `web/src/composables/` 下 7 个 `.ts`（不含 `.spec.ts`），全部为函数式组合式 API：
 
@@ -299,7 +294,7 @@ web/src/
 | `useExportJob.ts` | 异步导出任务轮询：提交 → 轮询到 `SUCCEEDED`/`FAILED`（默认 1500ms 间隔），失败抛 `AppError` | `running`、`run(payload)` | `PurchaseRequestsView`、`PurchaseMaterialsView` |
 | `useImportJob.ts` | 异步导入任务轮询：同样的提交+轮询流程，带同步重入保护（重复提交抛 `IMPORT_IN_PROGRESS`），成功返回 `result` | `running`、`run(file)` | `HuaXingStockView`、`SecondaryWarehouseLiteView`、`MaterialCodeLibraryView` |
 | `useImportConfirm.ts` | 全量更新导入的确认弹窗：确认后立刻禁用按钮并切换进行中文案，防重复提交（`maskClosable/closeOnEsc` 均为 false），错误交给 `onError` | 返回 `confirmImport(options)` 函数 | 同上三个导入页面 |
-| `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 5 个详情弹窗（物资 / 流水 / 工作记录 / 计划 / 记录） |
+| `useMaskCloseGuard.ts` | 详情弹窗的统一关闭入口（点遮罩 / ESC / 右上角 ×）：无未保存修改直接关，有修改先二次确认；脏判定由调用方实时求值 | `requestClose()` | 4 个详情弹窗（物资 / 流水 / 计划 / 记录） |
 | `useShiftWheelHorizontalScroll.ts` | 在表格滚动容器上支持 Shift+滚轮横向滚动 | 无返回值（内部挂/卸 `wheel` 监听，`passive: false`） | 申购 3 个列表页 |
 | `useAppTabs.ts` | 顶部标签页状态：标签按路由名去重、记录每页最后一次的完整地址（切回连筛选一起还原）；关闭 / 淘汰标签时切换实例代号强制重新挂载；标签列表存 sessionStorage（刷新与发版自愈后保留）；`isTabRoute` 排除登录 / 分享 / 404 与 `meta.noTab` 单据页 | `tabs`、`activeKey`、`useAppTabs()`、`trackRoute`、`activateTab`、`closeAppTab`、`isTabRoute` | `layouts/AppTabs.vue`、`layouts/AppLayout.vue` |
 
@@ -330,7 +325,7 @@ web/src/
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |
 | `hazard.ts` | 隐患纯逻辑：`hazardStatuses` / `hazardLevels` / `hazardStatusTypes` / `hazardLevelTypes`（状态与等级选项、标签色）、`initialHazardFilters()` / `hazardQuery(filters)`（筛选默认值与 URL query 互转）、`isHazardOverdue(dueDate, status, today)`（逾期判定）、`buildHazardTypeTree(types)`（扁平「大类 + 小类」→ 两级横向树） |
-| `work.ts` | 工作管理纯逻辑：`WORK_RANGE_MAX_DAYS`（与后端同值）、`shanghaiToday` / `addDays` / `workRangePresets`（今天 / 本周 / 下周 / 本月 / 上月）/ `defaultWorkRange`（本月整月）/ `rangeDays` / `clampWorkRange`（超限就地收窄）、`initialWorkOverviewFilters` / `initialWorkTaskFilters` / `initialWorkWorkerFilters` 与 `workOverviewQuery` / `workTaskQuery` / `workWorkerQuery` 及对应 `*FromQuery`（筛选与 URL 互转）、`parseIdList` / `parseNameList` / `parseStatusList` / `formatIdList` / `formatNameList`、`buildDaySlots` / `buildHalfColumns`（日 × 上下午列）、`recordSlotLabel` / `recordHalfKeys`（半天占用口径与后端 `record_slots` 一致）、`buildTimelineRow`（贪婪泳道打包 + 溢出计数）、`workBarPaletteIndex` / `workBarHash`（固定色板）、`formatRecordRange` / `sortParticipantNames` / `participantOptions` / `overviewRowKey` / `weekdayLabel` / `workTaskStatuses` / `workTaskStatusOptions` / `workTaskStatusTypes` / `workHalfOptions` / `workHalfLabel` |
+| `work.ts` | 工作管理纯逻辑：`initialWorkTaskFilters`（默认不限）/ `splitWorkTags` / `joinWorkTags`（标签英文逗号串与数组互转，去空白、去重）、`workTaskQuery` / `workTaskFiltersFromQuery`（筛选与 URL 互转）、`workTaskStatusOptions`（未完成 / 已完成）、`workProgressText`（完成度百分比展示，夹在 0~100） |
 | `ledger.ts` | 台账标签纯逻辑：`parseTagIds` / `formatTagIds`（`tag_ids` 逗号串与数组互转）、`isOrphanTag`（孤立标签判定）、`tagItemCount` / `tagItemCountHint`（节点上的台账使用数量与 tooltip 文案；字段缺失时返回 `null` 不显示徽标）、`tagPath`（完整层级路径）、`collectSubtreeIds`（节点自身 + 全部子孙，改上级时排除可选父节点）、`buildLedgerTagTree`（扁平标签 → 横向树，返回全新对象）、`tagSelectOptions` / `tagParentOptions`（标签选择器与上级选择器选项，后者支持按节点排除子树）、`tagColumnDisplay`（标签列展示切片）、`ledgerQuery` / `ledgerFiltersFromQuery`（筛选与 URL 同步） |
 #### `web/src/constants/`、`types/`、`config/`
 | 文件 | 职责 |
@@ -486,7 +481,7 @@ server/
 | `api/files` | `/files/images` | 分组挂 `auth.SystemScope`；上传 / 查重用各写权限位（`auth.FileWriter`），附件治理用 `auth.SystemAdmin`；读图公开 |
 | `api/hazard` | `/hazards*`、`/hazard-types`、`/hazard-units` | `auth.RequireProject`、`auth.HazardReader`、`auth.HazardWriter` |
 | `api/ledger` | `/ledger-items`、`/ledger-tags` | `auth.RequireProject`、`auth.LedgerReader`、`auth.LedgerWriter` |
-| `api/work` | `/work-tasks`、`/work-records`、`/work-overview`、`/work-task-timeline`、`/work-worker-timeline`、`/work-participants` | `auth.RequireProject`、`auth.WorkReader`、`auth.WorkWriter` |
+| `api/work` | `/work-tasks`、`/work-task-tags` | `auth.RequireProject`、`auth.WorkReader`、`auth.WorkWriter` |
 | `api/mcp` | `/mcp/` | 自带令牌认证（见 MCP 小节） |
 
 路由注册顺序集中在 `internal/api/api.go` 的 `Register`。`/__test__/*` 钩子只在 `APP_TEST_HOOKS=1` 时注册，供契约测试驱动后台任务与上游桩服务，生产环境不存在。
@@ -559,8 +554,8 @@ sequenceDiagram
 | `auth.HazardWriter` | `RequirePermission(PermHazardWrite)` | 隐患管理写操作（台账与两张字典表） |
 | `auth.LedgerReader` | `RequirePermission(PermLedgerRead)` | 台账记录与标签读取 |
 | `auth.LedgerWriter` | `RequirePermission(PermLedgerWrite)` | 台账管理写操作（台账记录与标签） |
-| `auth.WorkReader` | `RequirePermission(PermWorkRead)` | 工作管理三个视图与任务 / 记录读取 |
-| `auth.WorkWriter` | `RequirePermission(PermWorkWrite)` | 工作管理写操作（任务、工作记录与任务图片） |
+| `auth.WorkReader` | `RequirePermission(PermWorkRead)` | 工作管理任务读取 |
+| `auth.WorkWriter` | `RequirePermission(PermWorkWrite)` | 工作管理写操作（任务与任务图片） |
 | `auth.SystemAdmin` | `RequirePermission(PermSystemAdmin)` | 系统配置、用户、文件治理；没有独立「超级管理员角色」 |
 | 图片上传 | `auth.FileWriter`（任一业务写权限位） | 图片上传与上传前查重 |
 | `auth.MiniProgramUser` | 依赖 | 小程序用户；同时落定项目上下文（带 `X-Project-Id` 按头校验，缺头用默认项目） |
@@ -637,8 +632,8 @@ sequenceDiagram
 | `ledger:write` | 256 | 台账记录与标签维护 |
 | `hazard:read` | 512 | 隐患台账查看 |
 | `hazard:write` | 1024 | 隐患登记 / 整改、隐患类型与责任单位维护 |
-| `work:read` | 2048 | 工作管理三个视图查看 |
-| `work:write` | 4096 | 任务 / 工作记录维护与任务图片上传 |
+| `work:read` | 2048 | 工作管理查看 |
+| `work:write` | 4096 | 工作任务维护与任务图片上传 |
 | 全开 | 65471 | 旧「超级管理员」等价能力：系统管理位 + 全部功能读写位（位 6 已退役保留空位） |
 
 管理端与小程序端共用同一套判断：网页侧栏主 tab 按读权限位显示（工作台 / 备忘录不设门禁），小程序首页入口按读权限位显示，写操作按写权限位；分享链接与导出任务的属主校验允许 `system:admin` 查看全部。新建用户 / 小程序新注册用户的默认权限取自高级设置的 `runtime_settings.default_permissions`，代码兜底为二级库 Lite 只读 + 申购只读 + 华星总库存只读（8232）。
@@ -672,9 +667,7 @@ sequenceDiagram
 | `HAZARD_UNIT_PERSON_REQUIRED` | 400 | `DUPLICATE_LEDGER_TAG` | 409 |
 | `LEDGER_TAG_HAS_CHILDREN` | 409 | `LEDGER_TAG_IN_USE` | 409 |
 | `LEDGER_TAG_MAX_LEVEL` | 400 | `INVALID_TAG_ID` | 400 |
-| `DUPLICATE_WORK_TASK` | 409 | `WORK_TASK_HAS_RECORDS` | 409 |
-| `WORK_DATE_RANGE` | 400 | `WORK_RANGE_TOO_LONG` | 400 |
-| `INVALID_WORK_TASK_ID` | 400 | `PROJECT_REQUIRED` | 400 |
+| `WORK_DATE_RANGE` | 400 | `PROJECT_REQUIRED` | 400 |
 | `PROJECT_NOT_FOUND` | 400 | `PROJECT_DISABLED` | 400 |
 | `PROJECT_MISMATCH` | 409 | `PROJECT_IS_DEFAULT` | 409 |
 | `PROJECT_IN_USE` | 409 | `DUPLICATE_PROJECT_NAME` | 409 |
@@ -930,12 +923,12 @@ flowchart LR
 | 项 | 内容 |
 | --- | --- |
 | 挂载 | `mcp.Register` 在 `/api/v1/mcp/` 上接收全部方法；传输为 Streamable HTTP 的**无状态 JSON** 模式：只接受 `POST`（`GET` / `DELETE` 返回 405，不提供 SSE 流与会话），`Content-Type` 必须是 `application/json`，响应为 JSON（支持 JSON-RPC 批量请求，纯通知返回 202）；请求体上限 16 MB；协议版本支持 `2024-11-05` / `2025-03-26` / `2025-06-18` / `2025-11-25`；`serverInfo.name` 为 `spare-parts-management` |
-| 工具（业务） | 业务工具一跳完成常见查询与写入，参数默认值与网页端一致，按业务模块分组：`get_dashboard_summary`（工作台概览）、`list_inventory_balances`（库存余额）、`list_low_stock_materials`（低库存）、`list_inventory_operations`（出入库流水）、`list_stock_materials`（物资档案）、`create_inventory_inbound` / `create_inventory_outbound`（入库 / 出库）、`list_purchase_plans`（申购计划，默认「正常 + 未转入」）、`list_purchase_records`（申购记录）、`list_purchase_templates`（周期性计划）、`list_uncoded_materials`（未编码物资，固定 `coded=false`）、`create_purchase_plan`（新增申购计划）、`move_purchase_plans_to_record`（转入申购记录）、`batch_update_purchase_plans` / `batch_update_purchase_records`（批量编辑，`materials` / `records` 每项带 id 与 version）、`list_material_codes`（物料编码库）、`list_huaxing_inventory`（华星总库存）、`list_lite_inventory`（二级库 Lite）、`list_hazards` / `create_hazard` / `update_hazard`（隐患查询 / 登记 / 整改闭环）、`list_ledger_items`（台账）、`list_work_overview`（工作总览，默认本月）、`list_memos` / `create_memo`（备忘录） |
+| 工具（业务） | 业务工具一跳完成常见查询与写入，参数默认值与网页端一致，按业务模块分组：`get_dashboard_summary`（工作台概览）、`list_inventory_balances`（库存余额）、`list_low_stock_materials`（低库存）、`list_inventory_operations`（出入库流水）、`list_stock_materials`（物资档案）、`create_inventory_inbound` / `create_inventory_outbound`（入库 / 出库）、`list_purchase_plans`（申购计划，默认「正常 + 未转入」）、`list_purchase_records`（申购记录）、`list_purchase_templates`（周期性计划）、`list_uncoded_materials`（未编码物资，固定 `coded=false`）、`create_purchase_plan`（新增申购计划）、`move_purchase_plans_to_record`（转入申购记录）、`batch_update_purchase_plans` / `batch_update_purchase_records`（批量编辑，`materials` / `records` 每项带 id 与 version）、`list_material_codes`（物料编码库）、`list_huaxing_inventory`（华星总库存）、`list_lite_inventory`（二级库 Lite）、`list_hazards` / `create_hazard` / `update_hazard`（隐患查询 / 登记 / 整改闭环）、`list_ledger_items`（台账）、`list_work_tasks` / `create_work_task` / `update_work_task`（工作任务查询 / 新增 / 更新）、`list_memos` / `create_memo`（备忘录） |
 | 工具（基础 / 高级） | `get_current_user`（返回令牌对应用户、权限键、当前项目与项目来源）、`list_projects`（列出全部项目）、`find_api_operations`（业务工具不覆盖时按标签/关键字查管理端接口）、`describe_api_operation`（返回某接口的参数、请求体、响应契约与参数落位提示 `call_arguments`）、`call_api_operation`（以 `X-API-Token` 调用任意管理端接口；`path_params` / `query` / `headers` / `body` / `file` 分别对应路径参数、查询参数、请求头、JSON 请求体与附件，附件用 `file.content_base64` 上传，二进制响应超过 25 MB 报错） |
-| 默认值对齐 | 业务工具按网页端默认值补齐条件：`list_purchase_plans` 缺省 `status=["正常"]`、`moved=false`（网页端申购计划页只看正常且未转入的计划）；`list_work_overview` 缺省本月（上海时区，月初到月末）；`create_inventory_inbound` / `create_inventory_outbound` 自动补 `client_request_id`、`occurred_at`（当前时间）与 `source_type=MANUAL`；`create_purchase_plan` 缺省 `plan_date=今天`、`status=正常`、`urgency=正常`；`move_purchase_plans_to_record` 缺省 `purchase_date=今天`、`status=已申购`；`create_hazard` 缺省 `inspection_date=今天`、`level=一般隐患`、`status=待整改`。列表工具缺省 `page=1`、`page_size=20`（与网页端 `usePagedTable` 同一默认值，上限 200），所有分页型工具都要求接口确实声明了 `page` / `page_size`（由 Go 测试 `TestBusinessToolPagingMatchesContract` 守住）。查询条件与网页端一一对应：`list_inventory_balances` 带 `low_stock` 开关、`list_inventory_operations` 可按 `source_type` 过滤、申购计划 / 记录支持 `search_field` + `search_value` 按字段搜索、`empty_*` 空值过滤与 `sort_by` / `sort_order` 排序。高级接口 `call_api_operation` 不注入任何默认值，参数原样转发 |
+| 默认值对齐 | 业务工具按网页端默认值补齐条件：`list_purchase_plans` 缺省 `status=["正常"]`、`moved=false`（网页端申购计划页只看正常且未转入的计划）；`list_work_tasks` 按开始时间倒序、`tags` 命中任意一个即可；`create_inventory_inbound` / `create_inventory_outbound` 自动补 `client_request_id`、`occurred_at`（当前时间）与 `source_type=MANUAL`；`create_purchase_plan` 缺省 `plan_date=今天`、`status=正常`、`urgency=正常`；`move_purchase_plans_to_record` 缺省 `purchase_date=今天`、`status=已申购`；`create_hazard` 缺省 `inspection_date=今天`、`level=一般隐患`、`status=待整改`；`create_work_task` 缺省 `progress=0`。列表工具缺省 `page=1`、`page_size=20`（与网页端 `usePagedTable` 同一默认值，上限 200），所有分页型工具都要求接口确实声明了 `page` / `page_size`（由 Go 测试 `TestBusinessToolPagingMatchesContract` 守住）。查询条件与网页端一一对应：`list_inventory_balances` 带 `low_stock` 开关、`list_inventory_operations` 可按 `source_type` 过滤、申购计划 / 记录支持 `search_field` + `search_value` 按字段搜索、`empty_*` 空值过滤与 `sort_by` / `sort_order` 排序、`list_work_tasks` 支持 `tags` / `status`。高级接口 `call_api_operation` 不注入任何默认值，参数原样转发 |
 | 操作目录 | 由内嵌契约（`server/internal/openapi` 的 `openapi.Operations()`，按契约文件顺序）生成，按 `operationId` 索引；`ExcludedPaths` 排除 `/api/v1/auth/login`、`/api/v1/auth/refresh`，`ExcludedPrefixes` 排除小程序专用前缀 `/api/v1/mini-program/` 与扫码登录会话前缀 `/api/v1/auth/qr-sessions`，其余管理端接口全部可调用。小程序专用接口的能力都由管理端接口覆盖（库存与流水 → `/inventory/*`、隐患 → `/hazards*`、Lite 库存 → `/secondary-warehouse`、物料编码库 → `/material-code-library`、项目 → `/projects`），所以「完整操作所有功能」不依赖小程序端点 |
 | 参数映射 | `describe_api_operation` 的 `call_arguments` 由契约派生：`path_params` / `query` 是名字列表，`headers` 是 `{name, note}` 列表（如 `if-match` 说明「乐观锁版本号（String(version)）；不传则不校验版本」），`body` 是请求体 content-type 列表（multipart 时为 `null`，改用 `file`），`file` 是上传表单字段名（固定 `file`）。`headers` 只接受契约里该操作声明的请求头；令牌头与项目头（`ManagedHeaders`）由 MCP 层统一设置，不接受调用方传入 |
-| 字段中文名 | `describe_api_operation` 的 `parameters[].schema.title` 与 `schemas[].properties[].title` 按网页端 / 小程序端界面文案显示（`field_labels.go`），字段键名与 `operationId` 不变：默认按字段名取中文名，同名字段按接口标签与 schema 名消歧（`actual_demand_person` = 提报员工、`purchase_responsible` = 实际需求人；`name` 在二级库是物资名称、华星总库存是货品名称、工作任务是任务名称）。中文名只写入 MCP 的深拷贝目录，契约与 `/api/v1/openapi.json` / Swagger 的英文 title 保持原样；新增参数与请求体字段必须补中文名（Go 测试校验） |
+| 字段中文名 | `describe_api_operation` 的 `parameters[].schema.title` 与 `schemas[].properties[].title` 按网页端 / 小程序端界面文案显示（`field_labels.go`），字段键名与 `operationId` 不变：默认按字段名取中文名，同名字段按接口标签与 schema 名消歧（`actual_demand_person` = 提报员工、`purchase_responsible` = 实际需求人；`name` 在二级库是物资名称、华星总库存是货品名称、工作管理是工作任务）。中文名只写入 MCP 的深拷贝目录，契约与 `/api/v1/openapi.json` / Swagger 的英文 title 保持原样；新增参数与请求体字段必须补中文名（Go 测试校验） |
 | 上限 | 请求体上限 16 MB（附件 base64 编码后约 12MB 原文）；单次返回二进制不超过 25 MB，超出报错 |
 | 调用方式 | 业务工具与 `call_api_operation` 都用 `httptest.ResponseRecorder` 把请求在进程内交给应用自身的 Gin 引擎（`mcp.SetHandler`），仍完整经过中间件、参数校验、权限位、乐观锁与事务；最多跟随 5 次重定向。带乐观锁的写操作把版本号放进 `headers`（如 `{"If-Match": "3"}`），与网页端同一个入口（`If-Match` 头） |
 | 认证 | 取 `?token=`、`X-API-Token` 或 `Authorization: Bearer`，经 `auth.FindUserByAPIToken` 命中启用用户后解析项目（`X-Project-Id` → `?project_id=` → 默认项目），失败返回 `401` + `{"code":"INVALID_TOKEN", ...}` |

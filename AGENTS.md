@@ -127,7 +127,7 @@ npm run build             # 类型检查 + 生产构建
 
 MCP 有两层工具（`server/internal/api/mcp`，契约副本见 `server/internal/openapi`）：
 
-- **业务工具**（`business_tools.go`）：按业务流程命名的 `list_*` / `create_*` / `batch_update_*`，一跳完成常见查询与写入；筛选**默认值与网页端一致**（如申购计划默认「正常 + 未转入」、未编码物资固定 `coded=false`、工作总览默认本月、新建默认今天），改网页默认值时同步改对应工具与 Go 测试。
+- **业务工具**（`business_tools.go`）：按业务流程命名的 `list_*` / `create_*` / `batch_update_*`，一跳完成常见查询与写入；筛选**默认值与网页端一致**（如申购计划默认「正常 + 未转入」、未编码物资固定 `coded=false`、工作任务按开始时间倒序、新建默认今天），改网页默认值时同步改对应工具与 Go 测试。
 - **基础 / 高级工具**：`get_current_user` / `list_projects` / `find_api_operations` / `describe_api_operation` / `call_api_operation`；业务工具覆盖不到的能力走高级接口。
 
 **默认要求每个管理端接口都能被 `call_api_operation` 完整操作**：

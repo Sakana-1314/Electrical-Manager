@@ -46,7 +46,7 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
       'procurement-group',
       'hazard-group',
       'ledger-group',
-      'work-group',
+      'work-tasks',
       'settings-group',
     ])
   })
@@ -67,7 +67,7 @@ describe('buildMainMenu（侧栏主 tab 可见性）', () => {
       'ledger-group',
       'settings-group',
     ])
-    expect(topKeys(options)).not.toContain('work-group')
+    expect(topKeys(options)).not.toContain('work-tasks')
   })
 
   it('没有任何权限时只保留工作台 / 备忘录（不设门禁）', () => {

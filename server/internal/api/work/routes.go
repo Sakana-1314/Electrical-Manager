@@ -1,7 +1,7 @@
-// Package work 是工作管理接口：工作总览 / 任务视图 / 人员视图（对应 api/v1/work.py）。
+// Package work 是工作管理接口：一行一个任务（工作任务 / 事项或步骤 / 开始时间 /
+// 完成时间 / 责任人 / 完成度 / 备注 / 标签 / 图片）。
 //
-// 权限：读取对所有登录用户开放；写操作需要 WorkWriter（超级管理员 / 工作管理员）。
-// 三个视图的查询区间都是必填参数，且封顶 WorkRangeMaxDays 天。
+// 权限：读取需要 work:read，写操作需要 work:write（超级管理员 / 工作管理员）。
 package work
 
 import (
@@ -15,37 +15,42 @@ func Register(r *web.Router) {
 	g := r.Group("", auth.RequireProject)
 
 	g.GET("/work-tasks", listTasks, auth.WorkReader)
+	g.GET("/work-task-tags", listTaskTags, auth.WorkReader)
 	g.GET("/work-tasks/{task_id}", getTask, auth.WorkReader)
 	g.POST("/work-tasks", createTask, auth.WorkWriter)
 	g.PATCH("/work-tasks/{task_id}", updateTask, auth.WorkWriter)
 	g.DELETE("/work-tasks/{task_id}", deleteTask, auth.WorkWriter)
-
-	g.GET("/work-records/{record_id}", getRecord, auth.WorkReader)
-	g.POST("/work-records", createRecord, auth.WorkWriter)
-	g.PATCH("/work-records/{record_id}", updateRecord, auth.WorkWriter)
-	g.DELETE("/work-records/{record_id}", deleteRecord, auth.WorkWriter)
-
-	g.GET("/work-overview", overview, auth.WorkReader)
-	g.GET("/work-task-timeline", taskTimeline, auth.WorkReader)
-	g.GET("/work-worker-timeline", workerTimeline, auth.WorkReader)
-	g.GET("/work-participants", participants, auth.WorkReader)
 }
-
-// ===== 任务 =====
 
 func listTasks(c *web.Ctx) error {
 	p := c.Params()
 	page, size := p.Page()
 	keyword := p.QueryStr("keyword", "max=255")
-	status := p.QueryStr("status", "max=128")
+	tags := p.QueryStr("tags", "max=500")
+	status := p.QueryStr("status", "max=64")
 	if err := p.Err(); err != nil {
 		return err
 	}
-	items, total, err := svc.ListTasks(c.DB, keyword, svc.ParseStatuses(status), page, size)
+	items, total, err := svc.ListTasks(c.DB, svc.TaskFilter{
+		Keyword: keyword, Tags: svc.ParseTags(tags), Done: svc.ParseDoneFilter(status),
+	}, page, size)
 	if err != nil {
 		return err
 	}
 	return c.OK(schema.NewPage(items, page, size, total))
+}
+
+// listTaskTags 项目内出现过的标签（去重升序），供筛选下拉与标签输入辅助。
+func listTaskTags(c *web.Ctx) error {
+	p := c.Params()
+	if err := p.Err(); err != nil {
+		return err
+	}
+	tags, err := svc.ListTags(c.DB)
+	if err != nil {
+		return err
+	}
+	return c.OK(tags)
 }
 
 func getTask(c *web.Ctx) error {
@@ -101,129 +106,4 @@ func deleteTask(c *web.Ctx) error {
 		return err
 	}
 	return c.NoContent()
-}
-
-// ===== 工作记录 =====
-
-func getRecord(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("record_id")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	out, err := svc.GetRecordRead(c.DB, id)
-	if err != nil {
-		return err
-	}
-	return c.OK(out)
-}
-
-func createRecord(c *web.Ctx) error {
-	p := c.Params()
-	var data schema.WorkRecordCreate
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	out, err := svc.CreateRecord(c.DB, data)
-	if err != nil {
-		return err
-	}
-	return c.Created(out)
-}
-
-func updateRecord(c *web.Ctx) error {
-	p := c.Params()
-	id := p.PathInt("record_id")
-	var data schema.WorkRecordUpdate
-	p.Body(&data)
-	if err := p.Err(); err != nil {
-		return err
-	}
-	out, err := svc.UpdateRecord(c.DB, id, data)
-	if err != nil {
-		return err
-	}
-	return c.OK(out)
-}
-
-func deleteRecord(c *web.Ctx) error {
-	p := c.Params()
-	ifMatch := p.IfMatch()
-	id := p.PathInt("record_id")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	if err := svc.DeleteRecord(c.DB, id, ifMatch); err != nil {
-		return err
-	}
-	return c.NoContent()
-}
-
-// ===== 三个视图 =====
-
-func overview(c *web.Ctx) error {
-	p := c.Params()
-	start := p.QueryDateRequired("start_date")
-	end := p.QueryDateRequired("end_date")
-	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	taskIDs := p.QueryStr("task_ids", "max=500")
-	names := p.QueryStr("participants", "max=500")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	rows, total, err := svc.ListOverview(c.DB, svc.OverviewQuery{
-		StartDate: start, EndDate: end, TaskIDs: svc.ParseIDList(taskIDs), Participants: svc.ParseNames(names), Keyword: keyword,
-	}, page, size)
-	if err != nil {
-		return err
-	}
-	return c.OK(schema.NewPage(rows, page, size, total))
-}
-
-func taskTimeline(c *web.Ctx) error {
-	p := c.Params()
-	start := p.QueryDateRequired("start_date")
-	end := p.QueryDateRequired("end_date")
-	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=255")
-	status := p.QueryStr("status", "max=128")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	rows, total, err := svc.ListTaskTimeline(c.DB, start, end, svc.ParseStatuses(status), keyword, page, size)
-	if err != nil {
-		return err
-	}
-	return c.OK(schema.NewPage(rows, page, size, total))
-}
-
-func workerTimeline(c *web.Ctx) error {
-	p := c.Params()
-	start := p.QueryDateRequired("start_date")
-	end := p.QueryDateRequired("end_date")
-	page, size := p.Page()
-	keyword := p.QueryStr("keyword", "max=128")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	rows, total, err := svc.ListWorkerTimeline(c.DB, start, end, keyword, page, size)
-	if err != nil {
-		return err
-	}
-	return c.OK(schema.NewPage(rows, page, size, total))
-}
-
-func participants(c *web.Ctx) error {
-	p := c.Params()
-	keyword := p.QueryStr("keyword", "max=128")
-	if err := p.Err(); err != nil {
-		return err
-	}
-	out, err := svc.ListParticipants(c.DB, keyword)
-	if err != nil {
-		return err
-	}
-	return c.OK(out)
 }

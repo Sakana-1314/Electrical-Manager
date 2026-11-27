@@ -27,13 +27,11 @@ const MARKER = 'data-detail-modal'
 /**
  * 全部详情弹窗（相对 `web/src` 的路径）。
  *
- * 逐个列出而不是只数数量：标记丢了或新详情弹窗漏接，数量断言可能照样通过
- * （以前就漏了「工作记录详情」——它只是一个数量下限，少了它仍然 >= 4）。
+ * 逐个列出而不是只数数量：标记丢了或新详情弹窗漏接，数量断言可能照样通过。
  */
 const DETAIL_MODAL_FILES = [
   'components/StockMaterialFormModal.vue', // 二级库物资详情
   'components/OperationDetailModal.vue', // 出入库流水详情
-  'components/WorkRecordFormModal.vue', // 工作记录详情
   'components/PurchaseRecordDetailModal.vue', // 申购记录详情
   'components/PurchasePlanDetailModal.vue', // 申购计划详情
 ]

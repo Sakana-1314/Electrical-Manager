@@ -165,17 +165,3 @@ const (
 
 var ShareType = newEnum("PURCHASE_PLAN", "purchase_plan", "PURCHASE_RECORD", "purchase_record")
 var ShareExpiryOption = newEnum("HOURS_24", "24h", "DAYS_3", "3d", "DAYS_7", "7d", "DAYS_30", "30d", "PERMANENT", "permanent")
-
-// ---- 工作管理 ----
-const (
-	WorkTaskPending    = "未开始"
-	WorkTaskInProgress = "进行中"
-	WorkTaskDone       = "已完成"
-	WorkTaskPaused     = "已暂停"
-
-	HalfDayAM = "AM"
-	HalfDayPM = "PM"
-)
-
-var WorkTaskStatus = newEnum("PENDING", "未开始", "IN_PROGRESS", "进行中", "DONE", "已完成", "PAUSED", "已暂停")
-var WorkHalfDay = newEnum("AM", "AM", "PM", "PM")

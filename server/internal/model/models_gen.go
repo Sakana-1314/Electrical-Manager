@@ -634,42 +634,25 @@ type WebhookDelivery struct {
 const TableWebhookDelivery = "webhook_delivery"
 const ColsWebhookDelivery = `"id", "event_id", "event_type", "platform", "payload", "status", "attempts", "next_retry_at", "response_status", "response_excerpt", "last_error", "created_at", "updated_at", "delivered_at"`
 
-// WorkRecord ↔ 表 `work_record`（项目域）。
-type WorkRecord struct {
-	ID           int64      `db:"id" json:"id"`
-	TaskID       int64      `db:"task_id" json:"task_id"`
-	StartDate    jtype.Date `db:"start_date" json:"start_date"`
-	StartHalf    string     `db:"start_half" json:"start_half"` // enum: AM, PM
-	EndDate      jtype.Date `db:"end_date" json:"end_date"`
-	EndHalf      string     `db:"end_half" json:"end_half"` // enum: AM, PM
-	Participants string     `db:"participants" json:"participants"`
-	Remark       *string    `db:"remark" json:"remark"`
-	ProjectID    int64      `db:"project_id" json:"project_id"`
-	CreatedAt    time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt    time.Time  `db:"updated_at" json:"updated_at"`
-	Version      int64      `db:"version" json:"version"`
-}
-
-const TableWorkRecord = "work_record"
-const ColsWorkRecord = `"id", "task_id", "start_date", "start_half", "end_date", "end_half", "participants", "remark", "project_id", "created_at", "updated_at", "version"`
-
-// WorkTask ↔ 表 `work_task`（项目域）。
+// WorkTask ↔ 表 `work_task`（项目域）：一行一个任务。
 type WorkTask struct {
-	ID            int64       `db:"id" json:"id"`
-	Name          string      `db:"name" json:"name"`
-	Description   *string     `db:"description" json:"description"`
-	Status        string      `db:"status" json:"status"` // enum: PENDING, IN_PROGRESS, DONE, PAUSED
-	PlanStartDate *jtype.Date `db:"plan_start_date" json:"plan_start_date"`
-	PlanEndDate   *jtype.Date `db:"plan_end_date" json:"plan_end_date"`
-	Remark        *string     `db:"remark" json:"remark"`
-	ProjectID     int64       `db:"project_id" json:"project_id"`
-	CreatedAt     time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at"`
-	Version       int64       `db:"version" json:"version"`
+	ID        int64       `db:"id" json:"id"`
+	Name      string      `db:"name" json:"name"`
+	Steps     *string     `db:"steps" json:"steps"`
+	StartDate *jtype.Date `db:"start_date" json:"start_date"`
+	EndDate   *jtype.Date `db:"end_date" json:"end_date"`
+	Owner     *string     `db:"owner" json:"owner"`
+	Progress  int64       `db:"progress" json:"progress"`
+	Remark    *string     `db:"remark" json:"remark"`
+	Tags      string      `db:"tags" json:"tags"`
+	ProjectID int64       `db:"project_id" json:"project_id"`
+	CreatedAt time.Time   `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time   `db:"updated_at" json:"updated_at"`
+	Version   int64       `db:"version" json:"version"`
 }
 
 const TableWorkTask = "work_task"
-const ColsWorkTask = `"id", "name", "description", "status", "plan_start_date", "plan_end_date", "remark", "project_id", "created_at", "updated_at", "version"`
+const ColsWorkTask = `"id", "name", "steps", "start_date", "end_date", "owner", "progress", "remark", "tags", "project_id", "created_at", "updated_at", "version"`
 
 // WorkTaskImage ↔ 表 `work_task_image`（项目域）。
 type WorkTaskImage struct {
@@ -713,7 +696,6 @@ var ProjectScopedTables = []string{
 	"stock_operation",
 	"stock_operation_line",
 	"stock_replenishment_policy",
-	"work_record",
 	"work_task",
 	"work_task_image",
 }

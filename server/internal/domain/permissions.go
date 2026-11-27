@@ -22,8 +22,8 @@ const (
 	PermLedgerWrite    Permission = 1 << 8  // 台账编辑
 	PermHazardRead     Permission = 1 << 9  // 隐患查看
 	PermHazardWrite    Permission = 1 << 10 // 隐患上报与整改
-	PermWorkRead       Permission = 1 << 11 // 工单查看
-	PermWorkWrite      Permission = 1 << 12 // 工单编辑
+	PermWorkRead       Permission = 1 << 11 // 工作管理查看
+	PermWorkWrite      Permission = 1 << 12 // 工作管理编辑
 	PermLiteRead       Permission = 1 << 13 // 二级库 Lite 查看
 	PermLiteWrite      Permission = 1 << 14 // 二级库 Lite 导入
 	PermHuaxingWrite   Permission = 1 << 15 // 华星总库存导入
@@ -63,8 +63,8 @@ var PermissionCatalog = []PermissionDef{
 	{"ledger:write", "ledger", "write", "台账编辑", PermLedgerWrite},
 	{"hazard:read", "hazard", "read", "隐患查看", PermHazardRead},
 	{"hazard:write", "hazard", "write", "隐患上报与整改", PermHazardWrite},
-	{"work:read", "work", "read", "工单查看", PermWorkRead},
-	{"work:write", "work", "write", "工单编辑", PermWorkWrite},
+	{"work:read", "work", "read", "工作管理查看", PermWorkRead},
+	{"work:write", "work", "write", "工作管理编辑", PermWorkWrite},
 }
 
 // PermissionForKey 权限键 → 权限位。

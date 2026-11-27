@@ -5,7 +5,7 @@ package mcp
 // 设计约定：
 //   - 工具名用「动作 + 业务对象」（list_* / create_* / batch_update_*），中文 title 与网页端菜单一致；
 //   - 参数只暴露网页端实际会用的筛选项，缺省值与网页端一致（申购计划默认「正常 + 未转入」、
-//     工作总览默认本月、新建默认今天等），详见各工具 description；
+//     工作任务按开始时间倒序、新建默认今天等），详见各工具 description；
 //   - 底层仍经 callInternal 走原接口，权限位、校验、事务、乐观锁逻辑不变；
 //   - 业务工具覆盖不到的能力走 find_api_operations → describe_api_operation → call_api_operation。
 
@@ -25,22 +25,9 @@ func shanghaiNow() time.Time { return time.Now().In(shanghai) }
 
 func shanghaiToday() string { return shanghaiNow().Format("2006-01-02") }
 
-func shanghaiMonthStart() string {
-	now := shanghaiNow()
-	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, shanghai).Format("2006-01-02")
-}
-
-func shanghaiMonthEnd() string {
-	now := shanghaiNow()
-	firstOfNextMonth := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, shanghai)
-	return firstOfNextMonth.AddDate(0, 0, -1).Format("2006-01-02")
-}
-
-func defaultToday() any      { return shanghaiToday() }
-func defaultNow() any        { return shanghaiNow().Format(time.RFC3339) }
-func defaultMonthStart() any { return shanghaiMonthStart() }
-func defaultMonthEnd() any   { return shanghaiMonthEnd() }
-func defaultUUID() any       { return uuid.NewString() }
+func defaultToday() any { return shanghaiToday() }
+func defaultNow() any   { return shanghaiNow().Format(time.RFC3339) }
+func defaultUUID() any  { return uuid.NewString() }
 
 type businessParam struct {
 	Name        string
@@ -511,14 +498,40 @@ func businessTools() []*businessTool {
 
 		// ---- 工作管理 ----
 		businessList(
-			"list_work_overview", "查询工作总览", "list_work_overview_api_v1_work_overview_get",
-			"查询工作任务总览（任务 + 参与人 + 工时），与网页端「工作总览」一致。"+
-				"start_date/end_date 缺省为本月（月初到月末，上海时区）；接口要求区间不超过上限，跨月请显式传日期。",
-			businessParam{Name: "start_date", Title: "开始日期", In: "query", Desc: "缺省本月 1 日", Schema: sDate(), DefaultFunc: defaultMonthStart},
-			businessParam{Name: "end_date", Title: "结束日期", In: "query", Desc: "缺省本月最后一天", Schema: sDate(), DefaultFunc: defaultMonthEnd},
-			pStr("keyword", "关键字", "query", ""),
-			businessParam{Name: "task_ids", Title: "任务 id", In: "query", JoinComma: true, Schema: sArray(map[string]any{"type": "integer"})},
-			businessParam{Name: "participants", Title: "参与人", In: "query", JoinComma: true, Schema: sArray(sString())},
+			"list_work_tasks", "查询工作任务", "list_work_tasks_api_v1_work_tasks_get",
+			"查询工作任务（一行一个任务，按开始时间倒序），与网页端「工作管理」一致；"+
+				"tags 传多个标签时命中任意一个即可，status 可传「未完成」或「已完成」。",
+			pStr("keyword", "关键字", "query", "工作任务 / 事项或步骤 / 责任人 / 备注 / 标签"),
+			businessParam{Name: "tags", Title: "标签", In: "query", JoinComma: true, Schema: sArray(sString())},
+			businessParam{Name: "status", Title: "完成状态", In: "query", Schema: sEnum("未完成", "已完成")},
+		),
+		businessCreate(
+			"create_work_task", "新增工作任务", "create_work_task_api_v1_work_tasks_post",
+			"新增一条工作任务；完成度 progress 是 0~100 的整数（100 = 已完成），tags 用英文逗号分隔，图片先上传再传 image_ids。",
+			pStrReq("name", "工作任务", "body", ""),
+			pStr("steps", "事项或步骤", "body", ""),
+			pDate("start_date", "开始时间", "body", ""),
+			pDate("end_date", "完成时间", "body", ""),
+			pStr("owner", "责任人", "body", "可多人，文本"),
+			businessParam{Name: "progress", Title: "完成度", In: "body", Desc: "0~100 的整数，100 = 已完成", Schema: sInt(), Default: 0, HasDefault: true},
+			pStr("remark", "备注", "body", ""),
+			pStr("tags", "标签", "body", "英文逗号分隔，如「安全,检修」"),
+			businessParam{Name: "image_ids", Title: "图片 id", In: "body", Schema: sArray(sString())},
+		),
+		businessBatch(
+			"update_work_task", "更新工作任务", "update_work_task_api_v1_work_tasks__task_id__patch",
+			"更新工作任务（只传要改的字段，例如只改 progress=100 表示完成）；task_id 与 version 必填，version 来自列表 / 详情返回（乐观锁）。",
+			businessParam{Name: "task_id", Title: "任务 id", In: "path", Required: true, Schema: sInt()},
+			businessParam{Name: "version", Title: "版本号", In: "body", Required: true, Desc: "列表 / 详情返回的 version（乐观锁）", Schema: sInt()},
+			pStr("name", "工作任务", "body", ""),
+			pStr("steps", "事项或步骤", "body", ""),
+			pDate("start_date", "开始时间", "body", ""),
+			pDate("end_date", "完成时间", "body", ""),
+			pStr("owner", "责任人", "body", "可多人，文本"),
+			businessParam{Name: "progress", Title: "完成度", In: "body", Desc: "0~100 的整数，100 = 已完成", Schema: sInt()},
+			pStr("remark", "备注", "body", ""),
+			pStr("tags", "标签", "body", "英文逗号分隔，如「安全,检修」"),
+			businessParam{Name: "image_ids", Title: "图片 id", In: "body", Schema: sArray(sString())},
 		),
 
 		// ---- 备忘录 ----

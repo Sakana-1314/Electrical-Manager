@@ -27,7 +27,7 @@ const MODULE_LABELS: Record<string, string> = {
   codes: '物料编码库',
   ledger: '台账',
   hazard: '隐患',
-  work: '工单',
+  work: '工作管理',
 }
 const permissionGroups = computed(() => {
   const groups = new Map<string, PermissionRead[]>()
