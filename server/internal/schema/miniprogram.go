@@ -66,13 +66,17 @@ type MiniProgramMaterialRead struct {
 }
 
 // MiniProgramInventoryItemRead 是小程序库存列表行。
+//
+// FirstInboundAt 是该物资最早一笔入库流水的时间（没有任何入库流水时为 null），
+// 供二级库 Pro 列表卡左上角展示「首次入库时间」。
 type MiniProgramInventoryItemRead struct {
-	UUID        string        `json:"uuid"`
-	Name        string        `json:"name"`
-	ModelSpec   string        `json:"model_spec"`
-	UnitName    string        `json:"unit_name"`
-	CurrentQty  jtype.Decimal `json:"current_qty"`
-	StockStatus string        `json:"stock_status"`
+	UUID           string        `json:"uuid"`
+	Name           string        `json:"name"`
+	ModelSpec      string        `json:"model_spec"`
+	UnitName       string        `json:"unit_name"`
+	CurrentQty     jtype.Decimal `json:"current_qty"`
+	StockStatus    string        `json:"stock_status"`
+	FirstInboundAt *AwareTime    `json:"first_inbound_at"`
 }
 
 // MiniProgramOutboundCreate 是扫码出库请求。material_uuid / occurred_at 先以原始 JSON 接收，

@@ -3,7 +3,7 @@ const { request } = require('../../utils/request');
 const { decorateStock } = require('../../utils/inventory');
 const { buildRedirectQuery } = require('../../utils/navigation');
 const { buildSharePath, isAllowedShareValue, readShareParams } = require('../../utils/share');
-const { hasLiteInventory, hasStandardInventory } = require('../../utils/features');
+const { resolveInventorySource } = require('../../utils/features');
 const { getMessages, t } = require('../../utils/i18n');
 const { importTimeLabel } = require('../../utils/time');
 const {
@@ -18,13 +18,9 @@ const {
 } = require('../../utils/filters');
 const Toast = toastModule.default || toastModule;
 
-/** 库存页数据源：两种二级库权限都在时优先标准库；只有 lite:read 才走精简接口。 */
-function inventoryUseLiteFlag() {
-  return !hasStandardInventory() && hasLiteInventory();
-}
-
 // 分享链接携带的搜索词与筛选（与页面 data 字段同名，便于直接回填）。
-const SHARE_PARAMS = ['keyword', 'stockStatus', 'name', 'modelSpec', 'stockQtyFrom', 'stockQtyTo'];
+// source 也带上：二级库 Pro / Lite 共用本页，分享回跳后仍落在同一套数据源。
+const SHARE_PARAMS = ['source', 'keyword', 'stockStatus', 'name', 'modelSpec', 'stockQtyFrom', 'stockQtyTo'];
 const PAGE_ROUTE = '/pages/inventory/inventory';
 // 库存状态是固定两档（空串表示不限，与筛选面板的「全部」一致）：非法值直接忽略。
 const STOCK_STATUSES = ['out_of_stock', 'low_stock'];
@@ -78,6 +74,8 @@ Page({
     filterSections: [],
     filtered: false,
     liteMode: false,
+    /** 页面标题：Pro / Lite 共用本页，按入口的数据源切换（见 resolveInventorySource）。 */
+    pageTitle: t('inventoryTitle'),
     page: 1,
     pageSize: 15,
     total: 0,
@@ -106,9 +104,9 @@ Page({
         wx.reLaunch({ url: `/pages/bind/bind?redirect=${redirect}` });
         return;
       }
-      // 二级库 Lite 是独立权限位：只有 lite:read、没有 warehouse:read 的用户走精简数据源
-      //（独立表 + 只读，只按关键字搜索，展示最近导入时间）。
-      const liteMode = inventoryUseLiteFlag();
+      // 二级库 Pro / Lite 共用本页：入口用 source 参数决定数据源（见 resolveInventorySource）。
+      // 没带 source 的旧链接按权限兜底：有 Pro 用 Pro，否则 Lite。
+      const liteMode = resolveInventorySource(shared.source) === 'lite';
 
       const filters = {
         stockStatus:
@@ -120,6 +118,7 @@ Page({
 
       this.setData({
         liteMode,
+        pageTitle: liteMode ? t('inventoryLiteTitle') : t('inventoryProTitle'),
         keyword: shared.keyword || '',
         fieldValues,
         filters,
@@ -246,6 +245,7 @@ Page({
         return;
       }
       // 精简条目无 uuid/库存状态：统一补 current_qty 与行键，仅展示数量。
+      // Pro 条目额外把首次入库时间格式化成卡片顶栏文案（没有入库流水时留空，顶栏该段不渲染）。
       const incoming = this.data.liteMode
         ? (result.items || []).map((item) => ({
             ...item,
@@ -281,6 +281,11 @@ Page({
     wx.navigateTo({
       url: `/pages/material-detail/material-detail?uuid=${uuid}`,
     });
+  },
+
+  /** 出入库记录：二级库 Pro 的流水页，入口挂在 Pro 库存页顶部工具条（Lite 不展示）。 */
+  openRecords() {
+    wx.navigateTo({ url: '/pages/records/records' });
   },
 
   showError(error) {

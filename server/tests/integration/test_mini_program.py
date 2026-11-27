@@ -597,7 +597,17 @@ async def test_mini_program_inventory_search_filters_pagination_and_detail(
         "unit_name",
         "current_qty",
         "stock_status",
+        "first_inbound_at",
     }
+    # 首次入库时间取该物资最早一笔入库流水（列表卡左上角展示）；没有入库流水的物资为 null。
+    # 按 uuid 建索引，避免展示名带别名后缀影响断言。
+    items_by_uuid = {
+        item["uuid"]: item
+        for item in first_page.json()["items"] + second_page.json()["items"]
+    }
+    assert items_by_uuid[low_stock["uuid"]]["first_inbound_at"] == "2026-07-26T01:00:00Z"
+    assert items_by_uuid[normal_stock["uuid"]]["first_inbound_at"] == "2026-07-26T01:00:00Z"
+    assert items_by_uuid[no_stock["uuid"]]["first_inbound_at"] is None
 
     indonesian_inventory = await client.get(
         "/api/v1/mini-program/inventory",

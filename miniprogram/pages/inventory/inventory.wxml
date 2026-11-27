@@ -1,4 +1,4 @@
-<app-navbar title="{{i18n.inventoryTitle}}" />
+<app-navbar title="{{pageTitle}}" />
 <view class="page-shell list-page">
   <view wx:if="{{lastImportAtLabel}}" class="import-time">{{i18n.importTimeLabel}}：{{lastImportAtLabel}}</view>
 
@@ -13,6 +13,13 @@
       bind:search="onSearchChange"
       bind:change="onFilterChange"
     />
+    <!-- 出入库记录：二级库 Pro 的能力（warehouse:read），入口挂在 Pro 库存页；
+         Lite 是 Excel 导入的只读台账、没有出入库流水，不展示。 -->
+    <view wx:if="{{!liteMode}}" class="toolbar-row">
+      <t-button theme="default" variant="outline" size="small" icon="time" bind:tap="openRecords">
+        {{i18n.viewRecords}}
+      </t-button>
+    </view>
   </view>
 
   <view wx:if="{{items.length}}" class="result-count">{{resultCount}}</view>
@@ -34,8 +41,10 @@
       data-uuid="{{item.uuid}}"
       bind:tap="openDetail"
     >
-      <view wx:if="{{item.stock_status}}" class="card-topline">
-        <view class="topline-right">
+      <view wx:if="{{item.first_inbound_label || item.stock_status}}" class="card-topline">
+        <!-- 左上角：首次入库时间（Pro 卡片；没有入库流水时这一格留空，Lite 卡片没有该字段） -->
+        <view wx:if="{{item.first_inbound_label}}" class="card-date">{{item.first_inbound_label}}</view>
+        <view wx:if="{{item.stock_status}}" class="topline-right">
           <t-tag theme="{{item.stock_status_theme}}" variant="light" size="small">
             {{item.stock_status_label}}
           </t-tag>

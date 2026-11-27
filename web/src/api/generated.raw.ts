@@ -4547,7 +4547,8 @@ export interface components {
          *       "model_spec": "CJX2-2510 AC220V",
          *       "unit_name": "个",
          *       "current_qty": "6",
-         *       "stock_status": "low_stock"
+         *       "stock_status": "low_stock",
+         *       "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *     }
          */
         MiniProgramInventoryItemRead: {
@@ -4565,6 +4566,11 @@ export interface components {
             /** Current Qty */
             current_qty: string;
             stock_status: components["schemas"]["MiniProgramStockStatus"];
+            /**
+             * First Inbound At
+             * @description 首次入库时间（最早一笔入库流水的时间；没有入库流水时为 null）
+             */
+            first_inbound_at?: string | null;
         };
         /**
          * MiniProgramLedgerItemDetailRead
@@ -7295,7 +7301,8 @@ export interface components {
          *           "model_spec": "CJX2-2510 AC220V",
          *           "unit_name": "个",
          *           "current_qty": "6",
-         *           "stock_status": "low_stock"
+         *           "stock_status": "low_stock",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "70df5052-4879-4c20-a553-13edd372115a",
@@ -7303,7 +7310,8 @@ export interface components {
          *           "model_spec": "F4-22",
          *           "unit_name": "个",
          *           "current_qty": "12",
-         *           "stock_status": "normal"
+         *           "stock_status": "normal",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "21539e9e-74be-4503-a864-4b95b3c6409b",
@@ -7311,7 +7319,8 @@ export interface components {
          *           "model_spec": "C65N-C16/2P",
          *           "unit_name": "个",
          *           "current_qty": "18",
-         *           "stock_status": "normal"
+         *           "stock_status": "normal",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "0f14e702-4b64-4180-a1e0-e3cd1c78a326",
@@ -7319,7 +7328,8 @@ export interface components {
          *           "model_spec": "DZ47LE-32 C32/2P",
          *           "unit_name": "个",
          *           "current_qty": "10",
-         *           "stock_status": "normal"
+         *           "stock_status": "normal",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "a8638528-7c2b-47d6-a538-c32ad8b652e5",
@@ -7327,7 +7337,8 @@ export interface components {
          *           "model_spec": "JRS1-25/Z 4-6A",
          *           "unit_name": "个",
          *           "current_qty": "14",
-         *           "stock_status": "normal"
+         *           "stock_status": "normal",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "daa28adf-c3dc-4172-a257-ca92a2743d4b",
@@ -7335,7 +7346,8 @@ export interface components {
          *           "model_spec": "MY4N-GS DC24V",
          *           "unit_name": "个",
          *           "current_qty": "7",
-         *           "stock_status": "low_stock"
+         *           "stock_status": "low_stock",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "16373242-dabc-4d25-ad1c-b4838854c29a",
@@ -7343,7 +7355,8 @@ export interface components {
          *           "model_spec": "ST3PA-B AC220V",
          *           "unit_name": "个",
          *           "current_qty": "11",
-         *           "stock_status": "normal"
+         *           "stock_status": "normal",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         },
          *         {
          *           "uuid": "678854ac-1345-4126-a02d-ff410b8aeb3c",
@@ -7351,7 +7364,8 @@ export interface components {
          *           "model_spec": "RT18-32 10A",
          *           "unit_name": "个",
          *           "current_qty": "2",
-         *           "stock_status": "low_stock"
+         *           "stock_status": "low_stock",
+         *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
          *         }
          *       ],
          *       "page": 1,
@@ -22791,7 +22805,8 @@ export interface operations {
                      *           "model_spec": "CJX2-2510 AC220V",
                      *           "unit_name": "个",
                      *           "current_qty": "6",
-                     *           "stock_status": "low_stock"
+                     *           "stock_status": "low_stock",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "70df5052-4879-4c20-a553-13edd372115a",
@@ -22799,7 +22814,8 @@ export interface operations {
                      *           "model_spec": "F4-22",
                      *           "unit_name": "个",
                      *           "current_qty": "12",
-                     *           "stock_status": "normal"
+                     *           "stock_status": "normal",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "21539e9e-74be-4503-a864-4b95b3c6409b",
@@ -22807,7 +22823,8 @@ export interface operations {
                      *           "model_spec": "C65N-C16/2P",
                      *           "unit_name": "个",
                      *           "current_qty": "18",
-                     *           "stock_status": "normal"
+                     *           "stock_status": "normal",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "0f14e702-4b64-4180-a1e0-e3cd1c78a326",
@@ -22815,7 +22832,8 @@ export interface operations {
                      *           "model_spec": "DZ47LE-32 C32/2P",
                      *           "unit_name": "个",
                      *           "current_qty": "10",
-                     *           "stock_status": "normal"
+                     *           "stock_status": "normal",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "a8638528-7c2b-47d6-a538-c32ad8b652e5",
@@ -22823,7 +22841,8 @@ export interface operations {
                      *           "model_spec": "JRS1-25/Z 4-6A",
                      *           "unit_name": "个",
                      *           "current_qty": "14",
-                     *           "stock_status": "normal"
+                     *           "stock_status": "normal",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "daa28adf-c3dc-4172-a257-ca92a2743d4b",
@@ -22831,7 +22850,8 @@ export interface operations {
                      *           "model_spec": "MY4N-GS DC24V",
                      *           "unit_name": "个",
                      *           "current_qty": "7",
-                     *           "stock_status": "low_stock"
+                     *           "stock_status": "low_stock",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "16373242-dabc-4d25-ad1c-b4838854c29a",
@@ -22839,7 +22859,8 @@ export interface operations {
                      *           "model_spec": "ST3PA-B AC220V",
                      *           "unit_name": "个",
                      *           "current_qty": "11",
-                     *           "stock_status": "normal"
+                     *           "stock_status": "normal",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         },
                      *         {
                      *           "uuid": "678854ac-1345-4126-a02d-ff410b8aeb3c",
@@ -22847,7 +22868,8 @@ export interface operations {
                      *           "model_spec": "RT18-32 10A",
                      *           "unit_name": "个",
                      *           "current_qty": "2",
-                     *           "stock_status": "low_stock"
+                     *           "stock_status": "low_stock",
+                     *           "first_inbound_at": "2026-06-05T09:10:00+08:00"
                      *         }
                      *       ],
                      *       "page": 1,

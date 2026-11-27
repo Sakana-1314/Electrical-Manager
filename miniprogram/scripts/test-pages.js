@@ -545,6 +545,59 @@ async function run() {
   page = await mountPage('pages/inventory/inventory.js', { stockStatus: 'weird' });
   assert(page.data.filters.stockStatus === '', 'invalid shared stock status must fall back to all');
 
+  // 数据源由入口的 source 参数决定：Pro / Lite 同时持有时两个入口都能进各自的数据源。
+  requests.length = 0;
+  page = await mountPage('pages/inventory/inventory.js', { source: 'lite' });
+  assert(page.data.liteMode === true, 'source=lite must use the Lite data source');
+  assert(page.data.pageTitle === i18n.t('inventoryLiteTitle'), 'Lite source must switch the page title');
+  assert(
+    requests.some((item) => item.url === '/mini-program/lite-inventory'),
+    'source=lite must call the lite inventory endpoint even when warehouse:read exists',
+  );
+  assert(
+    !requests.some((item) => item.url === '/mini-program/inventory'),
+    'source=lite must not call the Pro inventory endpoint',
+  );
+
+  requests.length = 0;
+  page = await mountPage('pages/inventory/inventory.js', { source: 'pro' });
+  assert(page.data.liteMode === false, 'source=pro must use the Pro data source');
+  assert(page.data.pageTitle === i18n.t('inventoryProTitle'), 'Pro source must switch the page title');
+  assert(
+    requests.some((item) => item.url === '/mini-program/inventory'),
+    'source=pro must call the Pro inventory endpoint',
+  );
+
+  // 没带 source 的旧链接按权限兜底：同时持有两套权限时用 Pro。
+  page = await mountPage('pages/inventory/inventory.js');
+  assert(page.data.liteMode === false, 'legacy links must fall back to Pro when available');
+
+  // 首次入库时间：Pro 卡片左上角显示格式化后的时间，空值不渲染。
+  const { decorateStock } = require(path.join(root, 'utils/inventory.js'));
+  const decorated = decorateStock({
+    stock_status: 'normal',
+    first_inbound_at: '2026-06-05T09:10:00Z',
+  });
+  assert(
+    /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/.test(decorated.first_inbound_label),
+    'Pro inventory rows must format the first inbound time',
+  );
+  assert(
+    decorateStock({ stock_status: 'normal', first_inbound_at: null }).first_inbound_label === '',
+    'missing first inbound time must stay empty',
+  );
+
+  // 出入库记录入口挂在 Pro 库存页（Lite 不展示），不再放在个人信息页。
+  const originalInventoryNavigate = global.wx.navigateTo;
+  const inventoryNavigated = [];
+  global.wx.navigateTo = (options) => inventoryNavigated.push(options.url);
+  page.openRecords();
+  global.wx.navigateTo = originalInventoryNavigate;
+  assert(
+    inventoryNavigated.pop() === '/pages/records/records',
+    'the Pro inventory page must open the outbound records page',
+  );
+
   // ===== 华星页 =====
   global.__cachedResponse = { purchase_departments: ['设备管理部'], purchasers: ['吴冰'] };
   requests.length = 0;
@@ -701,6 +754,11 @@ async function run() {
   void home.onLoad();
   await waitFor(() => home.data.featureReady || home.data.loadFailed, 'home session');
   assert(home.data.featureReady === true, 'home entries must be ready');
+  // 同时持有二级库 Pro / Lite 权限：两个入口都展示（不再只保留 Pro）。
+  assert(
+    home.data.entryVisible.inventoryPro === true && home.data.entryVisible.inventoryLite === true,
+    'both warehouse entries must show when both permissions exist',
+  );
   assert(
     home.data.scanDescription === i18n.t('scanDescription'),
     'outbound permission must keep the outbound scan description',
@@ -752,6 +810,10 @@ async function run() {
   void liteHome.onLoad();
   await waitFor(() => liteHome.data.featureReady || liteHome.data.loadFailed, 'home session (lite only)');
   assert(
+    liteHome.data.entryVisible.inventoryLite === true && liteHome.data.entryVisible.inventoryPro === false,
+    'lite-only users must see only the Lite warehouse entry',
+  );
+  assert(
     liteHome.data.scanDescription === i18n.t('scanDescriptionGeneric'),
     'users without standard inventory must see the generic scan description',
   );
@@ -793,9 +855,10 @@ async function run() {
     page.data.user && page.data.user.display_name === '张三',
     'profile must read the user from globalData session',
   );
+  // 出入库记录入口已挪到二级库 Pro 库存页，个人信息页不再提供。
   assert(
-    page.data.recordsVisible === true,
-    'standard warehouse read permission must keep the records entry',
+    page.data.recordsVisible === undefined && page.openRecords === undefined,
+    'the outbound records entry must not live on the profile page',
   );
   assert(page.data.currentProjectLabel === i18n.t('projectNotSelected'), 'project label falls back to 未选择');
   // 没有可选项目时打开选择器只提示，不弹空选择器
