@@ -249,7 +249,7 @@ web/src/
 
 
 ### 公共组件清单
-`web/src/components/` 下 35 个 `.vue`（不含 `.spec.ts`）：
+`web/src/components/` 下 32 个 `.vue`（不含 `.spec.ts`）：
 
 | 组件 | 职责 | 关键 props / emits |
 | --- | --- | --- |
