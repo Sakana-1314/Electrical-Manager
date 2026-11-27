@@ -17,6 +17,8 @@ declare module 'vue-router' {
     permission?: Permission
     public?: boolean
     keepAlive?: boolean
+    /** 不进顶部标签页（登录、分享等公共页；表单页由 keepAlive: false 之外的方式排除） */
+    noTab?: boolean
   }
 }
 
@@ -85,14 +87,15 @@ const router = createRouter({
           name: 'inbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'INBOUND' },
-          meta: { title: '入库', parent: '二级库 Pro', permission: 'warehouse:write' },
+          // 单据页有离开确认：不进标签页，避免切标签触发「放弃未提交的单据」弹窗
+          meta: { title: '入库', parent: '二级库 Pro', permission: 'warehouse:write', noTab: true },
         },
         {
           path: 'warehouse/outbound',
           name: 'outbound',
           component: () => import('@/views/warehouse/OperationEditorView.vue'),
           props: { operationType: 'OUTBOUND' },
-          meta: { title: '出库', parent: '二级库 Pro', permission: 'warehouse:write' },
+          meta: { title: '出库', parent: '二级库 Pro', permission: 'warehouse:write', noTab: true },
         },
         {
           path: 'warehouse/stock',

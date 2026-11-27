@@ -19,6 +19,7 @@ import {
   isProjectMenuKey,
   projectIdFromMenuKey,
 } from '@/layouts/projectMenu'
+import { resetAppTabs } from '@/composables/useAppTabs'
 
 defineProps<{
   /** 侧栏折叠时只保留用户图标；移动端抽屉与展开态显示用户名与权限摘要。 */
@@ -114,6 +115,8 @@ function logout() {
   auth.logout()
   // 退出登录同时清掉项目选择：同一标签页换账号登录后要重新解析当前项目
   project.clear()
+  // 标签页也全部作废：换账号后不能还留着上一个账号打开的页面（含权限不同的菜单）
+  resetAppTabs()
   void router.push({ name: 'login' })
 }
 </script>
