@@ -108,15 +108,16 @@ function onAuxClick(event: MouseEvent, key: string) {
 .app-tabs::-webkit-scrollbar {
   display: none;
 }
-/* 扁平标签：无边框无圆角，激活态用一条 2px 下划线 + 深色文字，不占纵向留白 */
+/* 扁平标签：无边框无圆角，激活态只做颜色变化（主题色文字 + 浅主题色底），
+   不画下划线、不加边框，纵向仍撑满导航条 */
 .app-tab {
-  position: relative;
   display: flex;
   flex: none;
   width: calc(var(--app-tab-text-width) + var(--app-tab-decoration-width));
   align-items: center;
   gap: 4px;
   padding: 0 4px 0 12px;
+  border-radius: 6px;
   color: var(--color-text-muted);
   font-size: var(--app-tab-font-size);
   line-height: 1;
@@ -125,7 +126,7 @@ function onAuxClick(event: MouseEvent, key: string) {
     background-color 0.16s ease,
     color 0.16s ease;
 }
-.app-tab:hover {
+.app-tab:not(.is-active):hover {
   background: var(--color-panel);
   color: var(--color-text);
 }
@@ -134,17 +135,9 @@ function onAuxClick(event: MouseEvent, key: string) {
   outline-offset: -2px;
 }
 .app-tab.is-active {
-  color: var(--color-text-strong);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-weight: 600;
-}
-.app-tab.is-active::after {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  background: var(--color-primary);
-  content: '';
 }
 /* 单据页的临时签：与标签同宽同高，不可关闭、不参与标签列表 */
 .app-tab--current {
