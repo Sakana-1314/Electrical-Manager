@@ -5,6 +5,7 @@ const {
   ensureProject,
   getEnabledProjects,
   getCurrentProject,
+  getCurrentProjectId,
   switchProject,
 } = require('../../utils/project');
 const { uploadTime: buildUploadTime } = require('../../config/build-info');
@@ -169,27 +170,45 @@ Page({
   },
 
   /**
-   * 进入网页版：用当前登录态换一次性票据，再半屏唤起**御坂学习中转小程序**的 web 页展示。
+   * 进入网页版：把登录响应里的网页端 JWT（`web_access_token`）直接交给 `/web-open`，不再额外换票。
    *
-   * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版与接口同域、
-   * 不在本小程序的业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意
-   * 已配置域名的 H5，因此用 `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带票据的
-   * `/web-open` 地址，网页兑换票据后即用本人身份登录。
+   * 小程序登录时后端同时下发两枚令牌：小程序自己用的 `mini_program` 令牌，以及给网页端用的
+   * `management_access` 令牌（与网页密码登录同款、同一用户与权限位）。网页拿到后者后直接当
+   * 管理端登录态用（用户信息仍由网页 `/auth/me` 拉取）。网页地址也来自登录响应
+   * （`web_base_url`，后端 `APP_WEB_BASE_URL`），所以这里不需要为了拿地址再请求一次接口。
    *
-   * 票据 2 分钟有效、只能兑换一次；`openEmbeddedMiniProgram` 失败（未授权 / 目标小程序不可用）时
-   * 回落到本站 `pages/web-view`（业务域名已配置时同样可用），仍失败则提示。
+   * 兼容：后端未配置 `APP_WEB_BASE_URL`、或旧版登录响应没有 `web_access_token` / `web_base_url`
+   * 时，回退到 `/auth/web-open/tickets` 一次性票据，票据 2 分钟有效、只能兑换一次。
+   *
+   * 为什么走中转小程序：`web-view` 只能加载本小程序业务域名下的页面，而网页版不在本小程序的
+   * 业务域名清单里；御坂学习小程序（`shareAppId`）专门用 `web-view` 承载任意已配置域名的 H5，
+   * 因此用 `wx.openEmbeddedMiniProgram` 半屏打开它，由它加载带 token 的 `/web-open` 地址。
+   * `openEmbeddedMiniProgram` 失败时回落到本站 `pages/web-view`，仍失败则提示。
    */
   async openWebVersion() {
     if (this.data.openingWeb) return;
     this.setData({ openingWeb: true });
     try {
-      const result = await request({
-        url: '/auth/web-open/tickets',
-        method: 'POST',
-        data: { path: '/' },
-      });
-      if (!result || !result.url) throw new Error(t('webOpenFailed'));
-      const webPath = `/packages/static-package/pages/web/web?url=${encodeURIComponent(result.url)}`;
+      const session = await getApp().globalData.authPromise;
+      const webToken = String((session && session.web_access_token) || '');
+      const webBaseUrl = String((session && session.web_base_url) || '').replace(/\/+$/, '');
+      let url = '';
+      if (webToken && webBaseUrl) {
+        const projectId = getCurrentProjectId();
+        const query = [`token=${encodeURIComponent(webToken)}`, 'path=/'];
+        if (projectId) query.push(`project_id=${projectId}`);
+        url = `${webBaseUrl}/web-open?${query.join('&')}`;
+      } else {
+        // 兼容旧后端 / 未配置网页地址：仍用一次性票据换拼好的地址。
+        const result = await request({
+          url: '/auth/web-open/tickets',
+          method: 'POST',
+          data: { path: '/' },
+        });
+        if (!result || !result.url) throw new Error(t('webOpenFailed'));
+        url = result.url;
+      }
+      const webPath = `/packages/static-package/pages/web/web?url=${encodeURIComponent(url)}`;
       const opened = await new Promise((resolve) => {
         wx.openEmbeddedMiniProgram({
           appId: WEB_VERSION_APP_ID,
@@ -201,9 +220,9 @@ Page({
         });
       });
       if (opened) return;
-      // 中转小程序不可用：回落到本站 web-view 页（票据仍有效，页面自己会再换一次）。
+      // 中转小程序不可用：回落到本站 web-view 页（token / 票据仍在有效期内）。
       wx.navigateTo({
-        url: `/pages/web-view/web-view?url=${encodeURIComponent(result.url)}`,
+        url: `/pages/web-view/web-view?url=${encodeURIComponent(url)}`,
       });
     } catch (error) {
       Toast({

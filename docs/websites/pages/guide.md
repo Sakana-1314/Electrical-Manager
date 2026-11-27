@@ -41,6 +41,7 @@ docker compose up -d
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` | HXNI 电气无忧小程序 AppID，多个按相同顺序用英文逗号分隔。 |
 | `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 与上一项一一对应，只能保存在服务端。 |
 | `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | 小程序码环境：`trial` / `release`（默认 `release`）；AppID 取上面第一个已配置项。 |
+| `APP_WEB_BASE_URL` | 网页端站点地址（如 `https://spare.example.com`）；小程序「进入网页版」直接拼 `/web-open?token=…`，留空则回退一次性票据。 |
 | `APP_FEISHU_WEBHOOK_ENABLED` / `APP_FEISHU_WEBHOOK_URL` / `APP_FEISHU_WEBHOOK_SECRET` / `APP_FEISHU_WEBHOOK_EVENTS` | 飞书机器人推送开关、地址、签名密钥与订阅事件（英文逗号分隔：`stock.outbound.created,stock.inbound.created,mini_program.user.bound`）。 |
 | `APP_DINGTALK_WEBHOOK_ENABLED` / `APP_DINGTALK_WEBHOOK_URL` / `APP_DINGTALK_WEBHOOK_SECRET` / `APP_DINGTALK_WEBHOOK_EVENTS` | 钉钉机器人推送，字段同飞书。 |
 | `BACKEND_PORT` / `FRONTEND_PORT` | 宿主机映射端口，默认 8000 / 8080。 |

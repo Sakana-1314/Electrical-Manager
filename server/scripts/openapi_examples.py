@@ -1178,10 +1178,12 @@ def _build_schema_examples() -> dict[str, Any]:
         "MiniProgramWechatLoginRequest": {"code": "0a3Fk2ll2xQnkg4YzQml2aGkQp3Fk2lJ", "app_id": _MINI_PROGRAM_APP_IDS[0]},
         "MiniProgramLoginResponse": {
             "access_token": _ACCESS_TOKEN,
+            "web_access_token": _ACCESS_TOKEN,
             "registration_token": None,
             "token_type": "bearer",
             "user": mini,
             "requires_profile": False,
+            "web_base_url": "https://electrical.example.com",
         },
         "Page_MiniProgramUserRead_": _page(_MINI_PROGRAM_USER_ROWS),
         # —— 二级库物资与库存 ——

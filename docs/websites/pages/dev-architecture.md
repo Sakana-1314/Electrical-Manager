@@ -79,6 +79,7 @@ web/src/
 ├── layouts/appearanceMenu.ts 用户菜单「外观」二级菜单与档位判定（纯逻辑，有单测）
 ├── layouts/backendMenu.ts  用户菜单「线路」二级菜单：多后端地址切换、线路显示名与 key 解析（纯逻辑，有单测）
 ├── layouts/mainMenu.ts     侧边菜单一级项拼装：按权限位与二级库模式过滤（纯逻辑，有单测）
+├── layouts/menuAccordion.ts 侧边菜单手风琴：最多展开一个分组，进入页面时自动展开当前页所在组（纯逻辑，有单测）
 ├── router/index.ts         路由表 + beforeEach 守卫
 ├── test/setup.ts           vitest setup
 ├── 其余目录与文件分见下文清单：api/（模块表）、components/、composables/、config/、constants/、
@@ -97,7 +98,7 @@ web/src/
 | 路径 | name | 组件文件 | 鉴权 | 职责 |
 | --- | --- | --- | --- | --- |
 | `/login` | `login` | `views/LoginView.vue` | 无（公开 `meta.public`） | 登录页：默认「小程序扫码」页签（小程序码 + 轮询），另一个页签保留账号密码登录；扫码会话成功后在原页写入登录态并支持 `?redirect=` 回跳 |
-| `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：用一次性票据（`/auth/web-open/redeem`，2 分钟、只能兑换一次）换回登录令牌并写入本地会话与当前项目，跳到落地路由；无效时给出「用账号密码登录」兜底 |
+| `/web-open` | `web-open` | `views/WebOpenView.vue` | 无（公开 `meta.public`） | 小程序「进入网页版」：优先直接读取 `?token=`（小程序登录响应下发的 `web_access_token`，即 management_access 网页令牌），写入本地会话并调 `/auth/me` 补齐用户后跳落地路由；兼容旧链路的 `?ticket=`（`/auth/web-open/redeem`，2 分钟、只能兑换一次）。令牌读取后立即从地址栏清除；无效时给出「用账号密码登录」兜底 |
 | `/` | — | `layouts/AppLayout.vue` | 需登录 | 布局壳：顶部标签栏（`layouts/AppTabs.vue`，也是导航条本身）+ 侧边菜单 + 左下角用户菜单（移动端抽屉） |
 | `/dashboard` | `dashboard` | `views/dashboard/DashboardView.vue` | 需登录 | 工作台：按模块（二级库 / 二级库 Lite / 申购 / 隐患）分组的可点击指标卡（`inventoryApi.summary` + `hazardApi.stats`，模块卡片跟随读权限位，标准 / 二级库 Lite 可同时出现）、按写权限出现的快捷操作、低库存提醒与最近出入库两栏；各块独立请求、独立失败 |
 | `/memos` | `memos` | `views/MemosView.vue` | 需登录 | 备忘录：左侧列表 + 单编辑区，保存才提交、IndexedDB 草稿、字号偏好（浏览器本地，CSS 变量作用于编辑区） |
@@ -837,6 +838,7 @@ flowchart LR
 | `LogDir` | `APP_LOG_DIR` | `string` | `<server>/data/logs` | 日志目录 |
 | `LogBackupCount` | `APP_LOG_BACKUP_COUNT` | `int` | `90` | `≥1`，保留的历史日志文件数 |
 | `MaxImageBytes` | `APP_MAX_IMAGE_BYTES` | `int64` | `10 * 1024 * 1024` | 图片上传上限 |
+| `WebBaseURL` | `APP_WEB_BASE_URL` | `string` | 空 | 网页端站点地址（去掉末尾 `/`）；作为小程序登录响应的 `web_base_url` 返回，供「进入网页版」直接拼 `/web-open?token=…`。为空时小程序回退到一次性票据 |
 | `CORSOrigins` | `APP_CORS_ORIGINS` | `[]string` | 空 | 逗号分隔字符串（如 `https://a.example.com,.example.com`），空表示不限制 |
 | `CORSAllowCredentials` | `APP_CORS_ALLOW_CREDENTIALS` | `bool` | `true` | 是否回 `Access-Control-Allow-Credentials`；接受 `1/0`、`true/false`、`yes/no`、`on/off` 等写法 |
 | `CORSMaxAge` | `APP_CORS_MAX_AGE` | `int` | `86400` | `≥0`，预检缓存秒数 |
@@ -857,6 +859,7 @@ flowchart LR
 | `APP_DATABASE_URL` | `postgresql+asyncpg://user:pass@host:5432/spare_parts` |
 | `APP_JWT_SECRET` | `replace-with-at-least-32-random-characters` |
 | `APP_ACCESS_TOKEN_MINUTES` / `APP_REFRESH_TOKEN_DAYS` | `30` / `7` |
+| `APP_WEB_BASE_URL` | 网页端站点地址，如 `https://electrical.example.com`；小程序「进入网页版」直接拼 `/web-open?token=…`，留空则回退一次性票据 |
 | `APP_CORS_ALLOW_CREDENTIALS` / `APP_CORS_MAX_AGE` | `true` / `86400` |
 | `APP_WECHAT_MINI_PROGRAM_APP_ID` / `APP_WECHAT_MINI_PROGRAM_APP_SECRET` | 多个小程序按相同顺序逗号分隔 |
 | `APP_WECHAT_MINI_PROGRAM_CODE_ENV` | `trial` / `release`，默认 `release` |

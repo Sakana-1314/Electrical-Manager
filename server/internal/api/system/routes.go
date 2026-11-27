@@ -25,8 +25,9 @@ func Register(r *web.Router) {
 	a.POST("/qr-sessions", createQrSession)
 	a.GET("/qr-sessions/{session_id}/code", qrSessionCode)
 	a.GET("/qr-sessions/{session_id}", pollQrSession)
-	// 小程序「进入网页版」：小程序换一次性票据（登录用户），网页兑换票据换登录令牌（匿名）。
-	a.POST("/web-open/tickets", createWebOpenTicket, auth.CurrentUser)
+	// 小程序「进入网页版」：新版本直接把本地 JWT 交给网页；这里保留一次性票据接口，
+	// 供未升级的小程序或未配置 APP_WEB_BASE_URL 的部署回退（只接受小程序令牌）。
+	a.POST("/web-open/tickets", createWebOpenTicket, auth.MiniProgramUser)
 	a.POST("/web-open/redeem", redeemWebOpenTicket)
 
 	r.GET("/users", listUsers, auth.SystemAdmin)

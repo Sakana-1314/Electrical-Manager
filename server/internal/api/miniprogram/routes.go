@@ -4,8 +4,10 @@ package miniprogram
 import (
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/auth"
+	"github.com/Sakana-1314/Electrical-Manager/server/internal/config"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/domain"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/schema"
 	"github.com/Sakana-1314/Electrical-Manager/server/internal/security"
@@ -96,6 +98,12 @@ func acceptLanguage(c *web.Ctx) *string {
 
 // ---------------- 登录 / 建档 ----------------
 
+// webBaseURL 网页端站点地址：登录响应带回给小程序，用于直接拼 `/web-open?token=…`。
+// 未配置时返回空串，小程序回退到一次性票据接口。
+func webBaseURL() string {
+	return strings.TrimRight(strings.TrimSpace(config.S.WebBaseURL), "/")
+}
+
 func wechatLogin(c *web.Ctx) error {
 	p := c.Params()
 	var data schema.MiniProgramWechatLoginRequest
@@ -109,11 +117,24 @@ func wechatLogin(c *web.Ctx) error {
 	}
 	if u == nil {
 		token := security.CreateMiniProgramRegistrationToken(appID, openid)
-		return c.OK(schema.MiniProgramLoginResponse{RegistrationToken: &token, TokenType: "bearer", RequiresProfile: true})
+		return c.OK(schema.MiniProgramLoginResponse{
+			RegistrationToken: &token,
+			TokenType:         "bearer",
+			RequiresProfile:   true,
+			WebBaseURL:        webBaseURL(),
+		})
 	}
 	token := security.CreateMiniProgramAccessToken(u.ID)
+	webToken := security.CreateAccessToken(u.ID)
 	read := svc.UserRead(c.DB, u)
-	return c.OK(schema.MiniProgramLoginResponse{AccessToken: &token, TokenType: "bearer", User: &read, RequiresProfile: false})
+	return c.OK(schema.MiniProgramLoginResponse{
+		AccessToken:     &token,
+		WebAccessToken:  &webToken,
+		TokenType:       "bearer",
+		User:            &read,
+		RequiresProfile: false,
+		WebBaseURL:      webBaseURL(),
+	})
 }
 
 func me(c *web.Ctx) error {
@@ -149,8 +170,16 @@ func createProfile(c *web.Ctx) error {
 		return err
 	}
 	t := security.CreateMiniProgramAccessToken(u.ID)
+	webToken := security.CreateAccessToken(u.ID)
 	read := svc.UserRead(c.DB, u)
-	return c.OK(schema.MiniProgramLoginResponse{AccessToken: &t, TokenType: "bearer", User: &read, RequiresProfile: false})
+	return c.OK(schema.MiniProgramLoginResponse{
+		AccessToken:     &t,
+		WebAccessToken:  &webToken,
+		TokenType:       "bearer",
+		User:            &read,
+		RequiresProfile: false,
+		WebBaseURL:      webBaseURL(),
+	})
 }
 
 // ---------------- 二级库 ----------------

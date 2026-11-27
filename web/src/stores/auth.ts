@@ -30,10 +30,39 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('auth_user', JSON.stringify(response.user))
   }
 
+  /**
+   * 小程序直传网页令牌登录：小程序登录响应里的 `web_access_token` 就是 management_access
+   * （与网页密码登录同款、同一用户与权限位），直接写入本地会话即可。
+   * 它没有配套 refresh token，必须清掉上一位网页用户可能留下的续期令牌，避免 401 时续到别人会话；
+   * 用户信息（含权限位）仍以 /auth/me 为准，不能信任 URL 里的任何用户资料。
+   */
+  async function adoptAccessToken(accessToken: string) {
+    token.value = accessToken
+    user.value = null
+    localStorage.setItem('access_token', accessToken)
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('auth_user')
+    try {
+      user.value = await authApi.me({ skipAuthRedirect: true })
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
+    } catch (error) {
+      // 令牌无效 / 过期：不要留下半截会话，调用方负责提示回小程序重试。
+      token.value = null
+      user.value = null
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('auth_user')
+      throw error
+    }
+  }
+
   async function refresh() {
     if (!token.value) return
-    user.value = await authApi.me()
-    localStorage.setItem('auth_user', JSON.stringify(user.value))
+    // /web-open 会直接换掉 access_token：启动时发出的旧请求回来晚于换令牌时，不能覆盖新用户。
+    const expected = token.value
+    const fresh = await authApi.me()
+    if (token.value !== expected) return
+    user.value = fresh
+    localStorage.setItem('auth_user', JSON.stringify(fresh))
   }
 
   function logout() {
@@ -44,5 +73,15 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_user')
   }
 
-  return { user, token, isAuthenticated, can, login, adoptSession, refresh, logout }
+  return {
+    user,
+    token,
+    isAuthenticated,
+    can,
+    login,
+    adoptSession,
+    adoptAccessToken,
+    refresh,
+    logout,
+  }
 })

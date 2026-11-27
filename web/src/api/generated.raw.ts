@@ -105,8 +105,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 换取进入网页版的一次性票据
-         * @description 小程序用登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
+         * 换取进入网页版的一次性票据（兼容接口）
+         * @description 兼容接口：小程序通常把本地 JWT 直接带到 /web-open?token=…；仅在未配置 APP_WEB_BASE_URL 或旧版客户端时，用小程序登录令牌换一张一次性票据（2 分钟），再用返回的 url 在半屏 web-view 里打开网页版。
          */
         post: operations["create_web_open_ticket_api_v1_auth_web_open_tickets_post"];
         delete?: never;
@@ -125,8 +125,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 用票据换取网页登录令牌
-         * @description 网页 /web-open 页用小程序给的票据换回登录令牌（一次性，兑换后票据立即失效）。
+         * 用票据换取网页登录令牌（兼容接口）
+         * @description 兼容接口：网页 /web-open 页在 ?ticket= 链路上用票据换回登录令牌（一次性，兑换后票据立即失效）；新链路直接使用 ?token=（小程序本地 JWT）。
          */
         post: operations["redeem_web_open_ticket_api_v1_auth_web_open_redeem_post"];
         delete?: never;
@@ -4700,6 +4700,7 @@ export interface components {
          * MiniProgramLoginResponse
          * @example {
          *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+         *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
          *       "registration_token": null,
          *       "token_type": "bearer",
          *       "user": {
@@ -4720,7 +4721,8 @@ export interface components {
          *           "work:read"
          *         ]
          *       },
-         *       "requires_profile": false
+         *       "requires_profile": false,
+         *       "web_base_url": "https://electrical.example.com"
          *     }
          */
         MiniProgramLoginResponse: {
@@ -4728,6 +4730,8 @@ export interface components {
             access_token?: string | null;
             /** Registration Token */
             registration_token?: string | null;
+            /** Web Access Token */
+            web_access_token?: string | null;
             /**
              * Token Type
              * @default bearer
@@ -4737,6 +4741,11 @@ export interface components {
             user?: components["schemas"]["MiniProgramUserRead"] | null;
             /** Requires Profile */
             requires_profile: boolean;
+            /**
+             * Web Base Url
+             * @default
+             */
+            web_base_url: string;
         };
         /**
          * MiniProgramMaterialCodeRead
@@ -21420,6 +21429,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+                     *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
                      *       "registration_token": null,
                      *       "token_type": "bearer",
                      *       "user": {
@@ -21440,7 +21450,8 @@ export interface operations {
                      *           "work:read"
                      *         ]
                      *       },
-                     *       "requires_profile": false
+                     *       "requires_profile": false,
+                     *       "web_base_url": "https://electrical.example.com"
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramLoginResponse"];
@@ -21913,6 +21924,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
+                     *       "web_access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImV4cCI6MTc1Nzc2MDYwMH0.7Ql3Yk8mZ0dW1nXvT4bC2rP6sJ9aH5eF1uG0iO3kM8Q",
                      *       "registration_token": null,
                      *       "token_type": "bearer",
                      *       "user": {
@@ -21933,7 +21945,8 @@ export interface operations {
                      *           "work:read"
                      *         ]
                      *       },
-                     *       "requires_profile": false
+                     *       "requires_profile": false,
+                     *       "web_base_url": "https://electrical.example.com"
                      *     }
                      */
                     "application/json": components["schemas"]["MiniProgramLoginResponse"];

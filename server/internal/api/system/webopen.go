@@ -1,9 +1,12 @@
 package system
 
-// 小程序「进入网页版」：一次性登录票据的签发与兑换。
+// 小程序「进入网页版」：一次性登录票据的签发与兑换（兼容链路）。
 //
-// 小程序用登录令牌换一张票据（2 分钟、一次性），再用票据拼 web-view 地址打开网页；
-// 网页带票据进入 `/web-open` 页，用票据换回 access + refresh 令牌并进入系统。
+// 新链路：小程序把登录响应里的 `management_access` 网页令牌（`web_access_token`）
+// 直接带到 `/web-open?token=…`；网页调 `/auth/me` 补齐用户即可，无需换票。
+// 小程序自己的 `mini_program` 令牌仍然只能访问 `/mini-program/*`，不扩大管理端入口。
+// 这里保留票据接口，供未升级的小程序或未配置 APP_WEB_BASE_URL 的部署回退：
+// 小程序用登录令牌换一张票据（2 分钟、一次性），网页带票据兑换 access + refresh 令牌。
 // 票据只存在进程内存（service/webopen），网页侧兑换后立刻失效。
 
 import (
