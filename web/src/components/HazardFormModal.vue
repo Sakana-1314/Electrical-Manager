@@ -314,7 +314,7 @@ function confirmDelete(): void {
         size="small"
         :disabled="loading"
       >
-        <n-grid :cols="2" :x-gap="20">
+        <n-grid :cols="2" :x-gap="20" :y-gap="20">
           <n-grid-item>
             <n-form-item label="检查区域" path="inspectionArea">
               <n-input v-model:value="form.inspectionArea" placeholder="默认：华星现场" />

@@ -189,4 +189,17 @@ describe('弹窗统一排版接线', () => {
       })
     expect(offenders, `弹窗组件仍有字面排版值：${offenders.join(' / ')}`).toEqual([])
   })
+
+  it('旧版 n-grid 双列表单保留 20px 行距', () => {
+    // n-grid 每个字段都是 n-grid-item 的唯一子元素，会命中 `.n-form-item:last-child` 丢掉下边距；
+    // 不给栅格行距就会所有行贴在一起、浮在框线上方的标签压到上一行的校验提示（工作/隐患/台账实测）。
+    const dir = `${process.cwd()}/src/components`
+    const offenders = readdirSync(dir)
+      .filter((name) => name.endsWith('.vue'))
+      .filter((name) => {
+        const source = readFileSync(`${dir}/${name}`, 'utf8')
+        return /<n-grid\b/.test(source) && !/<n-grid[^>]*:y-gap="20"/.test(source)
+      })
+    expect(offenders, `n-grid 表单缺少 :y-gap="20"：${offenders.join(' / ')}`).toEqual([])
+  })
 })

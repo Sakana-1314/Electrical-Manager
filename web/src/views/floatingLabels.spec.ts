@@ -68,10 +68,18 @@ describe('浮动标签令牌', () => {
 describe('浮动标签接线', () => {
   it('输入 / 下拉表单项的标签改为绝对定位，未输入时在框内', () => {
     expect(floating).toMatch(
-      /\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\(\s*\n\s*:has\(\.n-form-item-label \.n-checkbox\)\s*\n\s*\) \{[\s\S]*?position: relative;[\s\S]*?grid-template-rows: 1fr;/,
+      /\.n-form-item--top-labelled:has\(\.n-input, \.n-base-selection\):not\(\s*\n\s*:has\(\.n-form-item-label \.n-checkbox\)\s*\n\s*\) \{[\s\S]*?position: relative;[\s\S]*?grid-template-rows: minmax\(0, auto\) 1fr;/,
     )
     expect(floating).toMatch(
       /\.n-form-item-label \{[\s\S]*?position: absolute;[\s\S]*?top: calc\(var\(--floating-field-height\) \/ 2\);[\s\S]*?transform: translateY\(-50%\);/,
+    )
+  })
+
+  it('栅格双列里字段钉在行首，不被行高拉伸把输入框推下去', () => {
+    // 同一行里第一个字段带 20px 下边距，行高 = 控件 + 边距；末列字段（:last-child 无边距）
+    // 若被拉伸，1fr 行会吃掉差额、把输入框往下推（用户详情「显示名称」实测低 20px）。
+    expect(floating).toMatch(
+      /position: relative;[\s\S]*?align-self: start;[\s\S]*?grid-template-rows: minmax\(0, auto\) 1fr;/,
     )
   })
 

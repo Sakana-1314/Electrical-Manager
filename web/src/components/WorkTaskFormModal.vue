@@ -196,8 +196,8 @@ function confirmDelete(): void {
       size="small"
       :disabled="loading"
     >
-      <n-grid :cols="2" :x-gap="20">
-        <n-grid-item :span="2">
+      <n-grid :cols="2" :x-gap="20" :y-gap="20">
+        <n-grid-item>
           <n-form-item label="任务名称" path="name">
             <n-input
               v-model:value="form.name"
@@ -213,12 +213,17 @@ function confirmDelete(): void {
         </n-grid-item>
         <n-grid-item>
           <n-form-item label="计划开始">
-            <n-date-picker v-model:value="form.planStart" type="date" clearable />
+            <n-date-picker
+              v-model:value="form.planStart"
+              type="date"
+              clearable
+              class="full-width"
+            />
           </n-form-item>
         </n-grid-item>
         <n-grid-item>
           <n-form-item label="计划结束">
-            <n-date-picker v-model:value="form.planEnd" type="date" clearable />
+            <n-date-picker v-model:value="form.planEnd" type="date" clearable class="full-width" />
           </n-form-item>
         </n-grid-item>
         <n-grid-item :span="2">
