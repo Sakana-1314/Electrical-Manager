@@ -13438,8 +13438,8 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "code": "USER_SCRIPT_SESSION_EXPIRED",
-                     *       "message": "授权会话已过期或已被使用，请回到脚本重新打开授权窗口",
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
                      *       "details": {},
                      *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
                      *     }
@@ -13455,8 +13455,8 @@ export interface operations {
                 content: {
                     /**
                      * @example {
-                     *       "code": "USER_SCRIPT_SESSION_CONFLICT",
-                     *       "message": "该授权窗口已被其他账号确认，请重新打开授权窗口",
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
                      *       "details": {},
                      *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
                      *     }
