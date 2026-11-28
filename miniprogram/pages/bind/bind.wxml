@@ -39,7 +39,7 @@
   <t-button
     class="primary-action"
     theme="primary"
-    size="large"
+    size="small"
     block
     loading="{{loading}}"
     disabled="{{loading}}"

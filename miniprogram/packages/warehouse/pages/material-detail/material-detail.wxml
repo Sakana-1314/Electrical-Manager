@@ -17,7 +17,7 @@
       <view class="section-divider"></view>
       <view class="remark-row">
         <view class="remark-label">{{i18n.remark}}</view>
-        <view class="remark-value"><text user-select="{{true}}">{{material.remark}}</text></view>
+        <view class="remark-value"><copy-text value="{{material.remark}}" /></view>
       </view>
     </view>
 
@@ -50,7 +50,7 @@
       <t-button
         class="detail-action"
         theme="primary"
-        size="large"
+        size="small"
         block
         icon="cart"
         bind:tap="goOutbound"

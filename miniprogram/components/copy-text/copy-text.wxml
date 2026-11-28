@@ -1,0 +1,2 @@
+<text wx:if="{{value}}" class="copy-text" user-select="{{true}}" bind:tap="onCopy">{{value}}</text>
+<t-toast id="copy-text-toast" />

@@ -159,7 +159,7 @@
     <t-button
       class="submit-action"
       theme="primary"
-      size="large"
+      size="small"
       block
       loading="{{submitting}}"
       disabled="{{submitting}}"

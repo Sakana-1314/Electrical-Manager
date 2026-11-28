@@ -147,10 +147,10 @@
         class="filter-action"
         theme="default"
         variant="outline"
-        size="large"
+        size="small"
         bind:tap="resetDraft"
       >{{i18n.filterReset}}</t-button>
-      <t-button class="filter-action" theme="primary" size="large" bind:tap="confirmSheet">
+      <t-button class="filter-action" theme="primary" size="small" bind:tap="confirmSheet">
         {{i18n.confirm}}
       </t-button>
     </view>

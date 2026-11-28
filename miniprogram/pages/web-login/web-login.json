@@ -2,6 +2,7 @@
   "navigationBarTitleText": "网页登录确认",
   "usingComponents": {
     "app-navbar": "/components/app-navbar/app-navbar",
+    "copy-text": "/components/copy-text/copy-text",
     "t-button": "tdesign-miniprogram/button/button",
     "t-empty": "tdesign-miniprogram/empty/empty",
     "t-icon": "tdesign-miniprogram/icon/icon",

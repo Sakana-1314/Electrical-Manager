@@ -51,6 +51,7 @@ function pageDir(key) {
 }
 const sharedComponents = [
   'app-navbar/app-navbar',
+  'copy-text/copy-text',
   'material-summary-card/material-summary-card',
 ];
 for (const page of allPages) {

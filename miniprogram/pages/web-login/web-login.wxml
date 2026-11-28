@@ -13,13 +13,13 @@
       <view class="web-login-title">{{i18n.webLoginConfirmTitle}}</view>
       <view class="web-login-desc">{{i18n.webLoginConfirmHint}}</view>
       <view wx:if="{{user}}" class="web-login-user">
-        <text user-select="{{true}}">{{user.display_name}}</text>
-        <text wx:if="{{user.department_name}}" class="web-login-department" user-select="{{true}}">{{user.department_name}}</text>
+        <copy-text value="{{user.display_name}}" />
+        <text wx:if="{{user.department_name}}" class="web-login-department"><copy-text value="{{user.department_name}}" /></text>
       </view>
       <t-button
         theme="primary"
         block
-        size="large"
+        size="small"
         loading="{{confirming}}"
         disabled="{{confirmed}}"
         bind:tap="confirm"

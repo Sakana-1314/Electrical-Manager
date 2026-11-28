@@ -123,6 +123,10 @@ AppID 和 AppSecret 按相同顺序使用英文逗号分隔，可继续追加任
 - 设置只存本机（`utils/watermark.js` 的 `watermarkSettings`，含常用词、置顶列表与开关），不落服务端；拍摄页进入与从设置页返回时重读。
 - 「地图选点」用 `wx.chooseLocation`，属于地理位置接口：`app.json` 已声明 `requiredPrivateInfos: ["chooseLocation"]` 与 `permission.scope.userLocation.desc`（`npm run check` 会校验声明与调用一致）；小程序后台还需在「用户隐私保护指引」里声明位置信息用途，并按平台提示在「开发管理 → 接口设置」申请开通对应地理位置接口，否则真机调用会失败。
 
+## 字段值点击复制
+
+详情 / 信息页的字段值统一用共享组件 `components/copy-text`：**虚线下划线 + 点击整段写入剪贴板**（TDesign Toast 提示「已复制」），**空值不渲染**。长按选择（`user-select`）保留，两种方式并存。新增详情字段时把值包成 `<copy-text value="{{...}}" />`，并在页面 `usingComponents` 里注册（`npm run check` 会校验组件文件存在）。
+
 ## 当前项目（项目隔离）
 
 业务数据按项目隔离，小程序始终处在某一个项目内：当前项目 id 存本机 storage（`currentProjectId`），每个请求（含图片上传）都带 `X-Project-Id`；请求没带头时后端落到默认项目（P05），所以旧版本客户端也能继续用。切换入口在首页「个人信息」弹窗的「当前项目」一行：收起时显示项目名称，点击后弹出 `t-picker` 滚轮选择器（默认定位到当前项目，取消不改动、确认才切换）。项目被停用或删除时，请求会自动清掉失效项目、重新解析后再重试一次。

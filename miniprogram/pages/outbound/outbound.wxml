@@ -63,7 +63,7 @@
       class="outbound-action rescan-action"
       theme="default"
       variant="outline"
-      size="large"
+      size="small"
       icon="scan"
       loading="{{scanning}}"
       disabled="{{scanning || submitting}}"
@@ -72,7 +72,7 @@
     <t-button
       class="outbound-action confirm-action"
       theme="primary"
-      size="large"
+      size="small"
       icon="check-circle"
       loading="{{submitting}}"
       disabled="{{submitting || scanning}}"
