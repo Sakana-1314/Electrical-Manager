@@ -320,7 +320,7 @@ web/src/
 | `staleChunk.ts` | 发版后旧代码块 404 自愈：`isStaleChunkError` 识别动态 import / 预加载 CSS 失败，`installStaleChunkRecovery` 记住目标路由后整页刷新、`resumePendingRoute` 刷新后继续跳转；15s 闸门防循环刷新，被拦下时广播 `STALE_CHUNK_BLOCKED_EVENT` |
 | `navigation.ts` | 后台侧栏主 tab 可见性纯逻辑：`NAV_FEATURES`（9 个主 tab 的 key / 标签 / 代表路由，数组顺序即侧栏顺序；二级库 Pro 与二级库 Lite 是两个独立一级项；系统管理不参与）、`visibleNavFeatureKeys(can)`、`resolveLandingRouteName(can)`（落地页推导） |
 | `mobileCards.ts` | 移动端表格折叠逻辑：`buildMobileCards(columns, rows, rowKey?)` 把列定义与行数据折成「标题 + 字段 + 操作」卡片（选择列 / 展开列 / 无标题列跳过，空值显示 `—`，标题含「操作」的列进底部操作区） |
-| `userscriptHandoff.ts` | 油猴脚本的「弹窗登录 → 授权 → 回传登录态」协议：`handoffRequest(query)` 校验`?userscript=1` 的纯 origin 是否在白名单与 `window.opener` 存在，`deliverSession(request, session, apiBase)` 按 targetOrigin 把登录令牌与用户权限 `postMessage` 回发起窗口（消息类型 `hxni-userscript-session`，带脚本生成的 nonce） |
+| `userscriptHandoff.ts` | 油猴脚本的「弹窗登录 → 授权 → 回传登录态」协议：`hasHandoffIntent(query)` 只校验`?userscript=1` 的交接参数形态（纯 origin 在白名单、nonce 合法），供路由守卫放行——已登录用户打开授权弹窗时不能被送去落地页；`handoffRequest(query)` 进一步要求 `window.opener` 存在，登录页据此判定授权模式；`deliverSession(request, session, apiBase)` 按 targetOrigin 把登录令牌与用户权限 `postMessage` 回发起窗口（消息类型 `hxni-userscript-session`，带脚本生成的 nonce） |
 | `tableRowNavigation.ts` | `createTableRowClickGuard()`：区分行点击与行内按钮/选择交互，避免误跳转 |
 | `tableText.ts` | `renderTwoLineText(primary, secondary)`：表格单元格两行文本渲染；`renderMaterialCode(value)`：物料编码列等宽展示 |
 | `time.ts` | 时间格式化（东八区）：`formatShanghaiTime`、`toIsoWithTimezone`、`toShanghaiDate`、`formatDate`、`dateToTimestamp`（空值返回 null，避免日期选择器默认成今天） |

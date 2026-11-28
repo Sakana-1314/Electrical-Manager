@@ -59,17 +59,29 @@ function pureOrigin(raw: string): string {
 }
 
 /**
+ * 判断这个登录页地址是不是脚本发起的交接请求（只校验参数形态，不要求 `window.opener`）。
+ *
+ * 路由守卫用它：浏览器已登录时，普通 `/login` 会被送去落地页，但授权弹窗必须留在登录页，
+ * 否则 `LoginView` 不挂载、脚本永远等不到回传。守卫不做安全把关（这里放行最多多显示一次
+ * 登录页），真正的授权仍由 `handoffRequest` 的白名单 + opener 校验决定。
+ */
+export function hasHandoffIntent(query: LocationQuery): boolean {
+  if (query[FLAG] !== '1') return false
+  const origin = typeof query.origin === 'string' ? pureOrigin(query.origin) : ''
+  const nonce = typeof query.nonce === 'string' ? query.nonce : ''
+  return origin !== '' && nonce !== '' && nonce.length <= 128 && ALLOWED_ORIGINS.has(origin)
+}
+
+/**
  * 从登录页的查询参数里读出交接请求。
  *
  * 返回 null 时按普通登录处理（表单、跳转都不变）：参数缺失、格式不对、
  * 不在白名单、或者这个窗口不是被 `window.open` 打开的。
  */
 export function handoffRequest(query: LocationQuery): HandoffRequest | null {
-  if (query[FLAG] !== '1') return null
-  const origin = typeof query.origin === 'string' ? pureOrigin(query.origin) : ''
-  const nonce = typeof query.nonce === 'string' ? query.nonce : ''
-  if (origin === '' || nonce === '' || nonce.length > 128) return null
-  if (!ALLOWED_ORIGINS.has(origin)) return null
+  if (!hasHandoffIntent(query)) return null
+  const origin = pureOrigin(String(query.origin))
+  const nonce = String(query.nonce)
   if (!window.opener) return null
   return { origin, nonce }
 }
