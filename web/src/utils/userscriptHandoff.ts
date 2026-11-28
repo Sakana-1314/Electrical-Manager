@@ -8,23 +8,37 @@ import type { User } from '@/api/generated'
  *
  * 油猴脚本运行在外部物资平台上，拿不到本系统的登录态；过去要用户手工粘贴接口令牌，
  * 既麻烦又容易泄露。改成：脚本弹窗打开本系统登录页，用户正常登录后点一次「授权」，
- * 本页用 `postMessage` 把**登录令牌与用户信息**交回脚本所在的窗口。
+ * 本页把登录态交回脚本所在页面。
+ *
+ * ## 两条送达通道（以会话为主）
+ *
+ * 1. **服务端一次性会话（主通道）**：脚本先用 `/auth/userscript-sessions` 建会话，
+ *    把 `session` 带进弹窗地址；用户点授权时本页调 `/auth/userscript-sessions/{id}/confirm`
+ *    登记当前用户，脚本轮询同一个会话即可拿到令牌。**不依赖窗口关系**，所以发起窗口
+ *    被刷新、关闭或跨域跳转都能送达。
+ * 2. **`postMessage`（快速通道）**：`window.opener` 还在时顺手直传，脚本免去一次轮询。
+ *
+ * 早期实现只有通道 2，opener 一旦被浏览器切断（刷新发起页、窗口回收、bfcache 恢复）
+ * 就永久送不回去，界面上表现为「发起窗口已关闭，授权未送达」。
  *
  * ## 与「进入网页版」的区别
  *
- * `/web-open` 是小程序 → 网页（一次性票据换成登录态）；这里是外部站点 → 网页（同源无法
- * 读写，只能靠用户的显式点击 + 白名单 origin 回传），两者都不需要用户复制任何令牌。
+ * `/web-open` 是小程序 → 网页（一次性票据换成登录态）；这里是外部站点 → 网页
+ * （同源无法读写，只能靠用户的显式点击），两者都不需要用户复制任何令牌。
  *
  * ## 参数与安全
  *
- * - `origin` 是发起方 origin，只接受**纯 origin**（不能带路径/查询），并作为 `postMessage`
- *   的 targetOrigin —— 令牌不会发给白名单之外的任何页面；
- * - `nonce` 由脚本生成，回传时原样带回，脚本据此丢弃伪造或串台的响应；
- * - 还要求 `window.opener` 存在：直接打开地址的普通登录不受影响，也不会进入授权流程。
+ * - `origin` 是发起方 origin，只接受**纯 origin**（不能带路径/查询），作为 `postMessage`
+ *   的 targetOrigin，也用来让脚本侧确认会话来源；
+ * - `session` 由脚本创建并签发的会话 id，服务端只认「用户确认过」的会话，且取一次即删除；
+ * - `nonce` 仅用于 `postMessage` 通道的串台过滤（会话通道不需要它）。
  */
 
 /** 查询参数名：`?userscript=1` 表示这是脚本发起的交接窗口。 */
 const FLAG = 'userscript'
+
+/** 会话 id 的查询参数名：脚本创建会话后带进来的 id。 */
+const SESSION_PARAM = 'session'
 
 /** 回传消息的类型，脚本按它过滤 `message` 事件。 */
 export const HANDOFF_MESSAGE_TYPE = 'hxni-userscript-session'
@@ -46,6 +60,12 @@ export interface HandoffRequest {
   nonce: string
 }
 
+/** 会话通道的授权请求：会话 id + 来源 origin（不需要 nonce，也不需要 opener）。 */
+export interface SessionHandoffRequest {
+  origin: string
+  sessionId: string
+}
+
 /** 只接受 `协议//域名[:端口]`；path、query、hash 一律视为非法。 */
 function pureOrigin(raw: string): string {
   try {
@@ -63,34 +83,68 @@ function pureOrigin(raw: string): string {
  *
  * 路由守卫用它：浏览器已登录时，普通 `/login` 会被送去落地页，但授权弹窗必须留在登录页，
  * 否则 `LoginView` 不挂载、脚本永远等不到回传。守卫不做安全把关（这里放行最多多显示一次
- * 登录页），真正的授权仍由 `handoffRequest` 的白名单 + opener 校验决定。
+ * 登录页），真正的授权仍由 `sessionHandoffRequest` 的会话校验决定。
+ *
+ * 两种形态都算交接意图：带 `session`（新，会话通道）或带 `nonce`（旧，postMessage 通道）。
  */
 export function hasHandoffIntent(query: LocationQuery): boolean {
   if (query[FLAG] !== '1') return false
   const origin = typeof query.origin === 'string' ? pureOrigin(query.origin) : ''
+  if (origin === '' || !ALLOWED_ORIGINS.has(origin)) return false
+  return readSessionId(query) !== '' || readNonce(query) !== ''
+}
+
+function readNonce(query: LocationQuery): string {
   const nonce = typeof query.nonce === 'string' ? query.nonce : ''
-  return origin !== '' && nonce !== '' && nonce.length <= 128 && ALLOWED_ORIGINS.has(origin)
+  return nonce !== '' && nonce.length <= 128 ? nonce : ''
+}
+
+/** 会话 id 只接受 UUID（带连字符或 32 位紧凑写法），其余一律视为无效。 */
+function readSessionId(query: LocationQuery): string {
+  const raw = typeof query[SESSION_PARAM] === 'string' ? query[SESSION_PARAM].trim() : ''
+  if (raw === '' || raw.length > 36) return ''
+  return /^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$/.test(
+    raw,
+  )
+    ? raw
+    : ''
 }
 
 /**
- * 从登录页的查询参数里读出交接请求。
+ * 读出会话通道的授权请求（**主通道**，不要求 `window.opener`）。
+ *
+ * 返回 null 表示地址里没有合法会话，按 `handoffRequest` 的旧通道或普通登录处理。
+ */
+export function sessionHandoffRequest(query: LocationQuery): SessionHandoffRequest | null {
+  if (query[FLAG] !== '1') return null
+  const origin = typeof query.origin === 'string' ? pureOrigin(query.origin) : ''
+  const sessionId = readSessionId(query)
+  if (origin === '' || !ALLOWED_ORIGINS.has(origin) || sessionId === '') return null
+  return { origin, sessionId }
+}
+
+/**
+ * 从登录页的查询参数里读出**旧版** postMessage 交接请求（快速通道）。
  *
  * 返回 null 时按普通登录处理（表单、跳转都不变）：参数缺失、格式不对、
  * 不在白名单、或者这个窗口不是被 `window.open` 打开的。
  */
 export function handoffRequest(query: LocationQuery): HandoffRequest | null {
-  if (!hasHandoffIntent(query)) return null
-  const origin = pureOrigin(String(query.origin))
-  const nonce = String(query.nonce)
+  if (query[FLAG] !== '1') return null
+  const origin = typeof query.origin === 'string' ? pureOrigin(query.origin) : ''
+  const nonce = readNonce(query)
+  if (origin === '' || nonce === '' || !ALLOWED_ORIGINS.has(origin)) return null
   if (!window.opener) return null
   return { origin, nonce }
 }
 
 /**
- * 把登录态交给弹窗的发起方，返回是否成功送出。
+ * 把登录态交给弹窗的发起方（快速通道），返回是否成功送出。
  *
  * 只发脚本用得到的字段：令牌、用户（含权限键）与接口地址 —— 脚本要按同一个后端发请求，
  * 否则会 401；权限键让脚本能提示「没有申购权限」这类问题。
+ *
+ * 送不出去不再是致命错误：调用方应同时（或改由）`confirmUserScriptSession` 走会话通道。
  */
 export function deliverSession(
   request: HandoffRequest,
@@ -110,7 +164,10 @@ export function deliverSession(
           user: {
             username: session.user.username,
             display_name: session.user.display_name,
-            permissions: session.user.permissions,
+            // 用户对象来自 Vue 响应式 store：permissions 是 Proxy 数组，
+            // 直接 postMessage 会抛 DataCloneError（且被下面的 catch 吞成「没送出去」）。
+            // 展开成普通数组再发。
+            permissions: [...(session.user.permissions ?? [])],
           },
         },
       },

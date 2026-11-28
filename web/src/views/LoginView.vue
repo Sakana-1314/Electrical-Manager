@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage, type FormInst, type FormRules } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
@@ -7,7 +7,14 @@ import { authApi } from '@/api/auth'
 import { resolveLandingRouteName } from '@/utils/navigation'
 import { LOGO_URL } from '@/constants/branding'
 import { activeBackendUrl } from '@/api/backend'
-import { deliverSession, handoffRequest, type HandoffRequest } from '@/utils/userscriptHandoff'
+import {
+  deliverSession,
+  handoffRequest,
+  hasHandoffIntent,
+  sessionHandoffRequest,
+  type HandoffRequest,
+  type SessionHandoffRequest,
+} from '@/utils/userscriptHandoff'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,10 +24,17 @@ const formRef = ref<FormInst | null>(null)
 const loading = ref(false)
 const model = reactive({ username: '', password: '' })
 /**
- * 油猴脚本的交接模式：`?userscript=1&origin=…&nonce=…` 且来源在白名单里。
- * 有值时登录成功不跳转，改为等待用户点「授权」，由本页把登录态 postMessage 回脚本窗口。
+ * 油猴脚本的交接模式：`?userscript=1&origin=…&session=…`（新会话通道）
+ * 或 `?userscript=1&origin=…&nonce=…`（旧 postMessage 通道），且来源在白名单里。
+ * 有值时登录成功不跳转，改为等待用户点「授权」。
+ *
+ * 注意：面板是否显示看的是**参数形态**（`hasHandoffIntent`），不是「握手成功」——
+ * 旧版脚本的 opener 很可能已经被浏览器切断，此时仍要显示面板并在点击时给出升级提示，
+ * 而不是把用户丢回普通登录页、让他猜为什么授权没了。
  */
-const handoff = ref<HandoffRequest | null>(handoffRequest(route.query))
+const sessionHandoff = ref<SessionHandoffRequest | null>(sessionHandoffRequest(route.query))
+const legacyHandoff = ref<HandoffRequest | null>(handoffRequest(route.query))
+const handoff = computed(() => hasHandoffIntent(route.query))
 const handoffDelivered = ref(false)
 const handoffFailed = ref('')
 const pendingSession = ref<{ accessToken: string } | null>(null)
@@ -159,21 +173,51 @@ watch(activeTab, (tab) => {
 // 默认页签就是扫码登录，mount 时 watch 不会触发，这里主动创建一次会话。
 void startQrLogin()
 
+const authorizing = ref(false)
+
 /**
  * 把登录态交给发起授权的油猴脚本。
  *
- * 只回传令牌、接口地址与用户的权限键；回传目标 origin 由 `handoffRequest` 白名单校验，
- * 非白名单 / 非弹窗场景 `handoff` 为 null，本函数不会被调用。
+ * 优先走**服务端会话**（`/auth/userscript-sessions/{id}/confirm`）：只登记「是哪个用户」，
+ * 由脚本轮询取令牌，因此不依赖窗口关系——发起窗口被刷新或关闭也能送达。
+ *
+ * 带 `nonce` 的旧版脚本没有会话，才退回 `postMessage`；那条通道要求 `window.opener`
+ * 仍在，断了就真的送不出去，界面直接把失败原因说清楚。
  */
-function authorizeUserscript() {
+async function authorizeUserscript() {
   if (!handoff.value || !pendingSession.value || !auth.user) return
-  const ok = deliverSession(
-    handoff.value,
+  authorizing.value = true
+  handoffFailed.value = ''
+  try {
+    if (sessionHandoff.value) {
+      await authApi.confirmUserScriptSession(sessionHandoff.value.sessionId)
+      // 顺手试一次快速通道：脚本收到消息就不必再等下一次轮询。
+      if (legacyHandoff.value) deliverLegacy()
+      handoffDelivered.value = true
+      return
+    }
+    // 旧版脚本只有 postMessage 通路。
+    handoffDelivered.value = deliverLegacy()
+    if (!handoffDelivered.value) {
+      handoffFailed.value =
+        '授权窗口与脚本页面的连接已断开（常见于脚本刷新了平台页）。请把脚本升级到最新版本后重新授权，新版本改用后台会话送达，不再依赖窗口连接。'
+    }
+  } catch (error) {
+    handoffFailed.value =
+      error instanceof Error ? error.message : '授权失败，请回到脚本重新打开授权窗口'
+  } finally {
+    authorizing.value = false
+  }
+}
+
+/** 旧版 postMessage 快速通道：opener 还在时把登录态直接交给脚本。 */
+function deliverLegacy(): boolean {
+  if (!legacyHandoff.value || !pendingSession.value || !auth.user) return false
+  return deliverSession(
+    legacyHandoff.value,
     { accessToken: pendingSession.value.accessToken, user: auth.user },
     activeBackendUrl(),
   )
-  handoffDelivered.value = ok
-  if (!ok) handoffFailed.value = '发起窗口已关闭，授权未送达；请回到脚本重新打开授权窗口。'
 }
 
 /** 授权后关闭弹窗（脚本自己也会在收到消息后关窗，两处都做以防浏览器限制）。 */
@@ -202,10 +246,10 @@ onBeforeUnmount(() => {
         <template v-if="handoff">
           <h2>{{ handoffDelivered ? '已授权' : '授权登录' }}</h2>
           <p class="handoff-hint">
-            油猴脚本正在请求使用你的登录态来同步采购数据。登录成功后点「授权」即可，令牌只回传给发起窗口。
+            油猴脚本正在请求使用你的登录态来同步采购数据。登录成功后点「授权」即可，登录态只交给这次授权会话。
           </p>
           <div v-if="handoffDelivered" class="handoff-result">
-            <n-alert type="success" :show-icon="true">已把登录态交给脚本，可以关闭本窗口。</n-alert>
+            <n-alert type="success" :show-icon="true">已授权，可以关闭本窗口。</n-alert>
             <n-button block size="large" type="primary" @click="closeHandoffWindow"
               >关闭窗口</n-button
             >
@@ -214,7 +258,13 @@ onBeforeUnmount(() => {
             <n-alert v-if="handoffFailed" type="error" :show-icon="true">{{
               handoffFailed
             }}</n-alert>
-            <n-button block size="large" type="primary" @click="authorizeUserscript">
+            <n-button
+              block
+              size="large"
+              type="primary"
+              :loading="authorizing"
+              @click="authorizeUserscript"
+            >
               授权脚本使用我的登录态
             </n-button>
           </div>

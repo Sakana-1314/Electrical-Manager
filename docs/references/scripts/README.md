@@ -22,16 +22,22 @@
 
 **不再需要手工粘贴接口令牌**，也不再保存账号密码到脚本里换取令牌：
 
-1. 在悬浮窗点「设置」→「网页授权登录」，脚本弹窗打开本系统登录页
-   （`/login?userscript=1&origin=…&nonce=…`，弹窗里可以用扫码或账号密码登录）；
-2. 登录成功后点「授权脚本使用我的登录态」，网页把 JWT 用 `postMessage` 回传给发起窗口
-   （只回传给白名单里的平台 origin，并校验脚本生成的 nonce）；
-3. 脚本把 JWT 存进脚本管理器私有存储（`GM_setValue`），后续接口用
-   `Authorization: Bearer <JWT>` 调用，令牌过期后重新点一次授权即可。
+1. 在悬浮窗点「设置」→「网页授权登录」，脚本先调 `/auth/userscript-sessions` 建一个
+   **一次性授权会话**，再弹窗打开本系统登录页
+   （`/login?userscript=1&origin=…&session=…`，弹窗里可以用扫码或账号密码登录）；
+2. 登录成功后点「授权脚本使用我的登录态」，网页把「当前用户」登记到该会话
+   （`/auth/userscript-sessions/{id}/confirm`，只上报会话 id、不上传令牌）；
+3. 脚本每 2 秒轮询同一会话，`confirmed` 时服务端签发 JWT 并**立即删除会话**（只能取一次），
+   脚本把它存进脚本管理器私有存储（`GM_setValue`），后续接口用 `Authorization: Bearer <JWT>` 调用。
 
-纯前端实现：授权只发生在浏览器内的两个窗口之间，不经过任何第三方服务，也不写网页 localStorage
-以外的位置（JWT 只落在脚本的私有存储里）。相关代码见 `web/src/utils/userscriptHandoff.ts`
-（网页侧）与脚本里的 `openWebAuth`。
+**为什么不靠窗口回传**：早期实现只靠 `window.opener.postMessage`，一旦发起窗口在点「授权」前
+被刷新、关闭或被浏览器回收，opener 关系就断了，界面会报「发起窗口已关闭，授权未送达」。
+现在会话通道是主路径，`postMessage` 只作为快速通道（opener 还在时省掉一次轮询）。
+脚本建会话失败（旧版后端）时才退回纯窗口回传。
+
+授权不经过任何第三方服务：会话只存在本系统后端进程内存、5 分钟过期、取一次即删除，
+不落数据库；JWT 只落在脚本的私有存储里。相关代码见 `web/src/utils/userscriptHandoff.ts`
+（网页侧）、`server/internal/service/userscriptauth`（会话存储）与脚本里的 `openWebAuth`。
 
 ### 多项目（数据隔离）
 

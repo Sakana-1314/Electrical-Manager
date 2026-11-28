@@ -15,6 +15,8 @@
 | `FORBIDDEN` | 403 | 没有执行此操作的权限（非权限位门禁的属主校验，如撤回分享链接） | `service/share` |
 | `PERMISSION_DENIED` | 403 | 没有执行此操作的权限（权限位图不包含所需权限） | `auth`（`RequirePermission`） |
 | `QR_SESSION_EXPIRED` | 400 | 登录二维码已过期或已被消费，请刷新后重新扫码 | `service/qrlogin` |
+| `USER_SCRIPT_SESSION_EXPIRED` | 400 | 授权会话已过期或已被使用，请回到脚本重新打开授权窗口 | `service/userscriptauth` |
+| `USER_SCRIPT_SESSION_CONFLICT` | 409 | 该授权窗口已被其他账号确认，请重新打开授权窗口 | `service/userscriptauth` |
 | `QR_SESSION_CONFLICT` | 409 | 扫码登录会话已被其他账号确认 | `service/qrlogin` |
 | `WECHAT_AUTH_FAILED` | 401 | 微信登录凭证无效，请重试 | `service/miniprogram` |
 | `MINI_PROGRAM_REGISTRATION_DISABLED` | 403 | 当前暂未开放新用户绑定 | `service/miniprogram` |

@@ -26,7 +26,10 @@ import type { User } from '@/api/generated'
  */
 const PLATFORM_ORIGIN = 'http://43.154.152.157:8080'
 const NONCE = 'c'.repeat(32)
+const SESSION_ID = '0198f3a7-2c00-7000-8000-000000000002'
 const LOGIN_PATH = `/login?userscript=1&origin=${encodeURIComponent(PLATFORM_ORIGIN)}&nonce=${NONCE}`
+/** 新版脚本的地址：带会话 id、不带 nonce。 */
+const SESSION_PATH = `/login?userscript=1&origin=${encodeURIComponent(PLATFORM_ORIGIN)}&session=${SESSION_ID}`
 
 const savedUser = {
   id: 7,
@@ -42,6 +45,7 @@ vi.mock('@/api/auth', () => ({
     createQrSession: vi.fn(),
     qrSession: vi.fn(),
     qrCodeUrl: vi.fn(() => ''),
+    confirmUserScriptSession: vi.fn(),
   },
 }))
 
@@ -174,5 +178,67 @@ describe('登录页的油猴授权模式', () => {
     expect(wrapper.text()).toContain('欢迎登录')
 
     wrapper.unmount()
+  })
+
+  describe('会话通道（主通道，不依赖 opener）', () => {
+    it('没有 window.opener 也能进授权面板并发起确认', async () => {
+      localStorage.setItem('access_token', 'saved-jwt')
+      api.me.mockResolvedValue(savedUser)
+      api.confirmUserScriptSession.mockResolvedValue({ status: 'confirmed' })
+      // 关键回归：发起窗口被浏览器切断时 opener 为 null，旧实现到这里就只能报错。
+      Object.defineProperty(window, 'opener', { value: null, configurable: true, writable: true })
+
+      const wrapper = await mountLogin(SESSION_PATH)
+
+      expect(wrapper.text()).toContain('授权登录')
+      const authorize = wrapper.findAll('button').find((btn) => btn.text().includes('授权'))!
+      await authorize.trigger('click')
+      await flushPromises()
+
+      // 只上报会话 id，由服务端登记当前用户；令牌由脚本轮询取走。
+      expect(api.confirmUserScriptSession).toHaveBeenCalledWith(SESSION_ID)
+      expect(wrapper.text()).toContain('已授权')
+      // 不该出现「发起窗口已关闭」这类失败提示
+      expect(wrapper.text()).not.toContain('发起窗口')
+
+      wrapper.unmount()
+    })
+
+    it('确认失败时把服务端原因展示出来', async () => {
+      localStorage.setItem('access_token', 'saved-jwt')
+      api.me.mockResolvedValue(savedUser)
+      api.confirmUserScriptSession.mockRejectedValue(
+        new Error('授权会话已过期或已被使用，请回到脚本重新打开授权窗口'),
+      )
+      Object.defineProperty(window, 'opener', { value: null, configurable: true, writable: true })
+
+      const wrapper = await mountLogin(SESSION_PATH)
+      const authorize = wrapper.findAll('button').find((btn) => btn.text().includes('授权'))!
+      await authorize.trigger('click')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('授权会话已过期')
+      expect(wrapper.text()).not.toContain('已授权')
+
+      wrapper.unmount()
+    })
+
+    it('旧版只有 nonce 的地址仍走窗口回传，opener 断了才报错', async () => {
+      localStorage.setItem('access_token', 'saved-jwt')
+      api.me.mockResolvedValue(savedUser)
+      Object.defineProperty(window, 'opener', { value: null, configurable: true, writable: true })
+
+      const wrapper = await mountLogin(LOGIN_PATH)
+      const authorize = wrapper.findAll('button').find((btn) => btn.text().includes('授权'))!
+      await authorize.trigger('click')
+      await flushPromises()
+
+      expect(api.confirmUserScriptSession).not.toHaveBeenCalled()
+      expect(wrapper.text()).toContain('连接已断开')
+      // 提示里要给出可执行的下一步（升级脚本）
+      expect(wrapper.text()).toContain('升级')
+
+      wrapper.unmount()
+    })
   })
 })

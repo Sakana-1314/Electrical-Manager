@@ -614,6 +614,132 @@ paths:
                 message: 请求字段或筛选参数不合法
                 details: {}
                 request_id: 7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc
+  /api/v1/auth/userscript-sessions:
+    post:
+      tags:
+      - 认证
+      summary: 创建油猴脚本授权会话
+      description: 脚本侧匿名创建；返回的 session_id 由脚本带进授权弹窗地址。会话只在服务端内存，5 分钟有效。
+      operationId: create_userscript_auth_session_api_v1_auth_userscript_sessions_post
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserScriptAuthSessionCreate'
+            example:
+              origin: http://43.154.152.157:8080
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScriptAuthSessionCreateRead'
+              example:
+                session_id: 0198f3a7-2c00-7000-8000-000000000002
+                expires_at: '2026-11-28T10:35:00+00:00'
+        '422':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/auth/userscript-sessions/{session_id}:
+    get:
+      tags:
+      - 认证
+      summary: 轮询油猴脚本授权会话
+      description: 脚本侧匿名轮询；confirmed 时签发管理端访问 / 续期令牌并消费会话，只能取一次。
+      operationId: poll_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__get
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScriptAuthSessionPollRead'
+              example:
+                status: pending
+                access_token: null
+                refresh_token: null
+                token_type: ''
+                user: null
+        '422':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: VALIDATION_ERROR
+                message: 请求字段或筛选参数不合法
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+  /api/v1/auth/userscript-sessions/{session_id}/confirm:
+    post:
+      tags:
+      - 认证
+      summary: 网页确认油猴脚本授权
+      description: 登录用户在授权页点「授权」时调用；只登记当前用户，不上传登录令牌（令牌由脚本轮询时签发）。
+      operationId: confirm_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__confirm_post
+      security:
+      - HTTPBearer: []
+      - APIKeyHeader: []
+      parameters:
+      - name: session_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScriptAuthSessionConfirmRead'
+              example:
+                status: confirmed
+        '400':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: USER_SCRIPT_SESSION_EXPIRED
+                message: 授权会话已过期或已被使用，请回到脚本重新打开授权窗口
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
+        '409':
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: USER_SCRIPT_SESSION_CONFLICT
+                message: 该授权窗口已被其他账号确认，请重新打开授权窗口
+                details: {}
+                request_id: caf23a6c-e039-448d-a4bf-451c669db663
   /api/v1/system-settings/advanced-settings:
     get:
       tags:
@@ -26690,6 +26816,104 @@ components:
         action: admin
         label: 系统管理（用户 / 项目 / 高级设置 / 附件 / 分享链接）
         bit: 1
+    UserScriptAuthSessionCreate:
+      properties:
+        origin:
+          type: string
+          maxLength: 255
+          title: Origin
+          description: 脚本所在平台的 origin（只用于授权页展示，不参与鉴权）
+          default: ''
+      additionalProperties: false
+      type: object
+      title: UserScriptAuthSessionCreate
+      examples:
+      - origin: http://43.154.152.157:8080
+    UserScriptAuthSessionCreateRead:
+      properties:
+        session_id:
+          type: string
+          title: Session Id
+          description: UUID 会话标识（只在服务端内存中存在）
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - session_id
+      - expires_at
+      title: UserScriptAuthSessionCreateRead
+      description: 新建油猴脚本授权会话（不落数据库，5 分钟有效）。
+      examples:
+      - session_id: 0198f3a7-2c00-7000-8000-000000000002
+        expires_at: '2026-11-28T10:35:00+00:00'
+    UserScriptAuthSessionConfirm:
+      properties:
+        session_id:
+          type: string
+          maxLength: 36
+          minLength: 32
+          title: Session Id
+      additionalProperties: false
+      type: object
+      required:
+      - session_id
+      title: UserScriptAuthSessionConfirm
+      examples:
+      - session_id: 0198f3a72c0070008000000000000002
+    UserScriptAuthSessionConfirmRead:
+      properties:
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - status
+      title: UserScriptAuthSessionConfirmRead
+      description: 网页确认结果（固定 confirmed）。
+      examples:
+      - status: confirmed
+    UserScriptAuthSessionPollRead:
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - confirmed
+          - expired
+          title: Status
+          description: pending 等待网页授权；confirmed 已授权（本次响应带凭据）；expired 已过期或已消费
+        access_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Access Token
+        refresh_token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Refresh Token
+        token_type:
+          type: string
+          title: Token Type
+        user:
+          anyOf:
+          - $ref: '#/components/schemas/UserRead'
+          - type: 'null'
+          title: User
+      type: object
+      required:
+      - status
+      - token_type
+      title: UserScriptAuthSessionPollRead
+      description: 脚本轮询结果；confirmed 时返回管理端访问 / 续期令牌并消费会话（只能取一次）。
+      examples:
+      - status: pending
+        access_token: null
+        refresh_token: null
+        token_type: ''
+        user: null
     QrLoginSessionRead:
       properties:
         session_id:
