@@ -3,6 +3,7 @@ import type { Permission } from '@/types/navigation'
 import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { resolveLandingRouteName } from '@/utils/navigation'
+import { hasHandoffIntent } from '@/utils/userscriptHandoff'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -273,7 +274,10 @@ router.beforeEach(async (to) => {
   document.title = `${pageTitle || '系统'} - HXNI 电气无忧`
   if (!to.meta.public && !auth.isAuthenticated)
     return { name: 'login', query: { redirect: to.fullPath } }
-  if (to.name === 'login' && auth.isAuthenticated) return landingRoute()
+  // 油猴脚本的授权弹窗必须停在登录页（登录页会直接进授权面板）；浏览器已登录时不能按
+  // 「已登录就没必要看登录页」跳走，否则脚本等不到回传。
+  if (to.name === 'login' && auth.isAuthenticated && !hasHandoffIntent(to.query))
+    return landingRoute()
   // 业务请求都要带 X-Project-Id：进入受保护页面前先确保当前项目已解析出来
   // （拉取失败保持未加载，不拦导航，本次由后端按 PROJECT_REQUIRED / PROJECT_NOT_FOUND 提示）
   if (!to.meta.public) await useProjectStore().ensureLoaded()

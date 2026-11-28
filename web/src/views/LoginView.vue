@@ -25,6 +25,27 @@ const handoffDelivered = ref(false)
 const handoffFailed = ref('')
 const pendingSession = ref<{ accessToken: string } | null>(null)
 
+/**
+ * 交接模式下浏览器已有登录态（弹窗与本系统同源，共用 localStorage）：直接进授权面板，
+ * 不必再登一次。判据是本地令牌而不是 `isAuthenticated`：缓存里的用户快照可能缺失
+ * （比如换了发版、权限位新增），此时先按 /auth/me 补齐再进授权面板。
+ */
+if (handoff.value && auth.token) {
+  if (auth.user) {
+    pendingSession.value = { accessToken: auth.token }
+  } else {
+    auth
+      .refresh()
+      .then(() => {
+        pendingSession.value = { accessToken: auth.token ?? '' }
+      })
+      .catch(() => {
+        // 缓存的令牌已失效：清掉半截会话，正常走表单 / 扫码登录。
+        auth.logout()
+      })
+  }
+}
+
 /** 交接模式下登录成功：记住令牌并停在授权面板（不跳转，否则弹窗会离开授权页）。 */
 async function finishLogin(accessToken: string) {
   if (!handoff.value) {
