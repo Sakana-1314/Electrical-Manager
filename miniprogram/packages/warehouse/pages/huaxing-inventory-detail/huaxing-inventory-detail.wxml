@@ -10,16 +10,16 @@
 
   <block wx:elif="{{detail}}">
     <view class="summary-card">
-      <view class="summary-name"><text user-select="{{true}}">{{detail.name}}</text></view>
-      <view wx:if="{{detail.model_spec}}" class="summary-spec"><text user-select="{{true}}">{{detail.model_spec}}</text></view>
+      <view class="summary-name"><copy-text value="{{detail.name}}" /></view>
+      <view wx:if="{{detail.model_spec}}" class="summary-spec"><copy-text value="{{detail.model_spec}}" /></view>
       <view class="summary-footer">
         <view>
           <view class="summary-label">{{i18n.quantityLabel}}</view>
-          <view class="summary-value"><text user-select="{{true}}">{{detail.quantity_label}}</text></view>
+          <view class="summary-value"><copy-text value="{{detail.quantity_label}}" /></view>
         </view>
         <view class="unit-block">
           <view class="summary-label">{{i18n.unitLabel}}</view>
-          <view class="unit-value"><text user-select="{{true}}">{{detail.unit_name}}</text></view>
+          <view class="unit-value"><copy-text value="{{detail.unit_name}}" /></view>
         </view>
       </view>
     </view>
@@ -30,27 +30,27 @@
       <view class="detail-list">
         <view class="detail-row">
           <view class="detail-label">{{i18n.materialCodeLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.material_code}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.material_code}}" /></view>
         </view>
         <view class="detail-row">
           <view class="detail-label">{{i18n.warehouseLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.warehouse}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.warehouse}}" /></view>
         </view>
         <view class="detail-row">
           <view class="detail-label">{{i18n.firstInboundDateLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.first_inbound_date_label}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.first_inbound_date_label}}" /></view>
         </view>
         <view class="detail-row">
           <view class="detail-label">{{i18n.purchaserLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.purchaser}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.purchaser}}" /></view>
         </view>
         <view class="detail-row">
           <view class="detail-label">{{i18n.purchaseDepartmentLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.purchase_department}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.purchase_department}}" /></view>
         </view>
         <view class="detail-row">
           <view class="detail-label">{{i18n.subitemNoNameLabel}}</view>
-          <view class="detail-value"><text user-select="{{true}}">{{detail.subitem_no_name}}</text></view>
+          <view class="detail-value"><copy-text value="{{detail.subitem_no_name}}" /></view>
         </view>
       </view>
     </view>
@@ -61,11 +61,11 @@
         class="detail-action"
         theme="primary"
         variant="outline"
-        size="large"
+        size="small"
         block
         bind:tap="openPurchaseRecords"
       >{{i18n.viewPurchaseRecords}}</t-button>
-      <t-button class="detail-action" theme="primary" size="large" block bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</t-button>
+      <t-button class="detail-action" theme="primary" size="small" block bind:tap="copyNameAndCode">{{i18n.copyNameAndCode}}</t-button>
     </view>
   </block>
 

@@ -39,7 +39,7 @@
         <text class="result-value">{{result.after_qty}} {{result.unit_name}}</text>
       </view>
       <view class="result-actions">
-        <t-button theme="primary" size="large" bind:tap="resetForm">{{i18n.stockInboundSubmit}}</t-button>
+        <t-button theme="primary" size="small" bind:tap="resetForm">{{i18n.stockInboundSubmit}}</t-button>
       </view>
     </view>
 
@@ -74,7 +74,7 @@
         class="inbound-action"
         theme="default"
         variant="outline"
-        size="large"
+        size="small"
         icon="scan"
         loading="{{scanning}}"
         disabled="{{scanning || submitting}}"
@@ -83,7 +83,7 @@
       <t-button
         class="inbound-action"
         theme="primary"
-        size="large"
+        size="small"
         icon="check-circle"
         loading="{{submitting}}"
         disabled="{{submitting || scanning}}"
@@ -95,10 +95,10 @@
     <view wx:if="{{!material && !result}}" class="section-card empty-card">
       <t-empty icon="scan" description="{{i18n.stockChooseMaterial}}" />
       <view class="empty-actions">
-        <t-button class="empty-action" theme="primary" size="large" icon="scan" loading="{{scanning}}" bind:tap="scanMaterial">
+        <t-button class="empty-action" theme="primary" size="small" icon="scan" loading="{{scanning}}" bind:tap="scanMaterial">
           {{i18n.scanTitle}}
         </t-button>
-        <t-button class="empty-action" theme="default" variant="outline" size="large" bind:tap="chooseMaterial">
+        <t-button class="empty-action" theme="default" variant="outline" size="small" bind:tap="chooseMaterial">
           {{i18n.stockMaterialsTitle}}
         </t-button>
       </view>

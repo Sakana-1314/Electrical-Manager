@@ -101,14 +101,14 @@
         class="danger-action"
         theme="danger"
         variant="outline"
-        size="large"
+        size="small"
         bind:tap="remove"
       >{{i18n.delete}}</t-button>
       <t-button
         wx:if="{{canWrite}}"
         class="primary-action"
         theme="primary"
-        size="large"
+        size="small"
         loading="{{submitting}}"
         disabled="{{submitting || uploading}}"
         bind:tap="submit"

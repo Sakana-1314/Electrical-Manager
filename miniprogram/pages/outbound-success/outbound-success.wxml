@@ -14,9 +14,9 @@
 
   <view wx:if="{{result}}" class="material-card">
     <view class="summary-heading">
-      <view class="material-name"><text user-select="{{true}}">{{result.material_name}}</text></view>
+      <view class="material-name"><copy-text value="{{result.material_name}}" /></view>
     </view>
-    <view class="material-spec"><text user-select="{{true}}">{{result.model_spec}}</text></view>
+    <view class="material-spec"><copy-text value="{{result.model_spec}}" /></view>
     <view class="stock-block">
       <view>
         <view class="stock-label">{{i18n.outboundQuantity}}</view>
@@ -24,7 +24,7 @@
       </view>
       <view class="after-block">
         <view class="stock-label">{{i18n.remainingStock}}</view>
-        <view class="after-value"><text user-select="{{true}}">{{result.after_qty}} {{result.unit_name}}</text></view>
+        <view class="after-value"><copy-text value="{{result.after_qty}} {{result.unit_name}}" /></view>
       </view>
     </view>
   </view>
@@ -37,35 +37,35 @@
     <view class="detail-list">
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundNo}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.operation_no}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.operation_no}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundQuantity}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.quantity}} {{result.unit_name}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.quantity}} {{result.unit_name}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.stockChange}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.before_qty}} → {{result.after_qty}} {{result.unit_name}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.before_qty}} → {{result.after_qty}} {{result.unit_name}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.subitemNo}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.subitem_no_label}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.subitem_no_label}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundPurpose}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.business_reason}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.business_reason}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.receiverName}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.receiver_name_label}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.receiver_name_label}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.executedBy}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.executed_by}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.executed_by}}" /></view>
       </view>
       <view class="detail-row">
         <view class="detail-label">{{i18n.outboundTime}}</view>
-        <view class="detail-value"><text user-select="{{true}}">{{result.occurred_at_label}}</text></view>
+        <view class="detail-value"><copy-text value="{{result.occurred_at_label}}" /></view>
       </view>
     </view>
   </view>
@@ -75,14 +75,14 @@
       class="detail-action"
       theme="default"
       variant="outline"
-      size="large"
+      size="small"
       icon="home"
       bind:tap="goHome"
     >{{i18n.goHome}}</t-button>
     <t-button
       class="detail-action finish-action"
       theme="primary"
-      size="large"
+      size="small"
       icon="scan"
       bind:tap="continueScan"
     >{{i18n.continueScan}}</t-button>

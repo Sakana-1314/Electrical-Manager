@@ -992,7 +992,7 @@ flowchart LR
 | `packages/warehouse`（华星） | 华星总库存、华星库存详情（与二级库同分包） |
 | `packages/tools` | 水印相机、水印设置 |
 
-公共组件有 `material-summary-card`（物资摘要卡）与 `filter-panel`（列表页搜索 + 筛选面板）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（权限位与功能可见性）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`assets.js`（网页前端静态资源地址）、`i18n.js`。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
+公共组件有 `material-summary-card`（物资摘要卡）、`filter-panel`（列表页搜索 + 筛选面板）与 `copy-text`（字段值虚线下划线，点击写入剪贴板并提示「已复制」，空值不渲染，详情 / 信息页的字段值统一使用）；工具层在 `utils/`：`auth.js`（登录与建档）、`request.js`（请求、弱网重试、项目头与图片上传、静默重登）、`project.js`（当前项目：列表、默认项目兜底与切换）、`features.js`（权限位与功能可见性）、`material.js`（物资 uuid 与幂等键）、`inventory.js`、`hazard.js`（隐患展示装饰与逾期判定）、`filters.js`（筛选值的归一 / 生效判定 / 相等比较）、`purchase.js`（申购记录卡片的日期 / 数量 / 状态色展示装饰）、`navigation.js`、`share.js`（分享链接的搜索 / 筛选参数编解码）、`assets.js`（网页前端静态资源地址）、`i18n.js`。后端地址来自 `config/index.js` 的 `apiBaseUrl`。
 
 ### 列表页筛选面板（`components/filter-panel`）
 

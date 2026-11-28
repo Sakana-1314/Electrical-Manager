@@ -1,0 +1,5 @@
+/* 字段值虚线下划线：提示可点击复制，点击整段写入剪贴板（空值不渲染）。 */
+.copy-text {
+  border-bottom: 2rpx dashed var(--app-brand-border);
+  padding-bottom: 2rpx;
+}

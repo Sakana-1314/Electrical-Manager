@@ -12,8 +12,8 @@
     <!-- 身份卡：头像 + 姓名 + 部门，延续品牌面板上的操作员徽章语言。 -->
     <view class="profile-hero">
       <view class="profile-avatar"><t-icon name="user" size="48rpx" /></view>
-      <view class="profile-name"><text user-select="{{true}}">{{user.display_name}}</text></view>
-      <view wx:if="{{user.department_name}}" class="profile-department"><text user-select="{{true}}">{{user.department_name}}</text></view>
+      <view class="profile-name"><copy-text value="{{user.display_name}}" /></view>
+      <view wx:if="{{user.department_name}}" class="profile-department"><copy-text value="{{user.department_name}}" /></view>
     </view>
 
     <!-- 账号信息：字段值可长按复制（与详情页同一约定）。 -->
@@ -23,15 +23,15 @@
       <view class="info-list">
         <view class="info-row">
           <view class="info-label">{{i18n.permissions}}</view>
-          <view class="info-value"><text user-select="{{true}}">{{permissionCountLabel}}</text></view>
+          <view class="info-value"><copy-text value="{{permissionCountLabel}}" /></view>
         </view>
         <view class="info-row">
           <view class="info-label">{{i18n.registeredAt}}</view>
-          <view class="info-value"><text user-select="{{true}}">{{user.registered_at}}</text></view>
+          <view class="info-value"><copy-text value="{{user.registered_at}}" /></view>
         </view>
         <view class="info-row">
           <view class="info-label">{{i18n.miniProgramUpdatedAt}}</view>
-          <view class="info-value"><text user-select="{{true}}">{{miniProgramUpdatedAt}}</text></view>
+          <view class="info-value"><copy-text value="{{miniProgramUpdatedAt}}" /></view>
         </view>
       </view>
     </view>
@@ -48,7 +48,7 @@
         bind:tap="openProjectPicker"
       >
         <view class="project-trigger-text {{currentProjectId ? '' : 'project-trigger-empty'}}">
-          <text user-select="{{true}}">{{currentProjectLabel}}</text>
+          <copy-text value="{{currentProjectLabel}}" />
         </view>
         <t-icon class="project-arrow" name="chevron-right" size="28rpx" />
       </view>

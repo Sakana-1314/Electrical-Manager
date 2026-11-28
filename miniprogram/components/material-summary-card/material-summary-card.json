@@ -1,6 +1,7 @@
 {
   "component": true,
   "usingComponents": {
+    "copy-text": "/components/copy-text/copy-text",
     "t-tag": "tdesign-miniprogram/tag/tag"
   }
 }
