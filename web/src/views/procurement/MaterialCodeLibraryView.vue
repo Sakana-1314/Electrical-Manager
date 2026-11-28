@@ -263,7 +263,7 @@ function onFileChange(event: Event) {
                 :disabled="importing"
                 @select="onImportSelect"
               >
-                <n-button type="primary" :loading="importing" :disabled="importing">
+                <n-button secondary :loading="importing" :disabled="importing">
                   导入表格全量更新
                   <n-icon class="import-caret" :component="ChevronDownOutline" />
                 </n-button>

@@ -188,7 +188,7 @@ function onFileChange(event: Event) {
           <div class="filter-action-buttons">
             <n-button
               v-if="auth.can('lite:write')"
-              type="primary"
+              secondary
               :loading="importing"
               :disabled="importing"
               @click="openFilePicker"

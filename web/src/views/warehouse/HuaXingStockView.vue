@@ -557,7 +557,7 @@ function onFileChange(event: Event) {
             <div class="filter-action-buttons">
               <n-button
                 v-if="auth.can('huaxing:write')"
-                type="primary"
+                secondary
                 :loading="importing"
                 :disabled="importing"
                 @click="openFilePicker"
