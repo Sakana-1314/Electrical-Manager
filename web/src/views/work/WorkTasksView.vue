@@ -3,7 +3,7 @@ import PersistentDataTable from '@/components/PersistentDataTable.vue'
 /**
  * 工作管理：一行一个任务，列与车间《任务详细计划》表一致
  * （工作任务 / 事项或步骤 / 开始时间 / 完成时间 / 责任人 / 完成度 / 备注），
- * 另加标签（英文逗号分隔）与图片；筛选按标签 / 完成状态 / 关键字，整行点击进入编辑。
+ * 另加标签（英文逗号分隔）与图片；筛选按关键词 / 标签 / 完成状态，整行点击进入编辑。
  */
 import { computed, h, onMounted, ref } from 'vue'
 import {
@@ -266,6 +266,15 @@ onMounted(refreshTags)
       <div class="filter-panel">
         <div class="filter-grid">
           <label class="filter-field">
+            <span>关键词</span>
+            <n-input
+              v-model:value="filters.keyword"
+              placeholder="工作任务 / 事项或步骤 / 责任人 / 备注 / 标签，可用 | 分隔"
+              clearable
+              @keyup.enter="query"
+            />
+          </label>
+          <label class="filter-field">
             <span>标签</span>
             <n-select
               v-model:value="filters.tags"
@@ -286,21 +295,11 @@ onMounted(refreshTags)
               clearable
             />
           </label>
-          <label class="filter-field">
-            <span>关键字</span>
-            <n-input
-              v-model:value="filters.keyword"
-              placeholder="工作任务 / 事项或步骤 / 责任人 / 备注 / 标签，可用 | 分隔"
-              clearable
-              @keyup.enter="query"
-            />
-          </label>
         </div>
         <div class="filter-actions">
           <span v-if="activeFilterCount" class="filter-count"
             >已启用 {{ activeFilterCount }} 项</span
           >
-          <span class="filter-hint">点行编辑任务，图片在行内可直接预览</span>
           <ColumnVisibilityPicker
             :value="visibleColumnKeys"
             :options="fieldOptions"
