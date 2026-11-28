@@ -34,6 +34,9 @@ export type LoginRequest = components['schemas']['LoginRequest']
 export type LoginResponse = components['schemas']['LoginResponse']
 export type QrLoginSession = components['schemas']['QrLoginSessionRead']
 export type QrLoginPoll = components['schemas']['QrLoginPollRead']
+/** 油猴脚本弹窗授权：网页确认会话的响应。 */
+export type UserScriptAuthSessionConfirmRead =
+  components['schemas']['UserScriptAuthSessionConfirmRead']
 export type TokenPairResponse = components['schemas']['TokenPairResponse']
 /** 小程序「进入网页版」的一次性票据（签发与兑换）。 */
 export type WebOpenTicketCreate = components['schemas']['WebOpenTicketCreate']

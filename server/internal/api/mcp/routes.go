@@ -39,7 +39,13 @@ const maxRequestBodyBytes = 16 * 1024 * 1024
 // ExcludedPaths / ExcludedPrefixes 不暴露给 MCP 的接口（同步维护 dev-architecture.md 的 MCP 小节）。
 var (
 	ExcludedPaths    = []string{"/api/v1/auth/login", "/api/v1/auth/refresh"}
-	ExcludedPrefixes = []string{"/api/v1/mini-program/", "/api/v1/auth/qr-sessions"}
+	ExcludedPrefixes = []string{
+		"/api/v1/mini-program/",
+		"/api/v1/auth/qr-sessions",
+		// 油猴脚本的弹窗授权会话：创建/轮询匿名、确认需登录，令牌由脚本侧轮询取走；
+		// MCP 调用方本来就已经带着登录凭据，这组端点对它没有意义。
+		"/api/v1/auth/userscript-sessions",
+	}
 	// ManagedHeaders 由 MCP 层统一设置、不接受调用方覆盖的请求头。
 	ManagedHeaders = map[string]bool{"x-api-token": true, "x-project-id": true}
 	headerNotes    = map[string]string{"if-match": "乐观锁版本号（String(version)）；不传则不校验版本"}

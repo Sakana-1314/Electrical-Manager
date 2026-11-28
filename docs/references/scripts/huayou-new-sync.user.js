@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      4.0.1
+// @version      4.1.0
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。登录态通过网页弹窗授权获取，无需手工粘贴令牌。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
@@ -774,19 +774,61 @@
     return result;
   };
   // —— 网页弹窗授权（替代手工粘贴接口令牌）——
-  // 打开本系统登录页（带 userscript=1 / origin / nonce），用户在弹窗里正常登录（可扫码），
-  // 点「授权」后网页把登录态 postMessage 回来；这里只认刚打开的那个窗口 + 同一个 origin + nonce。
+  // 打开本系统登录页（带 userscript=1 / origin / session / nonce），用户在弹窗里正常登录（可扫码），
+  // 点「授权」后拿到登录态。两条送达通道同时走，谁先到用谁：
+  //   1. 服务端一次性会话（主通道）：先建会话，网页确认后这里轮询取走令牌。
+  //      不依赖窗口关系，所以用户刷新了平台页、opener 被浏览器切断也照样能收到。
+  //   2. postMessage（快速通道）：opener 还在时网页直接回传，省掉一次轮询。
   const randomNonce = () =>
     Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) =>
       b.toString(16).padStart(2, "0"),
     ).join("");
-  const buildAuthUrl = (nonce) => {
+  const AUTH_POLL_INTERVAL_MS = 2000;
+  const AUTH_POLL_DEADLINE_MS = AUTH_TIMEOUT_MS;
+  /** 建一个授权会话：返回 session id；失败抛错由调用方提示。 */
+  const createAuthSession = async () => {
+    const payload = await json({
+      method: "POST",
+      url: `${apiBase()}/auth/userscript-sessions`,
+      headers: { "Content-Type": "application/json" },
+      data: JSON.stringify({ origin: window.location.origin }),
+    });
+    const id = clean(payload?.session_id);
+    if (!id) throw new Error("授权会话创建失败：接口没有返回 session_id");
+    return id;
+  };
+  /** 轮询授权会话：confirmed 时返回登录态，expired 抛错，其余继续等。 */
+  const pollAuthSession = async (sessionId) => {
+    const payload = await json({
+      method: "GET",
+      url: `${apiBase()}/auth/userscript-sessions/${encodeURIComponent(sessionId)}`,
+      headers: { "Content-Type": "application/json" },
+    });
+    const status = clean(payload?.status);
+    if (status === "confirmed" && clean(payload?.access_token)) {
+      const user = payload.user || {};
+      return {
+        token: clean(payload.access_token),
+        user: {
+          username: clean(user.username),
+          display_name: clean(user.display_name),
+          permissions: Array.isArray(user.permissions) ? user.permissions : [],
+        },
+      };
+    }
+    if (status === "expired") {
+      throw new Error("授权会话已过期，请重新点「网页授权登录」");
+    }
+    return null;
+  };
+  const buildAuthUrl = (nonce, sessionId) => {
     const origin = webOrigin();
     const params = new URLSearchParams({
       userscript: "1",
       origin: window.location.origin,
       nonce,
     });
+    if (sessionId) params.set("session", sessionId);
     return `${origin}/login?${params.toString()}`;
   };
   const rememberSession = (session) => {
@@ -808,16 +850,26 @@
   };
   let pendingAuth = null;
   /**
-   * 打开授权弹窗并等待回传。必须在用户点击的同步调用栈里调用（否则被浏览器拦截弹窗）。
+   * 打开授权弹窗并等待登录态。必须在用户点击的同步调用栈里调用（否则被浏览器拦截弹窗）。
+   *
+   * 先建会话再把 session id 带进弹窗地址：网页确认后由这里轮询取走令牌，
+   * 因此发起窗口被刷新 / opener 被切断也不影响送达；postMessage 只作快速通道。
    * 成功后写入 sessionToken 并刷新项目列表；失败把原因抛给调用方。
    */
-  const openWebAuth = () => {
+  const openWebAuth = async () => {
     if (pendingAuth) return pendingAuth;
     const nonce = randomNonce();
+    // 会话建不起来（旧版后端 / 网络问题）时不阻塞：仍可退回 postMessage 通道。
+    let sessionId = "";
+    try {
+      sessionId = await createAuthSession();
+    } catch (error) {
+      console.warn("[华友印尼] 授权会话创建失败，退回窗口回传通道", error);
+    }
     let popup = null;
     try {
       popup = window.open(
-        buildAuthUrl(nonce),
+        buildAuthUrl(nonce, sessionId),
         // 名字带 nonce：保证每次都是新窗口，不会复用没有 opener 的旧同名窗口。
         `hxni-userscript-auth-${nonce.slice(0, 8)}`,
         `popup=yes,width=${AUTH_WINDOW_WIDTH},height=${AUTH_WINDOW_HEIGHT}`,
@@ -836,6 +888,7 @@
         state.settled = true;
         window.clearTimeout(state.timer);
         window.clearInterval(state.watch);
+        window.clearTimeout(state.pollTimer);
         window.removeEventListener("message", onMessage, false);
         if (pendingAuth === state) pendingAuth = null;
         try {
@@ -846,6 +899,15 @@
         if (ok) resolve(value);
         else reject(value);
       };
+      const accept = (session) => {
+        if (!clean(session?.token)) {
+          finish(false, new Error("网页没有下发登录态，请重试"));
+          return;
+        }
+        rememberSession(session);
+        renderAuthState();
+        finish(true, session);
+      };
       const onMessage = (event) => {
         if (state.settled) return;
         if (event.origin !== origin) return;
@@ -854,23 +916,44 @@
         const data = event.data;
         if (!data || data.type !== AUTH_MESSAGE) return;
         if (String(data.nonce || "") !== nonce) return;
-        const session = data.session || {};
-        if (!session.token) {
-          finish(false, new Error("网页没有下发登录态，请重试"));
-          return;
-        }
-        rememberSession(session);
-        renderAuthState();
-        finish(true, session);
+        accept(data.session || {});
       };
       window.addEventListener("message", onMessage, false);
-      state.timer = setTimeout(
-        () => finish(false, new Error("等待网页授权超时，请重试")),
-        AUTH_TIMEOUT_MS,
-      );
-      state.watch = setInterval(() => {
-        if (popup.closed) finish(false, new Error("已取消网页授权"));
-      }, 500);
+      // 主通道：轮询会话。弹窗关掉也继续等到超时——用户可能在别的标签页完成授权。
+      const deadline = Date.now() + AUTH_POLL_DEADLINE_MS;
+      const poll = async () => {
+        if (state.settled) return;
+        if (!sessionId) return;
+        try {
+          const session = await pollAuthSession(sessionId);
+          if (state.settled) return;
+          if (session) {
+            accept(session);
+            return;
+          }
+        } catch (error) {
+          finish(false, error);
+          return;
+        }
+        if (state.settled) return;
+        if (Date.now() >= deadline) {
+          finish(false, new Error("等待网页授权超时，请重试"));
+          return;
+        }
+        state.pollTimer = setTimeout(poll, AUTH_POLL_INTERVAL_MS);
+      };
+      if (sessionId) state.pollTimer = setTimeout(poll, AUTH_POLL_INTERVAL_MS);
+      else
+        state.timer = setTimeout(
+          () => finish(false, new Error("等待网页授权超时，请重试")),
+          AUTH_TIMEOUT_MS,
+        );
+      // 只有没有会话通道时才依赖「弹窗被关闭」判取消；有会话时可以离开弹窗继续等。
+      if (!sessionId) {
+        state.watch = setInterval(() => {
+          if (popup.closed) finish(false, new Error("已取消网页授权"));
+        }, 500);
+      }
     });
     pendingAuth = state;
     return state.promise;

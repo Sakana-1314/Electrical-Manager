@@ -9,6 +9,7 @@ import type {
   TokenPairResponse,
   User,
   UserApiTokenRead,
+  UserScriptAuthSessionConfirmRead,
   WebOpenTicketCreate,
   WebOpenTicketRead,
   WebOpenTicketRedeemRead,
@@ -53,4 +54,17 @@ export const authApi = {
   /** 扫码登录小程序码图片地址（直接给 <img>，无需鉴权）。 */
   qrCodeUrl: (sessionId: string) =>
     `${activeBackendUrl()}/auth/qr-sessions/${encodeURIComponent(sessionId)}/code`,
+  /**
+   * 油猴脚本弹窗授权：把当前登录用户登记到脚本创建的一次性会话里。
+   *
+   * 只上报会话 id、不上传令牌 —— 令牌由脚本轮询该会话时由服务端签发。
+   * 因此这条链路不依赖 `window.opener`，发起窗口被刷新或关闭也能送达。
+   */
+  confirmUserScriptSession: (sessionId: string) =>
+    apiClient
+      .post<UserScriptAuthSessionConfirmRead>(
+        `/auth/userscript-sessions/${encodeURIComponent(sessionId)}/confirm`,
+        { session_id: sessionId },
+      )
+      .then((r) => r.data),
 }

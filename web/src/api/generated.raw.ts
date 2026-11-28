@@ -186,6 +186,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/userscript-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 创建油猴脚本授权会话
+         * @description 脚本侧匿名创建；返回的 session_id 由脚本带进授权弹窗地址。会话只在服务端内存，5 分钟有效。
+         */
+        post: operations["create_userscript_auth_session_api_v1_auth_userscript_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/userscript-sessions/{session_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 轮询油猴脚本授权会话
+         * @description 脚本侧匿名轮询；confirmed 时签发管理端访问 / 续期令牌并消费会话，只能取一次。
+         */
+        get: operations["poll_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/userscript-sessions/{session_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 网页确认油猴脚本授权
+         * @description 登录用户在授权页点「授权」时调用；只登记当前用户，不上传登录令牌（令牌由脚本轮询时签发）。
+         */
+        post: operations["confirm_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system-settings/advanced-settings": {
         parameters: {
             query?: never;
@@ -5473,6 +5533,88 @@ export interface components {
             label: string;
             /** Bit */
             bit: number;
+        };
+        /**
+         * UserScriptAuthSessionCreate
+         * @example {
+         *       "origin": "http://43.154.152.157:8080"
+         *     }
+         */
+        UserScriptAuthSessionCreate: {
+            /**
+             * Origin
+             * @description 脚本所在平台的 origin（只用于授权页展示，不参与鉴权）
+             * @default
+             */
+            origin: string;
+        };
+        /**
+         * UserScriptAuthSessionCreateRead
+         * @description 新建油猴脚本授权会话（不落数据库，5 分钟有效）。
+         * @example {
+         *       "session_id": "0198f3a7-2c00-7000-8000-000000000002",
+         *       "expires_at": "2026-11-28T10:35:00+00:00"
+         *     }
+         */
+        UserScriptAuthSessionCreateRead: {
+            /**
+             * Session Id
+             * @description UUID 会话标识（只在服务端内存中存在）
+             */
+            session_id: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /**
+         * UserScriptAuthSessionConfirm
+         * @example {
+         *       "session_id": "0198f3a72c0070008000000000000002"
+         *     }
+         */
+        UserScriptAuthSessionConfirm: {
+            /** Session Id */
+            session_id: string;
+        };
+        /**
+         * UserScriptAuthSessionConfirmRead
+         * @description 网页确认结果（固定 confirmed）。
+         * @example {
+         *       "status": "confirmed"
+         *     }
+         */
+        UserScriptAuthSessionConfirmRead: {
+            /** Status */
+            status: string;
+        };
+        /**
+         * UserScriptAuthSessionPollRead
+         * @description 脚本轮询结果；confirmed 时返回管理端访问 / 续期令牌并消费会话（只能取一次）。
+         * @example {
+         *       "status": "pending",
+         *       "access_token": null,
+         *       "refresh_token": null,
+         *       "token_type": "",
+         *       "user": null
+         *     }
+         */
+        UserScriptAuthSessionPollRead: {
+            /**
+             * Status
+             * @description pending 等待网页授权；confirmed 已授权（本次响应带凭据）；expired 已过期或已消费
+             * @enum {string}
+             */
+            status: "pending" | "confirmed" | "expired";
+            /** Access Token */
+            access_token?: string | null;
+            /** Refresh Token */
+            refresh_token?: string | null;
+            /** Token Type */
+            token_type: string;
+            /** User */
+            user?: components["schemas"]["UserRead"] | null;
         };
         /**
          * QrLoginSessionRead
@@ -13156,6 +13298,167 @@ export interface operations {
                      *       "message": "请求字段或筛选参数不合法",
                      *       "details": {},
                      *       "request_id": "7a72e9dd-f00d-4735-a2bf-ff2718b5d3bc"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    create_userscript_auth_session_api_v1_auth_userscript_sessions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                /**
+                 * @example {
+                 *       "origin": "http://43.154.152.157:8080"
+                 *     }
+                 */
+                "application/json": components["schemas"]["UserScriptAuthSessionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "session_id": "0198f3a7-2c00-7000-8000-000000000002",
+                     *       "expires_at": "2026-11-28T10:35:00+00:00"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserScriptAuthSessionCreateRead"];
+                };
+            };
+            /** @description Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    poll_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "pending",
+                     *       "access_token": null,
+                     *       "refresh_token": null,
+                     *       "token_type": "",
+                     *       "user": null
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserScriptAuthSessionPollRead"];
+                };
+            };
+            /** @description Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VALIDATION_ERROR",
+                     *       "message": "请求字段或筛选参数不合法",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    confirm_userscript_auth_session_api_v1_auth_userscript_sessions__session_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "status": "confirmed"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["UserScriptAuthSessionConfirmRead"];
+                };
+            };
+            /** @description Error */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "NOT_FOUND",
+                     *       "message": "二级库物资不存在",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Error */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "VERSION_CONFLICT",
+                     *       "message": "数据已被其他用户修改，请刷新后重试",
+                     *       "details": {},
+                     *       "request_id": "caf23a6c-e039-448d-a4bf-451c669db663"
                      *     }
                      */
                     "application/json": components["schemas"]["ApiError"];

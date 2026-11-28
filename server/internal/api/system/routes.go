@@ -25,6 +25,11 @@ func Register(r *web.Router) {
 	a.POST("/qr-sessions", createQrSession)
 	a.GET("/qr-sessions/{session_id}/code", qrSessionCode)
 	a.GET("/qr-sessions/{session_id}", pollQrSession)
+	// 油猴脚本「网页弹窗授权」：创建与轮询匿名（脚本在外部平台运行），确认需登录。
+	// 服务端内存会话中转：脚本轮询取走登录凭据，不依赖 window.opener（发起窗口被刷新/关闭也能送达）。
+	a.POST("/userscript-sessions", createUserScriptAuthSession)
+	a.GET("/userscript-sessions/{session_id}", pollUserScriptAuthSession)
+	a.POST("/userscript-sessions/{session_id}/confirm", confirmUserScriptAuthSession, auth.CurrentUser)
 	// 小程序「进入网页版」：新版本直接把本地 JWT 交给网页；这里保留一次性票据接口，
 	// 供未升级的小程序或未配置 APP_WEB_BASE_URL 的部署回退（只接受小程序令牌）。
 	a.POST("/web-open/tickets", createWebOpenTicket, auth.MiniProgramUser)
