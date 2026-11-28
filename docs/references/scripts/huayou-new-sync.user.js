@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         华友印尼数据平台同步脚本
 // @namespace    https://materials-manager.qcloud.19890605.xyz/
-// @version      4.0.0
+// @version      4.0.1
 // @description  从华友印尼数据平台“物料申购跟踪”同步采购人、状态、合同号、合同签订日期、采购单价、集港日期、集港港口和船名：按申购单号整单查询、整单批量回写（平台每 10 秒至多查询 1 次）。登录态通过网页弹窗授权获取，无需手工粘贴令牌。
 // @match        http://43.154.152.157:8080/*
 // @updateURL    https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
 // @downloadURL  https://raw.githubusercontent.com/Sakana-1314/Electrical-Manager/main/docs/references/scripts/huayou-new-sync.user.js
+// @connect      electrical.yangrucheng.top
+// 旧版默认网页端地址：兼容设置里仍手动配置旧域名的用户。
 // @connect      materials-manager.qcloud.19890605.xyz
 // @connect      43.154.152.157
 // @grant        GM_xmlhttpRequest
@@ -25,7 +27,7 @@
   const PLATFORM_BASE = `${PLATFORM_ORIGIN}/webroot/decision`;
   // 网页端站点（授权弹窗与后续接口都用它）：登录态通过「网页弹窗授权」交接，
   // 不再让用户手工粘贴接口令牌；`config.webUrl` 改了这里就跟着用新的。
-  const DEFAULT_WEB_URL = "https://materials-manager.qcloud.19890605.xyz";
+  const DEFAULT_WEB_URL = "https://electrical.yangrucheng.top";
   // 与网页端 src/utils/userscriptHandoff.ts 的约定一致：弹窗登录完成后把登录态 postMessage 回来。
   const AUTH_MESSAGE = "hxni-userscript-session";
   const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
